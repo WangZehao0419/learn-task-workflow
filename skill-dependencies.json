@@ -1,0 +1,194 @@
+{
+  "schema_version": "1",
+  "capabilities": [
+    "任务索引与进度解析",
+    "进度校验与证据验证",
+    "间隔调度与校准计算",
+    "KP 拓扑排序与检环",
+    "环境就绪检查"
+  ],
+  "dependencies": [
+    {
+      "id": "python-runtime",
+      "type": "runtime",
+      "required": true,
+      "auth_type": "none",
+      "capabilities": [
+        "任务索引与进度解析",
+        "进度校验与证据验证",
+        "间隔调度与校准计算",
+        "KP 拓扑排序与检环",
+        "环境就绪检查"
+      ],
+      "checks": [
+        {"id": "python-version", "type": "python", "required": true, "min_version": "3.8",
+         "capabilities": ["任务索引与进度解析", "进度校验与证据验证", "间隔调度与校准计算", "KP 拓扑排序与检环", "环境就绪检查"]},
+        {"id": "python-graphlib", "type": "python", "required": false, "min_version": "3.9",
+         "capabilities": ["KP 拓扑排序与检环"]}
+      ],
+      "setup": {
+        "official_home_url": "https://www.python.org/",
+        "official_docs_url": "https://docs.python.org/3/",
+        "steps": [
+          "托管环境：解释器由平台托管，通常无需操作；直接运行 python \"<技能根>/scripts/check_environment.py\" 完成检查。",
+          "非托管环境：从官方下载地址安装 Python 3.9 或更高版本，安装后在终端运行 python --version 确认版本。",
+          "检查输出 status 为 ready（或仅 KP 拓扑排序受影响的 partial）即可进入正常流程；needs_setup / unavailable 时按 references/setup-guide.md 处理并重检。"
+        ],
+        "verify": "python --version 显示 ≥ 3.8；运行 python -B scripts/check_environment.py 输出 status 为 ready 或可解释的 partial；五个脚本均带 --selftest（task_index / progress_check / scheduler / kp_sort / check_environment），逐一退出码 0。",
+        "security": "无需登录与凭据；不安装、不修改系统配置；检查器只读，不发起网络请求与子进程，无任何网络探测能力。",
+        "verified_at": "2026-10-16",
+        "applies_to_version": "5.2.1"
+      },
+      "degradation": [
+        {
+          "capability": "任务索引与进度解析",
+          "trigger": "解释器不可用或脚本不可执行",
+          "fallback": "改用目录枚举/文件读取能力手工枚举数据根并解析 progress.md（降级可用）",
+          "user_input": "数据根路径与任务目录名（如需）",
+          "limitations": "解析结果不保证与脚本逐字一致，输出标注「未验证」",
+          "evidence_label": "未验证",
+          "recovery": "恢复解释器后重跑 scripts/task_index.py",
+          "stop_condition": "数据根不可读且任务需要精确枚举时停止并说明"
+        },
+        {
+          "capability": "进度校验与证据验证",
+          "trigger": "解释器不可用或校验脚本不可执行",
+          "fallback": "按 progress.md 字段清单与判分证据逐项人工核对",
+          "user_input": "待校验的任务目录",
+          "limitations": "无脚本级结论，仅人工核对，标注「未完成运行验证」",
+          "evidence_label": "部分验证",
+          "recovery": "恢复解释器后重跑 scripts/progress_check.py",
+          "stop_condition": "用户要求正式通过结论或涉及闸口放行时停止"
+        },
+        {
+          "capability": "间隔调度与校准计算",
+          "trigger": "解释器不可用或脚本不可执行",
+          "fallback": "由模型按同一公式手工计算并展示过程，标注「推断」",
+          "user_input": "无",
+          "limitations": "结果不可脚本复核，日期推算需用户二次确认",
+          "evidence_label": "推断",
+          "recovery": "恢复解释器后重跑 scripts/scheduler.py",
+          "stop_condition": "用户要求可复核的脚本级结论时停止"
+        },
+        {
+          "capability": "KP 拓扑排序与检环",
+          "trigger": "Python < 3.9 或解释器不可用",
+          "fallback": "人工依赖排序并展示理由（不跑脚本、不检环），标注「未验证」",
+          "user_input": "确认接受降级排序",
+          "limitations": "不检环，环形依赖无法自动发现；排序合法性仅人工判断",
+          "evidence_label": "未验证",
+          "recovery": "升级到 Python 3.9 及以上后重跑 scripts/kp_sort.py",
+          "stop_condition": "依赖关系复杂且存在环风险时停止并建议升级"
+        },
+        {
+          "capability": "环境就绪检查",
+          "trigger": "解释器不可用（检查器无法运行）",
+          "fallback": "按 references/setup-guide.md 逐项人工核对（python --version、脚本存在性）",
+          "user_input": "无",
+          "limitations": "无法机器判定状态，路由结论基于人工核对",
+          "evidence_label": "部分验证",
+          "recovery": "恢复解释器后重跑 scripts/check_environment.py",
+          "stop_condition": "无法判断必需依赖状态时停止并说明"
+        }
+      ]
+    }
+  ],
+  "functional_degradations": [
+    {
+      "capability": "任务索引与进度解析",
+      "trigger": "脚本异常、数据根不可读或数据损坏",
+      "fallback": "目录枚举/文件读取能力手工枚举；坏数据条目按告警方式记录，不静默",
+      "user_input": "",
+      "limitations": "枚举覆盖度下降，标注「部分验证」",
+      "evidence_label": "部分验证",
+      "recovery": "修复数据或权限后重跑脚本",
+      "stop_condition": "数据根不可读且无替代来源时停止该动作"
+    },
+    {
+      "capability": "进度校验与证据验证",
+      "trigger": "字段解析失败或脚本输出不完整",
+      "fallback": "人工核对并保留原始文件不改动",
+      "user_input": "",
+      "limitations": "无脚本级结论，标注「未完成运行验证」",
+      "evidence_label": "部分验证",
+      "recovery": "修复字段后重跑脚本",
+      "stop_condition": "涉及闸口放行且证据不足时停止"
+    },
+    {
+      "capability": "间隔调度与校准计算",
+      "trigger": "脚本异常或日期数据缺失",
+      "fallback": "模型按公式计算并显式标注「推断」；日期缺失按默认链处理并提示用户",
+      "user_input": "",
+      "limitations": "结果不可脚本复核",
+      "evidence_label": "推断",
+      "recovery": "补日期数据后重跑脚本",
+      "stop_condition": "需要精确可复核调度结论时停止"
+    },
+    {
+      "capability": "KP 拓扑排序与检环",
+      "trigger": "清单畸形、含环或解释器版本不足",
+      "fallback": "检出环即停止并报告（不静默）；脚本不可用时人工排序并标注",
+      "user_input": "",
+      "limitations": "无自动检环能力时存在环风险",
+      "evidence_label": "部分验证",
+      "recovery": "修复清单或升级解释器后重跑脚本",
+      "stop_condition": "依赖声明互相冲突且无法消除时停止"
+    },
+    {
+      "capability": "环境就绪检查",
+      "trigger": "检查器不可用或输出畸形",
+      "fallback": "按 setup-guide 逐项人工核对并路由",
+      "user_input": "",
+      "limitations": "状态判定降级为人工",
+      "evidence_label": "部分验证",
+      "recovery": "恢复检查器后重跑",
+      "stop_condition": "无法判断必需依赖状态时停止"
+    }
+  ],
+  "scripts_contract": [
+    {
+      "script": "task_index.py",
+      "usage": "--root <数据根> [--write-index | --no-write-index] [--selftest]",
+      "default_behavior": "只读、不物化 index.json（写缓存为显式 opt-in）",
+      "exit_codes": {"0": "正常（含 scan_status=partial）", "1": "数据根缺失或非目录", "2": "用法错误", "3": "枚举失败 scan_status=failed（不覆盖既有缓存）"},
+      "schema": "learn-task-index/4",
+      "notes": "scan_status=failed 时 task_count=null（未知≠0）；写缓存用同目录临时文件 + os.replace 原子替换，区分 written/unchanged/failed"
+    },
+    {
+      "script": "progress_check.py",
+      "usage": "<任务目录> [--release] [--selftest]",
+      "default_behavior": "历史/日常校验（warning 非阻断旧任务）",
+      "exit_codes": {"0": "通过", "1": "不通过", "2": "用法错误"},
+      "notes": "--release 放行模式：空/模板证据 E-EMPTY-EVIDENCE；结课/已完成未完成路线 E-ROUTE-UNDONE；复习来源阶段枚举 {逐节学习, 结课, 已完成}；起点自进入 S2 起必填"
+    },
+    {
+      "script": "scheduler.py",
+      "usage": "next-interval | due-queue | calibration [--selftest]",
+      "exit_codes": {"0": "正常", "1": "数据根缺失或非目录", "2": "参数错误"},
+      "schema": {"due-queue": "ltw-due-queue/2", "calibration": "ltw-calibration/3"},
+      "notes": "due 锚点 = 本次复习日 today + interval_days；calibration 先按 evt 归组并合并互补投影再统计（dedup_mode: by_evt / legacy_double_count / mixed 并披露 evt_tagged_count、legacy_count）；cw 只数「反馈前信心 ≥4 且判错」的子集，孤立/低信心 cw 与信心/时序歧义（W-CONFIDENCE-AMBIGUOUS，含重复信心键与回顾性 × 数值并存）令 overconfidence_rate=null + rate_valid=false；纯回顾性观察不入分母（retro_excluded_count）"
+    },
+    {
+      "script": "kp_sort.py",
+      "usage": "<清单文件> [--selftest]",
+      "exit_codes": {"0": "正常", "1": "畸形行 / 依赖环 / Python<3.9 / 疑似解析失败"},
+      "notes": "空合法清单与疑似解析失败分离；KP 编号别名归一（KP-1-1 ≡ KP-01-01）；环路径输出稳定"
+    },
+    {
+      "script": "check_environment.py",
+      "usage": "[--manifest <路径>] [--capability <名称>]... [--selftest]",
+      "exit_codes": {"0": "ready / partial", "1": "needs_setup / unavailable", "2": "清单畸形 manifest_error"},
+      "notes": "严格校验清单类型与版本格式（布尔不误收字符串、非法 min_version 与畸形 capabilities 返回结构化诊断）"
+    }
+  ],
+  "verification": {
+    "selftest": [
+      "python -B scripts/task_index.py --selftest",
+      "python -B scripts/progress_check.py --selftest",
+      "python -B scripts/scheduler.py --selftest",
+      "python -B scripts/kp_sort.py --selftest",
+      "python -B scripts/check_environment.py --selftest"
+    ],
+    "note": "五脚本自测覆盖确定性计算与结构校验契约；真实教学回归与故障夹具见批次 E 的 evals。"
+  }
+}
