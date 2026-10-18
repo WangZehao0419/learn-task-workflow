@@ -3,7 +3,7 @@
 """formula-typesetting 静态契约校验脚本（stdlib-only、零网络、幂等只读）。
 
 用途：
-  对 v5.5.0「公式与科学符号呈现」机制做仓库内静态契约验证，作为
+  对「公式与科学符号呈现」机制（v5.5.0 引入）做仓库内静态契约验证，作为
   FORMULA-01–FORMULA-10 真实回放前的登记完整性证据。本脚本只读取
   技能包文件，不写任何文件、不访问网络，可重复运行（幂等）。
 
@@ -16,12 +16,12 @@
   3. teaching-loop 交叉引用：references/teaching-loop.md 中 "formula-typesetting"
      恰好出现 1 次且该行含「呈现与降级」；
   4. lecture-styles 范例修订：范例去上标化（含 x^2−x−6>0 与解集完整句、不含 x²）、
-     五要素标记（完整示例/易错点/卷面作答）与两共用节标题未被波及；
+     五要素标记（完整示例/易错点/标准答案）与两共用节标题未被波及；
   5. evals/evals.json 契约：FORMULA-01–10 登记字段与未回填语义、阻断标记、
      formula_checks_rubric、grading_axes、版本字段、E01/E24 存续、run_log_ref 与
      machine_evidence_ref 登记证据、FORMULA-02 定义域表述；
   6. 版本字段：SKILL.md / skill-dependencies.json / references/setup-guide.md /
-     CREDITS.md 四处 5.5.0，及 setup-guide.md 核验日期；
+     CREDITS.md 四处 5.7.1，及 setup-guide.md 核验日期；
   7. 无残留：管理文件范围内（SKILL.md、CREDITS.md、skill-dependencies.json、
      evals/evals.json、references/ 下全部 .md）不含 math-typesetting / task-updates /
      U-5.4。范围不含 evals/run-log.md——其既有遗留内容由运行记录留痕，
@@ -167,12 +167,12 @@ def group4_lecture_styles(styles, c: Checker) -> None:
     c.check("4.1 含「x^2−x−6>0」（范例已去上标）", "x^2−x−6>0" in body)
     c.check("4.2 不含「x²」（U+00B2）", "x²" not in body)
     # 集合语义：x<−2 或 x>3 即 {x | x<−2 或 x>3}，「或」为公式环境外的自然语言并集连接；
-    # 用户已手动删除卷面作答中的集合括注，此处只锚定完整句，不要求也不禁止括注回添。
+    # 用户已手动删除标准答案中的集合括注，此处只锚定完整句，不要求也不禁止括注回添。
     c.check("4.3 含「∴原不等式的解集为 x<−2 或 x>3」",
             "∴原不等式的解集为 x<−2 或 x>3" in body)
     c.check("4.4 含「完整示例」（五要素标记）", "完整示例" in body)
     c.check("4.5 含「易错点」（五要素标记）", "易错点" in body)
-    c.check("4.6 含「卷面作答」（五要素标记）", "卷面作答" in body)
+    c.check("4.6 含「标准答案」（五要素标记）", "标准答案" in body)
     c.check("4.7 含节标题「## 新记号/新操作讲透」", "## 新记号/新操作讲透" in body)
     c.check("4.8 含节标题「## 图像可视化双轨」", "## 图像可视化双轨" in body)
 
@@ -212,9 +212,9 @@ def group5_evals_contract(evals_data, c: Checker) -> None:
     c.check("5.8 grading_axes 长度为 5",
             isinstance(axes, list) and len(axes) == 5,
             f"实际 {len(axes) if isinstance(axes, list) else type(axes).__name__}")
-    c.check("5.9 applies_to_version == 5.5.0", data.get("applies_to_version") == "5.5.0",
+    c.check("5.9 applies_to_version == 5.7.1", data.get("applies_to_version") == "5.7.1",
             f"实际 {data.get('applies_to_version')!r}")
-    c.check("5.10 updated_at == 2026-10-17", data.get("updated_at") == "2026-10-17",
+    c.check("5.10 updated_at == 2026-10-18", data.get("updated_at") == "2026-10-18",
             f"实际 {data.get('updated_at')!r}")
     c.check("5.11 E01 与 E24 条目仍存在", "E01" in by_id and "E24" in by_id)
     # 顶层运行日志指针：指向「运行记录」节与本次静态回放的 run_id
@@ -242,10 +242,10 @@ def group5_evals_contract(evals_data, c: Checker) -> None:
 
 
 def group6_versions(skill_md, deps_data, setup_md, credits_md, c: Checker) -> None:
-    """组 6：四处版本字段同步 5.5.0。"""
-    c.check("6.1 SKILL.md 含 version: 5.5.0", "version: 5.5.0" in (skill_md or ""))
+    """组 6：四处版本字段同步 5.7.1。"""
+    c.check("6.1 SKILL.md 含 version: 5.7.1", "version: 5.7.1" in (skill_md or ""))
     # applies_to_version 按实际结构位于 dependencies[].setup（python-runtime 条目）；
-    # 顶层若也存在则一并收集，要求出现且全部为 5.5.0
+    # 顶层若也存在则一并收集，要求出现且全部为 5.7.1
     values = []
     if isinstance(deps_data, dict):
         if "applies_to_version" in deps_data:
@@ -255,11 +255,11 @@ def group6_versions(skill_md, deps_data, setup_md, credits_md, c: Checker) -> No
             setup = dep.get("setup") if isinstance(dep, dict) else None
             if isinstance(setup, dict) and "applies_to_version" in setup:
                 values.append(setup.get("applies_to_version"))
-    c.check("6.2 skill-dependencies.json applies_to_version == 5.5.0",
-            bool(values) and all(v == "5.5.0" for v in values),
+    c.check("6.2 skill-dependencies.json applies_to_version == 5.7.1",
+            bool(values) and all(v == "5.7.1" for v in values),
             f"实际 {values!r}" if values else "未找到 applies_to_version 字段")
-    c.check("6.3 setup-guide.md 含「适用版本：5.5.0」", "适用版本：5.5.0" in (setup_md or ""))
-    c.check("6.4 CREDITS.md 含「5.5.0」", "5.5.0" in (credits_md or ""))
+    c.check("6.3 setup-guide.md 含「适用版本：5.7.1」", "适用版本：5.7.1" in (setup_md or ""))
+    c.check("6.4 CREDITS.md 含「5.7.1」", "5.7.1" in (credits_md or ""))
     c.check("6.5 setup-guide.md 含「核验日期：2026-10-17」",
             "核验日期：2026-10-17" in (setup_md or ""))
 

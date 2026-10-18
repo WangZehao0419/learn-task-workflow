@@ -1,8 +1,8 @@
 {
   "schema": "ltw-evals/2",
   "skill": "learn-task-workflow",
-  "applies_to_version": "5.5.0",
-  "updated_at": "2026-10-17",
+  "applies_to_version": "5.7.1",
+  "updated_at": "2026-10-18",
   "grading_axes": [
     "教学正确性",
     "目标匹配",
@@ -60,7 +60,7 @@
   },
   "run_log_ref": "evals/run-log.md（「运行记录」节，run_id: formula-typesetting-5.5.0-20261017-static）",
   "run_log_note": "真实陪学运行日志尚未产出。待最终机制版本完成后，以同材料、同学员作答序列重跑，并把 actual_output / run_id / scores 回填本文件；未回填者保持「未验证」。",
-  "machine_evidence_ref": "包内 scripts/*.py --selftest（五脚本）；evals/verify-formula-typesetting.py（公式呈现静态契约 56 项检查、退出码 0；属静态证据，非渲染验证）；包外验收复现与真实教学日志不作为技能包运行依赖。",
+  "machine_evidence_ref": "包内 scripts/*.py --selftest（六脚本，含讲义结构校验 verify_explanation.py：shaanxi-gaoshu materials 校验通过、退出码 0）；evals/verify-formula-typesetting.py（公式呈现静态契约 56 项检查、退出码 0；属静态证据，非渲染验证）；包外验收复现与真实教学日志不作为技能包运行依赖。",
   "dialogues_ref": "evals/对话对照-批次B.md（设计摘要，非运行日志；真实新旧对照须另附运行输出）",
   "cases": [
     {
@@ -592,6 +592,90 @@
       "reviewer": null,
       "formula_checks": null,
       "review_note": "阻断：化学配平与学科正确性须独立评审者核验"
+    },
+    {
+      "id": "EXP-01",
+      "scenario": "题型首授附标准答案框一次，复授默认不附",
+      "kind": "human",
+      "prompt": "学员首次学某含解题过程的题型（如十字相乘），观察对话讲授轮中标准答案框的出现与提示语；同一题型换角度复授时再观察一次。",
+      "fixture": "含解题过程题型的对话讲授轮（首授 + 复授各一次）",
+      "pass_condition": "判分标准：首授轮标准答案框最多出现一次且提示「标准答案已落讲义」；复授轮无标准答案框；判分记账、状态行、伺服档位记录不出现在讲授正文。违一处即不通过。",
+      "actual_output": null,
+      "run_id": null,
+      "scores": null,
+      "verdict": "未验证",
+      "reviewer": null,
+      "review_note": "本轮无真实对话执行；规则源 lecture-styles.md「对话讲授契约」"
+    },
+    {
+      "id": "EXP-02",
+      "scenario": "简单事实按需压缩，不强行全套五段",
+      "kind": "human",
+      "prompt": "学员在非系统学习语境下问一个已知或低复杂度事实（如「log 的底数能是 1 吗」）。",
+      "fixture": "简单事实/低复杂度问答轮",
+      "pass_condition": "判分标准：回复为「结论 + 必要依据/条件 + 边界」量级；未强行生成完整五段骨架、三句小结或检验题；压缩未删除必要条件或纠错信息。",
+      "actual_output": null,
+      "run_id": null,
+      "scores": null,
+      "verdict": "未验证",
+      "reviewer": null,
+      "review_note": "本轮无真实对话执行；规则源 lecture-styles.md「对话讲授契约」压缩条款"
+    },
+    {
+      "id": "EXP-03",
+      "scenario": "用户明确「直接讲」时不被苏格拉底式引导阻塞",
+      "kind": "human",
+      "prompt": "讲授中学员明确说「别提问了，直接讲给我听」。",
+      "fixture": "讲授轮 + 用户直接讲指令",
+      "pass_condition": "判分标准：立即转入直授（按内容需要给压缩形态或完整讲授），不再连发苏格拉底式追问，不要求学员先猜；必要条件与边界仍完整给出。",
+      "actual_output": null,
+      "run_id": null,
+      "scores": null,
+      "verdict": "未验证",
+      "reviewer": null,
+      "review_note": "与 E08 同族——E08 验计划授权，本条验讲授轮内不被引导阻塞；本轮无真实对话执行"
+    },
+    {
+      "id": "EXP-04",
+      "scenario": "复杂推导不因长度截断",
+      "kind": "human",
+      "prompt": "让模型讲授一个长推导概念（如洛必达法则的推导），正文明显超出常规长度。",
+      "fixture": "复杂推导讲授轮/讲义",
+      "pass_condition": "判分标准：必要推导完整保留，结论、条件与边界齐全；超长自查只删重复、记账与可后置内容；无任何按字数截断行为（字数不作阈值或上限）。",
+      "actual_output": null,
+      "run_id": null,
+      "scores": null,
+      "verdict": "未验证",
+      "reviewer": null,
+      "review_note": "本轮无真实对话执行；规则源 lecture-styles.md「讲解文本密度原则（无硬字数）」"
+    },
+    {
+      "id": "EXP-05",
+      "scenario": "非数学任务的标准答案领域适配",
+      "kind": "human",
+      "prompt": "编程类任务（如写一个批量重命名文件的 Python 脚本）要求给出标准答案。",
+      "fixture": "非备考编程任务",
+      "pass_condition": "判分标准：标准答案给关键代码、输入输出与验证方式/成功标志，可运行可复现；不出现「解：」起笔、给分点量表或虚构评分细则。",
+      "actual_output": null,
+      "run_id": null,
+      "scores": null,
+      "verdict": "未验证",
+      "reviewer": null,
+      "review_note": "本轮无真实对话执行；规则源 lecture-styles.md 五要素之⑤「标准答案」（领域中立案）"
+    },
+    {
+      "id": "EXP-06",
+      "scenario": "来源不可得标「未核实」+ 纠错闭环",
+      "kind": "human",
+      "prompt": "讲解涉及外部事实（如某教材的版本年份）且来源不可得；随后模型或学员发现已讲内容有误。",
+      "fixture": "含外部事实引用的讲解 + 纠错触发轮",
+      "pass_condition": "判分标准：不可得来源标「未核实」并给截至日期，不编造链接/引文/权威背书；发现错误后先说明错误、影响范围与修正内容，再同步讲义/材料/受影响判分证据并重检，保留纠错留痕，无静默改写。",
+      "actual_output": null,
+      "run_id": null,
+      "scores": null,
+      "verdict": "未验证",
+      "reviewer": null,
+      "review_note": "本轮无真实对话执行；规则源 lecture-styles.md「事实、来源与不确定性」+ teaching-loop.md 纠错闭环"
     }
   ]
 }

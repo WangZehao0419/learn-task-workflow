@@ -6,7 +6,7 @@
 
 | 依赖 id | 类型 | 必需 | 支撑功能 | 检查方式 |
 |---|---|---|---|---|
-| python-runtime | runtime | 是 | 任务索引与进度解析 / 进度校验与证据验证 / 间隔调度与校准计算 / KP 拓扑排序与检环 / 环境就绪检查 | `scripts/check_environment.py`（python 检查项） |
+| python-runtime | runtime | 是 | 任务索引与进度解析 / 进度校验与证据验证 / 间隔调度与校准计算 / KP 拓扑排序与检环 / 环境就绪检查 / 讲义结构校验 | `scripts/check_environment.py`（python 检查项） |
 
 > 跨平台注：本技能只依赖终端执行、文件读写、目录枚举与文本检索等能力接口；具体能力由宿主以等价工具提供，不绑定某个 agent、终端或命令名。
 
@@ -16,7 +16,7 @@
 
 ## Python 版本要求
 
-- 基础要求：Python ≥ 3.8（四个核心脚本与环境检查脚本）。
+- 基础要求：Python ≥ 3.8（五个核心脚本与环境检查脚本）。
 - `scripts/kp_sort.py`（KP 依赖拓扑排序与检环）需要 Python ≥ 3.9（标准库 graphlib）；低于 3.9 时该脚本显式报「版本不足」，不静默降级，其余功能不受影响。
 - 托管环境（解释器由平台托管）通常无需手动安装；非托管环境请自行安装。
 - 官方主页：https://www.python.org/
@@ -40,7 +40,7 @@
 
 - `python --version`：确认解释器存在与版本。
 - 运行 `python -B "<技能根>/scripts/check_environment.py"`：确认 status 为 ready（或仅 KP 拓扑排序受影响的 partial）。
-- **五脚本自测**（契约回归口径，唯一事实源 = `skill-dependencies.json` 的 `verification.selftest`）：`python -B "<技能根>/scripts/{task_index,progress_check,scheduler,kp_sort,check_environment}.py" --selftest`，逐一退出码 0；`kp_sort.py` 需 Python ≥ 3.9。
+- **六脚本自测**（契约回归口径，唯一事实源 = `skill-dependencies.json` 的 `verification.selftest`）：`python -B "<技能根>/scripts/{task_index,progress_check,scheduler,kp_sort,check_environment,verify_explanation}.py" --selftest`，逐一退出码 0；`kp_sort.py` 需 Python ≥ 3.9。
 - **人工核验边界（F15）**：无解释器时上述脚本项**不可机器判定**，只能按本指南人工核对并如实标注「部分验证 / 未验证」——**不得谎称已通过脚本验证**；哪些环节可人工核验、何时只给部分验证、何时确需阻断，**一律以 `skill-dependencies.json` 的降级条目为唯一事实源**（下方矩阵为摘要，冲突时以清单为准）。
 
 ## 缺失与故障处理
@@ -59,6 +59,7 @@
 | 间隔调度与校准计算 | 解释器不可用 | 由模型按同一公式手工计算并标注「推断」 | 用户要求可复核的脚本级结论时停止 |
 | KP 拓扑排序与检环 | Python < 3.9 或解释器不可用 | 人工依赖排序并展示理由，标注「未检环」 | 依赖关系复杂且存在环风险时停止并建议升级 |
 | 环境就绪检查 | 解释器不可用 | 按本指南逐项人工核对 | 无法判断必需依赖状态时停止并说明 |
+| 讲义结构校验 | 解释器不可用或脚本不可执行 | 按 `lecture-styles.md`「讲解出厂自检」定稿维度全量人工核对并标注「部分验证」 | 讲义定稿或交付且结构核对无法完成时停止并说明 |
 
 ## 安全与权限
 
@@ -69,5 +70,5 @@
 
 ## 核验记录
 
-- 适用版本：5.5.0
+- 适用版本：5.7.1
 - 核验日期：2026-10-17

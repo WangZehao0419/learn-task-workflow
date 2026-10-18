@@ -5,7 +5,8 @@
     "进度校验与证据验证",
     "间隔调度与校准计算",
     "KP 拓扑排序与检环",
-    "环境就绪检查"
+    "环境就绪检查",
+    "讲义结构校验"
   ],
   "dependencies": [
     {
@@ -18,11 +19,12 @@
         "进度校验与证据验证",
         "间隔调度与校准计算",
         "KP 拓扑排序与检环",
-        "环境就绪检查"
+        "环境就绪检查",
+        "讲义结构校验"
       ],
       "checks": [
         {"id": "python-version", "type": "python", "required": true, "min_version": "3.8",
-         "capabilities": ["任务索引与进度解析", "进度校验与证据验证", "间隔调度与校准计算", "KP 拓扑排序与检环", "环境就绪检查"]},
+         "capabilities": ["任务索引与进度解析", "进度校验与证据验证", "间隔调度与校准计算", "KP 拓扑排序与检环", "环境就绪检查", "讲义结构校验"]},
         {"id": "python-graphlib", "type": "python", "required": false, "min_version": "3.9",
          "capabilities": ["KP 拓扑排序与检环"]}
       ],
@@ -34,10 +36,10 @@
           "非托管环境：从官方下载地址安装 Python 3.9 或更高版本，安装后在终端运行 python --version 确认版本。",
           "检查输出 status 为 ready（或仅 KP 拓扑排序受影响的 partial）即可进入正常流程；needs_setup / unavailable 时按 references/setup-guide.md 处理并重检。"
         ],
-        "verify": "python --version 显示 ≥ 3.8；运行 python -B scripts/check_environment.py 输出 status 为 ready 或可解释的 partial；五个脚本均带 --selftest（task_index / progress_check / scheduler / kp_sort / check_environment），逐一退出码 0。",
+        "verify": "python --version 显示 ≥ 3.8；运行 python -B scripts/check_environment.py 输出 status 为 ready 或可解释的 partial；六个脚本均带 --selftest（task_index / progress_check / scheduler / kp_sort / check_environment / verify_explanation），逐一退出码 0。",
         "security": "无需登录与凭据；不安装、不修改系统配置；检查器只读，不发起网络请求与子进程，无任何网络探测能力。",
         "verified_at": "2026-10-16",
-        "applies_to_version": "5.5.0"
+        "applies_to_version": "5.7.1"
       },
       "degradation": [
         {
@@ -89,6 +91,16 @@
           "evidence_label": "部分验证",
           "recovery": "恢复解释器后重跑 scripts/check_environment.py",
           "stop_condition": "无法判断必需依赖状态时停止并说明"
+        },
+        {
+          "capability": "讲义结构校验",
+          "trigger": "解释器不可用或校验脚本不可执行",
+          "fallback": "人工按 lecture-styles.md「讲解出厂自检」定稿维度全量核对（五要素与纯概念豁免标记、标准答案框体例与紧邻、分层标签、头部指针、记账残留）",
+          "user_input": "待校验的讲义材料目录或单文件",
+          "limitations": "无脚本级结论，仅人工核对，标注「部分验证」",
+          "evidence_label": "部分验证",
+          "recovery": "恢复解释器后重跑 scripts/verify_explanation.py",
+          "stop_condition": "讲义定稿或交付且结构核对无法完成时停止并说明"
         }
       ]
     }
@@ -143,6 +155,16 @@
       "evidence_label": "部分验证",
       "recovery": "恢复检查器后重跑",
       "stop_condition": "无法判断必需依赖状态时停止"
+    },
+    {
+      "capability": "讲义结构校验",
+      "trigger": "解释器不可用或校验脚本不可执行",
+      "fallback": "人工按 lecture-styles.md「讲解出厂自检」定稿维度全量核对（五要素与纯概念豁免标记、标准答案框体例与紧邻、分层标签、头部指针、记账残留）",
+      "user_input": "",
+      "limitations": "无脚本级结论，仅人工核对，标注「部分验证」",
+      "evidence_label": "部分验证",
+      "recovery": "恢复解释器后重跑 scripts/verify_explanation.py",
+      "stop_condition": "讲义定稿或交付且结构核对无法完成时停止并说明"
     }
   ],
   "scripts_contract": [
@@ -179,6 +201,13 @@
       "usage": "[--manifest <路径>] [--capability <名称>]... [--selftest]",
       "exit_codes": {"0": "ready / partial", "1": "needs_setup / unavailable", "2": "清单畸形 manifest_error"},
       "notes": "严格校验清单类型与版本格式（布尔不误收字符串、非法 min_version 与畸形 capabilities 返回结构化诊断）"
+    },
+    {
+      "script": "verify_explanation.py",
+      "usage": "<材料目录或单文件> [--selftest]",
+      "default_behavior": "只读静态校验，不写盘",
+      "exit_codes": {"0": "无 E（可有 W）", "1": "有 E（结构违规）", "2": "用法/路径错误"},
+      "notes": "概念单元级五要素检查（不得全文件计数代替；纯概念标「⑤ 不适用」时②③⑤ 豁免、①④仍查）；定稿区才查判分记账残留，草稿/历史日志合法；「本节自测答案」区不误报"
     }
   ],
   "verification": {
@@ -187,8 +216,9 @@
       "python -B scripts/progress_check.py --selftest",
       "python -B scripts/scheduler.py --selftest",
       "python -B scripts/kp_sort.py --selftest",
-      "python -B scripts/check_environment.py --selftest"
+      "python -B scripts/check_environment.py --selftest",
+      "python -B scripts/verify_explanation.py --selftest"
     ],
-    "note": "五脚本自测覆盖确定性计算与结构校验契约；真实教学回归与故障夹具见批次 E 的 evals。"
+    "note": "六脚本自测覆盖确定性计算与结构校验契约；真实教学回归与故障夹具见批次 E 的 evals。"
   }
 }
