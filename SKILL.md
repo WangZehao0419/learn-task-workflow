@@ -4,7 +4,7 @@ description: 私人家教工作流：把系统学习需求跑成带硬闸口、�
 version: 5.8.0
 description_zh: 带硬闸口、进度落盘、脚本化间隔复习调度、错因归因纠偏、跨会话可续学的中文私人家教工作流，按学科族分流教学法，辅以示范先行（新手先看完整 worked example 再做题、新记号当场讲透）、学习者画像与跨界锚定、条件化出题（考何时用）、讲解契约与出厂自检，并可与独立讲义/出题出口组合使用。以系统学习意图触发；单次问答、单题求解与材料摘要等不触发。
 description_en: A gate-enforced private-tutor workflow for systematic learning — and study-material generation (handouts, practice problem sets, exam papers). It turns a learning goal into a trackable, resumable task stream with on-disk progress, spaced-repetition scheduling, subject-family teaching playbooks, error-cause diagnosis, and a learner profile with crossover anchoring. Triggers on systematic-learning intent; one-off Q&A, single-problem solving, essay ghostwriting, and material summarization do not trigger it. If the host provides a separate teaching workspace or document-production skill, defer to it when the user explicitly invokes it.
-author: 顾全策技能设计专家团
+author: 王责豪
 agent_created: true
 ---
 
