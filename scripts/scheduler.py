@@ -261,7 +261,7 @@ def next_interval(grade, stability=None, difficulty=None, elapsed=None,
 FIELD_RE = re.compile(r"^-\s*([^：:]+)[：:]\s*(.*)$")
 # 输入行已由 parse_progress_sections 剥去「- 」前缀
 WRONG_LINE_RE = re.compile(r"^\[(\d{4}-\d{2}-\d{2})\]\s*(.*)$")
-META_KEYS = ("S=", "D=", "last=", "due=", "信心=", "cw", "顽固", "evt=", "attempt_id=")
+META_KEYS = ("S=", "D=", "last=", "due=", "信心=", "cw", "顽固", "evt=", "attempt_id=", "子类=")
 # ↑ v2.5：`evt=`/`attempt_id=` 也列为元数据挂载标记——仅含 `evt=` 的弱项投影（无 S/D/cw）
 #   此前不被拆出，导致同一次作答的投影无法归组合并（V07/evt_only_partial_projection）。
 # 元数据逐键严格格式（分隔后整 token fullmatch）：只认合法前缀会把 S=3oops 截成 3、
@@ -275,6 +275,7 @@ META_TOKEN_RES = (
     ("due", re.compile(r"due=(\S+)"), _valid_iso),
     ("错因", re.compile(r"错因=(\S+)"),
      lambda g: g if g in ("知识性", "理解性", "技巧性") else None),
+    ("子类", re.compile(r"子类=(\S+)"), lambda g: g),
     ("级", re.compile(r"级=(\S+)"), lambda g: g if g in ("A", "B", "C") else None),
     ("evt", re.compile(r"evt=([A-Za-z0-9_\-]+)"), lambda g: g),
 )
@@ -314,7 +315,7 @@ def parse_meta(meta_text):
     一律记入 `invalid_tokens` 并保持该键为 None（走缺省链），由调用方告警披露。
     """
     meta = {"S": None, "D": None, "last": None, "due": None, "信心": None,
-            "cw": False, "顽固": False, "错因": None, "级": None, "evt": None,
+            "cw": False, "顽固": False, "错因": None, "子类": None, "级": None, "evt": None,
             "invalid_tokens": [], "dup_keys": [], "信心_retro": False}
     tokens = [t for t in re.split(r"[，,;；\s]+", meta_text or "") if t]
     seen = set()
@@ -1166,6 +1167,10 @@ def selftest():
     # 全角优先不受影响：全角行仍按全角括号拆出
     it14c, mt14c = split_weak_item("全角点：正负号（S=2.0，D=3，last=2026-10-09，信心=4，cw）")
     ok = ok and it14c == "全角点：正负号" and mt14c is not None
+    # 断言 14b：子类 token 被识别，不进入 invalid_tokens
+    m14d = parse_meta("S=3.0，D=3，last=2026-10-09，due=2026-10-10，错因=理解性，级=B，子类=过度泛化")
+    ok = ok and m14d["子类"] == "过度泛化"
+    ok = ok and "子类=过度泛化" not in m14d["invalid_tokens"]
 
     # 断言 15：due 锚定「本次复习日」——逾期卡复习后 due 必落在未来，
     # 不得回落到过去日期（旧缺陷：last=2026-10-01 起算 → due=2026-10-10 已是过去）

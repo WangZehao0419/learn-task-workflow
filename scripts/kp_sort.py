@@ -21,7 +21,7 @@
     数值升序出堆——同输入双跑输出逐字节一致（幂等）；禁止依赖 graphlib 迭代序
     （graphlib 仅用于 prepare() 检环，其排序输出不读取不透传）。
   - 路径以显式实参为基准，不依赖 cwd；无任何写盘调用。
-  - Python < 3.9（无 graphlib）显式报「版本不足」，不静默降级。
+  - 解释器版本不足（无 graphlib）时显式报错，不静默降级。
 """
 
 import argparse
@@ -306,8 +306,8 @@ def sort_from_text(text):
     try:
         from graphlib import TopologicalSorter
     except ImportError:
-        return ({"error": "Python 版本不足：kp_sort 需要 Python >= 3.9（graphlib 标准库），"
-                          "当前 " + sys.version.split()[0] + "，不静默降级"}, 1)
+        return ({"error": "Python 版本不足：kp_sort 依赖标准库 graphlib（Python ≥ 3.9），"
+                          "本技能要求 Python ≥ 3.10；当前 " + sys.version.split()[0] + "，不静默降级"}, 1)
     try:
         from graphlib import CycleError as _CycleError
     except ImportError:  # 防御：极旧/改名运行时回退
@@ -483,8 +483,8 @@ def main(argv=None):
     if args.selftest:
         return selftest()
     if sys.version_info < (3, 9):
-        print(json.dumps({"error": "Python 版本不足：kp_sort 需要 Python >= 3.9（graphlib 标准库），"
-                                   "当前 " + sys.version.split()[0] + "，不静默降级"},
+        print(json.dumps({"error": "Python 版本不足：kp_sort 依赖标准库 graphlib（Python ≥ 3.9），"
+                                   "本技能要求 Python ≥ 3.10；当前 " + sys.version.split()[0] + "，不静默降级"},
                          ensure_ascii=False, sort_keys=True))
         return 1
     if not args.kp_list:

@@ -3,7 +3,9 @@
 
 读取包内 skill-dependencies.json 依赖清单，逐项执行检查并输出四状态
 （ready / partial / needs_setup / unavailable）路由结论。当前清单仅含
-python 运行时检查项。检查器全程只读：不写盘、不安装、不发起网络请求。
+python 运行时检查项；声明了但无可检查依赖的能力（学习数据落盘、备料来源
+检索）输出 unmapped_capabilities（not_checkable），不报清单错误。
+检查器全程只读：不写盘、不安装、不发起网络请求。
 """
 
 from __future__ import annotations
@@ -138,14 +140,16 @@ def validate_manifest(manifest: dict[str, Any]) -> None:
                 raise ValueError(f"依赖 {dependency_id} 存在无效检查")
             if check["required"]:
                 required_checks += 1
-            # E02：每个检查声明其影响的能力（供按请求能力计算状态与输出）
+            # E02：check 可声明其影响的能力；省略时继承依赖声明的全部能力。
+            # 但「多检查」必须逐个声明——否则漏声明会默认影响全部，导致过度降级。
             check_capabilities = check.get("capabilities")
-            if (not isinstance(check_capabilities, list) or not check_capabilities
-                    or not all(isinstance(cap, str) and cap for cap in check_capabilities)):
-                raise ValueError(f"依赖 {dependency_id} 的检查 {check_id} 必须声明非空 capabilities 字符串数组")
-            if set(check_capabilities) - declared_capabilities:
-                raise ValueError(f"依赖 {dependency_id} 的检查 {check_id} 引用了未声明功能："
-                                 f"{sorted(set(check_capabilities) - declared_capabilities)}")
+            if check_capabilities is not None:
+                if (not isinstance(check_capabilities, list) or not check_capabilities
+                        or not all(isinstance(cap, str) and cap for cap in check_capabilities)):
+                    raise ValueError(f"依赖 {dependency_id} 的检查 {check_id} 的 capabilities 必须是非空字符串数组")
+                if set(check_capabilities) - declared_capabilities:
+                    raise ValueError(f"依赖 {dependency_id} 的检查 {check_id} 引用了未声明功能："
+                                     f"{sorted(set(check_capabilities) - declared_capabilities)}")
             # E01：min_version 必须为字符串且整体匹配声明格式（fullmatch，不做 str 强转/search）
             if "min_version" in check:
                 min_version = check["min_version"]
@@ -153,6 +157,11 @@ def validate_manifest(manifest: dict[str, Any]) -> None:
                     raise ValueError(f"依赖 {dependency_id} 的检查 {check_id} 的 min_version 无效：{min_version!r}")
             if any(field in check for field in ("auth_env", "auth_header", "auth_scheme")):
                 raise ValueError(f"依赖 {dependency_id} 的检查项不得携带凭据字段")
+        if len(checks) > 1:
+            missing_scope = [c.get("id") for c in checks if not c.get("capabilities")]
+            if missing_scope:
+                raise ValueError(f"依赖 {dependency_id} 含多个检查，以下检查未声明 capabilities：{missing_scope}"
+                                 "——不声明会默认影响全部能力，导致过度降级")
         if dependency.get("required") is True and required_checks == 0:
             raise ValueError(f"必需依赖 {dependency_id} 至少需要一个必需检查")
         setup = dependency.get("setup")
@@ -226,8 +235,8 @@ def select_dependencies(manifest: dict[str, Any], capabilities: set[str]) -> lis
     if unknown:
         raise ValueError(f"请求了清单未声明的功能：{sorted(unknown)}")
     selected = [dependency for dependency in dependencies if capabilities & set(dependency["capabilities"])]
-    if not selected:
-        raise ValueError("当前功能没有关联任何依赖；请修复功能与依赖映射")
+    # 允许为空：能力已声明但无可检查依赖（如「学习数据落盘」「备料来源检索」由宿主/模型侧提供）。
+    # 这类能力由 main 标 not_checkable 并按 functional_degradations 执行，不得报清单错误。
     return selected
 
 
@@ -296,12 +305,21 @@ def selftest() -> int:
     m = base(); m["dependencies"][0]["checks"][0].pop("id"); cases.append(m)               # check.id 缺失
     m = base(); m["dependencies"][0]["checks"].append(                                    # check.id 重复
         {"id": "c1", "type": "python", "required": False, "capabilities": ["功能甲"]}); cases.append(m)
+    m = base(); m["dependencies"][0]["checks"].append(                                    # 多检查漏声明能力
+        {"id": "c2", "type": "python", "required": False, "min_version": "3.9"}); cases.append(m)
     for case in cases:
         try:
             validate_manifest(case)
             ok = False  # 未拒绝即失败
         except ValueError:
             pass
+
+    # 单检查可省略 capabilities（继承依赖范围）；多检查必须逐个声明，见上一条拒绝用例
+    m = base(); m["dependencies"][0]["checks"][0].pop("capabilities")
+    try:
+        validate_manifest(m)
+    except ValueError:
+        ok = False
 
     # check_item：python 版本满足 → ready；parse_version 严格（不被前后缀垃圾/强转蒙混）
     ok = ok and check_item({"id": "p", "type": "python", "required": True,
@@ -318,55 +336,64 @@ def selftest() -> int:
     except ValueError:
         pass
 
-    # E02：按功能请求只降级「受影响能力」——模拟 Python < 3.9，只有请求 KP 才受牵连
+    # 版本判定与按能力降级：3.9 < 最低版本 3.10 → 必需检查失败，整体 unavailable
     from types import SimpleNamespace
     import io
     import contextlib
     saved_sys = sys
     try:
-        globals()["sys"] = SimpleNamespace(version_info=(3, 8, 10))
-        # 单测：python 版本检查按 min_version 严格判定
+        globals()["sys"] = SimpleNamespace(version_info=(3, 9, 18))
         ok = ok and check_item({"id": "v", "type": "python", "required": True,
-                                "min_version": "3.8", "capabilities": ["基础"]})["status"] == "ready"
-        ok = ok and check_item({"id": "g", "type": "python", "required": False,
-                                "min_version": "3.9", "capabilities": ["KP"]})["status"] == "unavailable"
-        # 请求基础能力时，范围外（仅影响 KP）的失败检查不影响状态；请求 KP 时才降级为 partial
+                                "min_version": "3.10", "capabilities": ["基础"]})["status"] == "unavailable"
+        # 可选检查失败只影响它声明的能力（E02 契约，用合成数据保留覆盖）
         ok = ok and dependency_status(
             [{"id": "g", "required": False, "status": "unavailable", "capabilities": ["KP"]}],
             {"基础"}) == "ready"
         ok = ok and dependency_status(
             [{"id": "g", "required": False, "status": "unavailable", "capabilities": ["KP"]}],
             {"KP"}) == "partial"
-        # 端到端：请求基础能力 → ready 且输出不含 KP；请求 KP → 仅 KP 被降级
+        # 端到端：低于最低版本时必需检查失败，整体 unavailable，不得放行
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
-            rc_base = main(["--manifest", str(manifest_path), "--capability", "进度校验与证据验证"])
-        out_base = json.loads(buf.getvalue())
-        ok = ok and rc_base == 0 and out_base["status"] == "ready"
-        ok = ok and all("KP 拓扑排序与检环" not in d["capabilities"] for d in out_base["dependencies"])
-        ok = ok and not out_base["functional_degradations"]
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
-            rc_kp = main(["--manifest", str(manifest_path), "--capability", "KP 拓扑排序与检环"])
-        out_kp = json.loads(buf.getvalue())
-        ok = ok and rc_kp == 0 and out_kp["status"] == "partial"
-        ok = ok and [c for d in out_kp["dependencies"] for c in d["capabilities"]] == ["KP 拓扑排序与检环"]
-        ok = ok and {d["capability"] for d in out_kp["functional_degradations"]} == {"KP 拓扑排序与检环"}
-        # 修复回归：Python 3.8 下仅 python-graphlib（KP 拓扑排序）失败，
-        # 默认全部能力 / 单能力 / 多能力三种请求都必须只降级 KP，共享同一依赖的
-        # 其他能力（如「进度校验与证据验证」）不得被连带降级。
-        for request in ([], ["KP 拓扑排序与检环"], ["进度校验与证据验证", "KP 拓扑排序与检环"]):
-            argv = ["--manifest", str(manifest_path)]
-            for cap in request:
-                argv += ["--capability", cap]
-            buf = io.StringIO()
-            with contextlib.redirect_stdout(buf):
-                rc_multi = main(argv)
-            out_multi = json.loads(buf.getvalue())
-            ok = ok and rc_multi == 0 and out_multi["status"] == "partial"
-            ok = ok and [d["capability"] for d in out_multi["functional_degradations"]] == ["KP 拓扑排序与检环"]
+            rc_old = main(["--manifest", str(manifest_path), "--capability", "进度校验与证据验证"])
+        out_old = json.loads(buf.getvalue())
+        ok = ok and rc_old == 1 and out_old["status"] == "unavailable"
+        ok = ok and not out_old["unmapped_capabilities"]
+        # 检查未声明能力时，降级条目继承依赖范围（本例只剩被请求的进度校验）
+        ok = ok and {d["capability"] for d in out_old["functional_degradations"]} == {"进度校验与证据验证"}
     finally:
         globals()["sys"] = saved_sys
+
+    # 当前解释器（≥3.10）：可检查能力 ready；默认请求因两项不可检查而 partial
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        rc_base = main(["--manifest", str(manifest_path), "--capability", "进度校验与证据验证"])
+    out_base = json.loads(buf.getvalue())
+    ok = ok and rc_base == 0 and out_base["status"] == "ready"
+    ok = ok and not out_base["functional_degradations"]
+    ok = ok and not out_base["unmapped_capabilities"]
+
+    # 默认请求全部能力：仅两项「无可检查依赖」能力，降级集合应恰为两者
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        rc_all = main(["--manifest", str(manifest_path)])
+    out_all = json.loads(buf.getvalue())
+    ok = ok and rc_all == 0 and out_all["status"] == "partial"
+    ok = ok and {d["capability"] for d in out_all["functional_degradations"]} == {
+        "学习数据落盘", "备料来源检索"}
+    ok = ok and {u["capability"] for u in out_all["unmapped_capabilities"]} == {
+        "学习数据落盘", "备料来源检索"}
+
+    # 单请求不可检查能力：不报清单错误，返回 not_checkable + 对应降级，状态 partial
+    ok = ok and select_dependencies(load_json(manifest_path), {"学习数据落盘"}) == []
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        rc_unmapped = main(["--manifest", str(manifest_path), "--capability", "学习数据落盘"])
+    out_unmapped = json.loads(buf.getvalue())
+    ok = ok and rc_unmapped == 0 and out_unmapped["status"] == "partial"
+    ok = ok and out_unmapped["dependencies"] == []
+    ok = ok and [u["capability"] for u in out_unmapped["unmapped_capabilities"]] == ["学习数据落盘"]
+    ok = ok and [d["capability"] for d in out_unmapped["functional_degradations"]] == ["学习数据落盘"]
 
     print(("OK " if ok else "FAIL ") + "check_environment --selftest")
     return 0 if ok else 1
@@ -397,14 +424,19 @@ def main(argv=None) -> int:
     # E02：本次诊断作用域 = 请求能力（为空则视为全部已声明能力）；
     # 状态与输出只按「请求能力 ∩ 失败检查」计算，不波及相关能力。
     scope = set(args.capability) or set(manifest["capabilities"])
+    # 声明了但无可检查依赖的能力（如学习数据落盘、备料来源检索）：不参与 check 判定，
+    # 单独输出 not_checkable，避免「没检查过」被读成「检查通过」。
+    checkable_capabilities: set[str] = set()
+    for dependency in manifest["dependencies"]:
+        checkable_capabilities.update(dependency["capabilities"])
+    unmapped_capabilities = sorted(scope - checkable_capabilities)
 
     results = []
     has_required_missing = False
     has_required_unavailable = False
     has_optional_problem = False
-    # 修复：受影响能力必须来自「失败检查自己声明的 capabilities」，而非整项依赖的
-    # capabilities——python-runtime 依赖覆盖全部五项，若按整项展开，Python 3.8 下仅
-    # python-graphlib 失败却会把五项能力一并误标降级（含本可用的进度校验）。
+    # 受影响能力来自失败检查声明的 capabilities；单检查未声明时继承依赖范围。
+    # 多检查必须逐个声明（validate_manifest 强制），避免漏声明导致过度降级。
     failed_check_capabilities: set[str] = set()
 
     for dependency in dependencies:
@@ -424,7 +456,9 @@ def main(argv=None) -> int:
         failures = [item for item in scoped_checks if item["status"] != "ready"]
         # 修复：累积「失败检查自身声明的能力」∩「请求范围」，供后续精确生成降级列表
         for failure in failures:
-            failed_check_capabilities.update(cap for cap in failure["capabilities"] if cap in scope)
+            # 检查未声明能力时继承依赖范围（单检查场景）；多检查则校验器已强制逐个声明
+            caps = failure["capabilities"] or dependency["capabilities"]
+            failed_check_capabilities.update(cap for cap in caps if cap in scope)
         item = {
             "id": dependency["id"],
             "type": dependency["type"],
@@ -443,7 +477,7 @@ def main(argv=None) -> int:
         status = "needs_setup"
     elif has_required_unavailable:
         status = "unavailable"
-    elif has_optional_problem:
+    elif has_optional_problem or unmapped_capabilities:
         status = "partial"
     else:
         status = "ready"
@@ -451,15 +485,21 @@ def main(argv=None) -> int:
     visible_results = results if status == "ready" else [item for item in results if item["status"] != "ready"]
     # 修复：功能降级只列「失败检查声明的能力 ∩ 请求范围」，不再按可见依赖的整项能力展开，
     # 保证仅真正受失败检查牵连的能力被降级，其余请求到的能力保持可用。
-    visible_functional_degradations = [item for item in manifest["functional_degradations"] if item["capability"] in failed_check_capabilities] if status != "ready" else []
+    affected_capabilities = set(failed_check_capabilities) | set(unmapped_capabilities)
+    visible_functional_degradations = [item for item in manifest["functional_degradations"] if item["capability"] in affected_capabilities] if status != "ready" else []
     output = {
         "status": status,
         "requested_capabilities": args.capability,
         "dependencies": visible_results,
+        "unmapped_capabilities": [
+            {"capability": capability, "status": "not_checkable", "reason_code": "no_dependency",
+             "note": "清单未声明可检查依赖；按 functional_degradations 执行，不得声称已验证"}
+            for capability in unmapped_capabilities
+        ],
         "functional_degradations": visible_functional_degradations,
         "next_action": {
             "ready": "跳过配置引导，进入正常流程",
-            "partial": "进入可用流程，只说明受影响功能、限制和降级",
+            "partial": "进入可用流程，只说明受影响或不可机器检查的功能、限制和降级",
             "needs_setup": "只展示缺失必需项的配置步骤，完成后重新检查",
             "unavailable": "展示结构化故障原因、恢复步骤和安全降级",
         }[status],

@@ -126,6 +126,8 @@ ENUM_START = ["零基础", "入门", "进阶"]
 DIAG_PREFIXES = ("00-", "0-")   # S1 摸底证据专号（exercises/00-摸底-<日期>.md）
 FINAL_PREFIXES = ("99-",)       # S5 结课综合测验专号（exercises/99-结课综合测验-<日期>.md）
 GATE_RATIO = 2.0 / 3.0          # S3 小节验收默认通过线：≥2/3
+FINAL_RATIO = 4.0 / 5.0         # S5 结课综合测验默认目标线：4/5（备考型可在测验文件写「目标线：a/b」覆盖）
+TARGET_RE = re.compile(r"目标线[：:]\s*(\d+(?:\.\d+)?)\s*/\s*(\d+(?:\.\d+)?)")
 ANSWER_RE = re.compile(r"作答[「\"'（(]([^」\"'）)]*)[」\"'）)]")
 ALT_ANSWER_RE = re.compile(r"答案[：:]\s*([^｜|，,]+)")
 RESTATE_RE = re.compile(r"复述")
@@ -331,7 +333,19 @@ def has_graded_pool(text):
                for a in parse_attempts(text)["attempts"])
 
 
-def gate_evidence(ev_text, require_restatement=True, require_independence=True):
+def parse_target_ratio(ev_text):
+    """解析「目标线：a/b」；返回 (ratio, label) 或 None。非法值返回 None。"""
+    m = TARGET_RE.search(ev_text or "")
+    if not m:
+        return None
+    num, den = float(m.group(1)), float(m.group(2))
+    if den <= 0 or num < 0 or num > den:
+        return None
+    return num / den, "目标线 " + m.group(1) + "/" + m.group(2)
+
+
+def gate_evidence(ev_text, require_restatement=True, require_independence=True,
+                  min_ratio=GATE_RATIO, ratio_label="小节验收默认线 2/3"):
     """严格模式闸口判定：返回 [(error_code, message)]（空列表=达标）。
 
     口径（对齐 phases-and-gates「小节验收」）：真实作答 + 同题完整判定 + 独立性枚举
@@ -373,10 +387,10 @@ def gate_evidence(ev_text, require_restatement=True, require_independence=True):
     if correct and not independent_correct:
         errs.append(("E-HINT-ONLY",
                      "正确项全部依赖提示（无独立正确）——不得据此声称独立掌握"))
-    if (len(correct) / len(dedup)) < GATE_RATIO:
+    if (len(correct) / len(dedup)) < min_ratio:
         errs.append(("E-GATE-THRESHOLD",
                      "正确率 " + str(len(correct)) + "/" + str(len(dedup))
-                     + " 低于小节验收默认线 2/3"))
+                     + " 低于" + ratio_label))
     # 逐关键能力独立通过（V04）：声明了关键能力清单时，每项都要有**独立**正确记录
     abilities = parse_key_abilities(ev_text)
     if abilities:
@@ -1119,14 +1133,30 @@ def check(task_dir, release=False, proposed=None):
             else:
                 ftext = _read_evidence(ex_dir, fin)
                 # 结课证据合同不同于小节：另按真实分值与目标线，不套「复述 / 逐关键能力独立」
+                target = parse_target_ratio(ftext)
+                final_ratio = target[0] if target else FINAL_RATIO
+                final_label = target[1] if target else "结课默认目标线 4/5"
+                mapped_errs = []
                 for fcode, fmsg in gate_evidence(ftext, require_restatement=False,
-                                                require_independence=False):
+                                                require_independence=False,
+                                                min_ratio=final_ratio,
+                                                ratio_label=final_label):
                     mapped = {"E-NO-GRADED-ATTEMPT": "E-FINAL-NO-EVIDENCE",
                               "E-ATTEMPT-CONFLICT": "E-FINAL-ATTEMPT-CONFLICT",
                               "E-ALL-FAILED": "E-FINAL-BELOW-TARGET",
                               "E-HINT-ONLY": "E-FINAL-BELOW-TARGET",
                               "E-GATE-THRESHOLD": "E-FINAL-BELOW-TARGET"}.get(fcode, fcode)
-                    errors.append({"code": mapped, "message": "结课综合测验 " + fin + "：" + fmsg})
+                    mapped_errs.append({"code": mapped,
+                                        "message": "结课综合测验 " + fin + "：" + fmsg})
+                # 同一结课码只报一次：0 对 1 时 E-ALL-FAILED 与 E-GATE-THRESHOLD 会同码，
+                # 保留信息更具体的比例行（后者），避免同一件事显示两遍（拦停语义不变）
+                dedup_final, seen_codes = [], set()
+                for e in reversed(mapped_errs):
+                    if e["code"] in seen_codes:
+                        continue
+                    seen_codes.add(e["code"])
+                    dedup_final.append(e)
+                errors.extend(reversed(dedup_final))
                 gap = [k for k in included_kp_ids if k not in ftext]
                 if gap:
                     errors.append({"code": "E-FINAL-BLUEPRINT-GAP",
@@ -1770,6 +1800,37 @@ def selftest():
                     {"exercises/01-变量-2026-01-01.md": EV_OK,
                      "exercises/99-结课综合测验-2026-01-01.md": EV_OK})
         ok = ok and check(d40b, release=True)["ok"]
+
+        def _final_ev(correct, total):
+            rows = ["## 作答与判分"]
+            for i in range(1, total + 1):
+                good = i <= correct
+                rows.append(f"- 题{i}：作答「{i}」｜正确性={'对' if good else '错'}"
+                            f"｜独立性=独立｜调度档={'Good' if good else 'Again'}")
+            return "\n".join(rows) + "\n"
+
+        # ㊵b 结课默认目标线 4/5：7/10 不得放行；声明「目标线：7/10」后才放行
+        d40c = _mk2("r01-done-7of10", DONE_HEAD + "## 学习路线\n- [x] 1. 变量\n",
+                    {"exercises/01-变量-2026-01-01.md": EV_OK,
+                     "exercises/99-结课综合测验-2026-01-01.md": _final_ev(7, 10)})
+        r40c = check(d40c, release=True)
+        ok = ok and (not r40c["ok"]) and any(
+            e["code"] == "E-FINAL-BELOW-TARGET" for e in r40c["errors"])
+
+        d40d = _mk2("r01-done-7of10-target", DONE_HEAD + "## 学习路线\n- [x] 1. 变量\n",
+                    {"exercises/01-变量-2026-01-01.md": EV_OK,
+                     "exercises/99-结课综合测验-2026-01-01.md":
+                         _final_ev(7, 10) + "\n目标线：7/10\n"})
+        r40d = check(d40d, release=True)
+        ok = ok and r40d["ok"]
+
+        # ㊵c 结课 0/1：E-ALL-FAILED 与 E-GATE-THRESHOLD 同码，只报一次（保留比例行）
+        d40e = _mk2("r01-done-0of1", DONE_HEAD + "## 学习路线\n- [x] 1. 变量\n",
+                    {"exercises/01-变量-2026-01-01.md": EV_OK,
+                     "exercises/99-结课综合测验-2026-01-01.md": _final_ev(0, 1)})
+        r40e = check(d40e, release=True)
+        below = [e for e in r40e["errors"] if e["code"] == "E-FINAL-BELOW-TARGET"]
+        ok = ok and (not r40e["ok"]) and len(below) == 1 and "正确率 0/1" in below[0]["message"]
         # ㊶ 已完成但清单纳入口径下仍有「未讲」关键能力 KP → E-CORE-UNLEARNED
         KPLIST_CORE = ("# 知识清单：示例\n- 版本：1\n- 对照源：自拟总纲\n"
                        "- 排序规则：拓扑序\n- 覆盖范围：全量\n- 最近更新：2026-01-01\n"

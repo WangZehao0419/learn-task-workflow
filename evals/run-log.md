@@ -397,3 +397,20 @@ mutation-check: 11/11 mutations detected
 回放检查项（六维）：入口路由 / 教学动作 / 闸口真实性 / 落盘正确性 / 恢复可用性 / 用户负担。
 
 优先回放清单（对应 evals.json unrun 条目）：E01–E05（教学正确性）、E08（常规授权）、E10（正常下课）、E14（模考高分非满分）、E16（图错核验）、E17（教法裁决作用域）、E24（无陪学意图不建档）、E27（更新回补检查——模型侧行为，机器侧无实现，须由真实教学会话回放 + 独立评分判定）。
+
+### run_id: v580-design-note（2026-10-18）
+
+- 技能版本：5.8.0（计划）
+- 状态：**未运行**；本节只是用例设计说明，不构成任何通过证据。
+- 新增用例：E36–E46（深度契约/提示泄漏/冲刺姿态/卡壳/过度泛化/备料/续学回忆/安全边界/学习简报/现象→符号/计划一句话+D-B）。
+- 说明：E36–E46 的 `actual_output` / `run_id` / `scores` 均为 null，`verdict` 保持「未验证」；待真实会话回填后由独立评分者按五轴打分。
+- 相关规则源：`lecture-styles.md`「深度契约」、`teaching-loop.md` 第 2.1/4/7/9 节、`redlines.md` SR-8、`phases-and-gates.md` S0/S2/S3/S4、`data-and-recovery.md` 快捷指令/异常分支。
+
+### run_id: v580-selftest-20261018
+
+- 类型：machine（脚本自检；非真实教学回放）
+- 技能版本：5.8.0
+- 命令：`python scripts/<name>.py --selftest`（check_environment / kp_sort / progress_check / scheduler / task_index / verify_explanation）
+- 实际输出：六个脚本全部退出码 0
+- 结构校验：`skill_ops.py validate` 退出码 1，11 条**既有告警**（`.trae` 开发稿 4 条、`methodology.md` 证据等级词误判 3 条、`skill-dependencies.json` 自定义 schema 4 条）；本次改动未新增 error
+- 边界：未跑真实教学会话；E36–E46 仍为「未验证」，不得据本节声明教学效果通过

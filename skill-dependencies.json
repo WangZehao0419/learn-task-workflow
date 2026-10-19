@@ -6,7 +6,9 @@
     "间隔调度与校准计算",
     "KP 拓扑排序与检环",
     "环境就绪检查",
-    "讲义结构校验"
+    "讲义结构校验",
+    "学习数据落盘",
+    "备料来源检索"
   ],
   "dependencies": [
     {
@@ -23,23 +25,20 @@
         "讲义结构校验"
       ],
       "checks": [
-        {"id": "python-version", "type": "python", "required": true, "min_version": "3.8",
-         "capabilities": ["任务索引与进度解析", "进度校验与证据验证", "间隔调度与校准计算", "KP 拓扑排序与检环", "环境就绪检查", "讲义结构校验"]},
-        {"id": "python-graphlib", "type": "python", "required": false, "min_version": "3.9",
-         "capabilities": ["KP 拓扑排序与检环"]}
+        {"id": "python-version", "type": "python", "required": true, "min_version": "3.10"}
       ],
       "setup": {
         "official_home_url": "https://www.python.org/",
         "official_docs_url": "https://docs.python.org/3/",
         "steps": [
           "托管环境：解释器由平台托管，通常无需操作；直接运行 python \"<技能根>/scripts/check_environment.py\" 完成检查。",
-          "非托管环境：从官方下载地址安装 Python 3.9 或更高版本，安装后在终端运行 python --version 确认版本。",
+          "非托管环境：从官方下载地址安装 Python 3.10 或更高版本，安装后在终端运行 python --version 确认版本。",
           "检查输出 status 为 ready（或仅 KP 拓扑排序受影响的 partial）即可进入正常流程；needs_setup / unavailable 时按 references/setup-guide.md 处理并重检。"
         ],
-        "verify": "python --version 显示 ≥ 3.8；运行 python -B scripts/check_environment.py 输出 status 为 ready 或可解释的 partial；六个脚本均带 --selftest（task_index / progress_check / scheduler / kp_sort / check_environment / verify_explanation），逐一退出码 0。",
+        "verify": "python --version 显示 ≥ 3.10；运行 python -B scripts/check_environment.py 输出 status 为 ready 或可解释的 partial；六个脚本均带 --selftest（task_index / progress_check / scheduler / kp_sort / check_environment / verify_explanation），逐一退出码 0。",
         "security": "无需登录与凭据；不安装、不修改系统配置；检查器只读，不发起网络请求与子进程，无任何网络探测能力。",
-        "verified_at": "2026-10-16",
-        "applies_to_version": "5.7.1"
+        "verified_at": "2026-10-20",
+        "applies_to_version": "5.8.0"
       },
       "degradation": [
         {
@@ -74,12 +73,12 @@
         },
         {
           "capability": "KP 拓扑排序与检环",
-          "trigger": "Python < 3.9 或解释器不可用",
+          "trigger": "解释器不可用或脚本不可执行",
           "fallback": "人工依赖排序并展示理由（不跑脚本、不检环），标注「未验证」",
           "user_input": "确认接受降级排序",
           "limitations": "不检环，环形依赖无法自动发现；排序合法性仅人工判断",
           "evidence_label": "未验证",
-          "recovery": "升级到 Python 3.9 及以上后重跑 scripts/kp_sort.py",
+          "recovery": "恢复解释器后重跑 scripts/kp_sort.py",
           "stop_condition": "依赖关系复杂且存在环风险时停止并建议升级"
         },
         {
@@ -165,6 +164,26 @@
       "evidence_label": "部分验证",
       "recovery": "恢复解释器后重跑 scripts/verify_explanation.py",
       "stop_condition": "讲义定稿或交付且结构核对无法完成时停止并说明"
+    },
+    {
+      "capability": "学习数据落盘",
+      "trigger": "工作区只读、写入被拒或数据根不可写",
+      "fallback": "改为对话内推进：给出 progress.md 进度块与判分记录的完整文本，请用户在自选可写位置留档，并明确说明本轮未落盘",
+      "user_input": "可写路径（如有），或用户手动留档的确认",
+      "limitations": "跨会话续学、闸口校验与结课结论均无磁盘证据；不得声称已保存",
+      "evidence_label": "未验证",
+      "recovery": "恢复写权限后在可写路径重建数据根并补落盘",
+      "stop_condition": "需正式闸口放行、结课结论或可复核证据时停止并说明"
+    },
+    {
+      "capability": "备料来源检索",
+      "trigger": "无网络、检索工具不可用或未返回可用来源",
+      "fallback": "不建 materials/00-备课来源.md 台账；路线按通用脉络自拟，并在 S2 对照结论显式标注「无外部基准」",
+      "user_input": "可选：用户提供的教材、大纲或真题",
+      "limitations": "路线完备性无外部背书；覆盖对照只能按自拟总纲计，不得声称已按考纲核对",
+      "evidence_label": "未验证",
+      "recovery": "恢复检索或用户提供材料后补台账并重做覆盖对照",
+      "stop_condition": "用户要求以官方大纲/真题为准且无任何材料时停止并说明"
     }
   ],
   "scripts_contract": [
@@ -193,14 +212,14 @@
     {
       "script": "kp_sort.py",
       "usage": "<清单文件> [--selftest]",
-      "exit_codes": {"0": "正常", "1": "畸形行 / 依赖环 / Python<3.9 / 疑似解析失败"},
+      "exit_codes": {"0": "正常", "1": "畸形行 / 依赖环 / 解释器版本不足 / 疑似解析失败"},
       "notes": "空合法清单与疑似解析失败分离；KP 编号别名归一（KP-1-1 ≡ KP-01-01）；环路径输出稳定"
     },
     {
       "script": "check_environment.py",
       "usage": "[--manifest <路径>] [--capability <名称>]... [--selftest]",
       "exit_codes": {"0": "ready / partial", "1": "needs_setup / unavailable", "2": "清单畸形 manifest_error"},
-      "notes": "严格校验清单类型与版本格式（布尔不误收字符串、非法 min_version 与畸形 capabilities 返回结构化诊断）"
+      "notes": "严格校验清单类型与版本格式（布尔不误收字符串、非法 min_version 与畸形 capabilities 返回结构化诊断）；声明了但无可检查依赖的能力输出 unmapped_capabilities（not_checkable），不报清单错误"
     },
     {
       "script": "verify_explanation.py",
