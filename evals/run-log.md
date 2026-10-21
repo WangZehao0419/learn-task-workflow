@@ -513,3 +513,45 @@ mutation-check: 11/11 mutations detected
   - 新增「其余族的最小形态」：语言 / 编程 / 理科计算与化学 / 文科与记忆（按点给分）/ 理论（案例）/ 精读 六类各 3–13 行 ⑤ 片段（篇幅从简），只演示段结构
 - 实测：数学完整范例与六类片段（语言 Prompt/Model answer、编程 任务/代码/输出、物理公式代入、化学 `->` 配平、文科 `答：①②③` 每点一段、理论 `结论/依据/适用` 三段、精读 原文/参考概括/原文定位；理科计算与化学各一份样例）逐份落成讲义跑 `verify_explanation`，全部 0 违规；六脚本 --selftest 全 0；契约 56/56；`git diff --check` 0；`validate` 6 条既有告警
 - 边界：无真实对话回放；片段是格式参照，不构成教学效果证据
+
+### run_id: v59-five-element-rekey（2026-10-22）
+
+- 技能版本：5.10.0（工作区，未提交）
+- 覆盖场景：五要素重编号后的机器侧结构验证（EXP-01/05、E47–E49、E53 的判分标准已同步改写）
+- 执行方式：临时目录 + 真实脚本调用（非对话回放）
+
+#### 结果
+
+- `verify_explanation.py --selftest`：全 OK（终检后 73 项）（含旧编号单条报错、③ 标记行带内容、单步答案一段、③④⑤ 豁免口径）
+- 八族最小讲义（数学 / 语言 / 编程 / 物理 / 化学 / 文科 / 理论 / 精读）各 1 份，目录校验退出码 0、零违规
+- 旧编号讲义：恰 1 条 `E-MARKER-LEGACY`，不叠加 `E-REQ-MISSING` / `E-BOX-INCOMPLETE`；关掉拦截的对照跑为 2 条
+- 其余 5 个脚本 `--selftest` 全 0；`evals/verify-formula-typesetting.py` 56/56；`git diff --check` 0；`skill_ops.py validate` 6 条既有告警
+
+#### 边界
+
+- 无真实对话回放：EXP-01/05、E47–E55 仍为「未验证」；本次只改判分标准措辞，不构成教学效果证据
+- 新增规则（`E-MARKER-LEGACY` / `W-MARKER-CONTENT` / ⑤ 小结必检 / ③ 框不写题面段）尚无对应 eval 用例
+#### 追记：W-BOX-WRAP 降噪（同日）
+
+- 用户决定「降噪」：取消普通段内多行的提示，规则码 20 → 19；`E-BOX-WRAP` 保留（仅拆断 `$…$` / code span 时报）。
+- 改判据落点：`lecture-styles.md`「框内分段」注明脚本不提示、归出厂自检 2.1 人工核对；脚本 docstring 规则表、`SKILL.md`、`skill-dependencies.json`、E53 判分标准同步。
+- selftest 断言改为「多步挤一段 → 零 findings」，仍全 OK（终检后 73 项）；实测三例：多步挤一段 0、拆断公式 1 条 E、正常分段 0。
+- 三风格实写复测（费曼卡 / 考试冲刺卡 / 对比辨析卡，含检验列表行、多 ③ 框、纯概念豁免样态）：修正卡片布局说明后全部零违规；此前冲刺卡 / 辨析卡各报 1 条假「缺 ③」，根因是 `## 本节自测答案` 等标题把 ③ 切出概念单元。
+
+### run_id: marker-rules-5.10.0-20261022-machine（2026-10-22）
+
+- 技能版本：5.10.0（工作区，未提交）
+- 覆盖场景：五要素新编号五项规则的机器侧行为验证——E56（旧编号单因单报）、E57（③ 标记行留空）、E58（⑤ 小结必检、豁免不连带）、E59（标记行行首锚定）、E60（多题单元答案框）
+- 执行方式：`evals/verify-marker-rules.py`（新增，stdlib-only）——临时目录构造 14 份讲义夹具，子进程真实运行 `scripts/verify_explanation.py` 全 CLI 路径，断言退出码与违规码
+
+#### 结果
+
+- 行为契约 19 项全 OK（组 1 五项 / 组 2 四项 / 组 3 三项 / 组 4 三项 / 组 5 四项）
+- 关键断言：旧格式恰 1 条 E-MARKER-LEGACY 且不叠加缺项/框体例、退出码 1；仅 W 时退出码 0；纯概念豁免不连带豁免 ⑤；正文提及「见 ③ 答案」不误判；题号 + 占位答案仍报 E-BOX-EMPTY
+- evals.json：cases 60 → 65（E56–E60，kind: machine，verdict 未验证待独立评分）；machine_evidence_ref 登记新脚本；updated_at 2026-10-22
+- 连带修正：`verify-formula-typesetting.py` 5.10 的 updated_at 钉死值 2026-10-21 → 2026-10-22（evals.json 当日合法更新），契约恢复 56/56
+- 其余：六脚本 selftest 全 0；`git diff --check` 0；`skill_ops validate` 6 条既有告警
+
+#### 边界
+
+- 本运行只证明「脚本对五项新规则的判定行为符合判分标准」，不构成教学效果证据；E56–E60 verdict 保持「未验证」，待独立评分者复核
