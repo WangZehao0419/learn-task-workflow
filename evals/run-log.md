@@ -600,3 +600,25 @@ mutation-check: 11/11 mutations detected
 - 分型验收只对 `知识清单.md` 中声明了类型/视觉任务的 KP 生效；旧清单缺字段仍走统一闸口，不能据此声称旧任务已做分型
 - 模块目标/材料覆盖是结构提示（W 级），不替代教学判断；材料是否真正匹配模块仍需模型/用户核对
 - 未做真人对话回放；E64–E65 verdict 保持「未验证」
+
+### run_id: v620-selftest-20261022（2026-10-22）
+
+- 技能版本：6.2.0
+- 覆盖场景：E66（v6.2 文档契约）、E67（续学先读交接与学习记录）、E68（ask hint）、E69（来源备课与讲授证据）、E70（选项/答案键规则）
+- 执行方式：E66 为静态文档契约脚本；E67–E70 为待真实回放的人类场景（当前未验证）
+
+#### 结果
+
+- `evals/verify-v62-docs.py`：17/17 OK，退出码 0（版本、DeepTutor 归因、交接/记录/证据、记忆纪律、ask hint、来源备课、选项规则、E66–E69 登记）
+- 文档契约变异 5/5：移除 ask hint、移除记忆写法纪律、移除选项规则、改错版本、移除 DeepTutor 归因，均被脚本抓住
+- 其余六脚本 `--selftest` 全 0；`evals/verify-formula-typesetting.py` 56/56；`evals/verify-marker-rules.py` 19/19
+- 集成自检：含「本次交接/学习记录/讲授证据」三区的临时 task，`progress_check` exit 0 且无 E，`task_index` scan_status=ok、tasks=1（新分区不被旧脚本误判）
+- evals.json：cases 70 → 75（E66 machine + E67–E70 human，verdict 未验证）；applies_to_version 6.2.0；machine_evidence_ref 已登记文档契约
+- 文档：SKILL.md / data-and-recovery.md / phases-and-gates.md / teaching-loop.md / lecture-styles.md / skill-dependencies.json / CREDITS.md / setup-guide.md 已同步「交接/学习记录/讲授证据、记忆纪律、ask hint、来源备课、选项规则」
+- `git diff --check`：0
+
+#### 边界
+
+- 文档契约只证明“规则已写入对应分册”，不证明模型在真实对话中会执行；E66 不能替代教学效果证据
+- E67–E70 仍是人类场景，未做真实回放；verdict 保持「未验证」
+- v6.2 不新增脚本闸口，旧任务仍零迁移

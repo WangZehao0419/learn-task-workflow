@@ -1,7 +1,7 @@
 {
  "schema": "ltw-evals/2",
  "skill": "learn-task-workflow",
- "applies_to_version": "6.1.0",
+ "applies_to_version": "6.2.0",
  "updated_at": "2026-10-22",
  "grading_axes": [
   "教学正确性",
@@ -58,9 +58,9 @@
   },
   "阻断规则": "阻断型用例的学科内容/结构渲染/边界必须为 2，其他适用项不得低于 1。"
  },
- "run_log_ref": "evals/run-log.md（「运行记录」节，run_id: v610-selftest-20261022；历史 v6.0 见 v600-selftest-20261022；公式基线见 formula-typesetting-5.5.0-20261017-static）",
+ "run_log_ref": "evals/run-log.md（「运行记录」节，run_id: v620-selftest-20261022；历史 v6.1/v6.0 见 v610-selftest-20261022 / v600-selftest-20261022；公式基线见 formula-typesetting-5.5.0-20261017-static）",
  "run_log_note": "真实陪学运行日志尚未产出。待最终机制版本完成后，以同材料、同学员作答序列重跑，并把 actual_output / run_id / scores 回填本文件；未回填者保持「未验证」。",
- "machine_evidence_ref": "包内 scripts/*.py --selftest（六脚本，含讲义结构校验 verify_explanation.py：shaanxi-gaoshu materials 校验通过、退出码 0）；evals/verify-formula-typesetting.py（公式呈现静态契约 56 项检查、退出码 0；属静态证据，非渲染验证）；包外验收复现与真实教学日志不作为技能包运行依赖；evals/verify-marker-rules.py（五要素新编号规则行为契约 19 项检查、退出码 0；临时目录夹具真实运行 verify_explanation.py，属行为级静态证据，非对话回放）；v6.0 追加：scheduler --selftest 断言 2b/7b（同会话抑制、保持复习 reason、ltw-due-queue/3）与 progress_check --selftest 四态组（partial/ungraded/void）均退出码 0；v6.1 追加：progress_check --selftest 分型组（E-KP-TYPED-GATE）与大纲契约/intake 组（W-MODULE-* / E-ENUM-STRATEGY）退出码 0、kp_sort --selftest 分型字段夹具退出码 0；上述 56 项公式契约仍为基线。",
+ "machine_evidence_ref": "包内 scripts/*.py --selftest（六脚本，含讲义结构校验 verify_explanation.py：shaanxi-gaoshu materials 校验通过、退出码 0）；evals/verify-formula-typesetting.py（公式呈现静态契约 56 项检查、退出码 0；属静态证据，非渲染验证）；包外验收复现与真实教学日志不作为技能包运行依赖；evals/verify-marker-rules.py（五要素新编号规则行为契约 19 项检查、退出码 0；临时目录夹具真实运行 verify_explanation.py，属行为级静态证据，非对话回放）；v6.0 追加：scheduler --selftest 断言 2b/7b（同会话抑制、保持复习 reason、ltw-due-queue/3）与 progress_check --selftest 四态组（partial/ungraded/void）均退出码 0；v6.1 追加：progress_check --selftest 分型组（E-KP-TYPED-GATE）与大纲契约/intake 组（W-MODULE-* / E-ENUM-STRATEGY）退出码 0、kp_sort --selftest 分型字段夹具退出码 0；v6.2 追加：evals/verify-v62-docs.py 文档契约（交接/记录/证据、记忆纪律、ask hint、来源备课、选项规则、版本与 E66–E69 登记）退出码 0；上述 56 项公式契约仍为基线。",
  "dialogues_ref": "evals/对话对照-批次B.md（设计摘要，非运行日志；真实新旧对照须另附运行输出）",
  "cases": [
   {
@@ -1096,6 +1096,72 @@
    "verdict": "未验证",
    "reviewer": null,
    "machine_ref": "scripts/progress_check.py --selftest v6.1 契约组；2026-10-22 运行退出码 0"
+  },
+  {
+   "id": "E66",
+   "scenario": "v6.2 文档契约",
+   "kind": "machine",
+   "prompt": "检查 v6.2 规则是否真正写入对应分册：交接/学习记录/讲授证据、记忆写法纪律、ask hint、来源备课、选项/答案键规则、版本与 eval 登记。",
+   "fixture": "仓库当前 SKILL.md / references / CREDITS.md / setup-guide.md / skill-dependencies.json / evals.json。",
+   "pass_condition": "verify-v62-docs.py 全项 OK、退出码 0；版本四处为 6.2.0；交接/记录/证据三区、记忆纪律、ask hint、来源备课、选项规则均能在对应分册中定位；E66–E69 已登记。",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null,
+   "machine_ref": "evals/verify-v62-docs.py；2026-10-22 运行退出码 0"
+  },
+  {
+   "id": "E67",
+   "scenario": "续学先读交接与学习记录",
+   "kind": "human",
+   "prompt": "给一份含「本次交接：总结/下次先做/未解决」与 2 条「学习记录」的 progress.md，学员隔周说「继续学习」。",
+   "fixture": "progress.md 含上次卡点与已判低效的讲法；本次目标仍是同一小节。",
+   "pass_condition": "开场先复述上次卡点与下次先做；不重复已判低效的讲法；没有新洞察时不硬写学习记录；不把任务级记录误当跨任务画像。",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null
+  },
+  {
+   "id": "E68",
+   "scenario": "卡壳时给可问的问题",
+   "kind": "human",
+   "prompt": "学员说「我没思路，也不知道该问你什么」，题干是解一元二次不等式。",
+   "fixture": "本节已讲判别式与图像法，学员尚未动笔。",
+   "pass_condition": "给出 1 个第一人称、≤25 字、以问号结尾、不泄答案的问题（如「为什么这里要先看判别式？」）；不直接给解法；不连续追问；问题不重复上一轮已答内容。",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null
+  },
+  {
+   "id": "E69",
+   "scenario": "来源备课与讲授证据",
+   "kind": "human",
+   "prompt": "学员问一个教材里只有半页、但图表关键的物理概念；导师先查材料再讲。",
+   "fixture": "材料含该页原文与图，但缺少一个边界条件。",
+   "pass_condition": "讲授前先定位页码/原文/图；只讲材料覆盖的部分；缺失边界如实说明或一次定向补查；讲完的「讲授证据」只逐字引用已公开讲出的内容并带来源，不把计划/思考/来源原文当已讲，不声称已掌握。",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null
+  },
+  {
+   "id": "E70",
+   "scenario": "选项与答案键规则",
+   "kind": "human",
+   "prompt": "给一道四选一概念题，要求按 v6.2 规则出题并在学员作答后批改。",
+   "fixture": "正确项与三个误区干扰项长度相近；正确项不在固定位置。",
+   "pass_condition": "展示前打乱选项；题干/解析不引用 A/B/C/D；批改前不显示答案键；每题有解析与难度；正确项不更长、不带推荐标记、不按正确性排序；干扰项对应具体误区。",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null
   }
  ]
 }
