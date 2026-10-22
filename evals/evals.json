@@ -1,8 +1,8 @@
 {
  "schema": "ltw-evals/2",
  "skill": "learn-task-workflow",
- "applies_to_version": "6.2.0",
- "updated_at": "2026-10-22",
+ "applies_to_version": "6.3.0",
+ "updated_at": "2026-10-23",
  "grading_axes": [
   "教学正确性",
   "目标匹配",
@@ -58,9 +58,9 @@
   },
   "阻断规则": "阻断型用例的学科内容/结构渲染/边界必须为 2，其他适用项不得低于 1。"
  },
- "run_log_ref": "evals/run-log.md（「运行记录」节，run_id: v620-selftest-20261022；历史 v6.1/v6.0 见 v610-selftest-20261022 / v600-selftest-20261022；公式基线见 formula-typesetting-5.5.0-20261017-static）",
+ "run_log_ref": "evals/run-log.md（「运行记录」节，run_id: v630-selftest-20261023；历史 v6.2/v6.1/v6.0 见 v620-selftest-20261022 / v610-selftest-20261022 / v600-selftest-20261022；公式基线见 formula-typesetting-5.5.0-20261017-static）",
  "run_log_note": "真实陪学运行日志尚未产出。待最终机制版本完成后，以同材料、同学员作答序列重跑，并把 actual_output / run_id / scores 回填本文件；未回填者保持「未验证」。",
- "machine_evidence_ref": "包内 scripts/*.py --selftest（六脚本，含讲义结构校验 verify_explanation.py：shaanxi-gaoshu materials 校验通过、退出码 0）；evals/verify-formula-typesetting.py（公式呈现静态契约 56 项检查、退出码 0；属静态证据，非渲染验证）；包外验收复现与真实教学日志不作为技能包运行依赖；evals/verify-marker-rules.py（五要素新编号规则行为契约 19 项检查、退出码 0；临时目录夹具真实运行 verify_explanation.py，属行为级静态证据，非对话回放）；v6.0 追加：scheduler --selftest 断言 2b/7b（同会话抑制、保持复习 reason、ltw-due-queue/3）与 progress_check --selftest 四态组（partial/ungraded/void）均退出码 0；v6.1 追加：progress_check --selftest 分型组（E-KP-TYPED-GATE）与大纲契约/intake 组（W-MODULE-* / E-ENUM-STRATEGY）退出码 0、kp_sort --selftest 分型字段夹具退出码 0；v6.2 追加：evals/verify-v62-docs.py 文档契约（交接/记录/证据、记忆纪律、ask hint、来源备课、选项规则、版本与 E66–E69 登记）退出码 0；上述 56 项公式契约仍为基线。",
+ "machine_evidence_ref": "包内 scripts/*.py --selftest（六脚本，含讲义结构校验 verify_explanation.py：shaanxi-gaoshu materials 校验通过、退出码 0）；evals/verify-formula-typesetting.py（公式呈现静态契约 56 项检查、退出码 0；属静态证据，非渲染验证）；包外验收复现与真实教学日志不作为技能包运行依赖；evals/verify-marker-rules.py（五要素新编号规则行为契约 19 项检查、退出码 0；临时目录夹具真实运行 verify_explanation.py，属行为级静态证据，非对话回放）；v6.0 追加：scheduler --selftest 断言 2b/7b（同会话抑制、保持复习 reason、ltw-due-queue/3）与 progress_check --selftest 四态组（partial/ungraded/void）均退出码 0；v6.1 追加：progress_check --selftest 分型组（E-KP-TYPED-GATE）与大纲契约/intake 组（W-MODULE-* / E-ENUM-STRATEGY）退出码 0、kp_sort --selftest 分型字段夹具退出码 0；v6.2 追加：evals/verify-v62-docs.py 文档契约（交接/记录/证据、记忆纪律、ask hint、来源备课、选项规则、版本与 E66–E69 登记）退出码 0；v6.3 追加：evals/verify-v63-docs.py 文档契约（出题流水线四步、旧题去重、规划字段、一次修复、视觉任务原始来源、版本与 E71–E73 登记）退出码 0；上述 56 项公式契约仍为基线。",
  "dialogues_ref": "evals/对话对照-批次B.md（设计摘要，非运行日志；真实新旧对照须另附运行输出）",
  "cases": [
   {
@@ -1103,7 +1103,7 @@
    "kind": "machine",
    "prompt": "检查 v6.2 规则是否真正写入对应分册：交接/学习记录/讲授证据、记忆写法纪律、ask hint、来源备课、选项/答案键规则、版本与 eval 登记。",
    "fixture": "仓库当前 SKILL.md / references / CREDITS.md / setup-guide.md / skill-dependencies.json / evals.json。",
-   "pass_condition": "verify-v62-docs.py 全项 OK、退出码 0；版本四处为 6.2.0；交接/记录/证据三区、记忆纪律、ask hint、来源备课、选项规则均能在对应分册中定位；E66–E69 已登记。",
+   "pass_condition": "verify-v62-docs.py 全项 OK、退出码 0；版本不低于 6.2.0；交接/记录/证据三区、记忆纪律、ask hint、来源备课、选项规则均能在对应分册中定位；E66–E69 已登记。",
    "actual_output": null,
    "run_id": null,
    "scores": null,
@@ -1157,6 +1157,46 @@
    "prompt": "给一道四选一概念题，要求按 v6.2 规则出题并在学员作答后批改。",
    "fixture": "正确项与三个误区干扰项长度相近；正确项不在固定位置。",
    "pass_condition": "展示前打乱选项；题干/解析不引用 A/B/C/D；批改前不显示答案键；每题有解析与难度；正确项不更长、不带推荐标记、不按正确性排序；干扰项对应具体误区。",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null
+  },
+  {
+   "id": "E71",
+   "scenario": "v6.3 文档契约",
+   "kind": "machine",
+   "prompt": "检查 v6.3 规则是否真正写入对应分册：出题流水线四步（探索/规划/生成/修复）、旧题去重、规划字段、一次修复、视觉任务原始来源、版本与 eval 登记。",
+   "fixture": "仓库当前 SKILL.md / references / CREDITS.md / setup-guide.md / skill-dependencies.json / evals.json。",
+   "pass_condition": "verify-v63-docs.py 全项 OK、退出码 0；版本五处不低于 6.3.0；四步与视觉来源规则均能在对应分册定位；E71–E73 已登记。",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null,
+   "machine_ref": "evals/verify-v63-docs.py；2026-10-23 运行退出码 0"
+  },
+  {
+   "id": "E72",
+   "scenario": "出题流水线四步",
+   "kind": "human",
+   "prompt": "S4 复习：任务有 3 个薄弱点、2 道错题、1 条保持复习到期；exercises/ 里已有一道相近旧题，学员要 3 道复习题。",
+   "fixture": "due-queue 已输出到期项；旧题组含同知识点同情境题；本节预算 3 题。",
+   "pass_condition": "先读 due-queue、薄弱点/错题/保持复习与最近题组；规划题数、topic/题型/难度/对应 KP，至少 1 道判定题且避开旧题；生成答案/解析/难度；交付前做一次整套自检；不提前显示答案键。",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null
+  },
+  {
+   "id": "E73",
+   "scenario": "视觉任务原始来源",
+   "kind": "human",
+   "prompt": "某 KP 声明「视觉任务：图表」，材料只有第 42 页图 3 可用；导师准备出视觉题。",
+   "fixture": "原图分辨率一般但可读；讲义里已有一张重绘 SVG。",
+   "pass_condition": "视觉题基于第 42 页图 3 并记来源锚点；不用重绘 SVG/生成图替代；attempt 写 `KP=<id>｜视觉=图表` 且 `独立性=独立`（提示后不算）；若原图不可读则不启用视觉任务或按未判；不新增字段或闸口。",
    "actual_output": null,
    "run_id": null,
    "scores": null,

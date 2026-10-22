@@ -622,3 +622,27 @@ mutation-check: 11/11 mutations detected
 - 文档契约只证明“规则已写入对应分册”，不证明模型在真实对话中会执行；E66 不能替代教学效果证据
 - E67–E70 仍是人类场景，未做真实回放；verdict 保持「未验证」
 - v6.2 不新增脚本闸口，旧任务仍零迁移
+
+### run_id: v630-selftest-20261023（2026-10-23）
+
+- 技能版本：6.3.0
+- 覆盖场景：E71（v6.3 文档契约）、E72（出题流水线四步）、E73（视觉任务原始来源）
+- 执行方式：E71 为静态文档契约脚本；E72–E73 为待真实回放的人类场景（当前未验证）
+
+#### 结果
+
+- `evals/verify-v63-docs.py`：32/32 OK，退出码 0（版本五处、四步流水线、旧题去重、规划字段、一次修复、视觉任务原始来源、S5 蓝图优先、T11 例外、CR-8 改写覆盖、E71–E73 登记）
+- `evals/verify-v62-docs.py`：17/17 OK，退出码 0（版本断言改为 ≥6.2.0，历史契约在 6.3.0 下继续成立）
+- 文档契约变异 11/11：删掉规划步、删掉规划步难度、删掉生成图禁令、删掉视觉任务来源纪律、改错版本、删掉 S3 流水线引用、删掉 T11 例外、删掉无任务跳过、删掉 S5 规划按蓝图、删掉自测同题无例外、删掉 CR-8 改写，均被脚本抓住
+- 其余六脚本 `--selftest` 全 0；`evals/verify-formula-typesetting.py` 56/56；`evals/verify-marker-rules.py` 19/19
+- 集成自检：含「本次交接/学习记录/讲授证据」三区的临时 task，`progress_check` exit 0 且无 E，`task_index` scan_status=ok、tasks=1（v6.3 未改脚本，旧任务仍可读）
+- evals.json：cases 75 → 78（E71 machine + E72–E73 human，verdict 未验证）；applies_to_version 6.3.0；machine_evidence_ref 已登记 v6.3 文档契约
+- 文档：SKILL.md / data-and-recovery.md / phases-and-gates.md / teaching-loop.md / lecture-styles.md / subject-playbooks.md / references/redlines.md / skill-dependencies.json / CREDITS.md / setup-guide.md 已按落点同步出题流水线与视觉任务来源规则
+- `git diff --check`：0
+
+#### 边界
+
+- 文档契约只证明“规则已写入对应分册”，不证明模型在真实对话中会执行；E71 不能替代教学效果证据
+- E72–E73 仍是人类场景，未做真实回放；verdict 保持「未验证」
+- 视觉任务的来源锚点是文档纪律（写在题面/题组文件），不是新增脚本字段或硬闸口；旧证据不追溯作废
+- v6.3 不新增脚本闸口、不加数据字段，旧任务仍零迁移

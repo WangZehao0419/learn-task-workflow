@@ -9,6 +9,7 @@
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 import sys
@@ -35,6 +36,16 @@ def read(root, rel):
         return ""
 
 
+def version_tuple(text):
+    m = re.search(r"(\d+)\.(\d+)\.(\d+)", str(text or ""))
+    return tuple(int(x) for x in m.groups()) if m else None
+
+
+def at_least_v62(text):
+    v = version_tuple(text)
+    return v is not None and v >= (6, 2, 0)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="v6.2 文档型增强静态契约（只读）")
     parser.add_argument("--skill-root", default=None)
@@ -57,11 +68,30 @@ def main(argv=None):
         evals = {}
 
     c = Checker()
-    c.check("1.1 SKILL.md 版本为 6.2.0", "version: 6.2.0" in skill)
-    c.check("1.2 setup-guide 适用版本为 6.2.0", "适用版本：6.2.0" in setup)
-    c.check("1.3 skill-dependencies 版本为 6.2.0", '"applies_to_version": "6.2.0"' in deps)
-    c.check("1.4 CREDITS 当前版本说明为 6.2.0", "**当前版本说明**：6.2.0" in credits)
-    c.check("1.5 evals 版本为 6.2.0", evals.get("applies_to_version") == "6.2.0")
+    try:
+        deps_data = json.loads(deps)
+    except (TypeError, ValueError):
+        deps_data = {}
+    deps_versions = []
+    if isinstance(deps_data, dict):
+        if "applies_to_version" in deps_data:
+            deps_versions.append(deps_data.get("applies_to_version"))
+        for dep in deps_data.get("dependencies", []):
+            setup_obj = dep.get("setup") if isinstance(dep, dict) else None
+            if isinstance(setup_obj, dict) and "applies_to_version" in setup_obj:
+                deps_versions.append(setup_obj.get("applies_to_version"))
+    skill_version = re.search(r"version:\s*(\d+\.\d+\.\d+)", skill)
+    c.check("1.1 SKILL.md 版本 ≥ 6.2.0",
+            bool(skill_version) and at_least_v62(skill_version.group(1)))
+    c.check("1.2 setup-guide 适用版本 ≥ 6.2.0",
+            at_least_v62(re.search(r"适用版本：(\d+\.\d+\.\d+)", setup).group(1))
+            if re.search(r"适用版本：(\d+\.\d+\.\d+)", setup) else False)
+    c.check("1.3 skill-dependencies 版本 ≥ 6.2.0",
+            bool(deps_versions) and all(at_least_v62(v) for v in deps_versions))
+    c.check("1.4 CREDITS 当前版本说明 ≥ 6.2.0",
+            at_least_v62(re.search(r"当前版本说明\*\*：(\d+\.\d+\.\d+)", credits).group(1))
+            if re.search(r"当前版本说明\*\*：(\d+\.\d+\.\d+)", credits) else False)
+    c.check("1.5 evals 版本 ≥ 6.2.0", at_least_v62(evals.get("applies_to_version", "")))
     c.check("1.6 CREDITS 登记 DeepTutor 的 Apache-2.0 归因",
             "DeepTutor" in credits and "Apache-2.0" in credits
             and "未复制代码/正文/模板" in credits)
