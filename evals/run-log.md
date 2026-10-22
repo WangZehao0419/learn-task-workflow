@@ -671,3 +671,30 @@ mutation-check: 11/11 mutations detected
 - 四证/闭卷/二次定稿是文档规则与阅读动作，未新增脚本硬闸口；S3 仍由判分+关键能力+复述把关
 - 旧讲义不回溯；`③ 不适用（纯记忆/已会·检索版）` 与设计类标识为增量合法出口，不改变旧文件判定
 - 纯记忆/纯概念/参照级豁免的语义边界仍由人工/评审确认，脚本只做结构匹配
+
+### run_id: v650-stage2-20261023（2026-10-23）
+
+- 技能版本：6.5.0（阶段 2；来源四向对齐与 P1/P2 仍为后续）
+- 覆盖场景：E109（阶段 2 契约）、E110–E115（记忆/设计模板、支持级、学习者状态、流水线/决策日志、类型×支持；人评未验证）
+- 执行方式：E109 为静态文档契约 + mutation；E110–E115 为待真实回放的人评场景
+
+#### 结果
+
+- `evals/verify-v65-stage2.py`：24/24 OK，退出码 0（类型模板、四步流水线、L1/L2/L3 动态、学习者状态、决策日志/修复表、接线、E109 登记）
+- 文档契约变异 5/5：删除四类矩阵、L3 检索版产物、专家盲点、决策日志、来源待办，均被脚本抓住
+- 六个脚本 `--selftest` 全 0；`evals/verify-formula-typesetting.py` 56/56；`evals/verify-marker-rules.py` 19/19；`evals/verify-v62-docs.py` 17/17；`evals/verify-v63-docs.py` 32/32；`evals/verify-v64-consistency.py` 34/34
+- 类型结构样板：记忆、设计、程序 L2 三份最小结构样板跑 `verify_explanation.py`；程序样板最初把「验证：」写进 ③ 框，被 `E-BOX-FORMAT` 抓住——改为 `输出：` 交付段后 0 E，并把类型矩阵的 ③ 形态改为「模型解答+输出（决策点/验证写 ②/④，不写框内批注）」
+- `scripts/verify_explanation.py --selftest`：设计/记忆标识、纯记忆/L3 豁免、旧夹具仍全过
+- evals.json：cases 79 → 86（E109 machine + E110–E115 human，verdict 未验证）；applies_to_version 6.5.0；machine_evidence_ref 已登记 v6.5 阶段 2 契约
+- 支持级证据：L1→L2 可用同会话独立成功（支架渐退）；L2→L3、L3 保持要求「跨会话独立成功」；同一会话重复答对不单独作为 L3 证据，S/D 也不因同会话重复增长（v6.0 同会话抑制）
+- 文档口径修正：`已会` 不是 KP 状态（KP 状态只有未讲/已讲/暂缓/排除）；已会证据来自 S1/伺服/跨会话连续正确/学员确认，`handout-design.md` §7 已把「KP 状态」与「已会证据」拆开
+- 文档：`handout-design.md` §4–§8（类型模板/四步流水线/支持级/学习者状态/决策日志）；lecture-styles / phases-and-gates / entry-routing / teaching-loop / subject-playbooks / SKILL 已接线；版本五处同步 6.5.0
+- `git diff --check`：0
+
+#### 边界
+
+- 阶段 2 是文档 + 接线规则，不新增运行时闸口、progress.md 字段或迁移；S3 仍由判分+关键能力+复述把关
+- E109 只证明规则写入并接线，不证明模型在真实对话中会执行；E110–E115 未跑
+- 来源四向对齐、覆盖行、深度分配、教学例/评估例真实性仍在阶段 3；P1/P2 质量件未做
+- L1/L3 模拟冷读（机会成本）两版 4/4，但为 LLM 读者且 fixtures 未提交；不能替代真人冷读与 2 天延迟迁移
+- 旧讲义不回溯；类型/支持级只影响新生成/新定稿讲义

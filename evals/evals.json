@@ -1,7 +1,7 @@
 {
  "schema": "ltw-evals/2",
  "skill": "learn-task-workflow",
- "applies_to_version": "6.4.0",
+ "applies_to_version": "6.5.0",
  "updated_at": "2026-10-23",
  "grading_axes": [
   "教学正确性",
@@ -58,9 +58,9 @@
   },
   "阻断规则": "阻断型用例的学科内容/结构渲染/边界必须为 2，其他适用项不得低于 1。"
  },
- "run_log_ref": "evals/run-log.md（「运行记录」节，run_id: v640-consistency-20261023；历史 v630-selftest-20261023 / v620-selftest-20261022 / v610-selftest-20261022 / v600-selftest-20261022；公式基线见 formula-typesetting-5.5.0-20261017-static）",
+ "run_log_ref": "evals/run-log.md（「运行记录」节，run_id: v650-stage2-20261023；历史 v640-consistency-20261023 / v630-selftest-20261023 / v620-selftest-20261022 / v610-selftest-20261022 / v600-selftest-20261022；公式基线见 formula-typesetting-5.5.0-20261017-static）",
  "run_log_note": "真实陪学运行日志尚未产出。待最终机制版本完成后，以同材料、同学员作答序列重跑，并把 actual_output / run_id / scores 回填本文件；未回填者保持「未验证」。",
- "machine_evidence_ref": "包内 scripts/*.py --selftest（六脚本，含讲义结构校验 verify_explanation.py：shaanxi-gaoshu materials 校验通过、退出码 0）；evals/verify-formula-typesetting.py（公式呈现静态契约 56 项检查、退出码 0；属静态证据，非渲染验证）；包外验收复现与真实教学日志不作为技能包运行依赖；evals/verify-marker-rules.py（五要素新编号规则行为契约 19 项检查、退出码 0；临时目录夹具真实运行 verify_explanation.py，属行为级静态证据，非对话回放）；v6.0 追加：scheduler --selftest 断言 2b/7b（同会话抑制、保持复习 reason、ltw-due-queue/3）与 progress_check --selftest 四态组（partial/ungraded/void）均退出码 0；v6.1 追加：progress_check --selftest 分型组（E-KP-TYPED-GATE）与大纲契约/intake 组（W-MODULE-* / E-ENUM-STRATEGY）退出码 0、kp_sort --selftest 分型字段夹具退出码 0；v6.2 追加：evals/verify-v62-docs.py 文档契约（交接/记录/证据、记忆纪律、ask hint、来源备课、选项规则、版本与 E66–E69 登记）退出码 0；v6.3 追加：evals/verify-v63-docs.py 文档契约（出题流水线四步、旧题去重、规划字段、一次修复、视觉任务原始来源、版本与 E71–E73 登记）退出码 0；v6.4 追加：evals/verify-v64-consistency.py 阶段 0 + 理解核心契约（状态行/③豁免/交付标识/L3/单元-KP/头部/深讲拆节/类型单元数/命名/概念地图/理解四证/六问/四段/闭卷/二次定稿 + mutation）退出码 0；上述 56 项公式契约仍为基线。",
+ "machine_evidence_ref": "包内 scripts/*.py --selftest（六脚本，含讲义结构校验 verify_explanation.py：shaanxi-gaoshu materials 校验通过、退出码 0）；evals/verify-formula-typesetting.py（公式呈现静态契约 56 项检查、退出码 0；属静态证据，非渲染验证）；包外验收复现与真实教学日志不作为技能包运行依赖；evals/verify-marker-rules.py（五要素新编号规则行为契约 19 项检查、退出码 0；临时目录夹具真实运行 verify_explanation.py，属行为级静态证据，非对话回放）；v6.0 追加：scheduler --selftest 断言 2b/7b（同会话抑制、保持复习 reason、ltw-due-queue/3）与 progress_check --selftest 四态组（partial/ungraded/void）均退出码 0；v6.1 追加：progress_check --selftest 分型组（E-KP-TYPED-GATE）与大纲契约/intake 组（W-MODULE-* / E-ENUM-STRATEGY）退出码 0、kp_sort --selftest 分型字段夹具退出码 0；v6.2 追加：evals/verify-v62-docs.py 文档契约（交接/记录/证据、记忆纪律、ask hint、来源备课、选项规则、版本与 E66–E69 登记）退出码 0；v6.3 追加：evals/verify-v63-docs.py 文档契约（出题流水线四步、旧题去重、规划字段、一次修复、视觉任务原始来源、版本与 E71–E73 登记）退出码 0；v6.4 追加：evals/verify-v64-consistency.py 阶段 0 + 理解核心契约（状态行/③豁免/交付标识/L3/单元-KP/头部/深讲拆节/类型单元数/命名/概念地图/理解四证/六问/四段/闭卷/二次定稿 + mutation）退出码 0；v6.5 追加：evals/verify-v65-stage2.py 阶段 2 契约（类型模板/四步流水线/L1-L3/学习者状态/决策日志/修复表 + mutation）退出码 0；上述 56 项公式契约仍为基线。",
  "dialogues_ref": "evals/对话对照-批次B.md（设计摘要，非运行日志；真实新旧对照须另附运行输出）",
  "cases": [
   {
@@ -1216,6 +1216,98 @@
    "verdict": "未验证",
    "reviewer": null,
    "machine_ref": "evals/verify-v64-consistency.py；34 项检查，2026-10-23 运行退出码 0"
+  },
+  {
+   "id": "E109",
+   "scenario": "v6.5 阶段 2 契约",
+   "kind": "machine",
+   "prompt": "检查类型模板（记忆/概念/程序/设计）、四步讲义流水线、L1/L2/L3 动态、学习者状态、决策日志/修复表是否写入 handout-design 并接线。",
+   "fixture": "仓库当前 SKILL.md / references / CREDITS.md / setup-guide.md / skill-dependencies.json / evals.json。",
+   "pass_condition": "verify-v65-stage2.py 全项 OK、退出码 0（24 项）；版本五处不低于 6.5.0；类型矩阵/流水线/支持级/学习者状态/决策日志均可定位；lecture-styles/phases/entry-routing/teaching-loop/subject-playbooks 已接线；mutation 能抓到矩阵、L3 产物、专家盲点、决策日志、来源待办被删等回退；E109–E115 已登记。",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null,
+   "machine_ref": "evals/verify-v65-stage2.py；24 项检查，2026-10-23 运行退出码 0"
+  },
+  {
+   "id": "E110",
+   "scenario": "记忆型讲义模板",
+   "kind": "human",
+   "prompt": "给「三个条约年份」写一节讲义；学员基础一般，KP 类型为记忆，暂无学习者画像。",
+   "fixture": "3 个年份与对应条约；无原始材料；目标是一周后能区分。",
+   "pass_condition": "按记忆模板：①记忆任务/与什么区分；②编码线索或记忆策略；③用 `答案：`/`答：` 或 `③ 不适用（纯记忆）`；④混淆/干扰；⑤线索卡（≤7 条）；配对为回忆+辨别，迁移为新语境使用；不硬塞完整解题或设计模板。",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null
+  },
+  {
+   "id": "E111",
+   "scenario": "设计型讲义模板",
+   "kind": "human",
+   "prompt": "给「三人团队备份方案」写一节讲义；学员要能在成本与恢复时间约束下设计方案。",
+   "fixture": "KP 类型为设计；约束=成本/恢复时间；没有唯一正确答案。",
+   "pass_condition": "按设计模板：①设计/评估什么+约束；②权衡/备选/评价标准；③用 `方案：`/`设计说明：`+权衡+标准；④忽略约束/单一指标/过早定案；⑤权衡句；配对改一个约束，迁移到新约束/替代方案；接受多解，不编唯一答案。",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null
+  },
+  {
+   "id": "E112",
+   "scenario": "L1/L2/L3 支持级选择",
+   "kind": "human",
+   "prompt": "学员已多次独立做对同类题，S1 对应部分全对、伺服持续 >90%，现在要一份复习材料。",
+   "fixture": "已会 KP；有旧题组与判分证据；无新子技能。",
+   "pass_condition": "判为 L3，产出检索版要点卡：不出完整教学例；3–5 题，至少 1 道换情境/新问法；不作新判分证据；若检索/迁移失败下次回 L2；不把课程整体起点当成本技能证据；不新增字段或闸口。",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null
+  },
+  {
+   "id": "E113",
+   "scenario": "学习者状态层",
+   "kind": "human",
+   "prompt": "写讲义前已知：KP-A 已会、KP-B 是薄弱点且有过误解、KP-C 未讲；画像记录类比领域=做饭。",
+   "fixture": "KP 状态与错题本可用；无 KP-C 的掌握证据；有交接记录。",
+   "pass_condition": "A 标 `【已会·可跳过】` 并带证据/日期；B 预判真实误解并加对比/反误解/配对；C 按 L1 或未讲处理，不编「已会」；标签有证据、不铺满正文；类比优先做饭；无证据不写绝对化结论。",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null
+  },
+  {
+   "id": "E114",
+   "scenario": "四步流水线与决策日志/修复表",
+   "kind": "human",
+   "prompt": "给一个含条件分支的复杂程序写讲义；旧错题显示学员常在条件遗漏上出错。",
+   "fixture": "程序型；3–5 个决策点；有旧题组的条件遗漏记录。",
+   "pass_condition": "按四步流水线：分析出子技能/决策点/专家盲点；设计六问与教学例/评估例；生成四段与类型化 ①–⑤；修复冷读与二次定稿。②决策日志展示「看到什么→先想到什么→为什么放弃→怎么检查」；④修复表按「症状→原因→动作→验证」且对得上决策点；不写成全篇步骤复述。",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null
+  },
+  {
+   "id": "E115",
+   "scenario": "类型与支持级交叉",
+   "kind": "human",
+   "prompt": "同一主题下，给「记忆型 KP、新手」和「设计型 KP、已会」分别写材料。",
+   "fixture": "记忆 KP 无独立成功证据；设计 KP 有稳定独立成功证据；无画像。",
+   "pass_condition": "记忆新手走 L1：线索-目标例+配对回忆+新语境；设计已会走 L3：检索版要点卡+新约束/替代方案；不把记忆塞进完整解题模板，也不把设计压成单答案；类型/支持级/风格三层分开，六套风格不扩。",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null
   }
  ]
 }
