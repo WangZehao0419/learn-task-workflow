@@ -1,7 +1,7 @@
 {
  "schema": "ltw-evals/2",
  "skill": "learn-task-workflow",
- "applies_to_version": "6.3.0",
+ "applies_to_version": "6.4.0",
  "updated_at": "2026-10-23",
  "grading_axes": [
   "教学正确性",
@@ -58,9 +58,9 @@
   },
   "阻断规则": "阻断型用例的学科内容/结构渲染/边界必须为 2，其他适用项不得低于 1。"
  },
- "run_log_ref": "evals/run-log.md（「运行记录」节，run_id: v630-selftest-20261023；历史 v6.2/v6.1/v6.0 见 v620-selftest-20261022 / v610-selftest-20261022 / v600-selftest-20261022；公式基线见 formula-typesetting-5.5.0-20261017-static）",
+ "run_log_ref": "evals/run-log.md（「运行记录」节，run_id: v640-consistency-20261023；历史 v630-selftest-20261023 / v620-selftest-20261022 / v610-selftest-20261022 / v600-selftest-20261022；公式基线见 formula-typesetting-5.5.0-20261017-static）",
  "run_log_note": "真实陪学运行日志尚未产出。待最终机制版本完成后，以同材料、同学员作答序列重跑，并把 actual_output / run_id / scores 回填本文件；未回填者保持「未验证」。",
- "machine_evidence_ref": "包内 scripts/*.py --selftest（六脚本，含讲义结构校验 verify_explanation.py：shaanxi-gaoshu materials 校验通过、退出码 0）；evals/verify-formula-typesetting.py（公式呈现静态契约 56 项检查、退出码 0；属静态证据，非渲染验证）；包外验收复现与真实教学日志不作为技能包运行依赖；evals/verify-marker-rules.py（五要素新编号规则行为契约 19 项检查、退出码 0；临时目录夹具真实运行 verify_explanation.py，属行为级静态证据，非对话回放）；v6.0 追加：scheduler --selftest 断言 2b/7b（同会话抑制、保持复习 reason、ltw-due-queue/3）与 progress_check --selftest 四态组（partial/ungraded/void）均退出码 0；v6.1 追加：progress_check --selftest 分型组（E-KP-TYPED-GATE）与大纲契约/intake 组（W-MODULE-* / E-ENUM-STRATEGY）退出码 0、kp_sort --selftest 分型字段夹具退出码 0；v6.2 追加：evals/verify-v62-docs.py 文档契约（交接/记录/证据、记忆纪律、ask hint、来源备课、选项规则、版本与 E66–E69 登记）退出码 0；v6.3 追加：evals/verify-v63-docs.py 文档契约（出题流水线四步、旧题去重、规划字段、一次修复、视觉任务原始来源、版本与 E71–E73 登记）退出码 0；上述 56 项公式契约仍为基线。",
+ "machine_evidence_ref": "包内 scripts/*.py --selftest（六脚本，含讲义结构校验 verify_explanation.py：shaanxi-gaoshu materials 校验通过、退出码 0）；evals/verify-formula-typesetting.py（公式呈现静态契约 56 项检查、退出码 0；属静态证据，非渲染验证）；包外验收复现与真实教学日志不作为技能包运行依赖；evals/verify-marker-rules.py（五要素新编号规则行为契约 19 项检查、退出码 0；临时目录夹具真实运行 verify_explanation.py，属行为级静态证据，非对话回放）；v6.0 追加：scheduler --selftest 断言 2b/7b（同会话抑制、保持复习 reason、ltw-due-queue/3）与 progress_check --selftest 四态组（partial/ungraded/void）均退出码 0；v6.1 追加：progress_check --selftest 分型组（E-KP-TYPED-GATE）与大纲契约/intake 组（W-MODULE-* / E-ENUM-STRATEGY）退出码 0、kp_sort --selftest 分型字段夹具退出码 0；v6.2 追加：evals/verify-v62-docs.py 文档契约（交接/记录/证据、记忆纪律、ask hint、来源备课、选项规则、版本与 E66–E69 登记）退出码 0；v6.3 追加：evals/verify-v63-docs.py 文档契约（出题流水线四步、旧题去重、规划字段、一次修复、视觉任务原始来源、版本与 E71–E73 登记）退出码 0；v6.4 追加：evals/verify-v64-consistency.py 阶段 0 + 理解核心契约（状态行/③豁免/交付标识/L3/单元-KP/头部/深讲拆节/类型单元数/命名/概念地图/理解四证/六问/四段/闭卷/二次定稿 + mutation）退出码 0；上述 56 项公式契约仍为基线。",
  "dialogues_ref": "evals/对话对照-批次B.md（设计摘要，非运行日志；真实新旧对照须另附运行输出）",
  "cases": [
   {
@@ -1202,6 +1202,20 @@
    "scores": null,
    "verdict": "未验证",
    "reviewer": null
+  },
+  {
+   "id": "E108",
+   "scenario": "v6.4 一致性 + 理解核心契约",
+   "kind": "machine",
+   "prompt": "检查讲义规则是否已收拢为一页合同、修掉状态行/③ 豁免/交付标识/L3/单元-KP/头部/深讲/类型单元数/命名/概念地图等冲突，并检查理解四证/设计六问/四段支架/闭卷自检/二次定稿/关键能力/冷读是否写入并接线。",
+   "fixture": "仓库当前 SKILL.md / references / CREDITS.md / setup-guide.md / skill-dependencies.json / evals.json / scripts/verify_explanation.py。",
+   "pass_condition": "verify-v64-consistency.py 全项 OK、退出码 0（34 项）；版本五处不低于 6.4.0；handout-design.md 与各分册关键短语可定位；mutation 能抓到 8+ 阈值、状态行合并、方案删除、拆节删除、纯记忆误写、脚本标识多出等回退；理解核心六件套在 handout-design 与 lecture-styles/phases 可定位。",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null,
+   "machine_ref": "evals/verify-v64-consistency.py；34 项检查，2026-10-23 运行退出码 0"
   }
  ]
 }

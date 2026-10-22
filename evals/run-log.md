@@ -646,3 +646,28 @@ mutation-check: 11/11 mutations detected
 - E72–E73 仍是人类场景，未做真实回放；verdict 保持「未验证」
 - 视觉任务的来源锚点是文档纪律（写在题面/题组文件），不是新增脚本字段或硬闸口；旧证据不追溯作废
 - v6.3 不新增脚本闸口、不加数据字段，旧任务仍零迁移
+
+### run_id: v640-consistency-20261023（2026-10-23）
+
+- 技能版本：6.4.0（阶段 0 一致性 + 阶段 1 理解核心；类型/支持/来源细节仍为后续阶段目标）
+- 覆盖场景：E108（v6.4 一致性 + 理解核心契约）
+- 执行方式：E108 为静态文档契约脚本 + 内置 mutation；无真实对话回放
+
+#### 结果
+
+- `evals/verify-v64-consistency.py`：34/34 OK，退出码 0（版本五处、状态行两分、③ 豁免四类、交付标识单一表与集合比对、L3 复习产物例外、单元≠KP、头部/指针、深讲拆节、类型单元数、命名/附件、概念地图阈值、理解核心六件套、E108 登记）
+- 理解核心：`handout-design.md` §3 已写四证/六问/四段/闭卷/二次定稿/关键能力/冷读；`lecture-styles.md` 标准骨架改为教学例→配对→④/⑤→闭卷解释→评估例/迁移；`phases-and-gates.md`、`teaching-loop.md` 接入
+- 文档契约变异 6/6：概念地图阈值改回 8+、台账状态行合并回状态行、删除设计类标识、删除深讲拆节、纯记忆误写为纯概念、脚本交付标识多出一项，均被脚本抓住
+- 六个脚本 `--selftest` 全 0；`evals/verify-formula-typesetting.py` 56/56；`evals/verify-marker-rules.py` 19/19；`evals/verify-v62-docs.py` 17/17；`evals/verify-v63-docs.py` 32/32
+- `scripts/verify_explanation.py --selftest`：设计类 `方案：`/`设计说明：` 框零违规，纯记忆/已会·检索版 ③ 豁免零 E，旧夹具仍全过
+- evals.json：cases 78 → 79（E108 machine，verdict 未验证）；applies_to_version 6.4.0；machine_evidence_ref 已登记 v6.4 一致性/理解核心契约
+- 文档：新增 `references/handout-design.md`；lecture-styles / phases-and-gates / teaching-loop / subject-playbooks / SKILL / setup-guide / skill-dependencies / CREDITS / evals 已同步
+- `git diff --check`：0
+
+#### 边界
+
+- 一致性/理解核心契约只证明“规则已写入且互相对得上”，不证明模型在真实对话中会执行；E108 不能替代教学效果证据
+- 类型模板、L1/L2/L3 动态、来源四向对齐、教学例/评估例的来源保真在 `handout-design.md` 中仍为**后续阶段目标**；阶段 0/1 未新增自动闸口、数据字段或迁移
+- 四证/闭卷/二次定稿是文档规则与阅读动作，未新增脚本硬闸口；S3 仍由判分+关键能力+复述把关
+- 旧讲义不回溯；`③ 不适用（纯记忆/已会·检索版）` 与设计类标识为增量合法出口，不改变旧文件判定
+- 纯记忆/纯概念/参照级豁免的语义边界仍由人工/评审确认，脚本只做结构匹配

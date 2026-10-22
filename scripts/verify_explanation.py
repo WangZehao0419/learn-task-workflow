@@ -129,8 +129,8 @@ from pathlib import Path
 # ── denylist:已被 LaTeX 约定取代的 Unicode 写法(顺序即输出消息中的展示顺序)──
 DENY_CHARS = "→✔✓✅√≤≥∪⇔⇒"
 CIRCLED = "①②③④⑤⑥⑦⑧⑨⑩"
-# 交付标识:可复现答案的起笔,覆盖数学/编程/语言/文科/记忆/精读各族
-LEAD_WORDS = ("参考答案|参考概括|参考译文|解答|答案|证明|译文|范文|例文|代码|脚本|输出|步骤|操作|解|答"
+# 交付标识:可复现答案的起笔,覆盖数学/编程/语言/文科/记忆/设计/精读各族
+LEAD_WORDS = ("参考答案|参考概括|参考译文|解答|答案|证明|译文|范文|例文|代码|脚本|输出|步骤|操作|方案|设计说明|解|答"
               "|Model answer|Sample answer|Answer|Solution|Proof|Translation"
               "|Output|Code|Script|Steps|Key")
 LEAD_RE = re.compile(r"^\s*(?:" + LEAD_WORDS + r")\s*[：:]", re.I)
@@ -520,7 +520,7 @@ def check_text(text, rel, base_dir=None):
         if has_third and exempt:
             add("E", "E-THIRD-CONFLICT", u["start"],
                 "概念 " + str(u["num"]) + " 同时标注「③ 不适用」与「③ 答案」——"
-                "二者只能取一:确有可复现解答就给③框,纯概念就删③标记")
+                "二者只能取一:确有可复现解答就给③框,纯概念/纯记忆/已会·检索版就删③标记")
         elif exempt:
             if SOLVED_LEAD_RE.search(body):
                 add("E", "E-THIRD-EXEMPT-MISUSE", u["start"],
@@ -535,7 +535,7 @@ def check_text(text, rel, base_dir=None):
                            if label not in drop and not rx.search(body)]
                 if missing:
                     scope = ("参照级可省②③④⑤,但①题目不得省" if is_ref
-                             else "纯概念可省②③,但①题目、④易错、⑤小结不得省")
+                             else "纯概念/纯记忆/已会·检索版可省②③,但①题目、④易错、⑤小结不得省")
                     add("E", "E-REQ-MISSING", u["start"],
                         "概念 " + str(u["num"]) + " 豁免下仍缺:" + "、".join(missing) +
                         "——" + scope)
@@ -544,8 +544,8 @@ def check_text(text, rel, base_dir=None):
             if missing:
                 add("E", "E-REQ-MISSING", u["start"],
                     "概念 " + str(u["num"]) + " 五要素缺失:" + "、".join(missing) +
-                    "——①题目 ②解析 ③答案(框) ④易错 ⑤小结 逐个补齐(③ 须写在本单元内,任何 `## ` 标题都会终结单元);纯概念无可复现产物"
-                    "可标「③ 不适用(纯概念)」豁免②③(①④⑤仍须);参照级可标"
+                    "——①题目 ②解析 ③答案(框) ④易错 ⑤小结 逐个补齐(③ 须写在本单元内,任何 `## ` 标题都会终结单元);纯概念/纯记忆/已会·检索版无可复现产物"
+                    "可标「③ 不适用(纯概念/纯记忆/已会·检索版)」豁免②③(①④⑤仍须);参照级可标"
                     "「③ 不适用(参照级)」豁免②③④⑤(①仍须);不得以全文件计数代替")
 
     # ── 规则 3:正文 Unicode denylist(按排除范围过滤后逐行检查)──
@@ -1026,6 +1026,19 @@ FIX_THIRD_EXEMPT_ANS = _HEAD + """- ① 题目:认识术语。
 答:这个术语指一组可复现的操作。
 """
 
+# 纯记忆/已会·检索版:同一豁免结构,文档标签必须被接受
+FIX_THIRD_MEMORY = _HEAD + """- ① 题目:记住三个条约年份。
+- ④ 易错:年份张冠李戴。
+- ⑤ 小结:时间线 + 关键词。
+- ③ 不适用（纯记忆）:只做线索卡,无可复现产物。
+"""
+
+FIX_THIRD_L3 = _HEAD + """- ① 题目:独立完成检索题。
+- ④ 易错:把旧条件套到新情境。
+- ⑤ 小结:先判别再执行。
+- ③ 不适用（已会·检索版）:已会单元只检索,不再给完整示例。
+"""
+
 # 头部指针行改用半角括号 → 同样合规
 FIX_OK_HALF = FIX_OK.replace("体例约定（LaTeX 排版/答案框）", "体例约定(LaTeX 排版/答案框)")
 
@@ -1235,6 +1248,21 @@ FIX_BOX_EN = _BOX_SEG + """> Model answer: He runs very fast.
 FIX_BOX_READING = _BOX_SEG + """> 参考概括：作者主张中国乡土社会是「熟悉社会」，以人情与礼俗维持秩序，而非契约。
 >
 > 原文定位：第一章第 2 段，第 3–7 句。
+
+- ④ 易错:四。
+- ⑤ 小结:三步法。
+"""
+
+# 设计类:方案/设计说明起交付,多解+评价标准
+FIX_BOX_DESIGN = _BOX_SEG + """> 方案：先满足约束 A；再在 B/C 之间取舍。
+>
+> 评价标准：约束覆盖、取舍理由、可行性。
+
+- ④ 易错:四。
+- ⑤ 小结:三步法。
+"""
+
+FIX_BOX_DESIGN2 = _BOX_SEG + """> 设计说明：目标、约束、备选、取舍。
 
 - ④ 易错:四。
 - ⑤ 小结:三步法。
@@ -1547,6 +1575,10 @@ def selftest():
         len(codes(r, "E-THIRD-CONFLICT")) == 1)
     r = check_text(FIX_THIRD_EXEMPT_ANS, "exemptans.md")
     chk("正文行首「答:」不误判为解答起笔", not [f for f in r if f[0] == "E"])
+    r = check_text(FIX_THIRD_MEMORY, "memory.md")
+    chk("纯记忆③豁免零 E", not [f for f in r if f[0] == "E"])
+    r = check_text(FIX_THIRD_L3, "l3.md")
+    chk("已会·检索版③豁免零 E", not [f for f in r if f[0] == "E"])
 
     # ⑰ 正文提及标记词不误判;标记行带内容报 W
     chk("正文提及「见 ③ 答案」不误判为标记行",
@@ -1567,6 +1599,10 @@ def selftest():
     chk("英语 Model answer 框零违规", check_text(FIX_BOX_EN, "en.md") == [])
     chk("精读框（参考概括/原文定位）零违规",
         check_text(FIX_BOX_READING, "reading.md") == [])
+    chk("设计类「方案：」答案框零违规",
+        check_text(FIX_BOX_DESIGN, "design.md") == [])
+    chk("设计类「设计说明：」答案框零违规",
+        check_text(FIX_BOX_DESIGN2, "design2.md") == [])
     chk("句中分点编号仍报 E-BOX-FORMAT",
         len(codes(check_text(FIX_BOX_MIDPOINT, "mid.md"), "E-BOX-FORMAT")) == 1)
     chk("缺交付起笔报 E-BOX-INCOMPLETE",
