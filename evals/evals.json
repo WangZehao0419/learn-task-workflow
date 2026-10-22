@@ -1,7 +1,7 @@
 {
  "schema": "ltw-evals/2",
  "skill": "learn-task-workflow",
- "applies_to_version": "6.0.0",
+ "applies_to_version": "6.1.0",
  "updated_at": "2026-10-22",
  "grading_axes": [
   "教学正确性",
@@ -58,9 +58,9 @@
   },
   "阻断规则": "阻断型用例的学科内容/结构渲染/边界必须为 2，其他适用项不得低于 1。"
  },
- "run_log_ref": "evals/run-log.md（「运行记录」节，run_id: v600-selftest-20261022；公式基线见 formula-typesetting-5.5.0-20261017-static）",
+ "run_log_ref": "evals/run-log.md（「运行记录」节，run_id: v610-selftest-20261022；历史 v6.0 见 v600-selftest-20261022；公式基线见 formula-typesetting-5.5.0-20261017-static）",
  "run_log_note": "真实陪学运行日志尚未产出。待最终机制版本完成后，以同材料、同学员作答序列重跑，并把 actual_output / run_id / scores 回填本文件；未回填者保持「未验证」。",
- "machine_evidence_ref": "包内 scripts/*.py --selftest（六脚本，含讲义结构校验 verify_explanation.py：shaanxi-gaoshu materials 校验通过、退出码 0）；evals/verify-formula-typesetting.py（公式呈现静态契约 56 项检查、退出码 0；属静态证据，非渲染验证）；包外验收复现与真实教学日志不作为技能包运行依赖；evals/verify-marker-rules.py（五要素新编号规则行为契约 19 项检查、退出码 0；临时目录夹具真实运行 verify_explanation.py，属行为级静态证据，非对话回放）；v6.0 追加：scheduler --selftest 断言 2b/7b（同会话抑制、保持复习 reason、ltw-due-queue/3）与 progress_check --selftest 四态组（partial/ungraded/void）均退出码 0；上述 56 项公式契约仍为基线。",
+ "machine_evidence_ref": "包内 scripts/*.py --selftest（六脚本，含讲义结构校验 verify_explanation.py：shaanxi-gaoshu materials 校验通过、退出码 0）；evals/verify-formula-typesetting.py（公式呈现静态契约 56 项检查、退出码 0；属静态证据，非渲染验证）；包外验收复现与真实教学日志不作为技能包运行依赖；evals/verify-marker-rules.py（五要素新编号规则行为契约 19 项检查、退出码 0；临时目录夹具真实运行 verify_explanation.py，属行为级静态证据，非对话回放）；v6.0 追加：scheduler --selftest 断言 2b/7b（同会话抑制、保持复习 reason、ltw-due-queue/3）与 progress_check --selftest 四态组（partial/ungraded/void）均退出码 0；v6.1 追加：progress_check --selftest 分型组（E-KP-TYPED-GATE）与大纲契约/intake 组（W-MODULE-* / E-ENUM-STRATEGY）退出码 0、kp_sort --selftest 分型字段夹具退出码 0；上述 56 项公式契约仍为基线。",
  "dialogues_ref": "evals/对话对照-批次B.md（设计摘要，非运行日志；真实新旧对照须另附运行输出）",
  "cases": [
   {
@@ -1068,6 +1068,34 @@
    "verdict": "未验证",
    "reviewer": null,
    "machine_ref": "scripts/progress_check.py --selftest v6.0 四态组；2026-10-22 运行退出码 0"
+  },
+  {
+   "id": "E64",
+   "scenario": "KP 分型验收",
+   "kind": "machine",
+   "prompt": "构造同一小节内 记忆/概念/程序+视觉 三类 KP；分别验证完整证据通过、缺记忆 KP 标签、缺概念复述、缺视觉标签、旧清单无类型不触发、类型字段非法告警。",
+   "fixture": "progress_check.py --selftest v6.1 分型组（KPLIST_TYPED / KP_PROG_TYPED / EV_TYPED_OK 及四组负例）。",
+   "pass_condition": "完整证据通过且无 E-KP-TYPED-GATE；缺 KP-01-01 标签报 E-KP-TYPED-GATE（含 KP-01-01）；缺概念复述报（含 KP-01-02）；缺视觉标签报（含「视觉任务」）；旧清单无类型不报分型门；半角可选字段冒号与 KP-1-1 别名同样通过；非法类型报 W-UNPARSED-KP 且放行模式另报 E-KP-TYPED-GATE（不能靠写坏字段绕过）；progress_check --selftest 退出码 0。",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null,
+   "machine_ref": "scripts/progress_check.py --selftest v6.1 分型组；2026-10-22 运行退出码 0"
+  },
+  {
+   "id": "E65",
+   "scenario": "大纲契约与 intake",
+   "kind": "machine",
+   "prompt": "构造 progress.md：完整模块目标/材料覆盖、只给模块目标、模块行畸形、材料行畸形、材料覆盖缺口、合法/非法教学策略各一组，跑 release 校验。",
+   "fixture": "progress_check.py --selftest v6.1 契约组（MOD_OK / 五组负例 / 教学策略）。",
+   "pass_condition": "完整契约无 W-MODULE/W-UNPARSED-MODULE/W-UNPARSED-MATERIAL/W-MATERIAL-COVERAGE-GAP；有材料但只给模块目标报 W-MODULE-CONTRACT-INCOMPLETE，无材料任务只写模块目标不报；模块行畸形或占位报 W-UNPARSED-MODULE；材料行畸形或占位报 W-UNPARSED-MATERIAL；覆盖缺口报 W-MATERIAL-COVERAGE-GAP（含两份材料都写成同一份、另一份字面未出现；同名上册/下册只覆盖上册也报）；教学策略合法通过、非法报 E-ENUM-STRATEGY；progress_check --selftest 退出码 0。",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null,
+   "machine_ref": "scripts/progress_check.py --selftest v6.1 契约组；2026-10-22 运行退出码 0"
   }
  ]
 }

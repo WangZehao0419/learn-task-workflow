@@ -578,3 +578,25 @@ mutation-check: 11/11 mutations detected
 
 - 脚本 selftest 只证明确定性解析/调度/闸口行为符合新契约，不构成教学效果证据；E61–E63 verdict 保持「未验证」，待独立评分者复核
 - 未做真实对话回放；保持复习的初始条目写入与 S4 清除转区仍由模型按文档执行，需在后续真实任务中抽检
+
+### run_id: v610-selftest-20261022（2026-10-22）
+
+- 技能版本：6.1.0
+- 覆盖场景：E64（KP 分型验收）、E65（大纲契约与 intake）
+- 执行方式：脚本 selftest 内嵌纯函数与临时目录夹具（非对话回放；无真实教学会话）
+
+#### 结果
+
+- `progress_check.py --selftest`：OK（新增 v6.1 分型组：typed-ok / typed-mem / typed-con / typed-vis / typed-bad / typed-old / typed-half-colon / typed-alias / typed-title-only / typed-missing-status；大纲契约与 intake 组：contract-ok / incomplete / no-material / module-bad / material-bad / gap / duplicate-cover / same-prefix / placeholder / strategy-ok / strategy-bad）
+- `kp_sort.py --selftest`：OK（新增分型字段夹具：排序只读前六段，不因类型/视觉任务附加段报畸形）
+- 其余四脚本 `--selftest` 全 0；`evals/verify-formula-typesetting.py` 56/56；`evals/verify-marker-rules.py` 19/19
+- evals.json：cases 68 → 70（E64–E65，kind: machine，verdict 未验证待独立评分）；applies_to_version 6.1.0；machine_evidence_ref 已登记 v6.1 selftest
+- 文档：SKILL.md / data-and-recovery.md / phases-and-gates.md / teaching-loop.md / skill-dependencies.json / CREDITS.md / setup-guide.md 已同步「KP 分型、分型验收标签、模块目标/材料覆盖、目标程度/教学策略、零迁移」
+- 变异测试 7/7：关闭分型门、清空模块目标检查、关闭教学策略枚举、让 kp_sort 拒绝附加字段、关闭 KP 别名归一、忽略契约占位、放行畸形分型字段，七种定向变异均被 selftest 抓住
+- `git diff --check`：0
+
+#### 边界
+
+- 分型验收只对 `知识清单.md` 中声明了类型/视觉任务的 KP 生效；旧清单缺字段仍走统一闸口，不能据此声称旧任务已做分型
+- 模块目标/材料覆盖是结构提示（W 级），不替代教学判断；材料是否真正匹配模块仍需模型/用户核对
+- 未做真人对话回放；E64–E65 verdict 保持「未验证」

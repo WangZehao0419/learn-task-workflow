@@ -3,9 +3,10 @@
 """kp_sort.py - 知识清单 KP 依赖拓扑排序与检环（确定性，stdlib-only）。
 
 用途：知识型/技能型任务在 S2「排序」子步调用（见 references/phases-and-gates.md），
-对知识清单文件（行式六字段，格式见 references/data-and-recovery.md「知识清单文件」）
-按各行「前置」声明的依赖边计算合法拓扑序。判断归模型（依赖边真实性、该不该有边），
-排序与检环归本脚本；只读零写盘。
+对知识清单文件（行式六字段 + 可选类型/视觉任务，格式见 references/data-and-recovery.md
+「知识清单文件」）按各行「前置」声明的依赖边计算合法拓扑序。判断归模型（依赖边真实性、
+该不该有边），排序与检环归本脚本；只读零写盘。可选分型字段由 progress_check 校验，
+本脚本只读前六段并忽略附加段。
 
 用法：
     python kp_sort.py <清单文件路径>
@@ -86,6 +87,13 @@ HALF_WIDTH_HEADER = """# 知识清单：半角头行夹具（头行冒号半角/
 
 - KP-01-01 ｜ 甲 ｜ 小节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲
 """
+TYPED = """# 知识清单：分型字段夹具（排序只读前六段）
+- 版本：1
+- 覆盖范围：全量
+
+- KP-01-01 ｜ 甲 ｜ 小节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲 ｜ 类型：概念
+- KP-01-02 ｜ 乙 ｜ 小节 1 ｜ 前置：KP-01-01 ｜ 来源：总纲 1.1 ｜ 状态：未讲 ｜ 类型：记忆 ｜ 视觉任务：识别, 关系
+"""
 
 
 def kp_key(kid):
@@ -122,10 +130,13 @@ def kp_status_base(raw):
 
 
 def parse_kp_row(segs):
-    """清单行六段（KP编号｜知识点｜所属小节｜前置｜来源｜状态）→ dict；畸形返回 None。"""
-    if len(segs) != 6:
+    """清单行六段（KP编号｜知识点｜所属小节｜前置｜来源｜状态）→ dict；畸形返回 None。
+
+    v6.1 的可选「类型/视觉任务」段由 progress_check 校验；排序只读前六段，忽略附加段。
+    """
+    if len(segs) < 6:
         return None
-    kid, title, section, pre, source, status = segs
+    kid, title, section, pre, source, status = segs[:6]
     m = KP_ID_RE.match(kid)
     if not m or not title or not section:
         return None
@@ -424,6 +435,10 @@ def selftest():
                  "- KP-1-1 ｜ 甲别名 ｜ 小节 1 ｜ 前置：  ｜ 来源：总纲 ｜ 状态：未讲\n")
     resd, coded = sort_from_text(alias_dup)
     ok = ok and coded != 0 and "重复" in resd.get("error", "")
+
+    # ⑫ v6.1 可选类型/视觉任务字段：排序只读前六段，不因附加字段报畸形
+    rest, codet = sort_from_text(TYPED)
+    ok = ok and codet == 0 and rest.get("order") == ["KP-01-01", "KP-01-02"]
 
     # ⑫ P1 别名前置：前置用单位数 KP-1-1，目标写补零 KP-01-01 → 能命中，不误报不存在
     alias_pre = ("# 知识清单：别名前置\n- 版本：1\n\n"

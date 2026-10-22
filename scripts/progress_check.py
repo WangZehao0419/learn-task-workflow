@@ -40,6 +40,11 @@
       否则 E-KEY-ABILITY-UNMET（关键项错不被简单题抵消）。
     · **复述 / 目标型证据（R17）**：复述清单按**勾选项**计数（≥2，兼容同行多勾选）；
       「操作作品验收」类区块含 ≥2 个已勾选核验项可**等价替代**；二者皆无 → E-NO-RESTATEMENT。
+    · **分型验收（v6.1）**：知识清单 KP 声明类型/视觉任务时，记忆/程序要 `KP=<id>` 的独立正确
+      attempt，概念/设计要复述勾选行含该 KP，视觉任务要 `KP=<id>｜视觉=<任务>` 的独立正确
+      attempt；否则 E-KP-TYPED-GATE。未声明类型的旧任务不触发。
+    · **大纲契约 / intake（v6.1）**：模块目标/材料覆盖结构提示（W-MODULE-*），
+      教学策略存在但非枚举 → E-ENUM-STRATEGY；两区/字段缺失对旧任务合法。
     · 空文件/仅含模板字样的判分记录 → E-EMPTY-EVIDENCE。
     · **阶段证据按内容而非文件名（R14）**：S2 须有**可用**的 00 摸底（E-NO-DIAGNOSTIC）；
       结课/已完成须有**可用**的 99 综合测验（缺文件 E-NO-FINAL-EXAM、空文件 E-FINAL-NO-EVIDENCE、
@@ -83,6 +88,14 @@ from pathlib import Path
 ENUM_PHASE = ["接料建档", "诊断摸底", "计划确认中", "逐节学习", "复习巩固", "结课", "已完成"]
 ENUM_TYPE = ["知识型", "技能型", "备考型", "材料型"]
 ENUM_FAMILY = ["数学类", "编程类", "语言类", "理论概念类", "记忆密集类"]
+ENUM_STRATEGY = ["先测后教", "先教后测"]
+# v6.1 大纲契约：模块目标（M1｜名称｜能力句）与材料覆盖（材料 → M1/M2）
+MODULE_ROW_RE = re.compile(r"^(M\d+)\s*[｜|]\s*([^｜|]+?)\s*[｜|]\s*(.+)$")
+MATERIAL_ROW_RE = re.compile(r"^(.+?)\s*(?:→|->|[｜|])\s*(.+)$")
+MODULE_REF_RE = re.compile(r"M\d+")
+CONTRACT_PLACEHOLDER_RE = re.compile(r"<[^>]*>|待填|占位")
+# 只认 KP 编号/知识点之后的类型/视觉任务字段，避免标题里出现「类型：」被误判
+TYPED_FIELD_PREFIXES = ("类型：", "类型:", "视觉任务：", "视觉任务:")
 # 「复习来源阶段」返回点枚举（F04：已完成任务可复习并返回「已完成」；任意字符串被拒）
 ENUM_REVIEW_FROM = ["逐节学习", "结课", "已完成"]
 
@@ -145,6 +158,9 @@ GRADE_RE = re.compile(r"(?:调度档|档位|结果|档)\s*[=＝]\s*([^｜|，,]+
 ATTEMPT_ID_ROW_RE = re.compile(r"attempt_id\s*[=＝]\s*([A-Za-z0-9_\-]+)")
 ATTEMPT_ID_ANY_RE = re.compile(r"(?:attempt_id|evt)\s*[=＝]\s*([A-Za-z0-9_\-]+)")
 ABILITY_TAG_RE = re.compile(r"能力\s*[=＝]\s*([Cc]\d+)")
+# v6.1 分型验收标签：attempt 行写 KP=KP-01-01（记忆/程序/视觉）；复述勾选行写 KP 编号（概念/设计）
+ATTEMPT_KP_RE = re.compile(r"(?:^|[｜|，,；;\s])(?:KP|kp)\s*[=＝]\s*(KP-\d+-\d+)")
+VISUAL_TAG_RE = re.compile(r"(?:^|[｜|，,；;\s])(?:视觉|visual)\s*[=＝]\s*([^｜|，,；;\s]+)")
 KEY_ABILITY_HEAD_RE = re.compile(r"关键能力")
 KEY_ABILITY_ROW_RE = re.compile(r"^\s*-\s*([Cc]\d+)\s*[：:]\s*(.+?)\s*$")
 KEY_ITEM_FLAG = "关键项"
@@ -217,6 +233,32 @@ def _section_bodies(text, head_re):
 def _checked_count(bodies):
     """区块内勾选**项**总数（同行多个 [x] 各计一项——兼容官方模板「一行多勾选」）。"""
     return sum(len(CHECKED_RE.findall(b)) for b in bodies)
+
+
+def named_section_items(text, name):
+    """取指定二级区块的条目文本（去掉「- 」与「无」占位）；用于大纲契约的可选区。"""
+    pattern = re.compile(r"^##\s*" + re.escape(name) + r"\s*$")
+    items = []
+    for body in _section_bodies(text, pattern):
+        for ln in body.splitlines():
+            s = ln.strip()
+            if s.startswith("- "):
+                s = s[2:].strip()
+            if s and s not in ("无", "无。", "（暂无）", "(暂无)"):
+                items.append(s)
+    return items
+
+
+def has_typed_extra(body):
+    """畸形行是否声明了类型/视觉任务（跳过 KP 编号与知识点标题，用于分型门拦停）。"""
+    segs = [s.strip() for s in re.split(r"[｜|]", body or "")]
+    return any(seg.startswith(TYPED_FIELD_PREFIXES) for seg in segs[2:])
+
+
+def material_key(line):
+    """材料字面匹配键：去括注、取路径末段；用于覆盖区是否真的提到该材料。"""
+    s = re.split(r"[（(]", (line or "").strip(), 1)[0].strip()
+    return re.split(r"[\\/]", s)[-1].strip()
 
 
 def _restate_state(text):
@@ -313,9 +355,12 @@ def parse_attempts(text):
         indep = _parse_indep(m.group(1)) if m else None
         aid = ATTEMPT_ID_ROW_RE.search(body)
         ab = ABILITY_TAG_RE.search(body)
+        kp_tag = ATTEMPT_KP_RE.search(body)
+        vis_tag = VISUAL_TAG_RE.search(body)
         qm = QNUM_RE.search(body)
-        if not (has_answer or result is not None or indep is not None or aid or ab or voided):
-            continue     # 既无作答/判定/独立性/attempt/能力/作废标记 → 非作答行
+        if not (has_answer or result is not None or indep is not None or aid or ab
+                or kp_tag or vis_tag or voided):
+            continue     # 既无作答/判定/独立性/attempt/能力/KP/视觉/作废标记 → 非作答行
         correct = True if result == "correct" else (
             False if result in ("partial", "incorrect") else None)
         graded = bool(has_answer and result in ("correct", "partial", "incorrect")
@@ -326,6 +371,8 @@ def parse_attempts(text):
             "qid": qm.group(1) if qm else "",
             "attempt_id": aid.group(1) if aid else "",
             "ability": ab.group(1).upper() if ab else "",
+            "kp": kp_tag.group(1) if kp_tag else "",
+            "visual": vis_tag.group(1).strip() if vis_tag else "",
             "has_answer": has_answer, "result": result, "correct": correct,
             "indep": indep, "graded": graded, "voided": voided,
         })
@@ -442,6 +489,63 @@ def gate_evidence(ev_text, require_restatement=True, require_independence=True,
     return errs
 
 
+def restated_kp_ids(text):
+    """复述清单中已勾选行提到的 KP 编号集合（概念/设计类定性证据）。"""
+    ids = set()
+    for body in _section_bodies(text, RESTATE_RE):
+        for ln in body.splitlines():
+            if CHECKED_RE.search(ln):
+                ids.update(KP_ID_IN_TEXT_RE.findall(ln))
+    return ids
+
+
+def _visual_base(token):
+    t = (token or "").strip()
+    return t if t in ENUM_KP_VISUAL else KP_VISUAL_ALIASES.get(t.lower(), t)
+
+
+def typed_gate_errors(ev_text, kp_rows):
+    """v6.1 分型验收：只检查声明了类型/视觉任务的 KP；未声明行仍走统一闸口。
+
+    - 记忆/程序：至少一条 `KP=<id>` 的独立正确 attempt；
+    - 概念/设计：复述清单中至少一条已勾选行含该 KP 编号（定性证据）；
+    - 视觉任务：至少一条 `KP=<id>｜视觉=<任务>` 的独立正确 attempt。
+    """
+    typed = [r for r in kp_rows if r.get("type") or r.get("visual_tasks")]
+    if not typed:
+        return []
+    errors = []
+    attempts = [a for a in parse_attempts(ev_text)["attempts"]
+                if a["has_answer"] and not a["voided"]]
+    restated = {normalize_kp_id(x) for x in restated_kp_ids(ev_text)}
+    for r in typed:
+        if r.get("status") not in ("未讲", "已讲"):
+            continue
+        raw_id = r["id"]
+        kp_id = normalize_kp_id(raw_id)
+        kp_type = r.get("type")
+        if kp_type in ("记忆", "程序"):
+            hit = any(normalize_kp_id(a["kp"]) == kp_id
+                      and a["result"] == "correct" and a["indep"] == "独立"
+                      for a in attempts)
+            if not hit:
+                errors.append(raw_id + "（" + kp_type + "）缺独立正确证据（attempt 行写 "
+                              "KP=" + raw_id + "）")
+        elif kp_type in ("概念", "设计"):
+            if kp_id not in restated:
+                errors.append(raw_id + "（" + kp_type + "）缺定性复述证据（复述勾选行写 "
+                              + raw_id + "）")
+        for task in r.get("visual_tasks", []):
+            hit = any(normalize_kp_id(a["kp"]) == kp_id
+                      and _visual_base(a["visual"]) == task
+                      and a["result"] == "correct" and a["indep"] == "独立"
+                      for a in attempts)
+            if not hit:
+                errors.append(raw_id + " 视觉任务「" + task + "」缺独立正确证据（attempt 行写 "
+                              "KP=" + raw_id + "｜视觉=" + task + "）")
+    return errors
+
+
 def has_prefix(names, prefixes):
     """是否存在以给定专号前缀开头的判分证据文件（如 00 摸底 / 99 综合测验）。"""
     return any(n.startswith(p) for n in names for p in prefixes)
@@ -543,6 +647,12 @@ def collect_submission_ids(text, ex_dir, ex_names):
 
 # ── 知识清单文件（v2.4）解析 ──
 ENUM_KP_STATUS = ("未讲", "已讲", "暂缓", "排除")
+# v6.1 可选分型：缺失 = 旧任务统一闸口（零迁移）；类型/视觉任务只影响已声明行。
+ENUM_KP_TYPE = ("记忆", "概念", "程序", "设计")
+ENUM_KP_VISUAL = ("识别", "关系", "图表", "比较")
+KP_TYPE_ALIASES = {"memory": "记忆", "concept": "概念", "procedure": "程序", "design": "设计"}
+KP_VISUAL_ALIASES = {"identification": "识别", "relationship": "关系",
+                     "table_graph": "图表", "comparison": "比较"}
 KP_ID_RE = re.compile(r"^KP-(\d+)-(\d+)$")
 KP_ID_IN_TEXT_RE = re.compile(r"KP-\d+-\d+")
 # 稳定引用（F09）：路线行与判分记录可声明 lesson_id=…；消费方优先按 ID 匹配，旧资料回退序号
@@ -567,11 +677,51 @@ def kp_status_base(raw):
     return None
 
 
+def parse_kp_optional(segs):
+    """解析 KP 行可选字段（类型/视觉任务）；无字段返回 (None, [])，畸形返回 None。"""
+    kp_type = None
+    visual_tasks = []
+    for seg in segs:
+        if seg.startswith("类型：") or seg.startswith("类型:"):
+            if kp_type is not None:
+                return None
+            raw = re.split(r"[：:]", seg, maxsplit=1)[1].strip()
+            value = raw if raw in ENUM_KP_TYPE else KP_TYPE_ALIASES.get(raw.lower())
+            if value is None:
+                return None
+            kp_type = value
+        elif seg.startswith("视觉任务：") or seg.startswith("视觉任务:"):
+            if visual_tasks:
+                return None
+            raw = re.split(r"[：:]", seg, maxsplit=1)[1].strip()
+            if not raw:
+                return None
+            for tok in re.split(r"[,，、/\s]+", raw):
+                if not tok:
+                    continue
+                value = tok if tok in ENUM_KP_VISUAL else KP_VISUAL_ALIASES.get(tok.lower())
+                if value is None or value in visual_tasks:
+                    return None
+                visual_tasks.append(value)
+            if not visual_tasks:
+                return None
+        else:
+            return None
+    return kp_type, visual_tasks
+
+
 def parse_kp_row(segs):
-    """清单行六段（KP编号｜知识点｜所属小节｜前置｜来源｜状态）→ dict；畸形返回 None。"""
-    if len(segs) != 6:
+    """清单行六段（KP编号｜知识点｜所属小节｜前置｜来源｜状态）+ 可选类型/视觉任务。
+
+    可选字段缺失返回 type=None、visual_tasks=[]（旧任务统一闸口）；畸形返回 None。
+    """
+    if len(segs) < 6:
         return None
-    kid, title, section, pre, source, status = segs
+    kid, title, section, pre, source, status = segs[:6]
+    optional = parse_kp_optional(segs[6:])
+    if optional is None:
+        return None
+    kp_type, visual_tasks = optional
     m = KP_ID_RE.match(kid)
     if not m or not title or not section:
         return None
@@ -592,7 +742,8 @@ def parse_kp_row(segs):
     # 摸底「已会」括注探测（全角/半角括号双兼容）：带括注行豁免 W-KP-STATE-MISMATCH
     bottom_note = raw_status.startswith("已会") or re.match(r"^未讲[(（]\s*已会", raw_status) is not None
     return {"id": kid, "sec": int(m.group(1)), "no": int(m.group(2)),
-            "prereqs": prereqs, "status": base, "bottom_note": bottom_note}
+            "prereqs": prereqs, "status": base, "bottom_note": bottom_note,
+            "type": kp_type, "visual_tasks": visual_tasks}
 
 
 def parse_kp_list(path):
@@ -743,6 +894,7 @@ def check(task_dir, release=False, proposed=None):
     included_kp_ids = []      # 纳入出题分母的 KP（状态 ∈ {未讲, 已讲}）——结课蓝图覆盖核对用
     delta = None              # 候选快照相对磁盘原状态的**真实新增掌握**集合（R13）
     evidence_used = []        # 各小节实际选用的判分证据文件（确定性选取透明化，V06）
+    lesson_evidence = {}      # 小节号 -> 判分记录全文（v6.1 分型验收复用，避免重复选证据）
     prog = task_dir / "progress.md"
     if proposed.get("text") is not None:
         text = proposed["text"]
@@ -824,6 +976,52 @@ def check(task_dir, release=False, proposed=None):
                            "message": "「复习来源阶段」取值非法: " + review_from +
                                       "（合法枚举：" + " / ".join(ENUM_REVIEW_FROM) + "）"})
 
+    # v6.1 intake/大纲契约：均为可选字段，旧任务缺失不触发；存在则校验结构。
+    strategy = fields.get("教学策略", "")
+    if strategy and strategy not in ENUM_STRATEGY:
+        errors.append({"code": "E-ENUM-STRATEGY",
+                       "message": "「教学策略」取值非法: " + strategy +
+                                  "（合法枚举：" + " / ".join(ENUM_STRATEGY) + "）"})
+    module_items = named_section_items(text, "模块目标")
+    material_items = named_section_items(text, "材料覆盖")
+    source_materials = [x for x in named_section_items(text, "材料")
+                        if not CONTRACT_PLACEHOLDER_RE.search(x)]
+    # 无材料任务只写模块目标合法；只有「有材料但没覆盖」或「有覆盖但没目标」才算契约不完整。
+    if (module_items and source_materials and not material_items) or (material_items and not module_items):
+        warnings.append({"code": "W-MODULE-CONTRACT-INCOMPLETE",
+                         "message": "「模块目标」与「材料覆盖」只出现了一个；"
+                                    "新任务建议两区同时给出（旧任务无此区属合法形态）"})
+    for item in module_items:
+        if CONTRACT_PLACEHOLDER_RE.search(item) or not MODULE_ROW_RE.match(item):
+            warnings.append({"code": "W-UNPARSED-MODULE",
+                             "message": "「模块目标」行畸形或仍是占位（应为 M1 ｜ 模块名 ｜ 学完能独立……）：" + item})
+    for item in material_items:
+        m = MATERIAL_ROW_RE.match(item)
+        if (CONTRACT_PLACEHOLDER_RE.search(item) or not m
+                or not MODULE_REF_RE.search(m.group(2))):
+            warnings.append({"code": "W-UNPARSED-MATERIAL",
+                             "message": "「材料覆盖」行畸形或仍是占位（应为 材料 → M1 / M2）：" + item})
+    if module_items and material_items:
+        if len(material_items) < len(source_materials):
+            warnings.append({"code": "W-MATERIAL-COVERAGE-GAP",
+                             "message": "「材料覆盖」条目少于「材料」条目（" + str(len(material_items))
+                                        + " < " + str(len(source_materials)) + "）；请核对每份材料至少归入一个模块"})
+        else:
+            key_counts = {}
+            for material in source_materials:
+                key = material_key(material)
+                key_counts[key] = key_counts.get(key, 0) + 1
+            for material in source_materials:
+                key = material_key(material)
+                exact = any(material in cover for cover in material_items)
+                # 去括注/取 basename 的简写只在键唯一时兜底；同名前缀（上册/下册）仍要求字面命中。
+                soft = bool(key) and key_counts.get(key) == 1 and any(
+                    key in cover for cover in material_items)
+                if not exact and not soft:
+                    warnings.append({"code": "W-MATERIAL-COVERAGE-GAP",
+                                     "message": "材料未在「材料覆盖」中出现：" + material
+                                                + "（字面未匹配，若用了简称/改名请人工核对）"})
+
     # 落盘证据：已掌握小节必须有 exercises/ 判分记录
     ex_dir = task_dir / "exercises"
     ex_names = []
@@ -891,6 +1089,7 @@ def check(task_dir, release=False, proposed=None):
         if chosen:
             evidence_used.append(chosen)
             best, best_text = "real", _read_evidence(ex_dir, chosen)
+            lesson_evidence[num] = best_text
         else:
             # 无 real 证据：仍按确定性顺序找 template/empty，给出可核查的拦截原因
             best, best_text = "empty", ""
@@ -995,8 +1194,13 @@ def check(task_dir, release=False, proposed=None):
             else:
                 for body in kp["malformed"]:
                     warnings.append({"code": "W-UNPARSED-KP",
-                                     "message": "知识清单存在未解析行（六字段：KP编号｜知识点｜所属小节｜前置｜来源｜状态；"
+                                     "message": "知识清单存在未解析行（必需六字段：KP编号｜知识点｜所属小节｜前置｜来源｜状态；"
+                                                "可选：类型：记忆/概念/程序/设计、视觉任务：识别/关系/图表/比较；"
                                                 "畸形行不计入摘要计数）：" + body})
+                    if release and has_typed_extra(body):
+                        errors.append({"code": "E-KP-TYPED-GATE",
+                                       "message": "知识清单行声明了类型/视觉任务但字段畸形，分型门无法验收："
+                                                  + body})
                 cr = kp["coverage_range"]
                 if kp["coverage_malformed"] or (cr is not None and cr != "全量" and not KP_COVER_RE.match(cr)):
                     warnings.append({"code": "W-UNPARSED-KP",
@@ -1013,6 +1217,21 @@ def check(task_dir, release=False, proposed=None):
                     else:
                         seen_ids.add(r["id"])
                         rows_unique.append(r)
+                # v6.1 分型验收：只对声明了类型/视觉任务的 KP 生效；未声明行仍走统一闸口。
+                if release and lesson_evidence:
+                    typed_by_sec = {}
+                    for r in rows_unique:
+                        if r["status"] in ("未讲", "已讲") and (r.get("type") or r.get("visual_tasks")):
+                            typed_by_sec.setdefault(r["sec"], []).append(r)
+                    for num, ev_text in sorted(lesson_evidence.items()):
+                        typed_rows = typed_by_sec.get(num, [])
+                        if not typed_rows:
+                            continue
+                        typed_errors = typed_gate_errors(ev_text, typed_rows)
+                        if typed_errors:
+                            errors.append({"code": "E-KP-TYPED-GATE",
+                                           "message": "小节 " + str(num) + " 分型验收未通过："
+                                                      + "；".join(typed_errors)})
                 for i in dup_ids:
                     warnings.append({"code": "W-UNPARSED-KP",
                                      "message": "知识清单存在重复 KP 编号（重复行不计入摘要计数）：" + i})
@@ -1327,6 +1546,39 @@ KP_PROG_OK = """# 学习任务：示例
 
 ## 暂缓与范围外
 - 高级主题 KP-03-01 ｜ 来源：S2 对照 ｜ 处置：暂缓 ｜ 触发条件：用户要求
+"""
+
+# v6.1 分型夹具：同一小节内 记忆 + 概念 + 程序/视觉 三类 KP
+KPLIST_TYPED = """# 知识清单：分型示例
+- 版本：1
+- 对照源：自拟总纲
+- 排序规则：拓扑序
+- 覆盖范围：全量
+- 最近更新：2026-10-22
+- 覆盖摘要：总 3 ｜ 未讲 0 ｜ 已讲 3 ｜ 暂缓 0 ｜ 排除 0
+
+- KP-01-01 ｜ 变量命名 ｜ 小节 1 ｜ 前置：  ｜ 来源：目录 1.1 ｜ 状态：已讲 ｜ 类型：记忆
+- KP-01-02 ｜ 变量本质 ｜ 小节 1 ｜ 前置：KP-01-01 ｜ 来源：目录 1.1 ｜ 状态：已讲 ｜ 类型：概念
+- KP-01-03 ｜ 读变量表 ｜ 小节 1 ｜ 前置：KP-01-02 ｜ 来源：目录 1.1 ｜ 状态：已讲 ｜ 类型：程序 ｜ 视觉任务：图表
+"""
+KP_PROG_TYPED = """# 学习任务：分型示例
+- 数据根：<root>
+- 当前阶段：逐节学习
+- 类型：知识型
+- 学科族：编程类
+- 目标：入门
+- 起点：零基础
+- 知识清单：知识清单.md ｜ 版本 1 ｜ 总 3
+
+## 学习路线
+- [x] 1. 变量
+"""
+EV_TYPED_OK = """## 作答与判分
+- 题1：作答「3」｜正确性=对｜独立性=独立｜KP=KP-01-01
+- 题2：作答「表值」｜正确性=对｜独立性=独立｜KP=KP-01-03｜视觉=图表
+## 复述检查清单
+- [x] KP-01-02：用自己的话解释变量本质
+- [x] 无事实性错误
 """
 KP_PROG_NOHOLD = """# 学习任务：示例
 - 数据根：<root>
@@ -2050,6 +2302,130 @@ def selftest():
         r57 = _codes("v60-void-corrected", PROG_S3, EV_VOID_CORRECTED, release=True)[0]
         ok = ok and r57["ok"]
         ok = ok and any(w["code"] == "W-VOIDED-ATTEMPT" for w in r57["warnings"])
+
+        # ═══ v6.1 分型验收：记忆/程序要独立正确；概念/设计要定性复述；视觉任务要独立证据 ═══
+        d_type = _mk2("v61-typed-ok", KP_PROG_TYPED,
+                      {"知识清单.md": KPLIST_TYPED,
+                       "exercises/01-变量-2026-01-01.md": EV_TYPED_OK})
+        r_type = check(d_type, release=True)
+        ok = ok and r_type["ok"]
+        ok = ok and not any(e["code"] == "E-KP-TYPED-GATE" for e in r_type["errors"])
+        r_type_mem = check(_mk2("v61-typed-mem", KP_PROG_TYPED,
+                                {"知识清单.md": KPLIST_TYPED,
+                                 "exercises/01-变量-2026-01-01.md":
+                                 EV_TYPED_OK.replace("｜KP=KP-01-01", "")}), release=True)
+        ok = ok and any(e["code"] == "E-KP-TYPED-GATE" and "KP-01-01" in e["message"]
+                        for e in r_type_mem["errors"])
+        r_type_con = check(_mk2("v61-typed-con", KP_PROG_TYPED,
+                                {"知识清单.md": KPLIST_TYPED,
+                                 "exercises/01-变量-2026-01-01.md":
+                                 EV_TYPED_OK.replace("KP-01-02：", "关键点：")}), release=True)
+        ok = ok and any(e["code"] == "E-KP-TYPED-GATE" and "KP-01-02" in e["message"]
+                        for e in r_type_con["errors"])
+        r_type_vis = check(_mk2("v61-typed-vis", KP_PROG_TYPED,
+                                {"知识清单.md": KPLIST_TYPED,
+                                 "exercises/01-变量-2026-01-01.md":
+                                 EV_TYPED_OK.replace("｜视觉=图表", "")}), release=True)
+        ok = ok and any(e["code"] == "E-KP-TYPED-GATE" and "视觉任务" in e["message"]
+                        for e in r_type_vis["errors"])
+        # 可选字段畸形：类型非法 -> W-UNPARSED-KP；缺类型/视觉字段的旧行仍合法
+        r_type_bad = check(_mk2("v61-typed-bad", KP_PROG_TYPED,
+                                {"知识清单.md": KPLIST_TYPED.replace("类型：记忆", "类型：乱写"),
+                                 "exercises/01-变量-2026-01-01.md": EV_TYPED_OK}), release=True)
+        ok = ok and any(w["code"] == "W-UNPARSED-KP" for w in r_type_bad["warnings"])
+        ok = ok and any(e["code"] == "E-KP-TYPED-GATE" and "畸形" in e["message"]
+                        for e in r_type_bad["errors"])
+        r_type_title = check(_mk2("v61-typed-title-only", KP_PROG_TYPED,
+                                  {"知识清单.md": "# 知识清单：标题含类型\n- 版本：1\n"
+                                                   "- 覆盖摘要：总 1 ｜ 未讲 0 ｜ 已讲 1 ｜ 暂缓 0 ｜ 排除 0\n\n"
+                                                   "- KP-01-01 ｜ 类型转换 ｜ 小节 1 ｜ 前置：  ｜ 来源：目录\n",
+                                   "exercises/01-变量-2026-01-01.md": EV_TYPED_OK}), release=True)
+        ok = ok and any(w["code"] == "W-UNPARSED-KP" for w in r_type_title["warnings"])
+        ok = ok and not any(e["code"] == "E-KP-TYPED-GATE" for e in r_type_title["errors"])
+        r_type_missing_status = check(_mk2("v61-typed-missing-status", KP_PROG_TYPED,
+                                           {"知识清单.md": "# 知识清单：缺状态\n- 版本：1\n"
+                                                            "- 覆盖摘要：总 1 ｜ 未讲 0 ｜ 已讲 1 ｜ 暂缓 0 ｜ 排除 0\n\n"
+                                                            "- KP-01-01 ｜ 变量 ｜ 小节 1 ｜ 前置：  ｜ 来源：目录 ｜ 类型：概念\n",
+                                            "exercises/01-变量-2026-01-01.md": EV_TYPED_OK}), release=True)
+        ok = ok and any(e["code"] == "E-KP-TYPED-GATE" for e in r_type_missing_status["errors"])
+        r_type_old = check(_mk2("v61-typed-old", KP_PROG_OK,
+                                {"知识清单.md": KPLIST_OK,
+                                 "exercises/01-变量-2026-01-01.md": EV_TYPED_OK}), release=True)
+        ok = ok and not any(e["code"] == "E-KP-TYPED-GATE" for e in r_type_old["errors"])
+        r_type_half = check(_mk2("v61-typed-half-colon", KP_PROG_TYPED,
+                                 {"知识清单.md": KPLIST_TYPED.replace("类型：概念", "类型:概念")
+                                  .replace("视觉任务：图表", "视觉任务:图表"),
+                                  "exercises/01-变量-2026-01-01.md": EV_TYPED_OK}), release=True)
+        ok = ok and r_type_half["ok"]
+        ok = ok and not any(w["code"] == "W-UNPARSED-KP" for w in r_type_half["warnings"])
+        r_type_alias = check(_mk2("v61-typed-alias", KP_PROG_TYPED,
+                                  {"知识清单.md": KPLIST_TYPED.replace("KP-01-01", "KP-1-1"),
+                                   "exercises/01-变量-2026-01-01.md": EV_TYPED_OK}), release=True)
+        ok = ok and r_type_alias["ok"]
+
+        # ═══ v6.1 大纲契约 + intake ═══
+        MOD_OK = ("## 模块目标\n- M1 ｜ 变量 ｜ 学完能独立读写变量\n\n"
+                  "## 材料覆盖\n- 教材 1.1 → M1\n\n"
+                  "## 材料\n- 教材 1.1\n\n## 学习路线")
+        prog_contract = PROG_S3.replace("## 学习路线", MOD_OK)
+        r_c = check(_mk2("v61-contract-ok", prog_contract,
+                         {"exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
+        ok = ok and r_c["ok"]
+        ok = ok and not any(w["code"].startswith("W-MODULE") or w["code"].startswith("W-UNPARSED-MODULE")
+                            or w["code"].startswith("W-UNPARSED-MATERIAL") or w["code"] == "W-MATERIAL-COVERAGE-GAP"
+                            for w in r_c["warnings"])
+        r_ci = check(_mk2("v61-contract-incomplete",
+                          PROG_S3.replace("## 学习路线", "## 模块目标\n- M1 ｜ 变量 ｜ 学完能读写变量\n\n"
+                                                          "## 材料\n- 教材 1.1\n\n## 学习路线"),
+                          {"exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
+        ok = ok and any(w["code"] == "W-MODULE-CONTRACT-INCOMPLETE" for w in r_ci["warnings"])
+        r_cno = check(_mk2("v61-contract-no-material",
+                           PROG_S3.replace("## 学习路线", "## 模块目标\n- M1 ｜ 变量 ｜ 学完能读写变量\n\n## 学习路线"),
+                           {"exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
+        ok = ok and not any(w["code"] == "W-MODULE-CONTRACT-INCOMPLETE" for w in r_cno["warnings"])
+        r_cm = check(_mk2("v61-contract-module-bad",
+                          PROG_S3.replace("## 学习路线", "## 模块目标\n- 变量模块\n\n## 材料覆盖\n- 教材 → M1\n\n## 学习路线"),
+                          {"exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
+        ok = ok and any(w["code"] == "W-UNPARSED-MODULE" for w in r_cm["warnings"])
+        r_cmat = check(_mk2("v61-contract-material-bad",
+                            PROG_S3.replace("## 学习路线", "## 模块目标\n- M1 ｜ 变量 ｜ 学完能读写变量\n\n## 材料覆盖\n- 教材 M1\n\n## 学习路线"),
+                            {"exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
+        ok = ok and any(w["code"] == "W-UNPARSED-MATERIAL" for w in r_cmat["warnings"])
+        r_cgap = check(_mk2("v61-contract-gap",
+                            PROG_S3.replace("## 学习路线", "## 模块目标\n- M1 ｜ 变量 ｜ 学完能读写变量\n\n"
+                                                          "## 材料覆盖\n- 教材 1.1 → M1\n\n"
+                                                          "## 材料\n- 教材 1.1\n- 教材 1.2\n\n## 学习路线"),
+                            {"exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
+        ok = ok and any(w["code"] == "W-MATERIAL-COVERAGE-GAP" for w in r_cgap["warnings"])
+        r_cph = check(_mk2("v61-contract-placeholder",
+                           PROG_S3.replace("## 学习路线", "## 模块目标\n- M1 ｜ <模块名> ｜ <学完能独立……>\n\n"
+                                                           "## 材料\n- 教材 1.1\n\n"
+                                                           "## 材料覆盖\n- <材料> → M1\n\n## 学习路线"),
+                           {"exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
+        ok = ok and any(w["code"] == "W-UNPARSED-MODULE" for w in r_cph["warnings"])
+        ok = ok and any(w["code"] == "W-UNPARSED-MATERIAL" for w in r_cph["warnings"])
+        r_cdup = check(_mk2("v61-contract-duplicate-cover",
+                            PROG_S3.replace("## 学习路线", "## 模块目标\n- M1 ｜ 变量 ｜ 学完能读写变量\n\n"
+                                                          "## 材料覆盖\n- 教材 1.1 → M1\n- 教材 1.1 → M2\n\n"
+                                                          "## 材料\n- 教材 1.1\n- 教材 1.2\n\n## 学习路线"),
+                            {"exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
+        ok = ok and any(w["code"] == "W-MATERIAL-COVERAGE-GAP" and "教材 1.2" in w["message"]
+                        for w in r_cdup["warnings"])
+        r_cprefix = check(_mk2("v61-contract-same-prefix",
+                               PROG_S3.replace("## 学习路线", "## 模块目标\n- M1 ｜ 变量 ｜ 学完能读写变量\n\n"
+                                                             "## 材料覆盖\n- 数学（上册） → M1\n- 数学（上册） → M2\n\n"
+                                                             "## 材料\n- 数学（上册）\n- 数学（下册）\n\n## 学习路线"),
+                               {"exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
+        ok = ok and any(w["code"] == "W-MATERIAL-COVERAGE-GAP" and "数学（下册）" in w["message"]
+                        for w in r_cprefix["warnings"])
+        r_s = check(_mk2("v61-strategy-ok",
+                         PROG_S3.replace("- 起点：零基础\n", "- 起点：零基础\n- 教学策略：先教后测\n"),
+                         {"exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
+        ok = ok and r_s["ok"]
+        r_sbad = check(_mk2("v61-strategy-bad",
+                            PROG_S3.replace("- 起点：零基础\n", "- 起点：零基础\n- 教学策略：随便教\n"),
+                            {"exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
+        ok = ok and any(e["code"] == "E-ENUM-STRATEGY" for e in r_sbad["errors"])
 
     print(("OK " if ok else "FAIL ") + "progress_check --selftest")
     return 0 if ok else 1
