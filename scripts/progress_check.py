@@ -31,9 +31,11 @@
 --release 模式（本次放行校验，与历史检查分离）：
     · **结构化作答闸口（R01/R15）**：判分记录须**同题三要素配对**——真实学员作答（非占位）
       + 可判定结果（正确性/调度档，**精确枚举**） + 独立性枚举（独立 / 提示后·提示②–④ / 未测）；
-      缺失或 `未测` 一律**不推为独立**；零条「有作答且有判定」→ E-NO-GRADED-ATTEMPT；
-      全错 → E-ALL-FAILED；仅提示后对 → E-HINT-ONLY；缺独立性 → E-NO-INDEPENDENCE；
+      结果四态为 correct / partial / incorrect / ungraded：partial 计入分母、不计入分子；
+      ungraded 与「作废」行均不计入闸口，只保留审计；零条「有作答且有判定」→ E-NO-GRADED-ATTEMPT；
+      全错（含全 partial）→ E-ALL-FAILED；仅提示后对 → E-HINT-ONLY；缺独立性 → E-NO-INDEPENDENCE；
       低于 2/3 → E-GATE-THRESHOLD；同 attempt_id 冲突 → E-ATTEMPT-CONFLICT。
+      放行模式对作废/未判行另出 W-VOIDED-ATTEMPT / W-UNGRADED-ATTEMPT。
     · **逐关键能力独立通过（R16）**：声明「关键能力」区块时每项须至少一次独立正确 →
       否则 E-KEY-ABILITY-UNMET（关键项错不被简单题抵消）。
     · **复述 / 目标型证据（R17）**：复述清单按**勾选项**计数（≥2，兼容同行多勾选）；
@@ -98,7 +100,8 @@ HOLD_KEYS = ("来源", "处置", "触发条件")
 EVIDENCE_HEAD_RE = re.compile(r"(判分|作答)")
 # 结果标记：档位词 / 对错 / 正确率 / 得分 / 勾叉 / 分数比值
 GRADE_ROW_RE = re.compile(
-    r"(Good|Easy|Hard|Again|对|错|正确|错误|得分|满分|正确率|✓|✗|√|×|\d+\s*/\s*\d+)")
+    r"(Good|Easy|Hard|Again|对|错|正确|错误|得分|满分|正确率|✓|✗|√|×|\d+\s*/\s*\d+"
+    r"|(?:正确性|调度档|结果|档位|档)\s*[=＝]\s*(?:部分|部分正确|partial|Partial|未判|待判|ungraded|Ungraded|correct|Correct|incorrect|Incorrect|作废))")
 # 占位符：模板里的 <…>、待填、占位、示例标记——落在占位行上的结果不计为真实证据
 PLACEHOLDER_RE = re.compile(r"<[^>]*>|待填|占位|模板|示例")
 
@@ -150,11 +153,16 @@ DATE_IN_NAME_RE = re.compile(r"(\d{4}-\d{2}-\d{2})")
 EVIDENCE_REF_RE = re.compile(r"本次证据[：:]\s*(\S+)")
 KP_ID_ANY_RE = re.compile(r"KP-(\d+)-(\d+)")
 # 正确性/独立性均按**精确枚举**解析（V03）：`正确性=不对` 不得被子串 `对` 误判为正确；
-# 独立性缺失或 `未测` 均**不得推为独立**。
-CORRECT_TRUE_EXACT = ("对", "正确", "✓", "√")
-CORRECT_FALSE_EXACT = ("错", "错误", "✗", "×", "不对", "不正确", "否")
+# v6.0 正确性四态为 对/部分/错/未判（兼容英文），独立性缺失或 `未测` 均**不得推为独立**。
+CORRECT_TRUE_EXACT = ("对", "正确", "✓", "√", "correct", "Correct")
+CORRECT_FALSE_EXACT = ("错", "错误", "✗", "×", "不对", "不正确", "否", "incorrect", "Incorrect")
 GRADE_TRUE_EXACT = ("Good", "Easy", "Hard")
 GRADE_FALSE_EXACT = ("Again",)
+# v6.0 判分四态：partial 入分母不入分子；ungraded 不入分母；作废行仅审计、不进闸口
+RESULT_PARTIAL_EXACT = ("部分", "部分正确", "partial", "Partial")
+RESULT_UNGRADED_EXACT = ("未判", "待判", "ungraded", "Ungraded")
+# 作废标记须是独立段，避免把「未作废」误判为作废
+VOID_RE = re.compile(r"(?:^|[｜|，,；;\s])作废(?:$|[｜|，,；;\s（(])")
 
 
 def evidence_section(text):
@@ -241,13 +249,21 @@ def _artifact_state(text):
     return "absent"
 
 
-def _parse_correct(tok):
-    """正确性按**精确枚举**解析：`不对`/`不正确` 是错，不得被子串 `对` 误判为正确（V03）。"""
-    t = (tok or "").strip()
-    if t in CORRECT_TRUE_EXACT:
-        return True
-    if t in CORRECT_FALSE_EXACT:
-        return False
+def _parse_result(tok):
+    """把正确性/调度档 token 归一为四态；未知返回 None。
+
+    `不对`/`不正确` 是错，不得被子串 `对` 误判为正确（V03）。
+    容忍 token 后的括号注（如 `Again（得分点缺 X）`），只取主枚举。
+    """
+    t = re.split(r"[（(]", (tok or "").strip(), 1)[0].strip()
+    if t in CORRECT_TRUE_EXACT or t in GRADE_TRUE_EXACT:
+        return "correct"
+    if t in CORRECT_FALSE_EXACT or t in GRADE_FALSE_EXACT:
+        return "incorrect"
+    if t in RESULT_PARTIAL_EXACT:
+        return "partial"
+    if t in RESULT_UNGRADED_EXACT:
+        return "ungraded"
     return None
 
 
@@ -284,34 +300,34 @@ def parse_attempts(text):
             m2 = ALT_ANSWER_RE.search(body)
             raw_answer = m2.group(1).strip() if m2 else ""
         has_answer = bool(raw_answer) and not PLACEHOLDER_RE.search(raw_answer)
-        correct = None
+        voided = bool(VOID_RE.search(body))
+        result = None
         m = CORRECT_RE.search(body)
         if m:
-            correct = _parse_correct(m.group(1))
-        if correct is None:
+            result = _parse_result(m.group(1))
+        if result is None:
             m = GRADE_RE.search(body)
             if m:
-                tok = m.group(1).strip()
-                if tok in GRADE_TRUE_EXACT:
-                    correct = True
-                elif tok in GRADE_FALSE_EXACT:
-                    correct = False
+                result = _parse_result(m.group(1))
         m = INDEP_RE.search(body)
         indep = _parse_indep(m.group(1)) if m else None
         aid = ATTEMPT_ID_ROW_RE.search(body)
         ab = ABILITY_TAG_RE.search(body)
         qm = QNUM_RE.search(body)
-        if not (has_answer or correct is not None or indep is not None or aid or ab):
-            continue     # 既无作答/判定/独立性/attempt/能力标记 → 非作答行（标题、说明等）
-        graded = bool(has_answer and correct is not None and indep is not None)
-        if not graded:
+        if not (has_answer or result is not None or indep is not None or aid or ab or voided):
+            continue     # 既无作答/判定/独立性/attempt/能力/作废标记 → 非作答行
+        correct = True if result == "correct" else (
+            False if result in ("partial", "incorrect") else None)
+        graded = bool(has_answer and result in ("correct", "partial", "incorrect")
+                      and indep is not None and not voided)
+        if not graded and not voided and result != "ungraded":
             incomplete += 1
         attempts.append({
             "qid": qm.group(1) if qm else "",
             "attempt_id": aid.group(1) if aid else "",
             "ability": ab.group(1).upper() if ab else "",
-            "has_answer": has_answer, "correct": correct,
-            "indep": indep, "graded": graded,
+            "has_answer": has_answer, "result": result, "correct": correct,
+            "indep": indep, "graded": graded, "voided": voided,
         })
     return {"attempts": attempts, "incomplete": incomplete}
 
@@ -328,8 +344,12 @@ def parse_key_abilities(text):
 
 
 def has_graded_pool(text):
-    """是否存在至少一条「有作答 + 有判定」的记录（诊断/结课证据用，不要求独立性/复述）。"""
-    return any(a["has_answer"] and a["correct"] is not None
+    """是否存在至少一条「有作答 + 有判定」的记录（诊断/结课证据用，不要求独立性/复述）。
+
+    作废与未判均不算有效判定；partial 算有判定。
+    """
+    return any(a["has_answer"] and a["result"] in ("correct", "partial", "incorrect")
+               and not a["voided"]
                for a in parse_attempts(text)["attempts"])
 
 
@@ -354,11 +374,17 @@ def gate_evidence(ev_text, require_restatement=True, require_independence=True,
     """
     parsed = parse_attempts(ev_text)
     errs = []
-    pool = [a for a in parsed["attempts"] if a["has_answer"] and a["correct"] is not None]
+    pool = [a for a in parsed["attempts"] if a["has_answer"]
+            and a["result"] in ("correct", "partial", "incorrect") and not a["voided"]]
     if not pool:
-        errs.append(("E-NO-GRADED-ATTEMPT",
-                     "无「有真实作答且有判定」的记录（仅结果行 / 仅作答行 / 待批改均不计）"
-                     "——不得据此声称掌握"))
+        voided_count = sum(1 for a in parsed["attempts"] if a["voided"])
+        ungraded_count = sum(1 for a in parsed["attempts"] if a["result"] == "ungraded")
+        msg = ("无「有真实作答且有判定」的记录（仅结果行 / 仅作答行 / 待批改均不计）"
+               "——不得据此声称掌握")
+        if voided_count or ungraded_count:
+            msg += ("（本文件有 " + str(voided_count) + " 条作废、"
+                    + str(ungraded_count) + " 条未判；均不计入闸口）")
+        errs.append(("E-NO-GRADED-ATTEMPT", msg))
         return errs
     # attempt 幂等去重：同一 attempt_id 只计一次；结果冲突则整条诊断（V04）
     seen, dedup, conflict = {}, [], []
@@ -370,7 +396,7 @@ def gate_evidence(ev_text, require_restatement=True, require_independence=True,
         if aid not in seen:
             seen[aid] = a
             dedup.append(a)
-        elif seen[aid]["correct"] != a["correct"] and aid not in conflict:
+        elif seen[aid]["result"] != a["result"] and aid not in conflict:
             conflict.append(aid)
     if conflict:
         errs.append(("E-ATTEMPT-CONFLICT",
@@ -380,17 +406,23 @@ def gate_evidence(ev_text, require_restatement=True, require_independence=True,
         errs.append(("E-NO-INDEPENDENCE",
                      "存在「有作答有判定但独立性缺失或未测」的记录——缺失不推为独立，"
                      "须按 独立性=独立/提示后 明确落盘"))
-    correct = [a for a in dedup if a["correct"]]
+    correct = [a for a in dedup if a["result"] == "correct"]
+    partial_count = sum(1 for a in dedup if a["result"] == "partial")
     independent_correct = [a for a in correct if a["indep"] == "独立"]
     if not correct:
-        errs.append(("E-ALL-FAILED", "本次新增掌握的记录全部失败/Again——不得据此声称掌握"))
+        msg = "本次新增掌握的记录全部未达正确"
+        if partial_count:
+            msg += "（其中 partial " + str(partial_count) + " 条）"
+        msg += "——不得据此声称掌握"
+        errs.append(("E-ALL-FAILED", msg))
     if correct and not independent_correct:
         errs.append(("E-HINT-ONLY",
                      "正确项全部依赖提示（无独立正确）——不得据此声称独立掌握"))
     if (len(correct) / len(dedup)) < min_ratio:
-        errs.append(("E-GATE-THRESHOLD",
-                     "正确率 " + str(len(correct)) + "/" + str(len(dedup))
-                     + " 低于" + ratio_label))
+        msg = "正确率 " + str(len(correct)) + "/" + str(len(dedup)) + " 低于" + ratio_label
+        if partial_count:
+            msg += "（partial 计入分母、不计入分子）"
+        errs.append(("E-GATE-THRESHOLD", msg))
     # 逐关键能力独立通过（V04）：声明了关键能力清单时，每项都要有**独立**正确记录
     abilities = parse_key_abilities(ev_text)
     if abilities:
@@ -880,6 +912,17 @@ def check(task_dir, release=False, proposed=None):
                 warnings.append({"code": "W-EMPTY-EVIDENCE", "message": empty_msg})
         elif release:
             # R01/R15：结构化作答 + 闸口判定（不再仅凭「含评分词」放行）
+            parsed_ev = parse_attempts(best_text)
+            voided_n = sum(1 for a in parsed_ev["attempts"] if a["voided"])
+            ungraded_n = sum(1 for a in parsed_ev["attempts"] if a["result"] == "ungraded")
+            if voided_n:
+                warnings.append({"code": "W-VOIDED-ATTEMPT",
+                                 "message": "小节 " + str(num) + " 的判分记录含 " + str(voided_n)
+                                            + " 条作废记录（保留原行审计，不计入闸口）"})
+            if ungraded_n:
+                warnings.append({"code": "W-UNGRADED-ATTEMPT",
+                                 "message": "小节 " + str(num) + " 的判分记录含 " + str(ungraded_n)
+                                            + " 条未判记录（不计入闸口分母，需补判或作废）"})
             for code, msg in gate_evidence(best_text):
                 errors.append({"code": code, "message": "小节 " + str(num) + "：" + msg})
 
@@ -1925,6 +1968,88 @@ def selftest():
                     {"exercises/01-变量-2026-01-01.md": EV_OK})
         r49b = check(d49b, release=True)
         ok = ok and not any(e["code"] == "E-CURSOR-DANGLING" for e in r49b["errors"])
+
+        # ═══ v6.0 判分四态：partial / ungraded / 作废 ═══
+        RESTATE = "## 复述检查清单\n- [x] 关键点1\n- [x] 无事实性错误\n"
+        EV_PARTIAL_MIX = (
+            "## 作答与判分\n"
+            "- 题1：作答「3」｜正确性=对｜独立性=独立｜调度档=Good\n"
+            "- 题2：作答「x」｜正确性=部分｜独立性=独立｜调度档=Again\n"
+            "- 题3：作答「y」｜正确性=错｜独立性=独立｜调度档=Again\n" + RESTATE)
+        r50, c50 = _codes("v60-partial-mix", PROG_S3, EV_PARTIAL_MIX, release=True)
+        ok = ok and (not r50["ok"]) and "E-GATE-THRESHOLD" in c50
+        ok = ok and any("1/3" in e["message"] and "partial" in e["message"]
+                        for e in r50["errors"])
+
+        EV_PARTIAL_PASS = (
+            "## 作答与判分\n"
+            "- 题1：作答「3」｜正确性=对｜独立性=独立｜调度档=Good\n"
+            "- 题2：作答「4」｜正确性=对｜独立性=独立｜调度档=Good\n"
+            "- 题3：作答「x」｜正确性=部分｜独立性=独立｜调度档=Again\n" + RESTATE)
+        r51, c51 = _codes("v60-partial-pass", PROG_S3, EV_PARTIAL_PASS, release=True)
+        ok = ok and r51["ok"] and "E-GATE-THRESHOLD" not in c51
+
+        EV_UNGRADED = (
+            "## 作答与判分\n"
+            "- 题1：作答「3」｜正确性=对｜独立性=独立｜调度档=Good\n"
+            "- 题2：作答「4」｜正确性=对｜独立性=独立｜调度档=Good\n"
+            "- 题3：作答「x」｜正确性=未判｜独立性=未测\n" + RESTATE)
+        r52 = _codes("v60-ungraded", PROG_S3, EV_UNGRADED, release=True)[0]
+        ok = ok and r52["ok"]
+        ok = ok and any(w["code"] == "W-UNGRADED-ATTEMPT" for w in r52["warnings"])
+
+        EV_VOID_ONLY = (
+            "## 作答与判分\n"
+            "- 题1：作答「3」｜正确性=对｜独立性=独立｜调度档=Good｜作废（答案键错误）\n"
+            "- 题2：作答「x」｜正确性=未判｜独立性=未测\n" + RESTATE)
+        r53, c53 = _codes("v60-void-only", PROG_S3, EV_VOID_ONLY, release=True)
+        ok = ok and (not r53["ok"]) and "E-NO-GRADED-ATTEMPT" in c53
+        ok = ok and any("作废" in e["message"] and "未判" in e["message"]
+                        for e in r53["errors"])
+        ok = ok and any(w["code"] == "W-VOIDED-ATTEMPT" for w in r53["warnings"])
+        ok = ok and any(w["code"] == "W-UNGRADED-ATTEMPT" for w in r53["warnings"])
+
+        EV_VOID_EXCLUDED = (
+            "## 作答与判分\n"
+            "- 题1：作答「3」｜正确性=对｜独立性=独立｜调度档=Good\n"
+            "- 题2：作答「4」｜正确性=对｜独立性=独立｜调度档=Good\n"
+            "- 题3：作答「y」｜正确性=错｜独立性=独立｜调度档=Again｜作废（答案键错误）\n"
+            + RESTATE)
+        r54 = _codes("v60-void-excluded", PROG_S3, EV_VOID_EXCLUDED, release=True)[0]
+        ok = ok and r54["ok"]
+        ok = ok and any(w["code"] == "W-VOIDED-ATTEMPT" for w in r54["warnings"])
+
+        EV_CONFLICT = (
+            "## 作答与判分\n"
+            "- attempt_id=A1，题1：作答「3」｜正确性=对｜独立性=独立｜调度档=Good\n"
+            "- attempt_id=A1，题1：作答「3」｜正确性=部分｜独立性=独立｜调度档=Again\n"
+            + RESTATE)
+        r55, c55 = _codes("v60-result-conflict", PROG_S3, EV_CONFLICT, release=True)
+        ok = ok and (not r55["ok"]) and "E-ATTEMPT-CONFLICT" in c55
+
+        # 边界：调度档后带括号注仍可解析；英文四态；作废旧行 + 同 attempt_id 改判
+        EV_NOTE_ONLY = (
+            "## 作答与判分\n"
+            "- 题1：作答「x」｜调度档=Again（得分点缺 X）｜独立性=独立\n" + RESTATE)
+        r56, c56 = _codes("v60-note-only", PROG_S3, EV_NOTE_ONLY, release=True)
+        ok = ok and (not r56["ok"]) and "E-ALL-FAILED" in c56
+        ok = ok and parse_attempts(EV_NOTE_ONLY)["attempts"][0]["result"] == "incorrect"
+
+        EV_ENGLISH = (
+            "## 作答与判分\n"
+            "- 题1：作答「3」｜正确性=correct｜独立性=独立\n"
+            "- 题2：作答「4」｜正确性=partial｜独立性=独立\n" + RESTATE)
+        ev_en = parse_attempts(EV_ENGLISH)["attempts"]
+        ok = ok and [a["result"] for a in ev_en] == ["correct", "partial"]
+
+        EV_VOID_CORRECTED = (
+            "## 作答与判分\n"
+            "- attempt_id=A1，题1：作答「3」｜正确性=incorrect｜独立性=独立｜调度档=Again｜作废（答案键错误）\n"
+            "- attempt_id=A1，题1：作答「3」｜正确性=correct｜独立性=独立｜调度档=Good\n"
+            + RESTATE)
+        r57 = _codes("v60-void-corrected", PROG_S3, EV_VOID_CORRECTED, release=True)[0]
+        ok = ok and r57["ok"]
+        ok = ok and any(w["code"] == "W-VOIDED-ATTEMPT" for w in r57["warnings"])
 
     print(("OK " if ok else "FAIL ") + "progress_check --selftest")
     return 0 if ok else 1

@@ -24,11 +24,12 @@ SKILL.md「判断归模型、数据归脚本」）。
     due-queue      开节前查到期队列：
         python scheduler.py due-queue --root <数据根> [--slug <slug>] \
             --today YYYY-MM-DD [--all]
-        读 <root>/<slug>/progress.md 的「薄弱点」「错题本」两区，按
-        cw 优先 → 最逾期优先 → due 早优先 → slug/条目名稳定序 排序。
+        读 <root>/<slug>/progress.md 的「薄弱点」「错题本」「保持复习」三区，
+        按 cw 优先 → 最逾期优先 → due 早优先 → slug/条目名稳定序 排序。
+        每条输出 reason（到期/逾期/优先级的人类可读说明）；schema=ltw-due-queue/3。
         默认只出 due <= today；--all 出全部（供收尾五件套报具体日期用）。
         v2.2：条目输出新增 错因/级/meta_default 三键（加键升 schema
-        ltw-due-queue/2）；排序契约 cw→最逾期→due 早→稳定序 逐字不动。
+        ltw-due-queue/3）；排序契约 cw→最逾期→due 早→稳定序 逐字不动。
         薄弱点/错题行元数据挂载点全角/半角双兼容（推荐全角，
         半角兜底），防模型写半角括号/竖线时元数据静默丢失。
 
@@ -201,7 +202,12 @@ def next_interval(grade, stability=None, difficulty=None, elapsed=None,
     """纯计算函数：同输入同输出，不碰文件、不取当前时间。
 
     返回输出 JSON（dict）。
+
+    同会话重复抑制：elapsed=0 且答对时只刷新召回（same_session=true），
+    不增长 S、不改 D、不推迟 due。否则一天内反复刷题会把 massed practice
+    误记成长期保持，违背「流利度 ≠ 存储强度」。
     """
+    same_session = False
     if new_card:
         s_old = None
         d_old = None
@@ -217,12 +223,17 @@ def next_interval(grade, stability=None, difficulty=None, elapsed=None,
         d_old = difficulty
         if grade == "again":
             s_new = max(1.0, stability * 0.3)
+            d_new = max(1.0, min(5.0, difficulty + D_DRIFT[grade]))
+        elif elapsed == 0:
+            same_session = True
+            s_new = stability
+            d_new = difficulty
         else:
             r = clamp_r(elapsed, stability)
             factor = GRADE_BASE[grade] * (1 + 0.35 * (r - 1)) * (1.3 - 0.1 * difficulty)
             s_new = max(stability * factor, stability + 0.5)
+            d_new = max(1.0, min(5.0, difficulty + D_DRIFT[grade]))
         s_new = min(s_new, S_MAX)
-        d_new = max(1.0, min(5.0, difficulty + D_DRIFT[grade]))
 
     # 输出侧确定性舍入（4 位小数）：消除浮点噪音（如 6.6000000000000005），
     # 同输入同输出的 JSON 才逐字节稳定；不影响 interval_days 的 0.5 进位取整。
@@ -250,6 +261,7 @@ def next_interval(grade, stability=None, difficulty=None, elapsed=None,
         "interval_days": interval_days,
         "due": due,
         "confidence": confidence,
+        "same_session": same_session,
         "migrated": False,
     }
 
@@ -286,11 +298,12 @@ NONE_RE = re.compile(r"无[（(][^（）()]*[）)]")
 
 
 def parse_progress_sections(text):
-    """提取「最近更新」字段与薄弱点/错题本两区的条目行（纯文本解析）。"""
+    """提取「最近更新」字段与薄弱点/错题本/保持复习三区的条目行（纯文本解析）。"""
     section = None
     recent_update = None
     weak_lines = []
     wrong_lines = []
+    retention_lines = []
     for raw in text.splitlines():
         line = raw.rstrip()
         if line.startswith("## "):
@@ -305,7 +318,9 @@ def parse_progress_sections(text):
             weak_lines.append(line.strip()[2:].strip())
         elif section == "错题本" and line.strip().startswith("- "):
             wrong_lines.append(line.strip()[2:].strip())
-    return recent_update, weak_lines, wrong_lines
+        elif section == "保持复习" and line.strip().startswith("- "):
+            retention_lines.append(line.strip()[2:].strip())
+    return recent_update, weak_lines, wrong_lines, retention_lines
 
 
 def parse_meta(meta_text):
@@ -392,8 +407,9 @@ def resolve_item(item_text, meta_text, kind, wrong_date, recent_update):
     s_val = meta["S"] if meta["S"] is not None else DEFAULT_S
     d_val = meta["D"] if meta["D"] is not None else DEFAULT_D
     last = meta["last"]
-    if last is None and kind == "错题":
-        last = _valid_iso(wrong_date)   # 坏 [日期] 前缀不参与推算，回退默认链
+    if last is None and kind in ("错题", "保持"):
+        # 错题用出错日、保持复习用掌握日作缺省 last；坏 [日期] 前缀不参与推算。
+        last = _valid_iso(wrong_date)
     if last is None:
         last = _valid_iso(recent_update) if recent_update else None
     due = meta["due"]
@@ -404,6 +420,8 @@ def resolve_item(item_text, meta_text, kind, wrong_date, recent_update):
                     and (meta["due"] is not None or meta["last"] is not None))
     if due is None:
         return None, migrated
+    # 错因/级只对薄弱点/错题有意义；保持复习不参与这套问题元数据，避免假 meta_default。
+    is_retention = kind == "保持"
     return {
         "item": item_text,
         "kind": kind,
@@ -413,9 +431,9 @@ def resolve_item(item_text, meta_text, kind, wrong_date, recent_update):
         "S": norm_num(s_val),
         "D": norm_num(d_val),
         "migrated": migrated,
-        "错因": meta["错因"] if meta["错因"] is not None else DEFAULT_CAUSE,
-        "级": meta["级"] if meta["级"] is not None else DEFAULT_LEVEL,
-        "meta_default": meta["错因"] is None or meta["级"] is None,
+        "错因": meta["错因"] if meta["错因"] is not None else ("" if is_retention else DEFAULT_CAUSE),
+        "级": meta["级"] if meta["级"] is not None else ("" if is_retention else DEFAULT_LEVEL),
+        "meta_default": (not is_retention) and (meta["错因"] is None or meta["级"] is None),
         "teach": meta["顽固"],
     }, migrated
 
@@ -426,7 +444,7 @@ def observations_from_text(text, slug):
     返回 (raws, warnings)；queue 与 calibration 共用，防解析器漂移。
     raw = {item, kind, wrong_date, recent, meta, meta_text}
     """
-    recent_update, weak_lines, wrong_lines = parse_progress_sections(text)
+    recent_update, weak_lines, wrong_lines, retention_lines = parse_progress_sections(text)
     raws = []
     warnings = []
     for line in weak_lines:
@@ -447,6 +465,17 @@ def observations_from_text(text, slug):
         wrong_date, rest = m.group(1), m.group(2)
         item_text, meta_text = split_wrong_item(rest)
         raws.append({"item": item_text, "kind": "错题", "wrong_date": wrong_date,
+                     "recent": recent_update, "meta": parse_meta(meta_text),
+                     "meta_text": meta_text})
+    for line in retention_lines:
+        if line in NONE_MARKS or NONE_RE.fullmatch(line):
+            continue
+        m = WRONG_LINE_RE.match(line)
+        # 掌握日期前缀推荐但不强制：省略时由元数据 last/due 或「最近更新」兜底；
+        # 只有全部日期来源都缺失时，才由 resolve_item 统一告警不入队。
+        mastery_date, rest = (m.group(1), m.group(2)) if m else ("", line)
+        item_text, meta_text = split_wrong_item(rest)
+        raws.append({"item": item_text, "kind": "保持", "wrong_date": mastery_date,
                      "recent": recent_update, "meta": parse_meta(meta_text),
                      "meta_text": meta_text})
     return raws, warnings
@@ -537,6 +566,26 @@ def collect_queue(root, slug_filter, today):
     return queue, warnings + parse_warnings
 
 
+def review_reason(entry):
+    """生成人类可读的复习理由（确定性；不引入向量/遗忘曲线估算）。"""
+    kind_label = {"薄弱点": "薄弱点", "错题": "错题", "保持": "保持复习"}.get(
+        entry["kind"], entry["kind"])
+    parts = [kind_label]
+    if entry["cw"]:
+        parts.append("自信但错，优先修复")
+    if entry["顽固"]:
+        parts.append("两次提示到梯底，优先重教")
+    overdue = entry["overdue_days"]
+    if overdue > 0:
+        parts.append("已逾期 " + str(overdue) + " 天")
+    elif overdue == 0:
+        parts.append("今天到期")
+    else:
+        parts.append("还有 " + str(-overdue) + " 天到期")
+    parts.append("S=" + str(entry["S"]) + "，D=" + str(entry["D"]))
+    return "；".join(parts)
+
+
 def due_queue_output(root, slug_filter, today, show_all):
     """默认只出 due <= today；--all 出全部。排序：cw 优先 -> 最逾期 -> due 早 -> 稳定序。"""
     queue, warnings = collect_queue(root, slug_filter, today)
@@ -551,12 +600,13 @@ def due_queue_output(root, slug_filter, today, show_all):
     ))
     fields = ("slug", "item", "kind", "due", "overdue_days", "cw", "顽固",
               "S", "D", "migrated", "teach")
-    fields = fields + ("错因", "级", "meta_default")  # v2.2 加键回显；排序契约不动
+    fields = fields + ("错因", "级", "meta_default", "reason")  # 加键回显；排序契约不动
     return {
-        "schema": "ltw-due-queue/2",
+        "schema": "ltw-due-queue/3",
         "today": today.isoformat(),
         "root": str(Path(root)),
-        "queue": [{k: e[k] for k in fields} for e in ordered],
+        "queue": [{**{k: e[k] for k in fields if k != "reason"},
+                   "reason": review_reason(e)} for e in ordered],
         "warnings": warnings,
     }
 
@@ -645,6 +695,8 @@ def calibration_from_progress_texts(entries):
     per_slug = []
     for slug, text in entries:
         raws, w = observations_from_text(text, slug)
+        # 保持复习是已掌握内容的调度账本，不是问题记录；校准画像只统计薄弱点/错题。
+        raws = [r for r in raws if r["kind"] != "保持"]
         warnings.extend(w)
         groups = _group_by_evt(raws)
         obs = [_merge_evt_group(g, slug, warnings) for g in groups]
@@ -962,6 +1014,47 @@ FIX_C = """# 学习任务：丙
 - [2026-10-09] 变式题 ｜ 错因：审题漏条件 ｜ 元数据：S=1.0，D=4，last=2026-10-09，due=2026-10-10，信心=2，错因=技巧性，级=B
 """
 
+FIX_R = """# 学习任务：丁
+- 数据根：<root>
+- 当前阶段：复习巩固
+- 类型：知识型
+- 学科族：理论概念类
+- 目标：自测
+- 起点：入门
+- 最近更新：2026-10-20
+
+## 学习路线
+- [x] 1. 变量
+- [x] 2. 循环
+
+## 保持复习
+- [2026-10-12] 第 1 节 变量 ｜ 元数据：S=3.0，D=3，last=2026-10-12，due=2026-10-15
+- [2026-10-13] 第 2 节 循环 ｜ 元数据：S=7.0，D=4，last=2026-10-18，due=2026-10-25
+"""
+
+FIX_R2 = """# 学习任务：戊
+- 当前阶段：复习巩固
+- 类型：知识型
+- 学科族：理论概念类
+- 目标：自测
+- 起点：入门
+
+## 保持复习
+- 第 3 节 函数 ｜ 元数据：S=4.0，D=3，last=2026-10-18，due=2026-10-22
+- 第 4 节 类 ｜ 元数据：S=3.0，D=3，last=2026-10-18
+"""
+
+FIX_R3 = """# 学习任务：己
+- 当前阶段：复习巩固
+- 类型：知识型
+- 学科族：理论概念类
+- 目标：自测
+- 起点：入门
+
+## 保持复习
+- 第 5 节 无日期
+"""
+
 
 def approx(a, b, eps=1e-9):
     return abs(a - b) <= eps
@@ -987,6 +1080,22 @@ def selftest():
     # R=2.0 -> factor=2.2*1.35=2.97 -> S'=max(8.91, 3.5)=8.91
     ok = ok and approx(r_high["stability_new"], 8.91)
 
+    # 断言 2b：同会话重复答对（elapsed=0）只刷新召回，不增长 S/D、不推迟 due
+    r_same = next_interval("easy", stability=6.0, difficulty=3, elapsed=0,
+                           last="2026-10-20", today="2026-10-20")
+    ok = ok and r_same["same_session"] is True
+    ok = ok and approx(r_same["stability_new"], 6.0)
+    ok = ok and r_same["difficulty_new"] == 3
+    ok = ok and r_same["interval_days"] == 6
+    ok = ok and r_same["due"] == "2026-10-26"
+    r_same_h = next_interval("hard", stability=3.0, difficulty=3, elapsed=0)
+    ok = ok and r_same_h["same_session"] is True
+    ok = ok and approx(r_same_h["stability_new"], 3.0)
+    ok = ok and r_same_h["difficulty_new"] == 3
+    r_not_same = next_interval("good", stability=3.0, difficulty=3, elapsed=1)
+    ok = ok and r_not_same["same_session"] is False
+    ok = ok and approx(r_not_same["stability_new"], 5.06)  # R=1/3 -> 仍正常增长
+
     # 断言 3：失败档 again
     r = next_interval("again", stability=5.0, difficulty=3, elapsed=5,
                       last="2026-10-05", today="2026-10-10")
@@ -1010,6 +1119,7 @@ def selftest():
         ok = ok and approx(r["stability_new"], s0)
         ok = ok and r["difficulty_new"] == 3
         ok = ok and r["stability_old"] is None and r["difficulty_old"] is None
+        ok = ok and r["same_session"] is False
     r = next_interval("good", new_card=True, init_shift=1)
     ok = ok and r["difficulty_new"] == 4
     r = next_interval("good", new_card=True, init_shift=-1)
@@ -1054,6 +1164,47 @@ def selftest():
         [("slug-c", "# 学习任务：丙\n- 当前阶段：复习巩固\n\n## 薄弱点\n- 未来点：未到期（S=2.0，D=3，last=2026-10-10，due=2026-10-13）\n")],
         today)
     ok = ok and len(future) == 1 and future[0]["overdue_days"] == -3
+
+    # 断言 7b：保持复习区被 due-queue 识别；reason 说明到期原因；schema 升 /3
+    today_r = date.fromisoformat("2026-10-20")
+    rq, rw = queue_from_progress_texts([("slug-r", FIX_R)], today_r)
+    by_r = {e["item"]: e for e in rq}
+    ok = ok and by_r["第 1 节 变量"]["kind"] == "保持"
+    ok = ok and by_r["第 1 节 变量"]["overdue_days"] == 5
+    ok = ok and by_r["第 2 节 循环"]["overdue_days"] == -5
+    ok = ok and by_r["第 1 节 变量"]["meta_default"] is False
+    ok = ok and by_r["第 1 节 变量"]["错因"] == "" and by_r["第 1 节 变量"]["级"] == ""
+    ok = ok and "保持复习" in review_reason(by_r["第 1 节 变量"])
+    ok = ok and "已逾期 5 天" in review_reason(by_r["第 1 节 变量"])
+    ok = ok and "还有 5 天到期" in review_reason(by_r["第 2 节 循环"])
+    ok = ok and not any(w.startswith("W-UNPARSED-ITEM") for w in rw)
+    cal_r, _cw_r = calibration_from_progress_texts([("slug-r", FIX_R)])
+    ok = ok and cal_r[0]["total_items"] == 0  # 保持复习不进校准画像
+    # 日期前缀可省略：元数据 last/due 能推出 due 时仍入队；全部日期来源缺失才告警
+    rq2, rw2 = queue_from_progress_texts([("slug-r2", FIX_R2)], today_r)
+    by_r2 = {e["item"]: e for e in rq2}
+    ok = ok and by_r2["第 3 节 函数"]["due"] == "2026-10-22"
+    ok = ok and by_r2["第 4 节 类"]["due"] == "2026-10-21"
+    ok = ok and not any(w.startswith("W-UNPARSED-ITEM") for w in rw2)
+    rq3, rw3 = queue_from_progress_texts([("slug-r3", FIX_R3)], today_r)
+    ok = ok and not rq3
+    ok = ok and any(w.startswith("W-UNPARSED-ITEM") and "第 5 节 无日期" in w
+                    for w in rw3)
+    # 混合任务：保持复习不进校准，薄弱点仍正常计入
+    mix_cal, _ = calibration_from_progress_texts([(
+        "slug-mix", FIX_R + "\n## 薄弱点\n- 某点（S=3.0，D=3，last=2026-10-19，"
+        "due=2026-10-20，信心=4，cw）\n")])
+    ok = ok and mix_cal[0]["total_items"] == 1
+    ok = ok and mix_cal[0]["cw_count"] == 1
+    with tempfile.TemporaryDirectory() as td_r:
+        root_r = Path(td_r) / ".learning"
+        (root_r / "slug-r").mkdir(parents=True)
+        (root_r / "slug-r" / "progress.md").write_text(FIX_R, encoding="utf-8")
+        out_r = due_queue_output(root_r, None, today_r, False)
+        ok = ok and out_r["schema"] == "ltw-due-queue/3"
+        ok = ok and len(out_r["queue"]) == 1
+        ok = ok and out_r["queue"][0]["kind"] == "保持"
+        ok = ok and out_r["queue"][0]["reason"].startswith("保持复习")
 
     # 断言 8：畸形输入 -> exit 2（不谎报成功）
     bad_calls = [
@@ -1130,7 +1281,7 @@ def selftest():
     ok = ok and by_item["自信但错点"]["meta_default"] is True
 
     # 断言 12：due-queue 新键——v2.2 完整条目错因/级原值回显 meta_default:false；
-    # schema 升 ltw-due-queue/2；排序契约（cw 排前）断言 7 逐字保留未动
+    # v6.0 schema 升 ltw-due-queue/3（加 reason/保持复习）；排序契约（cw 排前）断言 7 逐字保留未动
     queue_c, _wc = queue_from_progress_texts(
         [("slug-c", FIX_C)], date.fromisoformat("2026-10-10"))
     ok = ok and len(queue_c) == 2
@@ -1143,7 +1294,7 @@ def selftest():
     ok = ok and by_item_c["变式题"]["meta_default"] is False
     out = due_queue_output(Path(__file__).resolve().parent, None,
                            date.fromisoformat("2026-10-10"), True)
-    ok = ok and out["schema"] == "ltw-due-queue/2"
+    ok = ok and out["schema"] == "ltw-due-queue/3"
 
     # 断言 13：calibration 畸形输入 → exit 2；--root 非目录 → exit 1
     for call in [["calibration"]]:  # 缺必填 --root → argparse exit 2

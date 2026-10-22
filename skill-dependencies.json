@@ -38,7 +38,7 @@
         "verify": "python --version 显示 ≥ 3.10；运行 python -B scripts/check_environment.py 输出 status 为 ready 或可解释的 partial；六个脚本均带 --selftest（task_index / progress_check / scheduler / kp_sort / check_environment / verify_explanation），逐一退出码 0。",
         "security": "无需登录与凭据；不安装、不修改系统配置；检查器只读，不发起网络请求与子进程，无任何网络探测能力。",
         "verified_at": "2026-10-20",
-        "applies_to_version": "5.10.0"
+        "applies_to_version": "6.0.0"
       },
       "degradation": [
         {
@@ -200,14 +200,14 @@
       "usage": "<任务目录> [--release] [--selftest]",
       "default_behavior": "历史/日常校验（warning 非阻断旧任务）",
       "exit_codes": {"0": "通过", "1": "不通过", "2": "用法错误"},
-      "notes": "--release 放行模式：空/模板证据 E-EMPTY-EVIDENCE；结课/已完成未完成路线 E-ROUTE-UNDONE；复习来源阶段枚举 {逐节学习, 结课, 已完成}；起点自进入 S2 起必填"
+      "notes": "--release 放行模式：判分四态 correct/partial/incorrect/ungraded；partial 入分母不入分子，ungraded 与作废行不入分母（W-VOIDED-ATTEMPT / W-UNGRADED-ATTEMPT）；空/模板证据 E-EMPTY-EVIDENCE；结课/已完成未完成路线 E-ROUTE-UNDONE；复习来源阶段枚举 {逐节学习, 结课, 已完成}；起点自进入 S2 起必填"
     },
     {
       "script": "scheduler.py",
       "usage": "next-interval | due-queue | calibration [--selftest]",
       "exit_codes": {"0": "正常", "1": "数据根缺失或非目录", "2": "参数错误"},
-      "schema": {"due-queue": "ltw-due-queue/2", "calibration": "ltw-calibration/3"},
-      "notes": "due 锚点 = 本次复习日 today + interval_days；calibration 先按 evt 归组并合并互补投影再统计（dedup_mode: by_evt / legacy_double_count / mixed 并披露 evt_tagged_count、legacy_count）；cw 只数「反馈前信心 ≥4 且判错」的子集，孤立/低信心 cw 与信心/时序歧义（W-CONFIDENCE-AMBIGUOUS，含重复信心键与回顾性 × 数值并存）令 overconfidence_rate=null + rate_valid=false；纯回顾性观察不入分母（retro_excluded_count）"
+      "schema": {"due-queue": "ltw-due-queue/3", "calibration": "ltw-calibration/3"},
+      "notes": "next-interval 同会话重复答对（elapsed=0）返回 same_session=true，S/D/due 不变；due-queue 读取薄弱点/错题本/保持复习三区并输出 reason；due 锚点 = 本次复习日 today + interval_days；calibration 先按 evt 归组并合并互补投影再统计（dedup_mode: by_evt / legacy_double_count / mixed 并披露 evt_tagged_count、legacy_count）；cw 只数「反馈前信心 ≥4 且判错」的子集，孤立/低信心 cw 与信心/时序歧义（W-CONFIDENCE-AMBIGUOUS，含重复信心键与回顾性 × 数值并存）令 overconfidence_rate=null + rate_valid=false；纯回顾性观察不入分母（retro_excluded_count）"
     },
     {
       "script": "kp_sort.py",

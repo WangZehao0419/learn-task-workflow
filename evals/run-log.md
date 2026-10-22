@@ -555,3 +555,26 @@ mutation-check: 11/11 mutations detected
 #### 边界
 
 - 本运行只证明「脚本对五项新规则的判定行为符合判分标准」，不构成教学效果证据；E56–E60 verdict 保持「未验证」，待独立评分者复核
+
+### run_id: v600-selftest-20261022（2026-10-22）
+
+- 技能版本：6.0.0（工作区，未提交）
+- 覆盖场景：E61（同会话重复答对不增长稳定度）、E62（保持复习进入到期队列并说明理由）、E63（判分四态/作废/未判）
+- 执行方式：脚本 selftest 内嵌纯函数与临时目录夹具（非对话回放；无真实教学会话）
+
+#### 结果
+
+- `scheduler.py --selftest`：OK（新增断言 2b 同会话抑制、断言 7b 保持复习/reason/schema、保持复习日期前缀容错与校准隔离；原有排序与回归断言保留）
+- `progress_check.py --selftest`：OK（新增 v6.0 四态组：partial-mix / partial-pass / ungraded / void-only / void-excluded / result-conflict，加测带括号注的调度档、英文四态别名、作废旧行+同 attempt_id 改判）
+- 端到端临时任务：`due-queue` 输出 `kind=保持`/`reason`/schema `/3`；`progress_check --release` 通过并报 `W-VOIDED-ATTEMPT`/`W-UNGRADED-ATTEMPT`；`next-interval` 新卡与同会话 CLI 结果符合契约
+- 对抗性矩阵：四态 token 矩阵、闸口 2/3 边界、全 partial/全未判/全作废、partial 缺独立性、同 attempt 冲突、作废后改判、保持复习无日期前缀的元数据兜底与无可推算日期告警，全部通过
+- 变异测试：关闭同会话抑制、恢复校准污染、把 partial 计为正确、忽略作废、恢复保持复习 meta_default=true 五个定向变异，均被 selftest 抓住（5/5），证明新断言不是空转
+- 其余四脚本 `--selftest` 全 0；`evals/verify-formula-typesetting.py` 56/56；`evals/verify-marker-rules.py` 19/19
+- evals.json：cases 65 → 68（E61–E63，kind: machine，verdict 未验证待独立评分）；applies_to_version 6.0.0；machine_evidence_ref 已登记 v6.0 selftest
+- 文档：SKILL.md / data-and-recovery.md / phases-and-gates.md / teaching-loop.md / redlines.md / skill-dependencies.json / CREDITS.md 已同步「保持复习、四态、作废/申诉、零迁移」
+- `git diff --check`：0
+
+#### 边界
+
+- 脚本 selftest 只证明确定性解析/调度/闸口行为符合新契约，不构成教学效果证据；E61–E63 verdict 保持「未验证」，待独立评分者复核
+- 未做真实对话回放；保持复习的初始条目写入与 S4 清除转区仍由模型按文档执行，需在后续真实任务中抽检
