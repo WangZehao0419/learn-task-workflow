@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""verify-v67-p1p2.py - v6.7 P1/P2 契约（stdlib-only、只读）。
+"""verify-v67-p1p2.py - v6.7.2 P1/P2 契约（stdlib-only、只读）。
 
 检查 P1（文本结构、主张—证据、设计量表、主图、质量回路、要点卡、移动端/MVP、
-问题停车位/贯穿案例/难度预算）与 P2（教材章节、教师包、预习）是否写入
+问题停车位/贯穿案例/难度预算）与 P2（教材章节层）是否写入
 handout-design 并接线；语义执行仍由模型/评审负责。
 """
 
@@ -39,9 +39,9 @@ def version_tuple(text):
     return tuple(int(x) for x in m.groups()) if m else None
 
 
-def at_least_v67(text):
+def at_least_v671(text):
     v = version_tuple(text)
-    return v is not None and v >= (6, 7, 0)
+    return v is not None and v >= (6, 7, 1)
 
 
 def p1p2_problems(handout):
@@ -52,7 +52,7 @@ def p1p2_problems(handout):
         ("序列", "序列结构"),
         ("### 10.2 主张—证据表", "主张—证据"),
         ("主张 | 证据/来源 | 强度/边界", "主张—证据表格式"),
-        ("学生版放正文，需要补充时放 `## 扩展（选读）` 区，不另起附录", "主张—证据表位置"),
+        ("学员版放正文，需要补充时放 `## 扩展（选读）` 区，不另起附录", "主张—证据表位置"),
         ("### 10.3 设计类评价量表", "设计量表"),
         ("训练量表", "量表性质"),
         ("### 10.4 按类型选主图", "主图选择"),
@@ -74,14 +74,9 @@ def p1p2_problems(handout):
         ("问题停车位：讲义末尾 `## 待解决问题`（有 `## 扩展（选读）` 时放在其前", "停车位与扩展区顺序"),
         ("贯穿案例：多概念小节可用一个案例逐步演化", "贯穿案例"),
         ("难度预算：每节 1 道", "难度预算"),
-        ("## 11. P2 教材与教学场景（可选）", "P2"),
+        ("## 11. P2 教材级章节层（可选）", "P2"),
         ("### 11.1 教材级章节层", "教材章节"),
         ("术语表自测", "术语自测"),
-        ("### 11.2 教师备课包", "教师包"),
-        ("误解清单", "教师包内容"),
-        ("不套 `verify_explanation.py` 的学生讲义结构校验（五要素/③ 框/节首导读）", "教师包校验边界"),
-        ("### 11.3 预习模式", "预习"),
-        ("带 1–2 个问题来", "预习问题"),
         ("P1/P2 是可选增强", "可选增强边界"),
         ("## 12. 证据与边界", "证据边界"),
     ):
@@ -91,7 +86,7 @@ def p1p2_problems(handout):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="v6.7 P1/P2 契约（只读）")
+    parser = argparse.ArgumentParser(description="v6.7.2 P1/P2 契约（只读）")
     parser.add_argument("--skill-root", default=None)
     args = parser.parse_args(argv)
     root = (Path(args.skill_root).resolve() if args.skill_root
@@ -128,17 +123,17 @@ def main(argv=None):
         return m.group(1) if m else ""
 
     c = Checker()
-    c.check("1.1 SKILL.md 版本 ≥ 6.7.0",
-            at_least_v67(version_in(skill, r"version:\s*(\d+\.\d+\.\d+)")))
-    c.check("1.2 setup-guide 适用版本 ≥ 6.7.0",
-            at_least_v67(version_in(setup, r"适用版本：(\d+\.\d+\.\d+)")))
-    c.check("1.3 skill-dependencies 版本 ≥ 6.7.0",
-            bool(deps_versions) and all(at_least_v67(v) for v in deps_versions),
+    c.check("1.1 SKILL.md 版本 ≥ 6.7.2",
+            at_least_v671(version_in(skill, r"version:\s*(\d+\.\d+\.\d+)")))
+    c.check("1.2 setup-guide 适用版本 ≥ 6.7.2",
+            at_least_v671(version_in(setup, r"适用版本：(\d+\.\d+\.\d+)")))
+    c.check("1.3 skill-dependencies 版本 ≥ 6.7.2",
+            bool(deps_versions) and all(at_least_v671(v) for v in deps_versions),
             deps_versions)
-    c.check("1.4 CREDITS 当前版本说明 ≥ 6.7.0",
-            at_least_v67(version_in(credits, r"当前版本说明\*\*：(\d+\.\d+\.\d+)")))
-    c.check("1.5 evals 版本 ≥ 6.7.0",
-            at_least_v67(evals.get("applies_to_version", "")))
+    c.check("1.4 CREDITS 当前版本说明 ≥ 6.7.2",
+            at_least_v671(version_in(credits, r"当前版本说明\*\*：(\d+\.\d+\.\d+)")))
+    c.check("1.5 evals 版本 ≥ 6.7.2",
+            at_least_v671(evals.get("applies_to_version", "")))
 
     c.check("2.1 P1/P2 正文齐全", not p1p2_problems(handout),
             p1p2_problems(handout))
@@ -148,14 +143,13 @@ def main(argv=None):
             all(k in handout for k in ("标准", "水平", "训练量表", "权衡矩阵")))
     c.check("2.4 质量回路/要点卡/移动端",
             all(k in handout for k in ("实际用时", "心理努力", "1/7/30", "≤4 列", "MVP", "核心解释段")))
-    c.check("2.5 教材章节/教师包/预习",
-            all(k in handout for k in ("章首", "章末", "术语表自测",
-                                       "教师版", "误解清单", "预问题")))
+    c.check("2.5 教材章节层",
+            all(k in handout for k in ("章首", "章末", "术语表自测")))
 
     c.check("3.1 SKILL 索引登记 P1/P2",
             "P1/P2 可选增强见 §10–§11" in skill)
-    c.check("3.2 entry-routing 备课/教材/预习接线",
-            all(k in entry for k in ("教师备课包", "教材/整章", "预习 → 预问题")))
+    c.check("3.2 entry-routing 教材/整章接线",
+            all(k in entry for k in ("教材/整章", "章首路线图", "章末混合检索")))
     c.check("3.3 phases 接线",
             "P1/P2 可选增强见 `handout-design.md` §10–§11" in phases)
 
@@ -174,7 +168,6 @@ def main(argv=None):
          .replace("陪学任务内按现有 `## 保持复习` 条目交给 scheduler/due-queue，以条目级 due 为主", "")
          .replace("问题停车位：讲义末尾 `## 待解决问题`（有 `## 扩展（选读）` 时放在其前", "")),
         ("教材章节被删", handout.replace("### 11.1 教材级章节层", "")),
-        ("教师包被删", handout.replace("### 11.2 教师备课包", "")),
     )
     for name, mutated in mutations:
         c.check("5.x mutation 能抓到：" + name, bool(p1p2_problems(mutated)),

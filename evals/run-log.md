@@ -743,3 +743,61 @@ mutation-check: 11/11 mutations detected
 - E122 只证明规则写入并接线，不证明模型在真实对话中会执行；E123–E128 未跑
 - 不做完整教材平台；正式 Word/排版仍让位文档技能；预习模式不把预读当已讲/已掌握
 - 旧讲义不回溯；P1/P2 只影响新生成/新定稿讲义
+
+### run_id: v671-cleanup-20261023（2026-10-23）
+
+- 技能版本：6.7.1（清理教师/家长侧入口）
+- 覆盖场景：删除 P2 教师备课包/教师版、预习模式；删除「家长版周报/给家长看的学习报告」别名；学习简报改为学员自用；保留教材级章节层
+- 执行方式：静态文档契约 + 全量回归；人评 E123–E126 未跑
+
+#### 结果
+
+- `evals/verify-v67-p1p2.py`：19/19 OK，退出码 0（P1 + 教材章节层、接线、E122 登记）
+- 文档契约变异 5/5：删除文本结构、设计量表、要点卡/间隔、要点卡/调度/扩展区冲突、教材章节，均被脚本抓住
+- 六个脚本 `--selftest` 全 0；`evals/verify-formula-typesetting.py` 56/56；`evals/verify-marker-rules.py` 19/19；`evals/verify-v62-docs.py` 17/17；`evals/verify-v63-docs.py` 32/32；`evals/verify-v64-consistency.py` 34/34；`evals/verify-v65-stage2.py` 24/24；`evals/verify-v66-stage3.py` 22/22
+- evals.json：cases 99 → 97（删除 E127/E128；E44 改为自用学习简报；E122 收窄为 P1 + 教材章节层）；applies_to_version 6.7.1；machine_evidence_ref 已登记 v6.7.1 清理
+- 文档：`handout-design.md` §9.1/§9.2 教师侧改家教侧；§11 只保留教材章节层；SKILL / CREDITS / entry-routing / data-and-recovery 去掉教师/家长入口；版本五处同步 6.7.1
+- `git diff --check`：0
+
+#### 边界
+
+- P1 与阶段 3 不变；P2 只保留教材章节层；不新增字段/闸口；旧讲义零迁移
+- 学习简报保留为学员自用；SR-8 家长/监护人安全提示保留；课堂研究引用仅作证据
+- E123–E126 等人评未跑；历史 v6.7 记录中教师包/预习条目保留为 release 历史，不再出现在当前规则
+
+### run_id: v672-cleanup-20261023（2026-10-23）
+
+- 技能版本：6.7.2（按用户要求移除 SR-8 安全边界）
+- 覆盖场景：删除 SR-8 规则、SKILL/redlines/teaching-loop 相关引用、E43 评测；其余规则不变
+- 执行方式：静态文档契约 + 全量回归；人评 E44/E45–E126 未跑
+
+#### 结果
+
+- 六个脚本 `--selftest` 全 0；`evals/verify-formula-typesetting.py` 56/56；`evals/verify-marker-rules.py` 19/19；`evals/verify-v62-docs.py` 17/17；`evals/verify-v63-docs.py` 32/32；`evals/verify-v64-consistency.py` 34/34；`evals/verify-v65-stage2.py` 24/24；`evals/verify-v66-stage3.py` 22/22；`evals/verify-v67-p1p2.py` 19/19
+- evals.json：cases 97 → 96（删除 E43）；applies_to_version 6.7.2；machine_evidence_ref 已登记 v6.7.2 清理
+- 文档：SKILL 红线改三类；redlines 删除 SR-8；teaching-loop 删除危机转介句；handout-design E 范围改 E44–E126；版本五处同步 6.7.2
+- `git diff --check`：0
+
+#### 边界
+
+- 只移除 SR-8 与 E43；P1、阶段 3、教材章节层、学习简报不变；不新增字段/闸口；旧讲义零迁移
+- 历史 v6.7/v6.7.1 记录保留原有 SR-8 描述，作为 release 历史
+
+### run_id: v672-cleanup2-20261023（2026-10-23）
+
+- 技能版本：6.7.2（续清理：红线编号重排 + 术语统一）
+- 覆盖场景：SR-9「未判/作废语义误用」重编号为 SR-8，红线编号恢复连续；references 内「学生」统一为「学员」；其余规则不变
+- 执行方式：静态文档契约 + 全量回归；人评未跑
+
+#### 结果
+
+- 六个脚本 `--selftest` 全 0；`evals/verify-formula-typesetting.py` 56/56；`verify-marker-rules.py` 19/19；`verify-v62-docs.py` 17/17；`verify-v63-docs.py` 32/32；`verify-v64-consistency.py` 34/34；`verify-v65-stage2.py` 24/24；`verify-v66-stage3.py` 22/22；`verify-v67-p1p2.py` 19/19
+- 文档：redlines SR-9→SR-8；handout-design/lecture-styles/phases-and-gates 术语统一；handout-design 类型判定问句改为直接问学员（修正第三人称错位）；CREDITS/evals.json 同步说明；`evals/verify-v67-p1p2.py` 断言同步「学员版」
+- 码表校正：SKILL 删除不存在的 `E-NO-ATTEMPT`；data 将 `W-EVT-CONFLICT` 更正为 `W-CONFIDENCE-AMBIGUOUS`；补登 `E-EVIDENCE-REF-MISSING` / `W-MULTI-EVIDENCE` / `E-FINAL-ATTEMPT-CONFLICT` / `W-CONFIDENCE-AMBIGUOUS`；码表标题改「常用」（完整码表以脚本输出与 docstring 为准）；E19 的 review_note 标注旧码名迁移
+- 引用校正：methodology 去掉失效的「§8」自引用（改指「核验状态与不能推出什么」节名）；phases 二次定稿的「§3.6」补 `handout-design.md` 前缀；复检两文件 `missing_local_sections` 归零
+- `git diff --check`：0
+
+#### 边界
+
+- 只改编号与称谓，不改触发条件、处置动作、闸口与字段；历史 v672 记录中的「移除 SR-8」指原安全边界，保留为 release 历史
+- 「学生」保留 3 处：目标用户枚举（entry-routing）与文献转述（methodology）
