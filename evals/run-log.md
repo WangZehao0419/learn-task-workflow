@@ -801,3 +801,31 @@ mutation-check: 11/11 mutations detected
 
 - 只改编号与称谓，不改触发条件、处置动作、闸口与字段；历史 v672 记录中的「移除 SR-8」指原安全边界，保留为 release 历史
 - 「学生」保留 3 处：目标用户枚举（entry-routing）与文献转述（methodology）
+
+### run_id: v673-readability-20261023（2026-10-23）
+
+- 技能版本：6.7.3（发布）
+- 类型：machine（文档契约 + 样板版面 + mutation；非真人回放）
+- 覆盖场景：E129–E134（读者路径 / 段落与标题版式 / 图解语法 / 黑白打印与证据边界 / 程序型样板 / 设计型样板）；人评未跑
+
+#### 改动
+
+- `lecture-styles.md`：新增「读者版可读性契约」（三遍路径、一段一义、标题/强调/留白、图解语法、5 问自检、渲染建议）；**拆分默认不变量（标题导航/段落/图解语法/颜色+线型/黑白可读/alt）与 P1 可选增强（速览/回看索引/一句话结论/章级块）**；新增 L1/L2/L3 与记忆/概念/程序/设计/精读/参照级变体表；补读者验证四问；图像双轨加图解语法指针；schema 默认顺序补 P1 可选增量。
+- `handout-design.md`：新增 10.10 读者路径与三层速览、10.11 图表系统与视觉一致性；10.4/10.8/10.9/11.1/12 同步；P1 可选，不新增字段/闸口；收口「强调标记」歧义、字号 `max(14px, 0.8×正文)`、颜色按领域语义、短节豁免逻辑。
+- 自检修正：强调配额统一为「连续两段不都用加粗抢重点」（`handout-design`、`lecture-styles`、`--reader`、`verify-readability` 四处一致）；5 问/读者四问对短节条件化（无速览时只看标题/导读）；`methodology` 节点预算改为「一次呈现 ≤7±2，完整概念图可更多但须分层」。
+- 自检修正（第二轮）：程序型 SVG「端点异号才有根」改为「保证有根」（充分条件，不是必要条件）；设计型样板改选「每日增量云备份」以同时满足 RTO 4 小时与 RPO 24 小时，配对答案同步改指该方案；概念/设计型主图改为按第 10.4 节可省；表格表题规则区分「速览表由标题承担」与「数据表加表题」；速览与概念地图顺序明确为「先速览、后地图」；`--reader` 与 `verify-readability` 均增加速览/回看索引位置检查。
+- `methodology.md`：登记可读性与可视化文献依据与边界（Mayer 2017/2005、Noetel 2021、Cromley & Chen 2025、Alpizar 2020、Schroeder 2018、Sundararajan & Adesope 2020、Nesbit & Adesope 2006、Krieglstein 2022、Hebert/Pyle/Bogaerds-Hazenberg、W3C clreq、WCAG 2.1、Zhu 2021、Gao 2019、Chan 2013、Lonsdale 2014、Pan 2020、Delgado 2018、Bisra 2018）。
+- `SKILL.md` / `phases-and-gates.md` / `skill-dependencies.json`：描述、参考索引与 S3 定稿口径接线；`verify_explanation.py` 新增 opt-in `--reader`（W 级可读性检查，不阻断、旧讲义不回溯）。
+- 新增 `evals/fixtures/reader-layout/` 读者版样板（概念）+ `procedure/` 程序型样板 + `design/` 设计型样板与 SVG 图；新增 `evals/verify-readability.py`（文档契约 + 样板版面 + L1/L3 烟测 + 程序/设计烟测 + 7 个样板 mutation + 3 个文档 mutation + 2 个 `--reader` 运行时 mutation，22 项）。
+- `evals/evals.json`：cases 96→102（E129–E134，machine，verdict 未验证）；`machine_evidence_ref` / `run_log_ref` 更新；applies_to_version 6.7.3。
+
+#### 结果
+
+- 六个脚本 `--selftest` 全 0；`verify-formula-typesetting.py` 56/56；`verify-marker-rules.py` 19/19；`verify-v62-docs.py` 17/17；`verify-v63-docs.py` 32/32；`verify-v64-consistency.py` 34/34；`verify-v65-stage2.py` 24/24；`verify-v66-stage3.py` 22/22；`verify-v67-p1p2.py` 19/19；`verify-readability.py` 22/22。
+- 样板经 `verify_explanation.py` 与 `--reader` 校验：0 违规；`evals.json` JSON 有效；`git diff --check` 0。
+
+#### 边界
+
+- 只证明规则在场 + 样板结构合格，不证明真人更易读或学习效果更好；E129–E132 保持「未验证」。
+- 中文行长证据冲突（17–48 字/行 vs 76 字/行），本技能取 25–40 字、上限 48；多媒体原则效应量受先验知识、材料复杂度、媒介与时长调节，不把 d/g 当固定收益。
+- 不新增运行时闸口、不新增 progress 字段、旧讲义不回溯；版本按约定未升。

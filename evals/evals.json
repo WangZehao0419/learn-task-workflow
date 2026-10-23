@@ -1,7 +1,7 @@
 {
  "schema": "ltw-evals/2",
  "skill": "learn-task-workflow",
- "applies_to_version": "6.7.2",
+ "applies_to_version": "6.7.3",
  "updated_at": "2026-10-23",
  "grading_axes": [
   "教学正确性",
@@ -58,9 +58,9 @@
   },
   "阻断规则": "阻断型用例的学科内容/结构渲染/边界必须为 2，其他适用项不得低于 1。"
  },
- "run_log_ref": "evals/run-log.md（「运行记录」节，run_id: v672-cleanup2-20261023；历史 v672-cleanup-20261023 / v671-cleanup-20261023 / v670-p1p2-20261023 / v660-stage3-20261023 / v650-stage2-20261023 / v640-consistency-20261023 / v630-selftest-20261023 / v620-selftest-20261022 / v610-selftest-20261022 / v600-selftest-20261022；公式基线见 formula-typesetting-5.5.0-20261017-static）",
+ "run_log_ref": "evals/run-log.md（「运行记录」节，run_id: v673-readability-20261023；历史 v672-cleanup2-20261023 / v672-cleanup-20261023 / v671-cleanup-20261023 / v670-p1p2-20261023 / v660-stage3-20261023 / v650-stage2-20261023 / v640-consistency-20261023 / v630-selftest-20261023 / v620-selftest-20261022 / v610-selftest-20261022 / v600-selftest-20261022；公式基线见 formula-typesetting-5.5.0-20261017-static）",
  "run_log_note": "真实陪学运行日志尚未产出。待最终机制版本完成后，以同材料、同学员作答序列重跑，并把 actual_output / run_id / scores 回填本文件；未回填者保持「未验证」。",
- "machine_evidence_ref": "包内 scripts/*.py --selftest（六脚本，含讲义结构校验 verify_explanation.py：shaanxi-gaoshu materials 校验通过、退出码 0）；evals/verify-formula-typesetting.py（公式呈现静态契约 56 项检查、退出码 0；属静态证据，非渲染验证）；包外验收复现与真实教学日志不作为技能包运行依赖；evals/verify-marker-rules.py（五要素新编号规则行为契约 19 项检查、退出码 0；临时目录夹具真实运行 verify_explanation.py，属行为级静态证据，非对话回放）；v6.0 追加：scheduler --selftest 断言 2b/7b（同会话抑制、保持复习 reason、ltw-due-queue/3）与 progress_check --selftest 四态组（partial/ungraded/void）均退出码 0；v6.1 追加：progress_check --selftest 分型组（E-KP-TYPED-GATE）与大纲契约/intake 组（W-MODULE-* / E-ENUM-STRATEGY）退出码 0、kp_sort --selftest 分型字段夹具退出码 0；v6.2 追加：evals/verify-v62-docs.py 文档契约（交接/记录/证据、记忆纪律、ask hint、来源备课、选项规则、版本与 E66–E69 登记）退出码 0；v6.3 追加：evals/verify-v63-docs.py 文档契约（出题流水线四步、旧题去重、规划字段、一次修复、视觉任务原始来源、版本与 E71–E73 登记）退出码 0；v6.4 追加：evals/verify-v64-consistency.py 阶段 0 + 理解核心契约（状态行/③豁免/交付标识/L3/单元-KP/头部/深讲拆节/类型单元数/命名/概念地图/理解四证/六问/四段/闭卷/二次定稿 + mutation）退出码 0；v6.5 追加：evals/verify-v65-stage2.py 阶段 2 契约（类型模板/四步流水线/L1-L3/学习者状态/决策日志/修复表 + mutation）退出码 0；v6.6 追加：evals/verify-v66-stage3.py 阶段 3 契约（四向对齐/覆盖行/深度分配/评估例真实性/来源保真 + mutation）退出码 0；v6.7 追加：evals/verify-v67-p1p2.py P1/P2 契约（文本结构/主张—证据/设计量表/主图/质量回路/要点卡/移动端/MVP/教材章节 + mutation）退出码 0；v6.7.1 清理：verify-v67-p1p2.py 19 项（移除教师包/预习与家长侧入口）退出码 0；v6.7.2 清理：移除原 SR-8 安全边界与 E43，原 SR-9 重编号为 SR-8，术语「学生」统一为「学员」；上述 56 项公式契约仍为基线。",
+ "machine_evidence_ref": "包内 scripts/*.py --selftest（六脚本，含讲义结构校验 verify_explanation.py：shaanxi-gaoshu materials 校验通过、退出码 0）；evals/verify-formula-typesetting.py（公式呈现静态契约 56 项检查、退出码 0；属静态证据，非渲染验证）；包外验收复现与真实教学日志不作为技能包运行依赖；evals/verify-marker-rules.py（五要素新编号规则行为契约 19 项检查、退出码 0；临时目录夹具真实运行 verify_explanation.py，属行为级静态证据，非对话回放）；v6.0 追加：scheduler --selftest 断言 2b/7b（同会话抑制、保持复习 reason、ltw-due-queue/3）与 progress_check --selftest 四态组（partial/ungraded/void）均退出码 0；v6.1 追加：progress_check --selftest 分型组（E-KP-TYPED-GATE）与大纲契约/intake 组（W-MODULE-* / E-ENUM-STRATEGY）退出码 0、kp_sort --selftest 分型字段夹具退出码 0；v6.2 追加：evals/verify-v62-docs.py 文档契约（交接/记录/证据、记忆纪律、ask hint、来源备课、选项规则、版本与 E66–E69 登记）退出码 0；v6.3 追加：evals/verify-v63-docs.py 文档契约（出题流水线四步、旧题去重、规划字段、一次修复、视觉任务原始来源、版本与 E71–E73 登记）退出码 0；v6.4 追加：evals/verify-v64-consistency.py 阶段 0 + 理解核心契约（状态行/③豁免/交付标识/L3/单元-KP/头部/深讲拆节/类型单元数/命名/概念地图/理解四证/六问/四段/闭卷/二次定稿 + mutation）退出码 0；v6.5 追加：evals/verify-v65-stage2.py 阶段 2 契约（类型模板/四步流水线/L1-L3/学习者状态/决策日志/修复表 + mutation）退出码 0；v6.6 追加：evals/verify-v66-stage3.py 阶段 3 契约（四向对齐/覆盖行/深度分配/评估例真实性/来源保真 + mutation）退出码 0；v6.7 追加：evals/verify-v67-p1p2.py P1/P2 契约（文本结构/主张—证据/设计量表/主图/质量回路/要点卡/移动端/MVP/教材章节 + mutation）退出码 0；v6.7.1 清理：verify-v67-p1p2.py 19 项（移除教师包/预习与家长侧入口）退出码 0；v6.7.2 清理：移除原 SR-8 安全边界与 E43，原 SR-9 重编号为 SR-8，术语「学生」统一为「学员」；v6.7.3 追加：evals/verify-readability.py 读者版可读性/图表契约（文档 + 样板版面 + mutation + verify_explanation.py --reader）退出码 0；上述 56 项公式契约仍为基线。",
  "dialogues_ref": "evals/对话对照-批次B.md（设计摘要，非运行日志；真实新旧对照须另附运行输出）",
  "cases": [
   {
@@ -1439,6 +1439,90 @@
    "scores": null,
    "verdict": "未验证",
    "reviewer": null
+  },
+  {
+   "id": "E129",
+   "scenario": "v6.7.3 读者路径与三层速览",
+   "kind": "machine",
+   "prompt": "检查读者版讲义是否具备 30 秒扫读/10 分钟精读/2 分钟回看路径，以及本节速览、回看索引、概念首行一句话结论。",
+   "fixture": "evals/fixtures/reader-layout/L1-机会成本-读者版样板.md + assets/01-机会成本判定流程.svg。",
+   "pass_condition": "verify-readability.py 全项 OK、退出码 0：本节速览 3 列 1–3 行；回看索引含核心/易错/下一步且在答案区之后；每个概念单元首行是「一句话结论：」；样板通过 verify_explanation.py 与 --reader（零 W-READER）；mutation 删除速览/结论/回看索引均被抓到。",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null,
+   "machine_ref": "evals/verify-readability.py；2026-10-23 运行退出码 0"
+  },
+  {
+   "id": "E130",
+   "scenario": "v6.7.3 段落、标题与版式",
+   "kind": "machine",
+   "prompt": "检查读者版样板是否做到一段一义、列表/表格/正文分工、标题层级不跳级、每段强调不超配额。",
+   "fixture": "evals/fixtures/reader-layout/L1-机会成本-读者版样板.md。",
+   "pass_condition": "verify-readability.py 全项 OK、退出码 0：表格 2–4 列且有表头；标题 H1→H2 不跳级；连续两段不都用加粗抢重点（术语密集段可例外）；样板通过 verify_explanation.py 与 --reader；mutation 5 列表格、标题跳级均被抓到，--reader 能报 W-READER-TABLE。",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null,
+   "machine_ref": "evals/verify-readability.py；2026-10-23 运行退出码 0"
+  },
+  {
+   "id": "E131",
+   "scenario": "v6.7.3 图解语法与无障碍",
+   "kind": "machine",
+   "prompt": "检查图解语法：一图一问、节点预算、颜色不单独编码、对比度、SVG 技术项、alt 与图注。",
+   "fixture": "evals/fixtures/reader-layout/L1-机会成本-读者版样板.md + assets/01-机会成本判定流程.svg。",
+   "pass_condition": "verify-readability.py 全项 OK、退出码 0：SVG 根元素有 viewBox/role=img，含 title/desc，字号 ≥14、线宽 ≥1.5、无 script/外链；alt 非空且非笼统；mutation 空 alt、缺 viewBox 被抓到；--reader 能报 W-READER-ALT；一次呈现节点 ≤7±2（完整概念图可更多但须分层/分组）、颜色+形状/线型/文字、文字 4.5:1、图形 3:1 写入文档。",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null,
+   "machine_ref": "evals/verify-readability.py；2026-10-23 运行退出码 0"
+  },
+  {
+   "id": "E132",
+   "scenario": "v6.7.3 黑白打印、移动端与证据边界",
+   "kind": "machine",
+   "prompt": "检查黑白打印/窄屏/行长条款与文献边界是否写入规则，避免把方向支持写成已验证。",
+   "fixture": "references/lecture-styles.md / references/handout-design.md / references/methodology.md。",
+   "pass_condition": "verify-readability.py 全项 OK、退出码 0：去色可读、窄屏不横向滚动、表格 ≤4 列、行长 25–40 字/上限 48 字写入；中文行长 17–48 与 76 字/行冲突、多媒体效应受先验知识/复杂度/媒介/时长调节写入 methodology 与 handout-design；mutation 删 Mayer 证据被抓到；不把 WCAG 等级当教学效果证据。",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null,
+   "machine_ref": "evals/verify-readability.py；2026-10-23 运行退出码 0"
+  },
+  {
+   "id": "E133",
+   "scenario": "v6.7.3 程序型读者版样板",
+   "kind": "machine",
+   "prompt": "给一个 L1 程序型小节写读者版讲义：二分法求近似根，含流程图、步骤答案、配对与迁移自测。",
+   "fixture": "evals/fixtures/reader-layout/procedure/L1-二分法-程序型样板.md + assets/01-二分法流程.svg。",
+   "pass_condition": "verify-readability.py 全项 OK、退出码 0；程序型样板版面合格且 --reader 零 W-READER；流程图一次呈现节点 ≤7±2、直接标注、颜色+线型、SVG 根元素 viewBox/role/title/desc；③ 用 `步骤：` + `输出：`；④ 覆盖不验异号/符号反/输出端点；自测 1 配对 + 1 迁移。",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null,
+   "machine_ref": "evals/verify-readability.py；2026-10-23 运行退出码 0"
+  },
+  {
+   "id": "E134",
+   "scenario": "v6.7.3 设计型读者版样板",
+   "kind": "machine",
+   "prompt": "给一个小团队备份方案写 L1 设计型读者版讲义，含权衡矩阵、方案答案、约束与评价标准。",
+   "fixture": "evals/fixtures/reader-layout/design/L1-备份方案-设计型样板.md。",
+   "pass_condition": "verify-readability.py 全项 OK、退出码 0；设计型样板版面合格且 --reader 零 W-READER；权衡矩阵 ≤4 列；③ 用 `方案：` 且含依据/取舍/评价标准；④ 覆盖忽略约束/单一指标/过早定案；自测迁移改预算；不编造官方分值。",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null,
+   "machine_ref": "evals/verify-readability.py；2026-10-23 运行退出码 0"
   }
  ]
 }
