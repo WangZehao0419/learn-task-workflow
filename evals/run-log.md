@@ -698,3 +698,48 @@ mutation-check: 11/11 mutations detected
 - 来源四向对齐、覆盖行、深度分配、教学例/评估例真实性仍在阶段 3；P1/P2 质量件未做
 - L1/L3 模拟冷读（机会成本）两版 4/4，但为 LLM 读者且 fixtures 未提交；不能替代真人冷读与 2 天延迟迁移
 - 旧讲义不回溯；类型/支持级只影响新生成/新定稿讲义
+
+### run_id: v660-stage3-20261023（2026-10-23）
+
+- 技能版本：6.6.0（阶段 3；P1/P2 仍为后续）
+- 覆盖场景：E116（阶段 3 契约）、E117–E121（四向对齐/覆盖行、深度分配、评估例真实性、来源保真、模块/考试对齐；人评未验证）
+- 执行方式：E116 为静态文档契约 + mutation；E117–E121 为待真实回放的人评场景
+
+#### 结果
+
+- `evals/verify-v66-stage3.py`：22/22 OK，退出码 0（四向对齐、覆盖行、深度分配、教学例/评估例真实性、来源保真、模块/考试对齐、接线、E116 登记）
+- 文档契约变异 5/5：删除四向对齐、覆盖行格式、深度分配、引用上限、评估例真实性，均被脚本抓住
+- 六个脚本 `--selftest` 全 0；`evals/verify-formula-typesetting.py` 56/56；`evals/verify-marker-rules.py` 19/19；`evals/verify-v62-docs.py` 17/17；`evals/verify-v63-docs.py` 32/32；`evals/verify-v64-consistency.py` 34/34；`evals/verify-v65-stage2.py` 24/24
+- evals.json：cases 86 → 92（E116 machine + E117–E121 human，verdict 未验证）；applies_to_version 6.6.0；machine_evidence_ref 已登记 v6.6 阶段 3 契约
+- 文档：`handout-design.md` §9–§11（来源/覆盖/深度/评估真实性/来源保真）；一页合同 11 条；SKILL / phases / entry-routing / teaching-loop 已接线；版本五处同步 6.6.0
+- `git diff --check`：0
+
+#### 边界
+
+- 阶段 3 是文档 + 接线规则，不新增运行时闸口、progress.md 字段或迁移；覆盖行/来源锚点仍是文档纪律，未做脚本完整性校验
+- E116 只证明规则写入并接线，不证明模型在真实对话中会执行；E117–E121 未跑
+- P1/P2 质量件（文本结构、主张—证据表、教材章节、教师包等）未做
+- 旧讲义不回溯；来源/覆盖/深度只影响新生成/新定稿讲义
+
+### run_id: v670-p1p2-20261023（2026-10-23）
+
+- 技能版本：6.7.0（合并 6.6.0 阶段 3 内部里程碑与 P1/P2 可选增强）
+- 覆盖场景：E122（P1/P2 契约）、E123–E128（文本结构/主张—证据、设计量表/主图、质量回路/要点卡/移动端/MVP、教材章节、教师包、预习；人评未验证）
+- 执行方式：E122 为静态文档契约 + mutation；E123–E128 为待真实回放的人评场景
+
+#### 结果
+
+- `evals/verify-v67-p1p2.py`：20/20 OK，退出码 0（P1/P2 规则、接线、E122 登记）
+- 文档契约变异 6/6：删除文本结构、设计量表、要点卡/间隔、要点卡/调度/扩展区冲突、教材章节、教师包，均被脚本抓住
+- 六个脚本 `--selftest` 全 0；`evals/verify-formula-typesetting.py` 56/56；`evals/verify-marker-rules.py` 19/19；`evals/verify-v62-docs.py` 17/17；`evals/verify-v63-docs.py` 32/32；`evals/verify-v64-consistency.py` 34/34；`evals/verify-v65-stage2.py` 24/24；`evals/verify-v66-stage3.py` 22/22
+- evals.json：cases 92 → 99（E122 machine + E123–E128 human，verdict 未验证）；applies_to_version 6.7.0；machine_evidence_ref 已登记 v6.7 P1/P2 契约
+- 文档：`handout-design.md` §10–§12（P1/P2/证据）；一页合同仍 11 条（P1/P2 为可选增强）；SKILL / entry-routing / phases 已接线；版本五处同步 6.7.0
+- 自检修正：清理旧阶段指针（§2.4/§10）；§9.6/§10.6 补独立讲义出口；§10.1/§10.5/§11.1 明确结构图/提示/章首路线位置；§10.2/§10.3/§10.7/§10.8 补表格/量表/要点卡/MVP 落点与类型例外；§10.6 升 L3 仍按 §6.1；§10.9 停车位放在扩展区之前；§11.1 章节混合检索、§11.3 预问题不计单节题量；§11.2 教师版不套学生讲义结构校验；契约补相应 mutation（20/20）
+- `git diff --check`：0
+
+#### 边界
+
+- P1/P2 是可选增强，不新增运行时闸口、progress.md 字段或迁移；11 条硬合同不变
+- E122 只证明规则写入并接线，不证明模型在真实对话中会执行；E123–E128 未跑
+- 不做完整教材平台；正式 Word/排版仍让位文档技能；预习模式不把预读当已讲/已掌握
+- 旧讲义不回溯；P1/P2 只影响新生成/新定稿讲义

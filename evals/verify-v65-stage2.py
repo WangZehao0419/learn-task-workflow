@@ -64,8 +64,7 @@ def stage2_problems(handout):
         ("已会·可跳过", "个性化标签"),
         ("## 8. 决策日志与修复表（阶段 2）", "决策日志/修复表"),
         ("症状 → 最可能原因 → 现在做什么 → 怎么验证修好了", "修复表格式"),
-        ("## 9. 后续阶段（未实现）", "后续阶段"),
-        ("来源四向对齐", "来源对齐仍待办"),
+        ("来源四向对齐", "来源对齐"),
     ):
         if phrase not in handout:
             problems.append(label)
@@ -176,7 +175,7 @@ def main(argv=None):
         ("L3 检索版产物被删", handout.replace("L3 用**检索版要点卡**", "")),
         ("专家盲点被删", handout.replace("专家盲点", "")),
         ("决策日志被删", handout.replace("决策日志", "")),
-        ("来源对齐待办被删", handout.replace("来源四向对齐", "")),
+        ("来源对齐被删", handout.replace("来源四向对齐", "")),
     )
     for name, mutated in mutations:
         c.check("5.x mutation 能抓到：" + name, bool(stage2_problems(mutated)),
