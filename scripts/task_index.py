@@ -18,7 +18,8 @@
     输出：每任务含 hold_count（「暂缓与范围外」区块合规条目总数，含处置为「排除」的条目）、
           excluded_count（区块内处置为「排除」的合规条目数）与 hold_unparsed（畸形条目数，
           计 0 并向 stderr 出 W-UNPARSED-HOLD 告警）；暂缓口径 = hold_count − excluded_count；
-          schema 为 learn-task-index/4，消费方按存在性读取新键（scan_status / scan_error）。
+          schema 为 learn-task-index/5，消费方按存在性读取新键（scan_status / scan_error /
+          current_block / block_total）。
     scan_status：ok（完整枚举、无不可读条目）/ partial（完整枚举但有不可读条目）/
                  failed（无法枚举——root 非目录或列目录失败；tasks 不可信，task_count 置 null，
                  不得当「无任务」处理）。
@@ -46,6 +47,8 @@ ENUM_FAMILY = ["数学类", "编程类", "语言类", "理论概念类", "记忆
 FIELD_RE = re.compile(r"^-\s*([^：:]+)[：:]\s*(.*)$")
 # 已完成勾选：x / X 均识别
 ROUTE_RE = re.compile(r"^-\s*\[([xX ])\]\s*(\d+)\.\s*(.*)$")
+# 「下次续学」小节行里的块位置：「已讲到第 k/总块」→ current_block / block_total
+BLOCK_RE = re.compile(r"(?:已讲到第\s*)?(\d+)\s*/\s*(\d+)\s*块")
 # 「暂缓与范围外」区块条目应含的三段（自由文本 + 竖线分段，不做枚举硬校验）
 HOLD_KEYS = ("来源", "处置", "触发条件")
 
@@ -94,6 +97,8 @@ def parse_progress(text):
     weak_points = []
     wrong_items = 0
     hold_entries = []   # 「暂缓与范围外」条目（非「无」行）
+    block_done = None   # 「下次续学」小节行的块位置（可选，缺失为 None）
+    block_total = None
     for raw in text.splitlines():
         line = raw.rstrip()
         if line.startswith("## "):
@@ -122,6 +127,12 @@ def parse_progress(text):
                 if body not in ("无", "无。"):
                     hold_entries.append(body)
             continue
+        if section and section.startswith("下次续学"):
+            m = BLOCK_RE.search(line)
+            if m:
+                block_done = int(m.group(1))
+                block_total = int(m.group(2))
+            continue
         m = FIELD_RE.match(line.strip())
         if m and section is None:
             key = m.group(1).strip()
@@ -139,6 +150,8 @@ def parse_progress(text):
         "hold_count": len(valid_holds),  # 区块合规条目总数（含处置为排除的条目）；畸形条目计 0
         "hold_unparsed": len(malformed),
         "excluded_count": sum(1 for b in valid_holds if hold_disposition_excluded(b)),
+        "block_done": block_done,
+        "block_total": block_total,
     }
 
 
@@ -152,6 +165,8 @@ def classify(parsed):
         "family": parsed["fields"].get("学科族", ""),
         "family_valid": parsed["fields"].get("学科族", "") in ENUM_FAMILY,
         "current_lesson": parsed["fields"].get("当前小节", ""),
+        "current_block": parsed.get("block_done"),
+        "block_total": parsed.get("block_total"),
         "review_from": parsed["fields"].get("复习来源阶段", ""),
         "last_update": parsed["fields"].get("最近更新", ""),
         "data_root": parsed["fields"].get("数据根", ""),
@@ -231,7 +246,7 @@ def build_index(root, tasks, legacy, root_exists, unreadable=None,
                 scan_status="ok", scan_error=None):
     # 派生缓存：字段排序稳定、不含易变时间戳，保证幂等。
     return {
-        "schema": "learn-task-index/4",  # 加键（scan_status/scan_error；failed 时 task_count=null）逐次升 schema，消费方按存在性读取
+        "schema": "learn-task-index/5",  # 加键（scan_status/scan_error；current_block/block_total；failed 时 task_count=null）逐次升 schema，消费方按存在性读取
         "data_root": str(Path(root)),
         "root_exists": root_exists,
         "scan_status": scan_status,
@@ -342,6 +357,11 @@ HOLD_SAMPLE = """# 学习任务：示例
 - 超纲从句 ｜ 来源：S2 对照 ｜ 处置：经用户确认排除 ｜ 触发条件：无
 """
 
+# 块游标夹具：从「下次续学」小节行解析「已讲到第 2/5 块」
+BLOCK_SAMPLE = SAMPLE + "\n## 下次续学\n- 阶段：逐节学习；小节：第 2 节（已讲到第 2/5 块）；先收作业：无；先复习：无\n"
+# 兼容：标题带后缀 + 无「已讲到第」前缀
+BLOCK_SAMPLE_ALT = SAMPLE + "\n## 下次续学（v6.8）\n- 小节：第 2 节（第 2/5 块）\n"
+
 
 def selftest():
     parsed = parse_progress(SAMPLE)
@@ -368,6 +388,12 @@ def selftest():
     legacy_info = classify(parse_progress(SAMPLE.split("## 暂缓与范围外")[0]))
     ok = ok and legacy_info["hold_count"] == 0 and legacy_info["hold_unparsed"] == 0
     ok = ok and legacy_info["excluded_count"] == 0
+    # 块游标：有「已讲到第 k/总块」→ 解析；无 → None（旧档案零迁移）
+    block_info = classify(parse_progress(BLOCK_SAMPLE))
+    ok = ok and block_info["current_block"] == 2 and block_info["block_total"] == 5
+    block_alt = classify(parse_progress(BLOCK_SAMPLE_ALT))
+    ok = ok and block_alt["current_block"] == 2 and block_alt["block_total"] == 5
+    ok = ok and info["current_block"] is None and info["block_total"] is None
     with tempfile.TemporaryDirectory() as td:
         root = Path(td) / ".learning"
         d = root / "python"
@@ -386,7 +412,7 @@ def selftest():
         ok = ok and "profile.md" not in legacy  # 全局画像不得被判为旧版单任务文件
         ok = ok and unreadable == []
         ok = ok and scan_status == "ok" and scan_error is None
-        ok = ok and idx["schema"] == "learn-task-index/4"
+        ok = ok and idx["schema"] == "learn-task-index/5"
         ok = ok and w1 == "written" and w2 == "unchanged"  # 幂等：第二次不重写
         ok = ok and not (root / "index.json.tmp").exists()  # 原子替换不留半截
         # 非规范数据根（临时目录）不物化 index.json（保持只读）

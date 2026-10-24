@@ -1,8 +1,8 @@
 {
  "schema": "ltw-evals/2",
  "skill": "learn-task-workflow",
- "applies_to_version": "6.7.3",
- "updated_at": "2026-10-23",
+ "applies_to_version": "6.8.0",
+ "updated_at": "2026-10-24",
  "grading_axes": [
   "教学正确性",
   "目标匹配",
@@ -58,9 +58,9 @@
   },
   "阻断规则": "阻断型用例的学科内容/结构渲染/边界必须为 2，其他适用项不得低于 1。"
  },
- "run_log_ref": "evals/run-log.md（「运行记录」节，run_id: v673-readability-20261023；历史 v672-cleanup2-20261023 / v672-cleanup-20261023 / v671-cleanup-20261023 / v670-p1p2-20261023 / v660-stage3-20261023 / v650-stage2-20261023 / v640-consistency-20261023 / v630-selftest-20261023 / v620-selftest-20261022 / v610-selftest-20261022 / v600-selftest-20261022；公式基线见 formula-typesetting-5.5.0-20261017-static）",
+ "run_log_ref": "evals/run-log.md（「运行记录」节，run_id: v680-block-pacing-20261024；历史 v673-readability-20261023 / v672-cleanup2-20261023 / v672-cleanup-20261023 / v671-cleanup-20261023 / v670-p1p2-20261023 / v660-stage3-20261023 / v650-stage2-20261023 / v640-consistency-20261023 / v630-selftest-20261023 / v620-selftest-20261022 / v610-selftest-20261022 / v600-selftest-20261022；公式基线见 formula-typesetting-5.5.0-20261017-static）",
  "run_log_note": "真实陪学运行日志尚未产出。待最终机制版本完成后，以同材料、同学员作答序列重跑，并把 actual_output / run_id / scores 回填本文件；未回填者保持「未验证」。",
- "machine_evidence_ref": "包内 scripts/*.py --selftest（六脚本，含讲义结构校验 verify_explanation.py：shaanxi-gaoshu materials 校验通过、退出码 0）；evals/verify-formula-typesetting.py（公式呈现静态契约 56 项检查、退出码 0；属静态证据，非渲染验证）；包外验收复现与真实教学日志不作为技能包运行依赖；evals/verify-marker-rules.py（五要素新编号规则行为契约 19 项检查、退出码 0；临时目录夹具真实运行 verify_explanation.py，属行为级静态证据，非对话回放）；v6.0 追加：scheduler --selftest 断言 2b/7b（同会话抑制、保持复习 reason、ltw-due-queue/3）与 progress_check --selftest 四态组（partial/ungraded/void）均退出码 0；v6.1 追加：progress_check --selftest 分型组（E-KP-TYPED-GATE）与大纲契约/intake 组（W-MODULE-* / E-ENUM-STRATEGY）退出码 0、kp_sort --selftest 分型字段夹具退出码 0；v6.2 追加：evals/verify-v62-docs.py 文档契约（交接/记录/证据、记忆纪律、ask hint、来源备课、选项规则、版本与 E66–E69 登记）退出码 0；v6.3 追加：evals/verify-v63-docs.py 文档契约（出题流水线四步、旧题去重、规划字段、一次修复、视觉任务原始来源、版本与 E71–E73 登记）退出码 0；v6.4 追加：evals/verify-v64-consistency.py 阶段 0 + 理解核心契约（状态行/③豁免/交付标识/L3/单元-KP/头部/深讲拆节/类型单元数/命名/概念地图/理解四证/六问/四段/闭卷/二次定稿 + mutation）退出码 0；v6.5 追加：evals/verify-v65-stage2.py 阶段 2 契约（类型模板/四步流水线/L1-L3/学习者状态/决策日志/修复表 + mutation）退出码 0；v6.6 追加：evals/verify-v66-stage3.py 阶段 3 契约（四向对齐/覆盖行/深度分配/评估例真实性/来源保真 + mutation）退出码 0；v6.7 追加：evals/verify-v67-p1p2.py P1/P2 契约（文本结构/主张—证据/设计量表/主图/质量回路/要点卡/移动端/MVP/教材章节 + mutation）退出码 0；v6.7.1 清理：verify-v67-p1p2.py 19 项（移除教师包/预习与家长侧入口）退出码 0；v6.7.2 清理：移除原 SR-8 安全边界与 E43，原 SR-9 重编号为 SR-8，术语「学生」统一为「学员」；v6.7.3 追加：evals/verify-readability.py 读者版可读性/图表契约（文档 + 样板版面 + mutation + verify_explanation.py --reader）退出码 0；上述 56 项公式契约仍为基线。",
+ "machine_evidence_ref": "包内 scripts/*.py --selftest（六脚本，含讲义结构校验 verify_explanation.py：shaanxi-gaoshu materials 校验通过、退出码 0）；evals/verify-formula-typesetting.py（公式呈现静态契约 56 项检查、退出码 0；属静态证据，非渲染验证）；包外验收复现与真实教学日志不作为技能包运行依赖；evals/verify-marker-rules.py（五要素新编号规则行为契约 19 项检查、退出码 0；临时目录夹具真实运行 verify_explanation.py，属行为级静态证据，非对话回放）；v6.0 追加：scheduler --selftest 断言 2b/7b（同会话抑制、保持复习 reason、ltw-due-queue/3）与 progress_check --selftest 四态组（partial/ungraded/void）均退出码 0；v6.1 追加：progress_check --selftest 分型组（E-KP-TYPED-GATE）与大纲契约/intake 组（W-MODULE-* / E-ENUM-STRATEGY）退出码 0、kp_sort --selftest 分型字段夹具退出码 0；v6.2 追加：evals/verify-v62-docs.py 文档契约（交接/记录/证据、记忆纪律、ask hint、来源备课、选项规则、版本与 E66–E69 登记）退出码 0；v6.3 追加：evals/verify-v63-docs.py 文档契约（出题流水线四步、旧题去重、规划字段、一次修复、视觉任务原始来源、版本与 E71–E73 登记）退出码 0；v6.4 追加：evals/verify-v64-consistency.py 阶段 0 + 理解核心契约（状态行/③豁免/交付标识/L3/单元-KP/头部/深讲拆节/类型单元数/命名/概念地图/理解四证/六问/四段/闭卷/二次定稿 + mutation）退出码 0；v6.5 追加：evals/verify-v65-stage2.py 阶段 2 契约（类型模板/四步流水线/L1-L3/学习者状态/决策日志/修复表 + mutation）退出码 0；v6.6 追加：evals/verify-v66-stage3.py 阶段 3 契约（四向对齐/覆盖行/深度分配/评估例真实性/来源保真 + mutation）退出码 0；v6.7 追加：evals/verify-v67-p1p2.py P1/P2 契约（文本结构/主张—证据/设计量表/主图/质量回路/要点卡/移动端/MVP/教材章节 + mutation）退出码 0；v6.7.1 清理：verify-v67-p1p2.py 19 项（移除教师包/预习与家长侧入口）退出码 0；v6.7.2 清理：移除原 SR-8 安全边界与 E43，原 SR-9 重编号为 SR-8，术语「学生」统一为「学员」；v6.7.3 追加：evals/verify-readability.py 读者版可读性/图表契约（文档 + 样板版面 + mutation + verify_explanation.py --reader）退出码 0；上述 56 项公式契约仍为基线；v6.8 追加：块级节奏文档契约由本次人工复核与 verify-formula-typesetting.py 版本字段校验覆盖，六个脚本 --selftest 退出码 0；task_index schema 4→5（current_block/block_total 可选键，selftest 含 block 夹具）；E135 为 human 场景，未跑，不冒充 machine 证据。",
  "dialogues_ref": "evals/对话对照-批次B.md（设计摘要，非运行日志；真实新旧对照须另附运行输出）",
  "cases": [
   {
@@ -1328,7 +1328,7 @@
    "kind": "human",
    "prompt": "备考型一节含 3 个考点：高频高分、低频低分、超纲；学员目标线已定。",
    "fixture": "有真题分值/频次；有考纲；目标程度=及格。",
-   "pass_condition": "高频高分考点深讲/工作并配例与练习；低频低分只到参照；超纲进扩展/暂缓并说明；不平均用力；题量仍 ≤6；目标程度与证据冲突时用户目标优先并写明取舍。",
+   "pass_condition": "高频高分考点深讲/工作并配例与练习；低频低分只到参照；超纲进扩展/暂缓并说明；不平均用力；核心题量仍 ≤6（关键块正式确认 ≤3–4 道、简单块轻量确认另计）；目标程度与证据冲突时用户目标优先并写明取舍。",
    "actual_output": null,
    "run_id": null,
    "scores": null,
@@ -1523,6 +1523,19 @@
    "verdict": "未验证",
    "reviewer": null,
    "machine_ref": "evals/verify-readability.py；2026-10-23 运行退出码 0"
+  },
+  {
+   "id": "E135",
+   "scenario": "v6.8.0 块级推进与整节投喂",
+   "kind": "human",
+   "prompt": "学员说：这一节内容有点多，帮我一次讲完。请按技能规则处理。",
+   "fixture": "一个含 5 个块的小节（如三角恒等式 8a–8e），其中 8c 单块预计 >10 分钟；知识清单未细化该节 KP。",
+   "pass_condition": "课首公示块清单与总时长/分次；8c 开讲前拆成 8c-1/8c-2；每轮只讲 1 块并停轮等确认；关键块正式确认 ≤3–4、简单块用可判定问题（不得只问「懂了吗」）；学员要求一次讲完时合并组 ≤3 块且组末 1 道综合确认；不得整节一次投喂；多块小节节末至少 1 道跨块综合题。",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null
   }
  ]
 }
