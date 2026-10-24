@@ -829,3 +829,25 @@ mutation-check: 11/11 mutations detected
 - 只证明规则在场 + 样板结构合格，不证明真人更易读或学习效果更好；E129–E132 保持「未验证」。
 - 中文行长证据冲突（17–48 字/行 vs 76 字/行），本技能取 25–40 字、上限 48；多媒体原则效应量受先验知识、材料复杂度、媒介与时长调节，不把 d/g 当固定收益。
 - 不新增运行时闸口、不新增 progress 字段、旧讲义不回溯；版本按约定未升。
+
+### run_id: v680-block-pacing-20261024（2026-10-24）
+
+- 技能版本：6.8.0（工作区 + 安装区同步；未提交、未推送）
+- 类型：machine（文档契约 + 静态脚本回归；非真人回放）
+- 覆盖场景：新增 E135（块级推进：逐块停轮 vs 整节投喂，human，未验证；真人回放延期）；其余 102 项保持「未验证」；本次仅做静态契约回归
+
+#### 改动
+
+- `SKILL.md` / `phases-and-gates.md` / `teaching-loop.md` / `lecture-styles.md` / `handout-design.md` / `data-and-recovery.md`：新增小节负载门与逐块推进（块尺寸 5–10 分钟、通用前置探针、关键块正式 ≤3–4、简单块轻量确认、跨块串联）。
+- 版本字段同步：`skill-dependencies.json` / `setup-guide.md` / `CREDITS.md` / `evals.json` / `verify-formula-typesetting.py`。
+- `scripts/task_index.py`：新增 `current_block` / `block_total` 可选解析（来自「下次续学」的「已讲到第 k/总块」，兼容标题后缀与无前缀写法），schema 4→5；`data-and-recovery.md` / `skill-dependencies.json` 同步；selftest 含 block 夹具。
+- `references/redlines.md` / `SKILL.md`：新增 SR-9「整节投喂 / 一轮多块」；`references/methodology.md`：新增 5–10 分钟块尺寸文献行；`evals/evals.json`：新增 E135（human，未验证）。
+
+#### 结果
+
+- 六个脚本 `--selftest` 全 0；`verify-formula-typesetting.py` 56/56；`verify-v64-consistency.py` 34/34；`git diff --check` 0。
+
+#### 边界
+
+- 只证明规则在场与静态契约通过，不证明真人学习效率提升；真实学习效果仍待回放。
+- E135 真人学习回放按用户 2026-10-24 决定延期，保持「未验证」；本次不做真人回放。
