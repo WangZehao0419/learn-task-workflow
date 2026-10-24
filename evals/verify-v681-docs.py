@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""verify-v69-docs.py - v6.9.0 最细知识点块契约（stdlib-only、只读）。
+"""verify-v681-docs.py - v6.8.1 最细知识点块契约（stdlib-only、只读）。
 
 检查「块 = 当前节目标内最细知识点」是否写入规则文件、旧口径是否清零、
 版本字段是否同步，并用 mutation 证明检查器不是空转。
@@ -50,7 +50,7 @@ RULE_FILES = (
 )
 
 REQUIRED = {
-    "SKILL.md": ("最细知识点", "独立答对才进下一块", "6.9.0"),
+    "SKILL.md": ("最细知识点", "独立答对才进下一块", "6.8.1"),
     "references/phases-and-gates.md": (
         "1 块 = 1 个最细知识点",
         "禁止多概念块",
@@ -94,24 +94,24 @@ def problems(texts, evals, deps):
             if needle in body:
                 found.append("{} 仍含旧口径「{}」".format(rel, needle))
 
-    if version_in(texts.get("SKILL.md", ""), r"version:\s*(\d+\.\d+\.\d+)") != "6.9.0":
-        found.append("SKILL.md version 不是 6.9.0")
-    if "适用版本：6.9.0" not in texts.get("references/setup-guide.md", ""):
-        found.append("setup-guide 适用版本不是 6.9.0")
-    if '"applies_to_version": "6.9.0"' not in deps:
-        found.append("skill-dependencies 未声明 6.9.0")
-    if not re.search(r"当前版本说明\*\*：6\.9\.0", texts.get("CREDITS.md", "")):
-        found.append("CREDITS 当前版本说明不是 6.9.0")
-    if evals.get("applies_to_version") != "6.9.0":
-        found.append("evals.json applies_to_version 不是 6.9.0")
+    if version_in(texts.get("SKILL.md", ""), r"version:\s*(\d+\.\d+\.\d+)") != "6.8.1":
+        found.append("SKILL.md version 不是 6.8.1")
+    if "适用版本：6.8.1" not in texts.get("references/setup-guide.md", ""):
+        found.append("setup-guide 适用版本不是 6.8.1")
+    if '"applies_to_version": "6.8.1"' not in deps:
+        found.append("skill-dependencies 未声明 6.8.1")
+    if not re.search(r"当前版本说明\*\*：6\.8\.1", texts.get("CREDITS.md", "")):
+        found.append("CREDITS 当前版本说明不是 6.8.1")
+    if evals.get("applies_to_version") != "6.8.1":
+        found.append("evals.json applies_to_version 不是 6.8.1")
     if not any(
         isinstance(case, dict) and case.get("id") == "E136"
         for case in evals.get("cases", [])
     ):
         found.append("evals.json 缺少 E136")
     formula = texts.get("evals/verify-formula-typesetting.py", "")
-    if "6.9.0" not in formula:
-        found.append("verify-formula-typesetting.py 未同步 6.9.0")
+    if "6.8.1" not in formula:
+        found.append("verify-formula-typesetting.py 未同步 6.8.1")
     if "6.8.0" in formula:
         found.append("verify-formula-typesetting.py 仍含 6.8.0")
     return found
@@ -124,7 +124,7 @@ def mutate(texts, rel, old, new):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="v6.9.0 最细知识点块契约（只读）")
+    parser = argparse.ArgumentParser(description="v6.8.1 最细知识点块契约（只读）")
     parser.add_argument("--skill-root", default=None)
     args = parser.parse_args(argv)
 
@@ -145,7 +145,7 @@ def main(argv=None):
 
     c = Checker()
     found = problems(texts, evals, deps)
-    c.check("1.1 规则文件与版本字段全部符合 v6.9.0", not found, found)
+    c.check("1.1 规则文件与版本字段全部符合 v6.8.1", not found, found)
 
     c.check("1.2 节内块数不设上限、教材节不按块数拆",
             "节内块数不设上限" in texts["references/phases-and-gates.md"]
@@ -174,13 +174,13 @@ def main(argv=None):
             "不设每节道数上限", "每节 ≤3–4 道")),
         ("redlines 去掉多概念块", mutate(
             texts, "references/redlines.md", "多概念块", "整节投喂")),
-        ("版本回到 6.8.0", mutate(texts, "SKILL.md", "6.9.0", "6.8.0")),
+        ("版本回到 6.8.0", mutate(texts, "SKILL.md", "6.8.1", "6.8.0")),
     )
     for name, mutated in mutations:
         got = problems(mutated, evals, deps)
         c.check("2.x mutation 能抓到：" + name, bool(got), got)
 
-    print("verify-v69-docs: {} checks, {} OK, {} FAIL".format(
+    print("verify-v681-docs: {} checks, {} OK, {} FAIL".format(
         c.ok + c.fail, c.ok, c.fail))
     return 0 if c.fail == 0 else 1
 
