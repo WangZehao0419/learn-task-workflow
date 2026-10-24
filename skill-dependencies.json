@@ -35,10 +35,10 @@
           "非托管环境：从官方下载地址安装 Python 3.10 或更高版本，安装后在终端运行 python --version 确认版本。",
           "检查输出 status 为 ready（或仅 KP 拓扑排序受影响的 partial）即可进入正常流程；needs_setup / unavailable 时按 references/setup-guide.md 处理并重检。"
         ],
-        "verify": "python --version 显示 ≥ 3.10；运行 python -B scripts/check_environment.py 输出 status 为 ready 或可解释的 partial；六个脚本均带 --selftest（task_index / progress_check / scheduler / kp_sort / check_environment / verify_explanation），逐一退出码 0。",
+        "verify": "python --version 显示 ≥ 3.10；运行 python -B scripts/check_environment.py 输出 status 为 ready 或可解释的 partial；六个脚本均带 --selftest（task_index / progress_check / scheduler / kp_sort / check_environment / verify_explanation），逐一退出码 0；读者版检查：python -B scripts/verify_explanation.py --reader <材料目录或单文件>。",
         "security": "无需登录与凭据；不安装、不修改系统配置；检查器只读，不发起网络请求与子进程，无任何网络探测能力。",
         "verified_at": "2026-10-20",
-        "applies_to_version": "6.8.0"
+        "applies_to_version": "6.9.0"
       },
       "degradation": [
         {
@@ -185,59 +185,5 @@
       "recovery": "恢复检索或用户提供材料后补台账并重做覆盖对照",
       "stop_condition": "用户要求以官方大纲/真题为准且无任何材料时停止并说明"
     }
-  ],
-  "scripts_contract": [
-    {
-      "script": "task_index.py",
-      "usage": "--root <数据根> [--write-index | --no-write-index] [--selftest]",
-      "default_behavior": "只读、不物化 index.json（写缓存为显式 opt-in）",
-      "exit_codes": {"0": "正常（含 scan_status=partial）", "1": "数据根缺失或非目录", "2": "用法错误", "3": "枚举失败 scan_status=failed（不覆盖既有缓存）"},
-      "schema": "learn-task-index/5",
-      "notes": "scan_status=failed 时 task_count=null（未知≠0）；任务含 current_block/block_total（可选，来自「下次续学」的已讲到第 k/总块，缺失为 null）；写缓存用同目录临时文件 + os.replace 原子替换，区分 written/unchanged/failed"
-    },
-    {
-      "script": "progress_check.py",
-      "usage": "<任务目录> [--release] [--selftest]",
-      "default_behavior": "历史/日常校验（warning 非阻断旧任务）",
-      "exit_codes": {"0": "通过", "1": "不通过", "2": "用法错误"},
-      "notes": "--release 放行模式：判分四态 correct/partial/incorrect/ungraded；partial 入分母不入分子，ungraded 与作废行不入分母（W-VOIDED-ATTEMPT / W-UNGRADED-ATTEMPT）；KP 类型/视觉任务声明后分型验收（E-KP-TYPED-GATE）；模块目标/材料覆盖结构提示（W-MODULE-CONTRACT-INCOMPLETE / W-UNPARSED-MODULE / W-UNPARSED-MATERIAL / W-MATERIAL-COVERAGE-GAP）；教学策略枚举（E-ENUM-STRATEGY）；空/模板证据 E-EMPTY-EVIDENCE；结课/已完成未完成路线 E-ROUTE-UNDONE；复习来源阶段枚举 {逐节学习, 结课, 已完成}；起点自进入 S2 起必填"
-    },
-    {
-      "script": "scheduler.py",
-      "usage": "next-interval | due-queue | calibration [--selftest]",
-      "exit_codes": {"0": "正常", "1": "数据根缺失或非目录", "2": "参数错误"},
-      "schema": {"due-queue": "ltw-due-queue/3", "calibration": "ltw-calibration/3"},
-      "notes": "next-interval 同会话重复答对（elapsed=0）返回 same_session=true，S/D/due 不变；due-queue 读取薄弱点/错题本/保持复习三区并输出 reason；due 锚点 = 本次复习日 today + interval_days；calibration 先按 evt 归组并合并互补投影再统计（dedup_mode: by_evt / legacy_double_count / mixed 并披露 evt_tagged_count、legacy_count）；cw 只数「反馈前信心 ≥4 且判错」的子集，孤立/低信心 cw 与信心/时序歧义（W-CONFIDENCE-AMBIGUOUS，含重复信心键与回顾性 × 数值并存）令 overconfidence_rate=null + rate_valid=false；纯回顾性观察不入分母（retro_excluded_count）"
-    },
-    {
-      "script": "kp_sort.py",
-      "usage": "<清单文件> [--selftest]",
-      "exit_codes": {"0": "正常", "1": "畸形行 / 依赖环 / 解释器版本不足 / 疑似解析失败"},
-      "notes": "空合法清单与疑似解析失败分离；KP 编号别名归一（KP-1-1 ≡ KP-01-01）；环路径输出稳定"
-    },
-    {
-      "script": "check_environment.py",
-      "usage": "[--manifest <路径>] [--capability <名称>]... [--selftest]",
-      "exit_codes": {"0": "ready / partial", "1": "needs_setup / unavailable", "2": "清单畸形 manifest_error"},
-      "notes": "严格校验清单类型与版本格式（布尔不误收字符串、非法 min_version 与畸形 capabilities 返回结构化诊断）；声明了但无可检查依赖的能力输出 unmapped_capabilities（not_checkable），不报清单错误"
-    },
-    {
-      "script": "verify_explanation.py",
-      "usage": "<材料目录或单文件> [--selftest] [--reader]",
-      "default_behavior": "只读静态校验，不写盘；--reader 为可选的读者版 W 级检查",
-      "exit_codes": {"0": "无 E（可有 W）", "1": "有 E（结构违规）", "2": "用法/路径错误"},
-      "notes": "概念单元级五要素检查（不得全文件计数代替；纯概念标「③ 不适用」时②③ 豁免、①④⑤仍查；参照级标【参照】+「③ 不适用（参照级）」时仅查①）；框内段内断行拆断 `$…$`/code span 报 E（多行本身不报，归人工自检）；③ 标记行带内容报 W-MARKER-CONTENT；定稿区才查判分记账残留与节首导读三行，草稿/历史日志合法；查自测/检验题面区缺答案区（题面区认 `本节自测`/`自测`/`自测题`/`检验`/`检验题`/`检验问题`/`本节检验`，答案区认同词干+`答案`（可接 `区`/`要点`/`与解析`）或通用 `答案`/`参考答案`，多答案区逐区查（同族答案区只覆盖同类题面区，通用答案区可统管其前多区）；开放/动手检验写 `- 检验说明：` 显式豁免）、图引用死链；上述答案区不误报；`--reader` 加查标题层级/表格/alt/SVG/速览/回看索引/一句话结论/强调密度，全部 W 级、不阻断、旧讲义不回溯"
-    }
-  ],
-  "verification": {
-    "selftest": [
-      "python -B scripts/task_index.py --selftest",
-      "python -B scripts/progress_check.py --selftest",
-      "python -B scripts/scheduler.py --selftest",
-      "python -B scripts/kp_sort.py --selftest",
-      "python -B scripts/check_environment.py --selftest",
-      "python -B scripts/verify_explanation.py --selftest"
-    ],
-    "note": "六脚本自测覆盖确定性计算与结构校验契约；真实教学回归与故障夹具见批次 E 的 evals。"
-  }
+  ]
 }

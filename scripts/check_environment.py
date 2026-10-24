@@ -58,8 +58,7 @@ def filtered_setup(setup: Any) -> dict[str, Any]:
 
 
 def validate_manifest(manifest: dict[str, Any]) -> None:
-    top_allowed = {"schema_version", "capabilities", "dependencies", "functional_degradations",
-                   "scripts_contract", "verification"}
+    top_allowed = {"schema_version", "capabilities", "dependencies", "functional_degradations"}
     dependency_allowed = {"id", "type", "required", "auth_type", "capabilities", "checks", "setup", "degradation"}
     check_allowed = {"id", "type", "required", "min_version", "capabilities"}
     setup_allowed = {"official_home_url", "official_docs_url", "download_url", "login_url", "credential_url", "console_path", "scopes", "credential_storage", "steps", "verify", "rotate_or_revoke", "security", "verified_at", "applies_to_version"}
@@ -68,15 +67,6 @@ def validate_manifest(manifest: dict[str, Any]) -> None:
         raise ValueError(f"清单包含未知顶层字段：{sorted(set(manifest) - top_allowed)}")
     if manifest.get("schema_version") != "1":
         raise ValueError("schema_version 必须为字符串 1")
-    # 可选扩展块（v2.3 起）：CLI 行为契约与验证口径。缺省合法（向后兼容）。
-    contract = manifest.get("scripts_contract")
-    if contract is not None:
-        if not isinstance(contract, list) or not all(isinstance(item, dict) for item in contract):
-            raise ValueError("scripts_contract 必须是对象数组")
-    verification = manifest.get("verification")
-    if verification is not None:
-        if not isinstance(verification, dict) or not isinstance(verification.get("selftest", []), list):
-            raise ValueError("verification 必须是含 selftest 数组的对象")
     capabilities = manifest.get("capabilities")
     if not isinstance(capabilities, list) or not capabilities or not all(isinstance(item, str) and item for item in capabilities):
         raise ValueError("capabilities 必须是非空字符串数组")

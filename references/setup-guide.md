@@ -48,7 +48,8 @@
 
 - `python --version`：确认解释器存在与版本。
 - 运行 `python -B "<技能根>/scripts/check_environment.py"`：确认 status 为 ready，或**可解释的 partial**（`unmapped_capabilities` 里只有落盘/检索这两项不可机器检查能力）。若 partial 里出现其他能力，才按降级矩阵处理。
-- **六脚本自测**（契约回归口径，唯一事实源 = `skill-dependencies.json` 的 `verification.selftest`）：`python -B "<技能根>/scripts/{task_index,progress_check,scheduler,kp_sort,check_environment,verify_explanation}.py" --selftest`，逐一退出码 0。
+- **六脚本自测**（契约回归口径；详细脚本契约与自测清单位于 `evals/scripts-contract.json`，不放进 `skill-dependencies.json`，以保持环境清单 schema 兼容）：`python -B "<技能根>/scripts/{task_index,progress_check,scheduler,kp_sort,check_environment,verify_explanation}.py" --selftest`，逐一退出码 0。
+- **打包前清理**：删除 `scripts/__pycache__`（字节码缓存会被静态预检当作不可扫描脚本）；`.trae`/`.workbuddy` 是本地 IDE/记忆目录，**打包时用干净副本排除**（`package` 不会自动忽略它们）。`scripts/task_index.py` 的 `tmp.unlink()` 只清理 `index.json.tmp`；preflight 的 high `file_delete` 属该临时清理，人工复核后可带 `--risk-ack` 打包。
 - **人工核验边界（F15）**：无解释器时上述脚本项**不可机器判定**，只能按本指南人工核对并如实标注「部分验证 / 未验证」——**不得谎称已通过脚本验证**；哪些环节可人工核验、何时只给部分验证、何时确需阻断，**一律以 `skill-dependencies.json` 的降级条目为唯一事实源**（下方矩阵为摘要，冲突时以清单为准）。
 
 ## 缺失与故障处理
@@ -79,5 +80,5 @@
 
 ## 核验记录
 
-- 适用版本：6.8.0
+- 适用版本：6.9.0
 - 核验日期：2026-10-21

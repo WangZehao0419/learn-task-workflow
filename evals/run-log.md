@@ -851,3 +851,49 @@ mutation-check: 11/11 mutations detected
 
 - 只证明规则在场与静态契约通过，不证明真人学习效率提升；真实学习效果仍待回放。
 - E135 真人学习回放按用户 2026-10-24 决定延期，保持「未验证」；本次不做真人回放。
+
+### run_id: v690-finest-kp-block-20261025（2026-10-25）
+
+- 技能版本：6.9.0（工作区；未提交、未推送）
+- 类型：machine（文档契约 + 静态脚本回归；非真人回放）
+- 覆盖场景：新增 E136（一个块塞多个知识点 → 拆 3 块，human，未验证）；更新 E135（加速不合并）；其余保持「未验证」；本次仅做静态契约回归
+
+#### 改动
+
+- `SKILL.md` / `phases-and-gates.md` / `teaching-loop.md` / `lecture-styles.md` / `handout-design.md` / `data-and-recovery.md` / `redlines.md`：讲授单位收敛为「块 = 当前节目标内最细知识点」；1 块 1 检、独立答对才推进；删除 5–10 分钟、15–30 分钟、≤5–7 块、≤2 套新记号、30/45 分钟休息、每节 ≤3–4 道正式确认、合并组、多 KP 块。
+- `SKILL.md` / `references/methodology.md`：块尺寸改为按最细知识点，不设时间阈值。
+- 版本字段同步：`skill-dependencies.json` / `setup-guide.md` / `CREDITS.md` / `evals.json` / `verify-formula-typesetting.py`；`evals.json` updated_at 2026-10-25。
+- `evals/evals.json`：更新 E118/E135，新增 E136；新增 `evals/verify-v69-docs.py`；`evals/verify-v64-consistency.py` 3.2 改为检查最细知识点/节内块数不设上限。
+- 学习档案 `shaanxi-zhuanshengben-english`：节 1 场 1 重切 13 块；`01A` 增讲授块清单与 9 类词性子块；课程体系追加附录 C（22 节粒度审计，约 236–244 块）；progress.md 学习日志记录重切与审计。
+
+#### 结果
+
+- 六个脚本 `--selftest` 全 0；`verify-formula-typesetting.py` 56/56；`verify-v69-docs.py` 11/11（含 6 个 mutation）；`verify-marker-rules.py` 19/19；`verify-readability.py` 22/22；`verify-v62-docs.py` 17/17；`verify-v63-docs.py` 32/32；`verify-v64-consistency.py` 34/34；`verify-v65-stage2.py` 24/24；`verify-v66-stage3.py` 22/22；`verify-v67-p1p2.py` 19/19。
+- `verify_explanation.py --reader` 对 `01A-词性与词性判断.md`：0 E 0 W；`evals.json` / `skill-dependencies.json` JSON 有效；`git diff --check` 0。
+- 数据核对：01A 讲授块清单 13 行；课程体系附录 C 覆盖 22 节；旧 2026-10-24 判分与探针记录保留。
+
+#### 边界
+
+- 只证明规则在场与静态契约通过，不证明真人学习效率提升；E135/E136 保持「未验证」，本轮不做真人回放。
+- 22 节块数是规划估算（无教材正文的节标暂定）；实际块数开节前按「知识梳理」正文复核。
+- 教材节不按块数拆；节 1 实际课堂节奏与 22 节课时影响仍待真人回放。
+
+#### 修复轮（skill-studio 复审，2026-10-25）
+
+- 删除 `scripts/__pycache__`（字节码缓存导致 preflight `scan_complete=False`）。
+- 将 `scripts_contract` / `verification` 从 `skill-dependencies.json` 移到 `evals/scripts-contract.json`，manifest 恢复 skill-studio schema 兼容；`references/setup-guide.md` 同步指向新文件，并补打包清理与 `--risk-ack` 说明；manifest 的 verify 补 `--reader`。
+- 课程表修旧数据：22 节总量 38.5 场→38.5 课次；节 1 块预算改为场 1 13 块 + 场 2 17 块；附录 C 总量 237–244 块；progress 补场 2 的 17 块暂定清单。
+- 01A 块 13 改为「1 道跨块综合 + 3 道节末题组」。
+
+**复测结果：**
+
+- 干净副本 `skill_ops validate`：0 issues。
+- 干净副本 `skill_ops preflight`：`scan_complete=True`，`summary high=1 / medium=169`，仍为 `blocked`；唯一 high 是 `scripts/task_index.py:295` 的 `tmp.unlink`，只清理 `index.json.tmp`，selftest 也要求失败后无 `.tmp` 残留；人工复核接受，打包需 `--risk-ack`。
+- 六个脚本 `--selftest` 全 0；`verify-formula-typesetting.py` 56/56；`verify-v69-docs.py` 11/11；`verify-v62-docs.py` 17/17；`verify-v63-docs.py` 32/32；`verify-v64-consistency.py` 34/34；`verify-v65-stage2.py` 24/24；`verify-v66-stage3.py` 22/22；`verify-v67-p1p2.py` 19/19；`verify-marker-rules.py` 19/19；`verify-readability.py` 22/22。
+- `01A` `verify_explanation.py --reader`：0 E 0 W；`progress_check.py`：ok；`evals.json` / `skill-dependencies.json` / `evals/scripts-contract.json` JSON 有效。
+
+#### 闭包轮（12+1 修正，2026-10-25）
+
+- 发现「综合」不是知识点：已从 01A、备课报告、课程表、附录 C 的块清单移出；节 1 场 1 = 12 个知识点块 + 1 节末综合；场 2 暂定 17 块；审计总量约 236 块（暂定，节末综合不计）。
+- `scripts/check_environment.py` 移除已迁移的 `scripts_contract` / `verification` 允许项，环境清单 schema 与 skill-studio 一致；selftest 退出码 0。
+- 复测：六脚本 selftest 0；全部文档契约 0；`01A --reader` 0E/0W；`progress_check` ok；干净副本 `skill_ops validate` 0；preflight 仍只有 1 个 high `task_index.py:295 tmp.unlink`（临时文件清理，人工复核接受）。

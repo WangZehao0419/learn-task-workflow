@@ -166,9 +166,9 @@ def main(argv=None):
 
     c.check("3.1 lecture-styles 与合同一致",
             not style_problems(styles), style_problems(styles))
-    c.check("3.2 phases 同步状态行/单元数/拆节",
-            all(k in phases for k in ("台账状态行", "讲义状态行", "记忆 5–7",
-                                      "设计 1–3", "拆节", "L3 复习产物")))
+    c.check("3.2 phases 同步状态行/最细知识点/拆节",
+            all(k in phases for k in ("台账状态行", "讲义状态行", "最细知识点",
+                                      "节内块数不设上限", "拆节", "L3 复习产物")))
     c.check("3.3 teaching-loop 同步深讲与设计标识",
             all(k in teaching for k in ("完整深讲", "方案：", "设计说明：")))
     c.check("3.4 subject-playbooks 同步设计/记忆标识",
