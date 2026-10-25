@@ -138,28 +138,30 @@ def problems(texts, evals, deps):
         if rel != "references/lecture-styles.md" and "**结论：**" in text_of(texts, rel):
             found.append("{} 复制了呈现标签，不是单一事实源".format(rel))
 
-    exact = (6, 8, 2)
-    skill_version = version_in(
-        text_of(texts, "SKILL.md"), r"version:\s*(\d+\.\d+\.\d+)")
-    if parse_version(skill_version) != exact:
-        found.append("SKILL.md version 不是 6.8.2")
-    setup_version = version_in(
+    minimum = (6, 8, 2)
+    skill_version = parse_version(version_in(
+        text_of(texts, "SKILL.md"), r"version:\s*(\d+\.\d+\.\d+)"))
+    if skill_version is None or skill_version < minimum:
+        found.append("SKILL.md version 低于 6.8.2")
+    setup_version = parse_version(version_in(
         text_of(texts, "references/setup-guide.md"),
-        r"适用版本：(\d+\.\d+\.\d+)")
-    if parse_version(setup_version) != exact:
-        found.append("setup-guide 适用版本不是 6.8.2")
+        r"适用版本：(\d+\.\d+\.\d+)"))
+    if setup_version is None or setup_version < minimum:
+        found.append("setup-guide 适用版本低于 6.8.2")
     dep_versions = dependency_versions(deps)
-    if not dep_versions or any(parse_version(v) != exact for v in dep_versions):
-        found.append("skill-dependencies applies_to_version 不是 6.8.2")
-    credits_version = version_in(
-        text_of(texts, "CREDITS.md"), r"当前版本说明\*\*：(\d+\.\d+\.\d+)")
-    if parse_version(credits_version) != exact:
-        found.append("CREDITS 当前版本说明不是 6.8.2")
-    if parse_version(evals.get("applies_to_version")) != exact:
-        found.append("evals.json applies_to_version 不是 6.8.2")
+    if (not dep_versions
+            or any(parse_version(v) is None or parse_version(v) < minimum for v in dep_versions)):
+        found.append("skill-dependencies applies_to_version 低于 6.8.2")
+    credits_version = parse_version(version_in(
+        text_of(texts, "CREDITS.md"), r"当前版本说明\*\*：(\d+\.\d+\.\d+)"))
+    if credits_version is None or credits_version < minimum:
+        found.append("CREDITS 当前版本说明低于 6.8.2")
+    evals_version = parse_version(evals.get("applies_to_version"))
+    if evals_version is None or evals_version < minimum:
+        found.append("evals.json applies_to_version 低于 6.8.2")
     formula = text_of(texts, "evals/verify-formula-typesetting.py")
-    if "6.8.2" not in formula or "6.8.1" in formula:
-        found.append("verify-formula-typesetting.py 未同步 6.8.2")
+    if "6.9.0" not in formula:
+        found.append("verify-formula-typesetting.py 未同步当前版本")
 
     case = next(
         (c for c in cases if isinstance(c, dict) and c.get("id") == "E137"),
@@ -231,7 +233,7 @@ def main(argv=None):
             texts, "SKILL.md", "对话轮呈现标记",
             "对话轮呈现标记（**结论：** 先结论后展开）")),
         ("版本回到 6.8.1", mutate(
-            texts, "SKILL.md", "6.8.2", "6.8.1")),
+            texts, "SKILL.md", "6.9.0", "6.8.1")),
         ("删发出前 3 问", mutate(
             texts, "references/lecture-styles.md", "发出前 3 问", "")),
         ("删五段落位", mutate(

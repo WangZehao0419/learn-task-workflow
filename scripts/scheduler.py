@@ -12,11 +12,12 @@ SKILL.md「判断归模型、数据归脚本」）。
         python scheduler.py next-interval --grade {again|hard|good|easy} \
             (--stability <S> | --new-card) --difficulty <D> \
             (--elapsed <N> | --last YYYY-MM-DD --today YYYY-MM-DD) \
-            [--confidence <1-5>] [--init-shift {-1|0|1}]
+            [--current-due YYYY-MM-DD] [--confidence <1-5>] [--init-shift {-1|0|1}]
         --elapsed 与 --last/--today 同传时数值必须一致（elapsed = today-last），
         不一致 exit 2；仅传 --elapsed（无 --last/--today）时 due 为 null，
         只回 interval_days，由模型以当日推算绝对日期——保证输出不依赖
-        机器时钟、完全确定。
+        机器时钟、完全确定。同会话重复答对（elapsed=0）必须传 --current-due，
+        返回原日期，不以重算值覆盖。
         **due 锚点**：新 due = 本次复习日期 today + interval_days；last 仅用于
         计算 elapsed（经过天数）与旧记录回显，**不**参与 due 起算——否则逾期卡
         复习后会把 due 算到过去日期。仅当 today 缺省（直连函数调用）时才回退用 last。
@@ -198,14 +199,15 @@ def clamp_r(elapsed, stability):
 
 def next_interval(grade, stability=None, difficulty=None, elapsed=None,
                   last=None, today=None, confidence=None, init_shift=0,
-                  new_card=False):
+                  new_card=False, current_due=None):
     """纯计算函数：同输入同输出，不碰文件、不取当前时间。
 
     返回输出 JSON（dict）。
 
     同会话重复抑制：elapsed=0 且答对时只刷新召回（same_session=true），
     不增长 S、不改 D、不推迟 due。否则一天内反复刷题会把 massed practice
-    误记成长期保持，违背「流利度 ≠ 存储强度」。
+    误记成长期保持，违背「流利度 ≠ 存储强度」。既有卡此分支必须提供
+    current_due，避免用重算值猜测并覆盖已有复习日。
     """
     same_session = False
     if new_card:
@@ -226,6 +228,14 @@ def next_interval(grade, stability=None, difficulty=None, elapsed=None,
             d_new = max(1.0, min(5.0, difficulty + D_DRIFT[grade]))
         elif elapsed == 0:
             same_session = True
+            if current_due is None:
+                raise ScheduleError("同会话重复答对必须提供 --current-due，以保留原复习日")
+            if not DATE_RE.match(current_due):
+                raise ScheduleError("--current-due 必须是 YYYY-MM-DD 绝对日期，收到：" + str(current_due))
+            try:
+                date.fromisoformat(current_due)
+            except ValueError as exc:
+                raise ScheduleError("--current-due 不是合法日期：" + str(current_due)) from exc
             s_new = stability
             d_new = difficulty
         else:
@@ -243,7 +253,9 @@ def next_interval(grade, stability=None, difficulty=None, elapsed=None,
     # due 锚点 = 本次复习日期 today（逾期卡复习后必须从「今天」起算下一间隔），
     # 仅当 today 缺省时才回退用 last（兼容直连函数调用；CLI 侧要求成对传入）。
     anchor = today if today is not None else last
-    if anchor is not None:
+    if same_session:
+        due = current_due
+    elif anchor is not None:
         due = safe_add_days(anchor, interval_days)
         if due is None:
             raise ScheduleError(
@@ -625,9 +637,9 @@ def _merge_evt_group(group, slug, warnings):
     evt = group["evt"]
     confidences = sorted({r["meta"]["信心"] for r in raws
                           if r["meta"]["信心"] is not None})
-    dup = any(r["meta"]["dup_keys"] for r in raws)          # 重复信心键 → 身份歧义
+    dup = any("信心" in r["meta"]["dup_keys"] for r in raws)  # 只有重复信心键才构成身份歧义
     retro = any(r["meta"]["信心_retro"] for r in raws)      # 回顾性时序标志（合法）
-    # 冲突：数值信心不一致 / 重复键 / 「回顾性 × 数值原信心」并存（同一次作答不可能两副身份）
+    # 冲突：数值信心不一致 / 重复信心键 / 「回顾性 × 数值原信心」并存（同一次作答不可能两副身份）
     conflict = len(confidences) > 1 or dup or (retro and bool(confidences))
     retro_only = retro and not confidences and not dup        # 纯回顾性观察：不入校准统计
     invalid_tokens = []
@@ -882,10 +894,12 @@ def cmd_next_interval(args):
     confidence = args.confidence
     if confidence is not None and not (1 <= confidence <= 5):
         fail("--confidence 须在 [1,5]，收到：" + str(confidence))
+    if args.current_due is not None:
+        parse_date_str(args.current_due, "--current-due")
     result = next_interval(args.grade, stability=stability, difficulty=difficulty,
                            elapsed=elapsed, last=last, today=args.today,
                            confidence=confidence, init_shift=args.init_shift,
-                           new_card=args.new_card)
+                           new_card=args.new_card, current_due=args.current_due)
     print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
     return 0
 
@@ -918,6 +932,7 @@ def build_parser():
     p1.add_argument("--elapsed", type=float, default=None)
     p1.add_argument("--last", default=None)
     p1.add_argument("--today", default=None)
+    p1.add_argument("--current-due", default=None)
     p1.add_argument("--confidence", type=int, default=None)
     p1.add_argument("--init-shift", type=int, default=0, choices=[-1, 0, 1])
     p1.set_defaults(func=cmd_next_interval)
@@ -1082,16 +1097,34 @@ def selftest():
 
     # 断言 2b：同会话重复答对（elapsed=0）只刷新召回，不增长 S/D、不推迟 due
     r_same = next_interval("easy", stability=6.0, difficulty=3, elapsed=0,
-                           last="2026-10-20", today="2026-10-20")
+                           last="2026-10-20", today="2026-10-20",
+                           current_due="2026-10-20")
     ok = ok and r_same["same_session"] is True
     ok = ok and approx(r_same["stability_new"], 6.0)
     ok = ok and r_same["difficulty_new"] == 3
     ok = ok and r_same["interval_days"] == 6
-    ok = ok and r_same["due"] == "2026-10-26"
-    r_same_h = next_interval("hard", stability=3.0, difficulty=3, elapsed=0)
+    ok = ok and r_same["due"] == "2026-10-20"
+    r_same_h = next_interval("hard", stability=3.0, difficulty=3, elapsed=0,
+                             current_due="2026-10-18")
     ok = ok and r_same_h["same_session"] is True
     ok = ok and approx(r_same_h["stability_new"], 3.0)
     ok = ok and r_same_h["difficulty_new"] == 3
+    ok = ok and r_same_h["due"] == "2026-10-18"
+    try:
+        next_interval("hard", stability=3.0, difficulty=3, elapsed=0,
+                      current_due="昨天")
+        ok = False
+    except ScheduleError:
+        pass
+    import contextlib
+    import io
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        rc_cli = main(["next-interval", "--grade", "good", "--stability", "3",
+                       "--difficulty", "3", "--elapsed", "0",
+                       "--current-due", "2026-10-20"])
+    cli_out = json.loads(buf.getvalue())
+    ok = ok and rc_cli == 0 and cli_out["due"] == "2026-10-20"
     r_not_same = next_interval("good", stability=3.0, difficulty=3, elapsed=1)
     ok = ok and r_not_same["same_session"] is False
     ok = ok and approx(r_not_same["stability_new"], 5.06)  # R=1/3 -> 仍正常增长
@@ -1227,6 +1260,10 @@ def selftest():
          "--difficulty", "3", "--elapsed", "-1"],  # elapsed 负数
         ["next-interval", "--grade", "good", "--stability", "3",
          "--difficulty", "3", "--last", "2026-10-10"],  # last 缺 today
+        ["next-interval", "--grade", "good", "--stability", "3",
+         "--difficulty", "3", "--elapsed", "0"],  # 同会话缺现有 due
+        ["next-interval", "--grade", "good", "--stability", "3",
+         "--difficulty", "3", "--elapsed", "0", "--current-due", "昨天"],
         ["next-interval", "--grade", "good", "--stability", "3",
          "--difficulty", "3", "--elapsed", "3", "--confidence", "9"],  # 信心越界
         ["due-queue", "--root", "x", "--today", "明天"],  # 非法日期
@@ -1461,6 +1498,11 @@ def selftest():
         [('s', '- 最近更新：2026-10-15\n## 薄弱点\n- A（信心=5，信心=2，cw，evt=E1）\n')])[0][0]
     ok = ok and dup24["rate_valid"] is False and dup24["cw_count"] == 0
     ok = ok and dup24["conflict_count"] == 1
+    dup_schedule = calibration_from_progress_texts(
+        [('s', '- 最近更新：2026-10-15\n## 薄弱点\n- A（S=3，S=4，信心=5，cw，evt=E2）\n')])[0][0]
+    ok = ok and dup_schedule["rate_valid"] is True
+    ok = ok and dup_schedule["conflict_count"] == 0
+    ok = ok and dup_schedule["overconfidence_rate"] == 1.0
     retro24 = calibration_from_progress_texts(
         [('s', '- 最近更新：2026-10-15\n## 薄弱点\n- A（信心=回顾性，evt=E1）\n')])[0][0]
     ok = ok and retro24["with_confidence"] == 0 and retro24["rate_valid"] is False

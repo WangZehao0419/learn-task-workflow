@@ -14,14 +14,14 @@
      排除边界「不触发」、八个章节标题（含按序出现）、formula_checks / selected_inline /
      selected_block / mhchem 标记；
   3. teaching-loop 交叉引用：references/teaching-loop.md 中 "formula-typesetting"
-     恰好出现 1 次且该行含「呈现与降级」；
+     恰好出现 1 次且该行含「呈现与渲染阻断」；
   4. lecture-styles 范例修订：范例去上标化（含 x^2−x−6>0 与解集完整句、不含 x²）、
      五要素标记（完整示例/易错点/③ 答案/⑤ 小结）与两共用节标题未被波及；
   5. evals/evals.json 契约：FORMULA-01–10 登记字段与未回填语义、阻断标记、
      formula_checks_rubric、grading_axes、版本字段、E01/E24 存续、run_log_ref 与
      machine_evidence_ref 登记证据、FORMULA-02 定义域表述；
   6. 版本字段：SKILL.md / skill-dependencies.json / references/setup-guide.md /
-     CREDITS.md 四处 6.8.2，及 setup-guide.md 核验日期；
+     CREDITS.md 四处 6.9.0，及 setup-guide.md 核验日期；
   7. 无残留：管理文件范围内（SKILL.md、CREDITS.md、skill-dependencies.json、
      evals/evals.json、references/ 下全部 .md）不含 math-typesetting / task-updates /
      U-5.4。范围不含 evals/run-log.md——其既有遗留内容由运行记录留痕，
@@ -68,7 +68,7 @@ CASE_NONE_KEYS = ("actual_output", "run_id", "scores", "reviewer", "formula_chec
 FORMULA_IDS = tuple(f"FORMULA-{i:02d}" for i in range(1, 11))
 FORMULA_BLOCKING_IDS = ("FORMULA-03", "FORMULA-05", "FORMULA-06", "FORMULA-07",
                         "FORMULA-09", "FORMULA-10")
-RUBRIC_KEYS = ("学科内容", "结构渲染", "教学解释", "降级复制", "边界", "阻断规则")
+RUBRIC_KEYS = ("学科内容", "结构渲染", "教学解释", "复制保真", "边界", "阻断规则")
 
 
 class Checker:
@@ -157,8 +157,8 @@ def group3_teaching_loop(teaching, c: Checker) -> None:
     c.check("3.1 teaching-loop.md 中 formula-typesetting 恰好出现 1 次",
             count == 1, f"实际 {count} 次")
     hits = [l for l in body.splitlines() if "formula-typesetting" in l]
-    c.check("3.2 交叉引用行含「呈现与降级」",
-            len(hits) == 1 and "呈现与降级" in hits[0])
+    c.check("3.2 交叉引用行含「呈现与渲染阻断」",
+            len(hits) == 1 and "呈现与渲染阻断" in hits[0])
 
 
 def group4_lecture_styles(styles, c: Checker) -> None:
@@ -212,7 +212,7 @@ def group5_evals_contract(evals_data, c: Checker) -> None:
     c.check("5.8 grading_axes 长度为 5",
             isinstance(axes, list) and len(axes) == 5,
             f"实际 {len(axes) if isinstance(axes, list) else type(axes).__name__}")
-    c.check("5.9 applies_to_version == 6.8.2", data.get("applies_to_version") == "6.8.2",
+    c.check("5.9 applies_to_version == 6.9.0", data.get("applies_to_version") == "6.9.0",
             f"实际 {data.get('applies_to_version')!r}")
     c.check("5.10 updated_at == 2026-10-25", data.get("updated_at") == "2026-10-25",
             f"实际 {data.get('updated_at')!r}")
@@ -242,10 +242,10 @@ def group5_evals_contract(evals_data, c: Checker) -> None:
 
 
 def group6_versions(skill_md, deps_data, setup_md, credits_md, c: Checker) -> None:
-    """组 6：四处版本字段同步 6.8.2。"""
-    c.check("6.1 SKILL.md 含 version: 6.8.2", "version: 6.8.2" in (skill_md or ""))
+    """组 6：四处版本字段同步 6.9.0。"""
+    c.check("6.1 SKILL.md 含 version: 6.9.0", "version: 6.9.0" in (skill_md or ""))
     # applies_to_version 按实际结构位于 dependencies[].setup（python-runtime 条目）；
-    # 顶层若也存在则一并收集，要求出现且全部为 6.8.2
+    # 顶层若也存在则一并收集，要求出现且全部为 6.9.0
     values = []
     if isinstance(deps_data, dict):
         if "applies_to_version" in deps_data:
@@ -255,13 +255,13 @@ def group6_versions(skill_md, deps_data, setup_md, credits_md, c: Checker) -> No
             setup = dep.get("setup") if isinstance(dep, dict) else None
             if isinstance(setup, dict) and "applies_to_version" in setup:
                 values.append(setup.get("applies_to_version"))
-    c.check("6.2 skill-dependencies.json applies_to_version == 6.8.2",
-            bool(values) and all(v == "6.8.2" for v in values),
+    c.check("6.2 skill-dependencies.json applies_to_version == 6.9.0",
+            bool(values) and all(v == "6.9.0" for v in values),
             f"实际 {values!r}" if values else "未找到 applies_to_version 字段")
-    c.check("6.3 setup-guide.md 含「适用版本：6.8.2」", "适用版本：6.8.2" in (setup_md or ""))
-    c.check("6.4 CREDITS.md 含「6.8.2」", "6.8.2" in (credits_md or ""))
-    c.check("6.5 setup-guide.md 含「核验日期：2026-10-21」",
-            "核验日期：2026-10-21" in (setup_md or ""))
+    c.check("6.3 setup-guide.md 含「适用版本：6.9.0」", "适用版本：6.9.0" in (setup_md or ""))
+    c.check("6.4 CREDITS.md 含「6.9.0」", "6.9.0" in (credits_md or ""))
+    c.check("6.5 setup-guide.md 含「核验日期：2026-10-25」",
+            "核验日期：2026-10-25" in (setup_md or ""))
 
 
 def group7_no_residue(scope, c: Checker) -> None:

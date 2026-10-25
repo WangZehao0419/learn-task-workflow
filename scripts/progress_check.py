@@ -144,8 +144,9 @@ FINAL_PREFIXES = ("99-",)       # S5 结课综合测验专号（exercises/99-结
 GATE_RATIO = 2.0 / 3.0          # S3 小节验收默认通过线：≥2/3
 FINAL_RATIO = 4.0 / 5.0         # S5 结课综合测验默认目标线：4/5（备考型可在测验文件写「目标线：a/b」覆盖）
 TARGET_RE = re.compile(r"目标线[：:]\s*(\d+(?:\.\d+)?)\s*/\s*(\d+(?:\.\d+)?)")
+TARGET_DECL_RE = re.compile(r"目标线[：:]\s*([^\s｜|，,。；;]+)")
 ANSWER_RE = re.compile(r"作答[「\"'（(]([^」\"'）)]*)[」\"'）)]")
-ALT_ANSWER_RE = re.compile(r"答案[：:]\s*([^｜|，,]+)")
+ALT_ANSWER_RE = re.compile(r"(?<!参考)(?<!标准)(?<!正确)答案[：:]\s*([^｜|，,]+)")
 RESTATE_RE = re.compile(r"复述")
 ARTIFACT_HEAD_RE = re.compile(r"作品|操作|产出|交付|实现")
 RESTATE_FAIL_TOKENS = ("未通过", "不通过", "未达标")
@@ -401,8 +402,12 @@ def has_graded_pool(text):
 
 
 def parse_target_ratio(ev_text):
-    """解析「目标线：a/b」；返回 (ratio, label) 或 None。非法值返回 None。"""
-    m = TARGET_RE.search(ev_text or "")
+    """解析完整「目标线：a/b」声明；未声明或任何非法声明都返回 None。"""
+    declaration = TARGET_DECL_RE.search(ev_text or "")
+    if not declaration:
+        return None
+    token = declaration.group(1)
+    m = TARGET_RE.fullmatch("目标线：" + token)
     if not m:
         return None
     num, den = float(m.group(1)), float(m.group(2))
@@ -443,11 +448,15 @@ def gate_evidence(ev_text, require_restatement=True, require_independence=True,
         if aid not in seen:
             seen[aid] = a
             dedup.append(a)
-        elif seen[aid]["result"] != a["result"] and aid not in conflict:
-            conflict.append(aid)
+        else:
+            previous = seen[aid]
+            previous_projection = (previous["result"], previous["indep"], normalize_kp_id(previous["kp"]))
+            current_projection = (a["result"], a["indep"], normalize_kp_id(a["kp"]))
+            if previous_projection != current_projection and aid not in conflict:
+                conflict.append(aid)
     if conflict:
         errs.append(("E-ATTEMPT-CONFLICT",
-                     "同一 attempt_id 出现互相冲突的判定：" + "、".join(conflict) +
+                     "同一 attempt_id 出现互相冲突的判定、独立性或 KP 归属：" + "、".join(conflict) +
                      "——须核对本次真实作答，不得按多行重复抬分"))
     if require_independence and any(a["indep"] in (None, "未测") for a in dedup):
         errs.append(("E-NO-INDEPENDENCE",
@@ -1038,8 +1047,13 @@ def check(task_dir, release=False, proposed=None):
     # 候选状态可为本次提交**显式引用**判分证据（`- 本次证据：<文件名>`）
     ev_ref_m = EVIDENCE_REF_RE.search(text)
     ev_ref = ev_ref_m.group(1) if ev_ref_m else None
+    invalid_lesson_nums = sorted({num for num, _done, _label in lessons if num < 1})
+    if invalid_lesson_nums:
+        errors.append({"code": "E-ROUTE-NUMBER",
+                       "message": "学习路线小节编号必须是正整数；00/0 专用于 S1 摸底证据："
+                                  + "、".join(str(num) for num in invalid_lesson_nums)})
     for num, done, label in lessons:
-        if not done:
+        if num < 1 or not done:
             continue
         if changed_lessons is not None and num not in changed_lessons:
             continue   # 增量：只校验本次新增掌握的小节，旧资料不阻断无关新节
@@ -1211,11 +1225,12 @@ def check(task_dir, release=False, proposed=None):
                 seen_ids, dup_ids = set(), []
                 rows_unique = []
                 for r in kp["rows"]:
-                    if r["id"] in seen_ids:
-                        if r["id"] not in dup_ids:
-                            dup_ids.append(r["id"])
+                    normalized_id = normalize_kp_id(r["id"])
+                    if normalized_id in seen_ids:
+                        if normalized_id not in dup_ids:
+                            dup_ids.append(normalized_id)
                     else:
-                        seen_ids.add(r["id"])
+                        seen_ids.add(normalized_id)
                         rows_unique.append(r)
                 # v6.1 分型验收：只对声明了类型/视觉任务的 KP 生效；未声明行仍走统一闸口。
                 if release and lesson_evidence:
@@ -1237,7 +1252,7 @@ def check(task_dir, release=False, proposed=None):
                                      "message": "知识清单存在重复 KP 编号（重复行不计入摘要计数）：" + i})
                 for r in rows_unique:
                     for p in r["prereqs"]:
-                        if p not in seen_ids:
+                        if normalize_kp_id(p) not in seen_ids:
                             warnings.append({"code": "W-UNPARSED-KP",
                                              "message": "知识清单 " + r["id"] + " 前置引用不存在的 KP：" + p})
                 # 摘要核对与双写交叉核对：rows 为空但摘要行有值（如「清单仅写『无』却称总 4」）照常核对，不静默
@@ -1396,20 +1411,26 @@ def check(task_dir, release=False, proposed=None):
                 ftext = _read_evidence(ex_dir, fin)
                 # 结课证据合同不同于小节：另按真实分值与目标线，不套「复述 / 逐关键能力独立」
                 target = parse_target_ratio(ftext)
+                invalid_target = target is None and TARGET_DECL_RE.search(ftext)
+                if invalid_target:
+                    errors.append({"code": "E-FINAL-INVALID-TARGET",
+                                   "message": "结课综合测验 " + fin +
+                                              " 的目标线非法（须为 0 ≤ a ≤ b 且 b > 0），不得回退默认线"})
                 final_ratio = target[0] if target else FINAL_RATIO
                 final_label = target[1] if target else "结课默认目标线 4/5"
                 mapped_errs = []
-                for fcode, fmsg in gate_evidence(ftext, require_restatement=False,
-                                                require_independence=False,
-                                                min_ratio=final_ratio,
-                                                ratio_label=final_label):
-                    mapped = {"E-NO-GRADED-ATTEMPT": "E-FINAL-NO-EVIDENCE",
-                              "E-ATTEMPT-CONFLICT": "E-FINAL-ATTEMPT-CONFLICT",
-                              "E-ALL-FAILED": "E-FINAL-BELOW-TARGET",
-                              "E-HINT-ONLY": "E-FINAL-BELOW-TARGET",
-                              "E-GATE-THRESHOLD": "E-FINAL-BELOW-TARGET"}.get(fcode, fcode)
-                    mapped_errs.append({"code": mapped,
-                                        "message": "结课综合测验 " + fin + "：" + fmsg})
+                if not invalid_target:
+                    for fcode, fmsg in gate_evidence(ftext, require_restatement=False,
+                                                    require_independence=False,
+                                                    min_ratio=final_ratio,
+                                                    ratio_label=final_label):
+                        mapped = {"E-NO-GRADED-ATTEMPT": "E-FINAL-NO-EVIDENCE",
+                                  "E-ATTEMPT-CONFLICT": "E-FINAL-ATTEMPT-CONFLICT",
+                                  "E-ALL-FAILED": "E-FINAL-BELOW-TARGET",
+                                  "E-HINT-ONLY": "E-FINAL-BELOW-TARGET",
+                                  "E-GATE-THRESHOLD": "E-FINAL-BELOW-TARGET"}.get(fcode, fcode)
+                        mapped_errs.append({"code": mapped,
+                                            "message": "结课综合测验 " + fin + "：" + fmsg})
                 # 同一结课码只报一次：0 对 1 时 E-ALL-FAILED 与 E-GATE-THRESHOLD 会同码，
                 # 保留信息更具体的比例行（后者），避免同一件事显示两遍（拦停语义不变）
                 dedup_final, seen_codes = [], set()
@@ -1640,6 +1661,11 @@ KPLIST_DUP = """# 知识清单：重复编号夹具
 - KP-01-01 ｜ 甲重复 ｜ 小节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲
 - KP-01-02 ｜ 乙 ｜ 小节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲
 """
+KPLIST_ALIAS_DUP = KPLIST_DUP.replace("KP-01-01 ｜ 甲重复", "KP-1-1 ｜ 甲重复")
+KPLIST_ALIAS_PRE = (KPLIST_DUP
+                    .replace("- KP-01-01 ｜ 甲重复 ｜ 小节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲\n", "")
+                    .replace("KP-01-02 ｜ 乙 ｜ 小节 1 ｜ 前置：  ｜",
+                             "KP-01-02 ｜ 乙 ｜ 小节 1 ｜ 前置：KP-1-1 ｜"))
 # 半角冒号覆盖范围行：宽容解析不告警
 KPLIST_HALFCOLON = KPLIST_OK.replace("- 覆盖范围：全量", "- 覆盖范围:全量")
 # 含「覆盖范围」字样但非合法头行（写法偏差）：必须出 W-UNPARSED-KP，不静默失效
@@ -1885,6 +1911,12 @@ def selftest():
         ok = ok and r20["ok"]
         ok = ok and sum(1 for w in _kp_warnings(r20) if w["code"] == "W-UNPARSED-KP") == 1
         ok = ok and not any(w["code"] == "W-KP-SUMMARY-MISMATCH" for w in _kp_warnings(r20))
+        r20_alias = check(_mk(KP_PROG_NA, KPLIST_ALIAS_DUP))
+        ok = ok and sum(1 for w in _kp_warnings(r20_alias)
+                        if w["code"] == "W-UNPARSED-KP" and "重复 KP 编号" in w["message"]) == 1
+        r20_pre = check(_mk(KP_PROG_NA, KPLIST_ALIAS_PRE))
+        ok = ok and not any(w["code"] == "W-UNPARSED-KP" and "前置引用不存在" in w["message"]
+                            for w in r20_pre["warnings"])
 
         # ㉑ 滚雪球候选（设计性范围外）不计入 HOLD-CROSS 比对基数：护栏场景零误报
         r21 = check(_mk(KP_PROG_SNOWBALL, KPLIST_OK))
@@ -2063,6 +2095,11 @@ def selftest():
         ok = ok and (not r36a["ok"]) and "E-NO-GRADED-ATTEMPT" in c36a
         r36b, c36b = _codes("r01-header", PROG_S3, "## 作答与判分\n# 错题记录", release=True)
         ok = ok and (not r36b["ok"]) and "E-NO-GRADED-ATTEMPT" in c36b
+        r36c, c36c = _codes("r01-reference-answer", PROG_S3,
+                            "## 作答与判分\n- 题1：参考答案：3｜正确性=对｜独立性=独立｜调度档=Good\n"
+                            "## 复述检查清单\n- [x] 关键点1：变量\n- [x] 无事实性错误\n",
+                            release=True)
+        ok = ok and (not r36c["ok"]) and "E-NO-GRADED-ATTEMPT" in c36c
         # ㊲ 全部答错/Again → E-ALL-FAILED；仅提示后全对 → E-HINT-ONLY
         r37a, c37a = _codes("r01-all-wrong", PROG_S3,
                             "## 作答与判分\n- 题1：作答「错误答案」｜正确性=错｜独立性=独立｜Again\n"
@@ -2079,6 +2116,31 @@ def selftest():
         ok = ok and (not r38a["ok"]) and "E-NO-RESTATEMENT" in c38a and "E-NO-GRADED-ATTEMPT" not in c38a
         r38b, _c38b = _codes("r01-valid", PROG_S3, EV_OK, release=True)
         ok = ok and r38b["ok"] and r38b["checked_lessons"] == [1]
+        restate = "## 复述检查清单\n- [x] 关键点1：变量\n- [x] 无事实性错误\n"
+        r38_indep, c38_indep = _codes(
+            "r01-attempt-indep-conflict", PROG_S3,
+            "## 作答与判分\n- 题1：作答「3」｜正确性=对｜独立性=独立｜attempt_id=A1\n"
+            "- 题1：作答「3」｜正确性=对｜独立性=提示后｜attempt_id=A1\n" + restate,
+            release=True)
+        ok = ok and "E-ATTEMPT-CONFLICT" in c38_indep
+        r38_kp, c38_kp = _codes(
+            "r01-attempt-kp-conflict", PROG_S3,
+            "## 作答与判分\n- 题1：作答「3」｜正确性=对｜独立性=独立｜attempt_id=A1｜KP=KP-01-01\n"
+            "- 题1：作答「3」｜正确性=对｜独立性=独立｜attempt_id=A1｜KP=KP-01-02\n" + restate,
+            release=True)
+        ok = ok and "E-ATTEMPT-CONFLICT" in c38_kp
+        r38_dedup, c38_dedup = _codes(
+            "r01-attempt-alias-dedup", PROG_S3,
+            "## 作答与判分\n- 题1：作答「3」｜正确性=对｜独立性=独立｜attempt_id=A1｜KP=KP-1-1\n"
+            "- 题1：作答「3」｜正确性=对｜独立性=独立｜attempt_id=A1｜KP=KP-01-01\n"
+            "- 题2：作答「0」｜正确性=错｜独立性=独立｜attempt_id=B1\n" + restate,
+            release=True)
+        ok = ok and "E-GATE-THRESHOLD" in c38_dedup and "E-ATTEMPT-CONFLICT" not in c38_dedup
+        d38_zero = _mk2("r01-zero-lesson", PROG_S3.replace("- [x] 1. 变量", "- [x] 0. 摸底"),
+                        {"exercises/00-摸底-2026-01-01.md": EV_OK})
+        r38_zero = check(d38_zero, release=True)
+        ok = ok and not r38_zero["ok"] and any(
+            e["code"] == "E-ROUTE-NUMBER" for e in r38_zero["errors"])
         # ㊴ 结课/已完成：空路线 → E-NO-ROUTE-STRICT；不可解析路线 → E-NO-ROUTE-STRICT
         DONE_HEAD = ("# 学习任务：结课\n- 数据根：<root>\n- 当前阶段：已完成\n"
                      "- 类型：技能型\n- 学科族：编程类\n- 目标：x\n- 起点：零基础\n\n")
@@ -2118,6 +2180,16 @@ def selftest():
                          _final_ev(7, 10) + "\n目标线：7/10\n"})
         r40d = check(d40d, release=True)
         ok = ok and r40d["ok"]
+        for index, target in enumerate(("2/0", "abc", "-1/2")):
+            d40_invalid = _mk2(
+                "r01-done-invalid-target-" + str(index),
+                DONE_HEAD + "## 学习路线\n- [x] 1. 变量\n",
+                {"exercises/01-变量-2026-01-01.md": EV_OK,
+                 "exercises/99-结课综合测验-2026-01-01.md":
+                     _final_ev(10, 10) + "\n目标线：" + target + "\n"})
+            r40_invalid = check(d40_invalid, release=True)
+            ok = ok and not r40_invalid["ok"] and any(
+                e["code"] == "E-FINAL-INVALID-TARGET" for e in r40_invalid["errors"])
 
         # ㊵c 结课 0/1：E-ALL-FAILED 与 E-GATE-THRESHOLD 同码，只报一次（保留比例行）
         d40e = _mk2("r01-done-0of1", DONE_HEAD + "## 学习路线\n- [x] 1. 变量\n",
@@ -2427,6 +2499,16 @@ def selftest():
                             {"exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
         ok = ok and any(e["code"] == "E-ENUM-STRATEGY" for e in r_sbad["errors"])
 
+        for args in (["x", "--changed-lessons", "0"],
+                     ["x", "--changed-lessons", ""],
+                     ["x", "--changed-lessons", ",， "],
+                     ["x", "--proposed-phase", "随便"]):
+            try:
+                rc = main(args)
+            except SystemExit as exc:
+                rc = exc.code
+            ok = ok and rc == 2
+
     print(("OK " if ok else "FAIL ") + "progress_check --selftest")
     return 0 if ok else 1
 
@@ -2437,7 +2519,7 @@ def main(argv=None):
     ap.add_argument("--release", action="store_true",
                     help="放行校验：本次新增掌握/结课/跨阶段前的严格检查"
                          "（结构化作答与闸口、空证据、未完成/不可解析路线、缺综合测验、关键能力未讲拦停）")
-    ap.add_argument("--proposed-phase", default=None,
+    ap.add_argument("--proposed-phase", default=None, choices=ENUM_PHASE,
                     help="拟提交的目标阶段（校验该候选状态，如 --release --proposed-phase 已完成）")
     ap.add_argument("--staged", default=None,
                     help="拟提交的 progress.md 候选快照文件（校验拟提交对象而非磁盘现状）")
@@ -2461,16 +2543,19 @@ def main(argv=None):
                   file=sys.stderr)
             return 2
         proposed["text"] = staged.read_text(encoding="utf-8", errors="replace")
-    if args.changed_lessons:
+    if args.changed_lessons is not None:
         nums = []
         for tok in re.split(r"[,，、\s]+", args.changed_lessons):
             if not tok:
                 continue
-            if not tok.isdigit():
-                print("[learn-task-workflow] --changed-lessons 只接受小节编号（数字）：" + tok,
+            if not tok.isdigit() or int(tok) < 1:
+                print("[learn-task-workflow] --changed-lessons 只接受正整数小节编号：" + tok,
                       file=sys.stderr)
                 return 2
             nums.append(int(tok))
+        if not nums:
+            print("[learn-task-workflow] --changed-lessons 不能为空列表", file=sys.stderr)
+            return 2
         proposed["changed_lessons"] = nums
     result = check(args.task_dir, release=args.release, proposed=proposed)
     print(json.dumps(result, ensure_ascii=False, indent=2))

@@ -370,7 +370,9 @@ def main(argv=None):
             (rc_r, out_r[-300:]))
     l1 = root / "evals" / "fixtures" / "handout-l1-l3" / "L1-机会成本.md"
     rc_l1, out_l1 = run_verify_explanation(root, l1, reader=True)
-    c.check("2.4 L1 短节样板无 W-READER", rc_l1 == 0 and "W-READER" not in out_l1,
+    l1_reader_codes = set(re.findall(r"W-READER-[A-Z]+", out_l1))
+    c.check("2.4 L1 短节显式 reader 审计仅提示可省速览",
+            rc_l1 == 0 and l1_reader_codes == {"W-READER-OVERVIEW"},
             (rc_l1, out_l1[-300:]))
     l3 = root / "evals" / "fixtures" / "handout-l1-l3" / "L3-机会成本-检索版要点卡.md"
     rc_l3, out_l3 = run_verify_explanation(root, l3, reader=True)
@@ -421,6 +423,10 @@ def main(argv=None):
         p = d / "assets" / Path(SVG_REL).name
         p.write_text(read(p).replace(' viewBox="0 0 640 240"', ""), encoding="utf-8")
 
+    def mut_bad_encoding(d):
+        p = d / Path(SAMPLE_REL).name
+        p.write_bytes(b"\xff\xfe\xfa")
+
     mutations = (
         ("本节速览被删", mut_remove_overview),
         ("一句话结论被删", mut_remove_conclusion),
@@ -434,13 +440,19 @@ def main(argv=None):
         probs = mutate_fixture(root, fn)
         c.check("3.x mutation 能抓到：" + name, bool(probs), probs)
 
-    # --reader 运行时检查必须能抓到两个典型回退
+    # --reader 运行时检查必须能抓到典型回退
+    rc_o, out_o = reader_output_for_mutation(root, mut_remove_overview)
+    c.check("3.x --reader 能抓到本节速览缺失", rc_o == 0 and "W-READER-OVERVIEW" in out_o,
+            (rc_o, out_o[-300:]))
     rc_w, out_w = reader_output_for_mutation(root, mut_wide_table)
     c.check("3.y --reader 能抓到 5 列表格", rc_w == 0 and "W-READER-TABLE" in out_w,
             (rc_w, out_w[-300:]))
     rc_a, out_a = reader_output_for_mutation(root, mut_empty_alt)
     c.check("3.z --reader 能抓到空 alt", rc_a == 0 and "W-READER-ALT" in out_a,
             (rc_a, out_a[-300:]))
+    rc_e, out_e = reader_output_for_mutation(root, mut_bad_encoding)
+    c.check("3.e --reader 对非法 UTF-8 结构化失败", rc_e == 1 and "E-READ-FILE" in out_e,
+            (rc_e, out_e[-300:]))
 
     # mutation：删掉文档规则也必须被抓到
     c.check("4.1 删读者版契约被抓到",

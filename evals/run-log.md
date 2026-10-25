@@ -2,6 +2,8 @@
 
 本文件是 `evals.json` 的运行记录载体：machine 侧记录脚本端到端夹具与 selftest 的真实输出；human 回放待真实教学会话产生后回填，并交**独立评分者**（非执行模型）按五轴打分。
 
+> **历史口径说明（2026-10-25）**：v6.4–v6.8.1 记录中的“深讲拆节”“预计讲授超过 30 分钟拆节”等表述是**当时版本的历史口径**，不是现行规则。现行统一语义为：深讲数量只影响课时与块级安排，不改变节号；讲义单元数和时间不触发拆节。现行规则以 `SKILL.md` 与 `references/` 为准。
+
 ## 运行记录
 
 ### run_id: v53-migration-budget-fixture（2026-10-16）
@@ -959,3 +961,19 @@ mutation-check: 11/11 mutations detected
 - 全量畸形输入实测：11 个验证器分别面对空根、`evals.json` 为 `[]`/`{"cases":null}`/非 JSON/`{}`、`skill-dependencies.json` 为非 JSON/`[]`/`{}`、`SKILL.md` 与 `evals.json` 非法 UTF-8，均无 traceback；`verify-marker-rules.py` 不消费这些输入，保持退出 0。
 - 全量回归：六脚本 selftest 全 0；v682 9/9、v681 12/12、formula 56/56、marker 19/19、readability 22/22、v62 17/17、v63 32/32、v64 34/34、v65 24/24、v66 22/22、v67 19/19；两个 `--reader` fixture 退出码 0；干净副本 `skill_ops validate` 0 issues；preflight 仍为既有 1 high/169 medium（`task_index.py` 临时文件清理与写盘逻辑），无新增脚本。
 - `evals.json` JSON 有效；`git diff --check` 0；未升版本、未提交。
+
+#### v6.9.0 脚本加固与不可降级（2026-10-25）
+
+- run_id：`v690-script-hardening-20261025`。基线 `69ffc6f` / v6.8.2；修改未提交。
+- 脚本回归（红→绿）：伪答案不再构成学员作答；路线与 `--changed-lessons` 只接受正整数；KP 别名统一归一；同 attempt 的结果/独立性/KP 冲突被拒；非法显式目标线报 `E-FINAL-INVALID-TARGET`；同会话必须传 `--current-due` 并保留原日期；重复 S/D/due 不再污染信心校准；reader 缺速览继续报 W；Markdown/SVG 非法 UTF-8 结构化失败；manifest 校验依赖类型、setup 字段与能力覆盖。
+- 环境清单：schema 1→2，删除 `functional_degradations`、依赖级 `degradation`、`partial` 与 `unmapped_capabilities`；只有 `ready` 可继续，其他状态停止。新增 schema 2 自测：空依赖/能力无覆盖、遗留降级字段均被拒。
+- 文档：删除运行降级路径；深讲软默认 1 个、多项可逐块且不拆节；P1 可选；代码未实跑、公式未验证、材料不可读、真人冷读未完成、落盘失败均停止；修复 redlines 损坏字符。
+- 最终回归（真实输出存 `D:/me/learn-task-workflow-workspace/rule-audit/final-test-results.json`）：六脚本 selftest 全 0；11 个验证器全 0（formula 56、marker 19、readability 24、v62 17、v63 32、v64 39、v65 24、v66 22、v67 19、v681 12、v682 9）。
+- CLI 失败注入（`final/injections/summary.json`）：same-session 保留原 due、缺 `--current-due` exit 2、无覆盖能力 exit 2、非法 UTF-8 exit 1 且有 `E-READ-FILE`、无 traceback，4/4 通过。
+- A/B：4 个场景（深讲拆节冲突、无真人冷读、材料不可读、代码不可实跑）× 新旧各 1 次，独立盲评。新版断言 12/12，旧版 5/12；逐场景均按断言门槛由新版胜出。证据仅属 `LLM_simulation`：每场景单次、单评审，tokens/时长/工具调用未采集；代码场景旧版五轴总分更高但违反停止条件。页面与原始 JSON 存外置 `D:/me/learn-task-workflow-workspace/iteration-1/`。
+- 加载体积：SKILL.md 36,438→32,795 bytes（-10.0%）；setup-guide 8,692→5,977 bytes（-31.2%）。
+- 规则漏改追查（2026-10-25）：v6.4.0 `1646fe9` 引入“多深讲则拆节”并复制到 4 个分册；v6.8.0 `10afe2a` 在 `handout-design.md` §2.8 引入“单元 >7 或 30 分钟拆节”；v6.8.1 `e3903f6` 改主策略时漏改讲义 §2.7/§2.8、深度契约、备课短表及 `SKILL.md` 索引；v6.8.2 `69ffc6f` 未修改 `handout-design.md`，旧句继续存活。旧 `verify-v64-consistency.py` 还把“拆节”作为期望短语，导致全绿掩盖漏改。
+- 全仓复查：初扫 144 条相关命中；现行规范面 `SKILL.md` + `references/*.md` 中残留旧拆节句 0 条，所有“深讲 + 拆节”句子均为现行“不拆节/加课时”口径。`30 分钟` 现行仅剩 S0 排期示例与“不设 30/45 分钟拆节阈值”的负向说明，均合法。历史 `run-log.md` 与本地 `.trae` 设计规格保留原文并加“已归档/已废止”边界；历史记录不篡改。
+- 验证器加固：`verify-v64-consistency.py` 由 34 项增至 39 项，新增全规范面旧文案扫描，以及“旧深讲拆节”“单元/时间拆节”“深讲数量硬上限”三组 mutation 与合法 30 分钟不误报反例。`evals.json` 的 E108 描述与机器证据计数同步 39。
+- 本轮最终复跑（`D:/me/learn-task-workflow-workspace/rule-audit/final-test-results.json`）：六脚本 selftest 全 0；11 个验证器全 0；JSON 有效；`git diff --check` 0。
+- 边界：E135–E137、真人冷读、延迟迁移和宿主触发率仍未验证；不得据此宣称教学效果提升。未 commit/push。

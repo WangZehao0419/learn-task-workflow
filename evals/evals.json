@@ -1,7 +1,7 @@
 {
  "schema": "ltw-evals/2",
  "skill": "learn-task-workflow",
- "applies_to_version": "6.8.2",
+ "applies_to_version": "6.9.0",
  "updated_at": "2026-10-25",
  "grading_axes": [
   "教学正确性",
@@ -46,7 +46,7 @@
    "1": "有部分说明",
    "2": "符号、条件和关键变形均解释"
   },
-  "降级复制": {
+  "复制保真": {
    "0": "复制后含义丢失",
    "1": "需猜分组",
    "2": "复制/纯文本后仍可辨"
@@ -58,9 +58,9 @@
   },
   "阻断规则": "阻断型用例的学科内容/结构渲染/边界必须为 2，其他适用项不得低于 1。"
  },
- "run_log_ref": "evals/run-log.md（「运行记录」节，run_id: v681-finest-kp-block-20261025；历史 v680-block-pacing-20261024 / v673-readability-20261023 / v672-cleanup2-20261023 / v672-cleanup-20261023 / v671-cleanup-20261023 / v670-p1p2-20261023 / v660-stage3-20261023 / v650-stage2-20261023 / v640-consistency-20261023 / v630-selftest-20261023 / v620-selftest-20261022 / v610-selftest-20261022 / v600-selftest-20261022；公式基线见 formula-typesetting-5.5.0-20261017-static）",
- "run_log_note": "真实陪学运行日志尚未产出。待最终机制版本完成后，以同材料、同学员作答序列重跑，并把 actual_output / run_id / scores 回填本文件；未回填者保持「未验证」。",
- "machine_evidence_ref": "包内 scripts/*.py --selftest（六脚本，含讲义结构校验 verify_explanation.py：shaanxi-gaoshu materials 校验通过、退出码 0）；evals/verify-formula-typesetting.py（公式呈现静态契约 56 项检查、退出码 0；属静态证据，非渲染验证）；包外验收复现与真实教学日志不作为技能包运行依赖；evals/verify-marker-rules.py（五要素新编号规则行为契约 19 项检查、退出码 0；临时目录夹具真实运行 verify_explanation.py，属行为级静态证据，非对话回放）；v6.0 追加：scheduler --selftest 断言 2b/7b（同会话抑制、保持复习 reason、ltw-due-queue/3）与 progress_check --selftest 四态组（partial/ungraded/void）均退出码 0；v6.1 追加：progress_check --selftest 分型组（E-KP-TYPED-GATE）与大纲契约/intake 组（W-MODULE-* / E-ENUM-STRATEGY）退出码 0、kp_sort --selftest 分型字段夹具退出码 0；v6.2 追加：evals/verify-v62-docs.py 文档契约（交接/记录/证据、记忆纪律、ask hint、来源备课、选项规则、版本与 E66–E69 登记）退出码 0；v6.3 追加：evals/verify-v63-docs.py 文档契约（出题流水线四步、旧题去重、规划字段、一次修复、视觉任务原始来源、版本与 E71–E73 登记）退出码 0；v6.4 追加：evals/verify-v64-consistency.py 阶段 0 + 理解核心契约（状态行/③豁免/交付标识/L3/单元-KP/头部/深讲拆节/类型单元数/命名/概念地图/理解四证/六问/四段/闭卷/二次定稿 + mutation）退出码 0；v6.5 追加：evals/verify-v65-stage2.py 阶段 2 契约（类型模板/四步流水线/L1-L3/学习者状态/决策日志/修复表 + mutation）退出码 0；v6.6 追加：evals/verify-v66-stage3.py 阶段 3 契约（四向对齐/覆盖行/深度分配/评估例真实性/来源保真 + mutation）退出码 0；v6.7 追加：evals/verify-v67-p1p2.py P1/P2 契约（文本结构/主张—证据/设计量表/主图/质量回路/要点卡/移动端/MVP/教材章节 + mutation）退出码 0；v6.7.1 清理：verify-v67-p1p2.py 19 项（移除教师包/预习与家长侧入口）退出码 0；v6.7.2 清理：移除原 SR-8 安全边界与 E43，原 SR-9 重编号为 SR-8，术语「学生」统一为「学员」；v6.7.3 追加：evals/verify-readability.py 读者版可读性/图表契约（文档 + 样板版面 + mutation + verify_explanation.py --reader）退出码 0；上述 56 项公式契约仍为基线；v6.8 追加：块级节奏文档契约由本次人工复核与 verify-formula-typesetting.py 版本字段校验覆盖，六个脚本 --selftest 退出码 0；task_index schema 4→5（current_block/block_total 可选键，selftest 含 block 夹具）；E135 为 human 场景，未跑，不冒充 machine 证据。v6.8.1 追加：evals/verify-v681-docs.py 最细知识点契约 12 项（含 mutation）退出码 0；verify-v64-consistency.py 34 项退出码 0；E136 为 human 场景，未跑，不冒充 machine 证据。v6.8.2 追加：evals/verify-v682-docs.py 对话轮呈现与语气契约 9 项（含 7 个 mutation 与 1 个畸形输入检查）退出码 0；第四次复审补充 texts=None、非字符串文件值、非法 UTF-8 的兜底实测；全量复审覆盖 11 个 evals 验证器空根、畸形 evals/依赖清单与非法 UTF-8，均无 traceback，verify-readability 缺夹具不再崩溃；E137 为 human 场景，未跑，不冒充 machine 证据。",
+ "run_log_ref": "evals/run-log.md（「运行记录」节，run_id: v690-script-hardening-20261025 / v681-finest-kp-block-20261025；历史 v680-block-pacing-20261024 / v673-readability-20261023 / v672-cleanup2-20261023 / v672-cleanup-20261023 / v671-cleanup-20261023 / v670-p1p2-20261023 / v660-stage3-20261023 / v650-stage2-20261023 / v640-consistency-20261023 / v630-selftest-20261023 / v620-selftest-20261022 / v610-selftest-20261022 / v600-selftest-20261022；公式基线见 formula-typesetting-5.5.0-20261017-static）",
+ "run_log_note": "v6.9.0 已完成 4 组新旧 LLM 模拟盲评并归档外置 workspace，但真实陪学、E135–E137 真人回放与真人冷读仍未产出；未回填 actual_output / run_id / scores 的条目保持「未验证」，模拟证据不得写成真人结论。",
+ "machine_evidence_ref": "包内 scripts/*.py --selftest（六脚本，含讲义结构校验 verify_explanation.py：shaanxi-gaoshu materials 校验通过、退出码 0）；evals/verify-formula-typesetting.py（公式呈现静态契约 56 项检查、退出码 0；属静态证据，非渲染验证）；包外验收复现与真实教学日志不作为技能包运行依赖；evals/verify-marker-rules.py（五要素新编号规则行为契约 19 项检查、退出码 0；临时目录夹具真实运行 verify_explanation.py，属行为级静态证据，非对话回放）；v6.0 追加：scheduler --selftest 断言 2b/7b（同会话抑制、保持复习 reason、ltw-due-queue/3）与 progress_check --selftest 四态组（partial/ungraded/void）均退出码 0；v6.1 追加：progress_check --selftest 分型组（E-KP-TYPED-GATE）与大纲契约/intake 组（W-MODULE-* / E-ENUM-STRATEGY）退出码 0、kp_sort --selftest 分型字段夹具退出码 0；v6.2 追加：evals/verify-v62-docs.py 文档契约（交接/记录/证据、记忆纪律、ask hint、来源备课、选项规则、版本与 E66–E69 登记）退出码 0；v6.3 追加：evals/verify-v63-docs.py 文档契约（出题流水线四步、旧题去重、规划字段、一次修复、视觉任务原始来源、版本与 E71–E73 登记）退出码 0；v6.4 追加：evals/verify-v64-consistency.py 阶段 0 + 理解核心契约（状态行/③豁免/交付标识/L3/单元-KP/头部/深讲与拆节关系（v6.4 历史口径；v6.9.0 改为不强制拆节）/类型单元数/命名/概念地图/理解四证/六问/四段/闭卷/二次定稿 + mutation）退出码 0；v6.5 追加：evals/verify-v65-stage2.py 阶段 2 契约（类型模板/四步流水线/L1-L3/学习者状态/决策日志/修复表 + mutation）退出码 0；v6.6 追加：evals/verify-v66-stage3.py 阶段 3 契约（四向对齐/覆盖行/深度分配/评估例真实性/来源保真 + mutation）退出码 0；v6.7 追加：evals/verify-v67-p1p2.py P1/P2 契约（文本结构/主张—证据/设计量表/主图/质量回路/要点卡/移动端/MVP/教材章节 + mutation）退出码 0；v6.7.1 清理：verify-v67-p1p2.py 19 项（移除教师包/预习与家长侧入口）退出码 0；v6.7.2 清理：移除原 SR-8 安全边界与 E43，原 SR-9 重编号为 SR-8，术语「学生」统一为「学员」；v6.7.3 追加：evals/verify-readability.py 读者版可读性/图表契约（文档 + 样板版面 + mutation + verify_explanation.py --reader）退出码 0；上述 56 项公式契约仍为基线；v6.8 追加：块级节奏文档契约由本次人工复核与 verify-formula-typesetting.py 版本字段校验覆盖，六个脚本 --selftest 退出码 0；task_index schema 4→5（current_block/block_total 可选键，selftest 含 block 夹具）；E135 为 human 场景，未跑，不冒充 machine 证据。v6.8.1 追加：evals/verify-v681-docs.py 最细知识点契约 12 项（含 mutation）退出码 0；verify-v64-consistency.py 34 项退出码 0；E136 为 human 场景，未跑，不冒充 machine 证据。v6.8.2 追加：evals/verify-v682-docs.py 对话轮呈现与语气契约 9 项（含 7 个 mutation 与 1 个畸形输入检查）退出码 0；第四次复审补充 texts=None、非字符串文件值、非法 UTF-8 的兜底实测；全量复审覆盖 11 个 evals 验证器空根、畸形 evals/依赖清单与非法 UTF-8，均无 traceback，verify-readability 缺夹具不再崩溃；E137 为 human 场景，未跑，不冒充 machine 证据。v6.9.0 追加：六脚本 selftest 全绿；11 个 evals 验证器全绿（verify-formula 56、marker 19、readability 24、v62 17、v63 32、v64 39、v65 24、v66 22、v67 19、v681 12、v682 9）；新增伪答案、非法目标线、第 0 节、KP 别名、attempt 冲突、同会话 current-due、reader 缺失/坏编码与 manifest schema 2 回归；4 组新旧盲评 12/12 对 5/12，为 LLM 模拟证据，不是真人学习效果。",
  "dialogues_ref": "evals/对话对照-批次B.md（设计摘要，非运行日志；真实新旧对照须另附运行输出）",
  "cases": [
   {
@@ -414,10 +414,10 @@
    "scenario": "无 Python 或渲染失败",
    "kind": "human",
    "prompt": "无 Python 环境 / 图像渲染失败",
-   "fixture": "降级矩阵（skill-dependencies.json）",
-   "pass_condition": "清楚说明局限，继续可用教学，不谎称验证/看见图片",
-   "actual_output": "check_environment：清单逐层严格类型/版本校验；按请求能力∩失败检查 计算状态与降级（见 scheduler 复现输出 environment_python38_*）",
-   "run_id": "rework-20261015-scheduler-audit",
+   "fixture": "manifest schema 2 与运行阻断条件（skill-dependencies.json / setup-guide）",
+   "pass_condition": "立即停止，说明停止点、缺失条件、受影响动作与恢复条件；不提供手工代验、文字图或其他降级产物，不谎称验证/看见图片",
+   "actual_output": null,
+   "run_id": null,
    "scores": {
     "教学正确性": null,
     "目标匹配": null,
@@ -505,18 +505,18 @@
   },
   {
    "id": "FORMULA-05",
-   "scenario": "纯文本降级解释",
+   "scenario": "用户明确要求纯文本",
    "kind": "human",
-   "prompt": "在只支持纯文本的环境里，解释 sqrt((a+b)/c) 与 (a+b)/c 两个式子的结构区别。",
-   "fixture": "无脚本任务：目标宿主不支持公式渲染（降级路径）",
-   "pass_condition": "不把未渲染源码当唯一说明；分组、根号覆盖范围和运算顺序可读（须有「根号覆盖……」「分母是……」类文字说明）",
+   "prompt": "我只要纯文本，解释 sqrt((a+b)/c) 与 (a+b)/c 两个式子的结构区别。",
+   "fixture": "无脚本任务：用户从一开始明确要求纯文本目标",
+   "pass_condition": "按纯文本目标分组书写，根号覆盖范围和运算顺序可读，并配必要文字说明；不声称这是渲染降级",
    "actual_output": null,
    "run_id": null,
    "scores": null,
    "verdict": "未验证",
    "reviewer": null,
    "formula_checks": null,
-   "review_note": "阻断：降级路径正确性须独立评审"
+   "review_note": "阻断：纯文本目标的结构正确性须独立评审"
   },
   {
    "id": "FORMULA-06",
@@ -583,8 +583,8 @@
    "scenario": "化学配平与离子讲解",
    "kind": "human",
    "prompt": "配平氢气燃烧的反应（2 H₂ + O₂ → 2 H₂O），说明反应条件与物态，并解释 SO₄²⁻ 中各数字与电荷的位置含义。",
-   "fixture": "无脚本任务：化学讲解场景；若宿主不支持化学扩展须走纯文本降级（2 H2 + O2 -> 2 H2O (点燃)、SO4^2-）",
-   "pass_condition": "系数与下标不混；电荷、箭头、状态、条件保留；配平结果可从左右原子数核对；不支持扩展时有清楚降级",
+   "fixture": "无脚本任务：化学讲解场景；宿主化学渲染须已实测，否则停止",
+   "pass_condition": "系数与下标不混；电荷、箭头、状态、条件保留；配平结果可从左右原子数核对；扩展未验证或渲染失败时立即停止，不以纯文本冒充已渲染交付",
    "actual_output": null,
    "run_id": null,
    "scores": null,
@@ -1195,13 +1195,13 @@
    "kind": "machine",
    "prompt": "检查讲义规则是否已收拢为一页合同、修掉状态行/③ 豁免/交付标识/L3/单元-KP/头部/深讲/类型单元数/命名/概念地图等冲突，并检查理解四证/设计六问/四段支架/闭卷自检/二次定稿/关键能力/冷读是否写入并接线。",
    "fixture": "仓库当前 SKILL.md / references / CREDITS.md / setup-guide.md / skill-dependencies.json / evals.json / scripts/verify_explanation.py。",
-   "pass_condition": "verify-v64-consistency.py 全项 OK、退出码 0（34 项）；版本五处不低于 6.4.0；handout-design.md 与各分册关键短语可定位；mutation 能抓到 8+ 阈值、状态行合并、设计类标识被删、拆节删除、纯记忆误写、脚本标识多出等回退；理解核心六件套在 handout-design 与 lecture-styles/phases 可定位。",
+   "pass_condition": "verify-v64-consistency.py 全项 OK、退出码 0（39 项）；版本五处不低于 6.4.0；handout-design.md 与各分册关键短语可定位；mutation 能抓到 8+ 阈值、状态行合并、设计类标识被删、不拆节规则回退、旧时间拆节或旧深讲数量硬上限文案回流、纯记忆误写、脚本标识多出等回退；理解核心六件套在 handout-design 与 lecture-styles/phases 可定位。",
    "actual_output": null,
    "run_id": null,
    "scores": null,
    "verdict": "未验证",
    "reviewer": null,
-   "machine_ref": "evals/verify-v64-consistency.py；34 项检查，2026-10-23 运行退出码 0"
+   "machine_ref": "evals/verify-v64-consistency.py；39 项检查，2026-10-25 运行退出码 0"
   },
   {
    "id": "E109",

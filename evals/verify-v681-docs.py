@@ -157,8 +157,9 @@ def problems(texts, evals, deps):
     ):
         found.append("evals.json 缺少 E136")
     formula = text_of(texts, "evals/verify-formula-typesetting.py")
-    if not re.search(r"6\.8\.\d+", formula):
-        found.append("verify-formula-typesetting.py 未同步 6.8.x")
+    current = version_in(text_of(texts, "SKILL.md"), r"version:\s*(\d+\.\d+\.\d+)")
+    if current and current not in formula:
+        found.append("verify-formula-typesetting.py 未同步当前版本")
     if "6.8.0" in formula:
         found.append("verify-formula-typesetting.py 仍含 6.8.0")
     return found
@@ -241,7 +242,7 @@ def main(argv=None):
             "不设每节道数上限", "每节 ≤3–4 道")),
         ("redlines 去掉多概念块", mutate(
             texts, "references/redlines.md", "多概念块", "整节投喂")),
-        ("版本回到 6.8.0", mutate(texts, "SKILL.md", "6.8.2", "6.8.0")),
+        ("版本回到 6.8.0", mutate(texts, "SKILL.md", "6.9.0", "6.8.0")),
     )
     for name, mutated in mutations:
         got = problems(mutated, evals, deps)

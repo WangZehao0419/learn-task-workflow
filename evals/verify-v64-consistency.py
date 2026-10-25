@@ -3,7 +3,7 @@
 """verify-v64-consistency.py - v6.4 阶段 0 + 理解核心契约（stdlib-only、只读）。
 
 只检查“规则有没有写进对应分册、彼此是否还对得上”：状态行两分、③ 豁免
-canonical、交付标识单一表、L3 复习产物例外、单元≠KP、头部/指针、深讲拆节、
+canonical、交付标识单一表、L3 复习产物例外、单元≠KP、头部/指针、深讲不强制拆节、
 类型单元数、命名/附件、概念地图阈值、理解核心六件套、版本与 eval 登记。语义执行仍由模型/评审负责。
 """
 
@@ -57,11 +57,30 @@ def style_problems(styles):
         ("修复表、决策日志、对照表算附件", "④/⑤ 附件例外"),
         ("单元≠KP", "单元-KP"),
         ("完整深讲", "完整深讲"),
-        ("拆节", "深讲拆节"),
+        ("不拆节", "深讲不强制拆节"),
         ("检索版要点卡", "L3 产物命名"),
     ):
         if phrase not in styles:
             problems.append(label)
+    return problems
+
+
+def stale_rule_problems(texts):
+    """扫描现行规范面，禁止已废止的深讲/时间拆节文案回流。"""
+    problems = []
+    for rel, body in texts.items():
+        for lineno, line in enumerate(body.splitlines(), 1):
+            if "深讲拆节" in line:
+                problems.append("{}:{} 深讲拆节".format(rel, lineno))
+            if re.search(r"最多\s*1\s*个\s*\*{0,2}完整深讲", line):
+                problems.append("{}:{} 深讲数量硬上限".format(rel, lineno))
+            if re.search(r"若\s*>\s*1\s*项关键能力都需完整深讲，\s*\*{0,2}拆节", line):
+                problems.append("{}:{} 多深讲强制拆节".format(rel, lineno))
+            if ("讲义单元" in line or "预计讲授" in line) and re.search(
+                    r"(?:>\s*7|30\s*分钟)[^\n]{0,40}拆(?:节|块)", line):
+                problems.append("{}:{} 单元数/时间拆节".format(rel, lineno))
+            if "超限先拆节" in line:
+                problems.append("{}:{} 超限先拆节".format(rel, lineno))
     return problems
 
 
@@ -101,6 +120,10 @@ def main(argv=None):
     deps_raw = read(root, "skill-dependencies.json")
     evals_raw = read(root, "evals/evals.json")
     verify_explanation = read(root, "scripts/verify_explanation.py")
+    rule_texts = {"SKILL.md": skill}
+    for path in sorted((root / "references").glob("*.md")):
+        rel = "references/" + path.name
+        rule_texts[rel] = read(root, rel)
     try:
         deps = json.loads(deps_raw)
     except (TypeError, ValueError):
@@ -140,6 +163,25 @@ def main(argv=None):
     c.check("1.5 evals 版本 ≥ 6.4.0",
             at_least_v64(evals.get("applies_to_version", "")))
 
+    stale = stale_rule_problems(rule_texts)
+    c.check("1.6 现行规范无已废止的拆节文案", not stale, stale)
+    bad = dict(rule_texts)
+    bad["references/lecture-styles.md"] += "\n若 >1 项关键能力都需完整深讲，**拆节**，不压缩深度。\n"
+    c.check("1.6a mutation 能抓到旧深讲拆节", bool(stale_rule_problems(bad)),
+            stale_rule_problems(bad))
+    bad = dict(rule_texts)
+    bad["references/handout-design.md"] += "\n讲义单元 >7 或预计讲授 >30 分钟时，优先拆节或拆块。\n"
+    c.check("1.6b mutation 能抓到旧时间/单元数拆节", bool(stale_rule_problems(bad)),
+            stale_rule_problems(bad))
+    bad = dict(rule_texts)
+    bad["references/handout-design.md"] += "\n每节最多 1 个完整深讲。\n"
+    c.check("1.6c mutation 能抓到深讲数量硬上限", bool(stale_rule_problems(bad)),
+            stale_rule_problems(bad))
+    benign = dict(rule_texts)
+    benign["references/teaching-loop.md"] += "\n连续讲授 30 分钟后提醒休息，不改变教材节号。\n"
+    c.check("1.6d 合法 30 分钟排期/休息不误报", not stale_rule_problems(benign),
+            stale_rule_problems(benign))
+
     c.check("2.1 一页合同分册存在且含一页合同",
             "一页合同" in handout)
     c.check("2.2 状态行两分（讲义/台账）",
@@ -155,8 +197,8 @@ def main(argv=None):
             all(k in handout for k in ("单元 ≠ KP", "一个单元可映射多个 KP", "不强制 1:1")))
     c.check("2.7 头部合并/指针存在",
             all(k in handout for k in ("3 行", "只在目标区存在时写", "死指针")))
-    c.check("2.8 深讲拆节",
-            all(k in handout for k in ("完整深讲", "拆节", "机制段 ≠ 深讲")))
+    c.check("2.8 深讲不强制拆节",
+            all(k in handout for k in ("完整深讲", "逐块深讲", "不拆节", "机制段 ≠ 深讲")))
     c.check("2.9 类型单元数",
             all(k in handout for k in ("记忆 5–7", "程序 3–5", "设计 1–3")))
     c.check("2.10 命名/附件",
@@ -170,9 +212,9 @@ def main(argv=None):
 
     c.check("3.1 lecture-styles 与合同一致",
             not style_problems(styles), style_problems(styles))
-    c.check("3.2 phases 同步状态行/最细知识点/拆节",
+    c.check("3.2 phases 同步状态行/最细知识点/不强制拆节",
             all(k in phases for k in ("台账状态行", "讲义状态行", "最细知识点",
-                                      "节内块数不设上限", "拆节", "L3 复习产物")))
+                                      "节内块数不设上限", "不拆节", "L3 复习产物")))
     c.check("3.3 teaching-loop 同步深讲与设计标识",
             all(k in teaching for k in ("完整深讲", "方案：", "设计说明：")))
     c.check("3.4 subject-playbooks 同步设计/记忆标识",
@@ -212,7 +254,7 @@ def main(argv=None):
         ("概念地图阈值改回 8+", styles.replace("5 个以上概念", "8 个以上概念")),
         ("台账状态行被合并回状态行", styles.replace("台账状态行", "状态行")),
         ("设计类标识被删", styles.replace("方案：", "")),
-        ("深讲拆节被删", styles.replace("拆节", "")),
+        ("深讲不拆节规则被删", styles.replace("不拆节", "")),
         ("纯记忆被误写成纯概念", styles.replace("纯记忆", "纯概念")),
     )
     for name, mutated in mutations:

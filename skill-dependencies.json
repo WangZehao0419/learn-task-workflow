@@ -1,14 +1,12 @@
 {
-  "schema_version": "1",
+  "schema_version": "2",
   "capabilities": [
     "任务索引与进度解析",
     "进度校验与证据验证",
     "间隔调度与校准计算",
     "KP 拓扑排序与检环",
     "环境就绪检查",
-    "讲义结构校验",
-    "学习数据落盘",
-    "备料来源检索"
+    "讲义结构校验"
   ],
   "dependencies": [
     {
@@ -31,159 +29,15 @@
         "official_home_url": "https://www.python.org/",
         "official_docs_url": "https://docs.python.org/3/",
         "steps": [
-          "托管环境：解释器由平台托管，通常无需操作；直接运行 python \"<技能根>/scripts/check_environment.py\" 完成检查。",
-          "非托管环境：从官方下载地址安装 Python 3.10 或更高版本，安装后在终端运行 python --version 确认版本。",
-          "检查输出 status 为 ready（或仅 KP 拓扑排序受影响的 partial）即可进入正常流程；needs_setup / unavailable 时按 references/setup-guide.md 处理并重检。"
+          "托管环境：解释器由平台托管时，运行 python \"<技能根>/scripts/check_environment.py\" 完成检查。",
+          "非托管环境：从官方下载地址安装 Python 3.10 或更高版本，安装后运行 python --version 确认版本。",
+          "只有检查输出 status 为 ready 才能继续；needs_setup / unavailable 时停止当前运行，处理后重新检查。"
         ],
-        "verify": "python --version 显示 ≥ 3.10；运行 python -B scripts/check_environment.py 输出 status 为 ready 或可解释的 partial；六个脚本均带 --selftest（task_index / progress_check / scheduler / kp_sort / check_environment / verify_explanation），逐一退出码 0；读者版检查：python -B scripts/verify_explanation.py --reader <材料目录或单文件>。",
-        "security": "无需登录与凭据；不安装、不修改系统配置；检查器只读，不发起网络请求与子进程，无任何网络探测能力。",
-        "verified_at": "2026-10-20",
-        "applies_to_version": "6.8.2"
-      },
-      "degradation": [
-        {
-          "capability": "任务索引与进度解析",
-          "trigger": "解释器不可用或脚本不可执行",
-          "fallback": "改用目录枚举/文件读取能力手工枚举数据根并解析 progress.md（降级可用）",
-          "user_input": "数据根路径与任务目录名（如需）",
-          "limitations": "解析结果不保证与脚本逐字一致，输出标注「未验证」",
-          "evidence_label": "未验证",
-          "recovery": "恢复解释器后重跑 scripts/task_index.py",
-          "stop_condition": "数据根不可读且任务需要精确枚举时停止并说明"
-        },
-        {
-          "capability": "进度校验与证据验证",
-          "trigger": "解释器不可用或校验脚本不可执行",
-          "fallback": "按 progress.md 字段清单与判分证据逐项人工核对",
-          "user_input": "待校验的任务目录",
-          "limitations": "无脚本级结论，仅人工核对，标注「未完成运行验证」",
-          "evidence_label": "部分验证",
-          "recovery": "恢复解释器后重跑 scripts/progress_check.py",
-          "stop_condition": "用户要求正式通过结论或涉及闸口放行时停止"
-        },
-        {
-          "capability": "间隔调度与校准计算",
-          "trigger": "解释器不可用或脚本不可执行",
-          "fallback": "由模型按同一公式手工计算并展示过程，标注「推断」",
-          "user_input": "无",
-          "limitations": "结果不可脚本复核，日期推算需用户二次确认",
-          "evidence_label": "推断",
-          "recovery": "恢复解释器后重跑 scripts/scheduler.py",
-          "stop_condition": "用户要求可复核的脚本级结论时停止"
-        },
-        {
-          "capability": "KP 拓扑排序与检环",
-          "trigger": "解释器不可用或脚本不可执行",
-          "fallback": "人工依赖排序并展示理由（不跑脚本、不检环），标注「未验证」",
-          "user_input": "确认接受降级排序",
-          "limitations": "不检环，环形依赖无法自动发现；排序合法性仅人工判断",
-          "evidence_label": "未验证",
-          "recovery": "恢复解释器后重跑 scripts/kp_sort.py",
-          "stop_condition": "依赖关系复杂且存在环风险时停止并建议升级"
-        },
-        {
-          "capability": "环境就绪检查",
-          "trigger": "解释器不可用（检查器无法运行）",
-          "fallback": "按 references/setup-guide.md 逐项人工核对（python --version、脚本存在性）",
-          "user_input": "无",
-          "limitations": "无法机器判定状态，路由结论基于人工核对",
-          "evidence_label": "部分验证",
-          "recovery": "恢复解释器后重跑 scripts/check_environment.py",
-          "stop_condition": "无法判断必需依赖状态时停止并说明"
-        },
-        {
-          "capability": "讲义结构校验",
-          "trigger": "解释器不可用或校验脚本不可执行",
-          "fallback": "人工按 lecture-styles.md「讲解出厂自检」定稿维度全量核对（五要素与纯概念/参照级豁免标记、答案框体例（交付标识、框内不写题面段、标记行留空、段首分点、代码块、空答案）与紧邻、段内断行是否拆断公式（多行本身不提示）、分层标签、头部指针、定稿导读三行、自测/检验题面区缺答案区（标题别名与开放检验豁免）、图引用落盘、记账残留）",
-          "user_input": "待校验的讲义材料目录或单文件",
-          "limitations": "无脚本级结论，仅人工核对，标注「部分验证」",
-          "evidence_label": "部分验证",
-          "recovery": "恢复解释器后重跑 scripts/verify_explanation.py",
-          "stop_condition": "讲义定稿或交付且结构核对无法完成时停止并说明"
-        }
-      ]
-    }
-  ],
-  "functional_degradations": [
-    {
-      "capability": "任务索引与进度解析",
-      "trigger": "脚本异常、数据根不可读或数据损坏",
-      "fallback": "目录枚举/文件读取能力手工枚举；坏数据条目按告警方式记录，不静默",
-      "user_input": "",
-      "limitations": "枚举覆盖度下降，标注「部分验证」",
-      "evidence_label": "部分验证",
-      "recovery": "修复数据或权限后重跑脚本",
-      "stop_condition": "数据根不可读且无替代来源时停止该动作"
-    },
-    {
-      "capability": "进度校验与证据验证",
-      "trigger": "字段解析失败或脚本输出不完整",
-      "fallback": "人工核对并保留原始文件不改动",
-      "user_input": "",
-      "limitations": "无脚本级结论，标注「未完成运行验证」",
-      "evidence_label": "部分验证",
-      "recovery": "修复字段后重跑脚本",
-      "stop_condition": "涉及闸口放行且证据不足时停止"
-    },
-    {
-      "capability": "间隔调度与校准计算",
-      "trigger": "脚本异常或日期数据缺失",
-      "fallback": "模型按公式计算并显式标注「推断」；日期缺失按默认链处理并提示用户",
-      "user_input": "",
-      "limitations": "结果不可脚本复核",
-      "evidence_label": "推断",
-      "recovery": "补日期数据后重跑脚本",
-      "stop_condition": "需要精确可复核调度结论时停止"
-    },
-    {
-      "capability": "KP 拓扑排序与检环",
-      "trigger": "清单畸形、含环或解释器版本不足",
-      "fallback": "检出环即停止并报告（不静默）；脚本不可用时人工排序并标注",
-      "user_input": "",
-      "limitations": "无自动检环能力时存在环风险",
-      "evidence_label": "部分验证",
-      "recovery": "修复清单或升级解释器后重跑脚本",
-      "stop_condition": "依赖声明互相冲突且无法消除时停止"
-    },
-    {
-      "capability": "环境就绪检查",
-      "trigger": "检查器不可用或输出畸形",
-      "fallback": "按 setup-guide 逐项人工核对并路由",
-      "user_input": "",
-      "limitations": "状态判定降级为人工",
-      "evidence_label": "部分验证",
-      "recovery": "恢复检查器后重跑",
-      "stop_condition": "无法判断必需依赖状态时停止"
-    },
-    {
-      "capability": "讲义结构校验",
-      "trigger": "解释器不可用或校验脚本不可执行",
-      "fallback": "人工按 lecture-styles.md「讲解出厂自检」定稿维度全量核对（五要素与纯概念/参照级豁免标记、答案框体例（不写题面段、标记行留空）与紧邻、段内断行是否拆断公式（多行本身不提示）、分层标签、头部指针、定稿导读三行、自测/检验题面区缺答案区（标题别名与开放检验豁免）、图引用落盘、记账残留）",
-      "user_input": "",
-      "limitations": "无脚本级结论，仅人工核对，标注「部分验证」",
-      "evidence_label": "部分验证",
-      "recovery": "恢复解释器后重跑 scripts/verify_explanation.py",
-      "stop_condition": "讲义定稿或交付且结构核对无法完成时停止并说明"
-    },
-    {
-      "capability": "学习数据落盘",
-      "trigger": "工作区只读、写入被拒或数据根不可写",
-      "fallback": "改为对话内推进：给出 progress.md 进度块与判分记录的完整文本，请用户在自选可写位置留档，并明确说明本轮未落盘",
-      "user_input": "可写路径（如有），或用户手动留档的确认",
-      "limitations": "跨会话续学、闸口校验与结课结论均无磁盘证据；不得声称已保存",
-      "evidence_label": "未验证",
-      "recovery": "恢复写权限后在可写路径重建数据根并补落盘",
-      "stop_condition": "需正式闸口放行、结课结论或可复核证据时停止并说明"
-    },
-    {
-      "capability": "备料来源检索",
-      "trigger": "无网络、检索工具不可用或未返回可用来源",
-      "fallback": "不建 materials/00-备课来源.md 台账；路线按通用脉络自拟，并在 S2 对照结论显式标注「无外部基准」",
-      "user_input": "可选：用户提供的教材、大纲或真题",
-      "limitations": "路线完备性无外部背书；覆盖对照只能按自拟总纲计，不得声称已按考纲核对",
-      "evidence_label": "未验证",
-      "recovery": "恢复检索或用户提供材料后补台账并重做覆盖对照",
-      "stop_condition": "用户要求以官方大纲/真题为准且无任何材料时停止并说明"
+        "verify": "python --version 显示 ≥ 3.10；python -B scripts/check_environment.py 输出 status=ready；六个脚本逐一以 --selftest 运行并退出 0；读者版检查：python -B scripts/verify_explanation.py --reader <材料目录或单文件>。",
+        "security": "无需登录与凭据；不安装、不修改系统配置；检查器只读，不发起网络请求与子进程。",
+        "verified_at": "2026-10-25",
+        "applies_to_version": "6.9.0"
+      }
     }
   ]
 }

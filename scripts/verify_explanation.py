@@ -83,7 +83,7 @@
    Markdown 图片语法 `![](<相对路径>)` 须指向真实文件,缺失报 E-IMG-DEADLINK;
    http(s)/data: 等外部地址与锚点不查。
 
-【规则表(13 类检查 / 27 个规则码;末组 W-READER-* 仅 --reader 启用)】
+【规则表(13 类检查 / 29 个规则码;末组 W-READER-* 仅 --reader 启用)】
 | 规则码           | 级 | 触发条件                                                            |
 |------------------|----|---------------------------------------------------------------------|
 | E-LEDGER-RESIDUE | E  | 定稿文件正文含判分记账状态行(「状态(…):已通过/关闭/讲授中」等);草稿不查 |
@@ -105,6 +105,8 @@
 | E-THIRD-EXEMPT-MISUSE | E | 标注了「③ 不适用」但单元引用块内仍有「解:/答:」解答起笔(豁免被滥用) |
 | E-HEADER-BRIEF   | E  | 定稿文件头部缺「本节目标」「前置」「预计」任一(草稿不查)             |
 | E-IMG-DEADLINK   | E  | `图：<相对路径>` 或 `![](<相对路径>)` 指向的文件不存在(死链)        |
+| E-READ-FILE      | E  | Markdown 读取失败或编码不是 UTF-8；继续扫描其他文件，最终 exit 1    |
+| E-IMG-READ       | E  | `--reader` 下 SVG 读取失败或编码不是 UTF-8                         |
 | W-READER-HEADING | W  | 读者版标题层级跳级(H1→H3 等);仅 `--reader`                       |
 | W-READER-TABLE   | W  | 读者版表格缺表头分隔行、列数不在 2–4、表头有空列名;仅 `--reader`     |
 | W-READER-ALT     | W  | 读者版图片 alt 为空或只写「示意图/图片」;仅 `--reader`               |
@@ -498,7 +500,7 @@ def _svg_reader_problems(path):
     """读者版 SVG 技术项:根元素 viewBox/role、title/desc、字号/线宽、无脚本/外链。"""
     try:
         text = Path(path).read_text(encoding="utf-8")
-    except OSError:
+    except (OSError, UnicodeError):
         return ["SVG 读取失败"]
     problems = []
     root = re.search(r"<svg\b[^>]*>", text, re.I)
@@ -570,7 +572,9 @@ def reader_checks(lines, doc, vis, fence, base_dir, box_rows, add):
             path = Path(target) if Path(target).is_absolute() else Path(base_dir) / target
             if path.suffix.lower() == ".svg" and path.exists():
                 probs = _svg_reader_problems(path)
-                if probs:
+                if "SVG 读取失败" in probs:
+                    add("E", "E-IMG-READ", i, "SVG 读取失败或编码不是 UTF-8")
+                elif probs:
                     add("W", "W-READER-SVG", i,
                         "SVG 读者版技术项不合格:" + "、".join(probs) +
                         "——补 viewBox/role/title/desc,字号 ≥14、线宽 ≥1.5,去脚本/外链")
@@ -604,6 +608,9 @@ def reader_checks(lines, doc, vis, fence, base_dir, box_rows, add):
             if not 1 <= data_rows <= 3:
                 add("W", "W-READER-OVERVIEW", block[0],
                     "本节速览数据行 {}——只留 1–3 行,对应 1–3 项关键能力".format(data_rows))
+    else:
+        add("W", "W-READER-OVERVIEW", 0,
+            "读者版缺 ## 本节速览——用 3 列「要解决的问题 | 一句话结论 | 用在哪」")
 
     # 5. 回看索引三行 + 位置(答案区之后,停车位/扩展区之前)
     if "## 回看索引" in lines:
@@ -1021,10 +1028,10 @@ def main(argv=None):
         rel = f.relative_to(p).as_posix() if p.is_dir() else f.name
         try:
             text = f.read_text(encoding="utf-8-sig")
-        except OSError as exc:
-            # 单个文件不可读不阻断其余文件,降级为 stderr 提示
-            print("[learn-task-workflow] 跳过不可读文件 " + str(f) + ":" + str(exc),
-                  file=sys.stderr)
+        except (OSError, UnicodeError) as exc:
+            # 扫描失败必须进入最终判定，不能把漏扫文件伪装成通过。
+            findings.append(("E", "E-READ-FILE", rel, 1,
+                             "文件读取失败或编码不是 UTF-8:" + str(exc)))
             continue
         findings.extend(check_text(text, rel, base_dir=f.parent, reader=args.reader))
     return report(findings)
@@ -1909,12 +1916,19 @@ def selftest():
     chk("扩展区外同内容照常报错",
         len(codes(r, "E-REQ-MISSING")) == 1
         and len(codes(r, "W-NO-TIER")) == 1)
+    r = check_text(FIX_OK, "reader-missing.md", reader=True)
+    chk("reader 缺本节速览报 W-READER-OVERVIEW",
+        len(codes(r, "W-READER-OVERVIEW")) == 1)
 
     # ㉔ 退出码:0=无 E / 1=有 E / 2=用法或路径错误
     with tempfile.TemporaryDirectory() as td:
         d0 = Path(td) / "ok"
         d0.mkdir()
         (d0 / "a.md").write_text(FIX_OK, encoding="utf-8")
+        bad_encoding = Path(td) / "bad-encoding"
+        bad_encoding.mkdir()
+        (bad_encoding / "bad.md").write_bytes(b"\xff\xfe\xfa")
+        chk("Markdown 非法 UTF-8 结构化失败", main([str(bad_encoding)]) == 1)
         d1 = Path(td) / "bad"
         d1.mkdir()
         (d1 / "a.md").write_text(FIX_LEDGER, encoding="utf-8")
@@ -1936,6 +1950,9 @@ def selftest():
             len(codes(check_text(md_code, "code.md", base_dir=d2), "E-IMG-DEADLINK")) == 0)
         (d2 / "dead.md").write_text(md_dead, encoding="utf-8")
         chk("入口目录校验能命中图死链(退出码 1)", main([str(d2)]) == 1)
+        (d2 / "assets" / "bad.svg").write_bytes(b"\xff\xfe\xfa")
+        (d2 / "bad-svg.md").write_text(FIX_BOX_OKSEG + "![](assets/bad.svg)\n", encoding="utf-8")
+        chk("SVG 非法 UTF-8 结构化失败", main([str(d2 / "bad-svg.md"), "--reader"]) == 1)
 
     print(("OK " if ok else "FAIL ") + "verify_explanation --selftest")
     return 0 if ok else 1
