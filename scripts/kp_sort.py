@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 """kp_sort.py - 知识清单 KP 依赖拓扑排序与检环（确定性，stdlib-only）。
 
-用途：知识型/技能型任务在 S2「排序」子步调用（见 references/phases-and-gates.md），
-对知识清单文件（行式六字段 + 可选类型/视觉任务，格式见 references/data-and-recovery.md
+用途：知识型/技能型任务在 S2「排序」子步调用（见 references/workflow.md），
+对知识清单文件（行式六字段 + 可选类型/视觉任务，格式见 references/data.md
 「知识清单文件」）按各行「前置」声明的依赖边计算合法拓扑序。判断归模型（依赖边真实性、
 该不该有边），排序与检环归本脚本；只读零写盘。可选分型字段由 progress_check 校验，
 本脚本只读前六段并忽略附加段。
@@ -32,9 +32,11 @@ import re
 import sys
 from pathlib import Path
 
-# 同步维护提示：ENUM_KP_STATUS 与 parse_kp_row 在 progress_check.py 有一份拷贝，
-# 两处必须同步修改。
-ENUM_KP_STATUS = ("未讲", "已讲", "暂缓", "排除")
+import rule_contract
+
+# 枚举唯一来源：contracts/rules.json（缺失/畸形即结构化失败）。
+_C = rule_contract.load_or_exit()["constants"]
+ENUM_KP_STATUS = tuple(_C["kp"]["states"])
 KP_ID_RE = re.compile(r"^KP-(\d+)-(\d+)$")
 
 VALID = """# 知识清单：格式演示（示例仅为格式演示，KP 取舍与依赖声明规则领域无关）
@@ -241,7 +243,7 @@ def find_cycle(ids, deps):
 
 def _counts(rows):
     """excluded/held 计数：状态为排除/暂缓的条目数（order 含清单全部行，
-    讲授序与出题序仅取纳入项 = 状态 ∈ {未讲, 已讲}，口径见 data-and-recovery.md）。"""
+    讲授序与出题序仅取纳入项 = 状态 ∈ {未讲, 已讲}，口径见 data.md）。"""
     excluded = sum(1 for r in rows if r["status"] == "排除")
     held = sum(1 for r in rows if r["status"] == "暂缓")
     return excluded, held

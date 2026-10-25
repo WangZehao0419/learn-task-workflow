@@ -137,13 +137,14 @@ import sys
 import tempfile
 from pathlib import Path
 
+import rule_contract
+
 # ── denylist:已被 LaTeX 约定取代的 Unicode 写法(顺序即输出消息中的展示顺序)──
-DENY_CHARS = "→✔✓✅√≤≥∪⇔⇒"
+_C = rule_contract.load_or_exit()["constants"]
+DENY_CHARS = "".join(_C["headings"]["unicode_denylist"])
 CIRCLED = "①②③④⑤⑥⑦⑧⑨⑩"
 # 交付标识:可复现答案的起笔,覆盖数学/编程/语言/文科/记忆/设计/精读各族
-LEAD_WORDS = ("参考答案|参考概括|参考译文|解答|答案|证明|译文|范文|例文|代码|脚本|输出|步骤|操作|方案|设计说明|解|答"
-              "|Model answer|Sample answer|Answer|Solution|Proof|Translation"
-              "|Output|Code|Script|Steps|Key")
+LEAD_WORDS = "|".join(re.escape(w) for w in _C["headings"]["lead_words"])
 LEAD_RE = re.compile(r"^\s*(?:" + LEAD_WORDS + r")\s*[：:]", re.I)
 
 CONCEPT_RE = re.compile(r"^##\s*概念\s*(\d+)")
@@ -153,7 +154,7 @@ H2_RE = re.compile(r"^##\s")
 # 词干后须是行尾/空白/左括号/冒号:防「## 检验方法」「## 检验步骤」「## 检验清单」被当成
 # 题面区,也防交替回溯让「## 检验问题答案」经 `检验` 分支漏成题面区。
 SELFTEST_TAIL = r"(?![^\s（(：:])"
-SELFTEST_STEM = r"(?:本节)?(?:检验问题|自测题?|检验题?)"
+SELFTEST_STEM = "(?:" + "|".join(re.escape(h) for h in _C["headings"]["self_test"]) + ")"
 SELFTEST_ANS_TAIL = r"(?:区|要点|[与及和]?解析)?"
 SELFTEST_HEAD_RE = re.compile(
     r"^##\s*(?:" + SELFTEST_STEM + r"\s*答案" + SELFTEST_ANS_TAIL +

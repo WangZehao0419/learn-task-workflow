@@ -2,16 +2,16 @@
  "scripts_contract": [
   {
    "script": "task_index.py",
-   "usage": "--root <数据根> [--write-index | --no-write-index] [--selftest]",
+   "usage": "[--root <数据根>] [--write-index | --no-write-index] [--selftest]",
    "default_behavior": "只读、不物化 index.json（写缓存为显式 opt-in）",
    "exit_codes": {
     "0": "正常（含 scan_status=partial）",
-    "1": "数据根缺失或非目录",
+    "1": "数据根路径不存在",
     "2": "用法错误",
     "3": "枚举失败 scan_status=failed（不覆盖既有缓存）"
    },
    "schema": "learn-task-index/5",
-   "notes": "scan_status=partial/failed 时任务集合不完整，调用方必须停止枚举/续学并修复数据后重跑，不得按部分结果继续；failed 时 task_count=null（未知≠0）；任务含 current_block/block_total（可选，来自「下次续学」的已讲到第 k/总块，缺失为 null）；写缓存用同目录临时文件 + os.replace 原子替换，区分 written/unchanged/failed"
+   "notes": "scan_status=partial/failed 时任务集合不完整，调用方必须停止枚举/续学并修复数据后重跑，不得按部分结果继续；failed 时 task_count=null（未知≠0）；任务含 current_block/block_total（可选，来自「下次续学」的已讲到第 k/总块，缺失为 null）；写缓存用同目录临时文件 + os.replace 原子替换，区分 written/unchanged/failed；--root 可省略（走默认根），路径存在但非目录 → 3（scan_status=failed），路径不存在 → 1"
   },
   {
    "script": "progress_check.py",
@@ -22,7 +22,7 @@
     "1": "不通过",
     "2": "用法错误"
    },
-   "notes": "--release 放行模式：判分四态 correct/partial/incorrect/ungraded；partial 入分母不入分子，ungraded 与作废行不入分母（W-VOIDED-ATTEMPT / W-UNGRADED-ATTEMPT）；参考答案/标准答案/正确答案不构成学员作答；路线和 changed-lessons 仅接受正整数；KP 查重与前置统一别名归一；同 attempt 的结果/独立性/KP 冲突报 E-ATTEMPT-CONFLICT；非法显式目标线报 E-FINAL-INVALID-TARGET；KP 类型/视觉任务声明后分型验收（E-KP-TYPED-GATE）；模块目标/材料覆盖结构提示（W-MODULE-CONTRACT-INCOMPLETE / W-UNPARSED-MODULE / W-UNPARSED-MATERIAL / W-MATERIAL-COVERAGE-GAP）；教学策略枚举（E-ENUM-STRATEGY）；空/模板证据 E-EMPTY-EVIDENCE；结课/已完成未完成路线 E-ROUTE-UNDONE；复习来源阶段枚举 {逐节学习, 结课, 已完成}；起点自进入 S2 起必填"
+   "notes": "--release 放行模式：判分四态 correct/partial/incorrect/ungraded；partial 入分母不入分子，ungraded 与作废行不入分母（W-VOIDED-ATTEMPT / W-UNGRADED-ATTEMPT）；参考答案/标准答案/正确答案不构成学员作答；路线和 changed-lessons 仅接受正整数；KP 查重与前置统一别名归一；同 attempt 的结果/独立性/KP 冲突报 E-ATTEMPT-CONFLICT；非法显式目标线报 E-FINAL-INVALID-TARGET；KP 类型/视觉任务声明后分型验收（E-KP-TYPED-GATE）；模块目标/材料覆盖结构提示（W-MODULE-CONTRACT-INCOMPLETE / W-UNPARSED-MODULE / W-UNPARSED-MATERIAL / W-MATERIAL-COVERAGE-GAP）；教学策略枚举（E-ENUM-STRATEGY）；空/模板证据 E-EMPTY-EVIDENCE；结课/已完成未完成路线 E-ROUTE-UNDONE；复习来源阶段枚举 {逐节学习, 结课, 已完成}；起点自进入 S2 起必填；小节目标线可选字段缺省取 gates.min_ratio，非法报 E-GATE-RATIO-INVALID；复述门要求关键点 ≥ restatement.keypoints 且「无事实性错误」已勾，旧模板无该项时回退总勾选计数"
   },
   {
    "script": "scheduler.py",
@@ -67,7 +67,19 @@
     "1": "有 E（结构违规）",
     "2": "用法/路径错误"
    },
-   "notes": "概念单元级五要素检查（不得全文件计数代替；纯概念标「③ 不适用」时②③ 豁免、①④⑤仍查；参照级标【参照】+「③ 不适用（参照级）」时仅查①）；框内段内断行拆断 `$…$`/code span 报 E（多行本身不报，归人工自检）；③ 标记行带内容报 W-MARKER-CONTENT；定稿区才查判分记账残留与节首导读三行，草稿/历史日志合法；查自测/检验题面区缺答案区（题面区认 `本节自测`/`自测`/`自测题`/`检验`/`检验题`/`检验问题`/`本节检验`，答案区认同词干+`答案`（可接 `区`/`要点`/`与解析`）或通用 `答案`/`参考答案`，多答案区逐区查（同族答案区只覆盖同类题面区，通用答案区可统管其前多区）；开放/动手检验写 `- 检验说明：` 显式豁免）、图引用死链；Markdown 读取失败/非法 UTF-8 报 E-READ-FILE，SVG 读取失败/非法 UTF-8 报 E-IMG-READ，均继续扫描其余文件并最终 exit 1；`--reader` 加查标题层级/表格/alt/SVG/速览（含缺失）/回看索引/一句话结论/强调密度，结构项为 W 级、不阻断、旧讲义不回溯"
+   "notes": "概念单元级五要素检查（不得全文件计数代替；纯概念标「③ 不适用」时②③ 豁免、①④⑤仍查；参照级标【参照】+「③ 不适用（参照级）」时仅查①）；框内段内断行拆断 `$…$`/code span 报 E（多行本身不报，归人工自检）；③ 标记行带内容报 W-MARKER-CONTENT；定稿区才查判分记账残留与节首导读三行，草稿/历史日志合法；查自测/检验题面区缺答案区（题面区认 `本节自测`/`自测`/`自测题`/`检验`/`检验题`/`检验问题`/`本节检验`，答案区认同词干+`答案`（可接 `区`/`要点`/`与解析`）或通用 `答案`/`参考答案`，多答案区逐区查（同族答案区只覆盖同类题面区，通用答案区可统管其前多区）；开放/动手检验写 `- 检验说明：` 显式豁免）、图引用死链；Markdown 读取失败/非法 UTF-8 报 E-READ-FILE，SVG 读取失败/非法 UTF-8 报 E-IMG-READ，均继续扫描其余文件并最终 exit 1；`--reader` 加查标题层级/表格/alt/SVG/速览（含缺失）/回看索引/一句话结论/强调密度，结构项为 W 级、不阻断、旧讲义不回溯；自测题面标题接受 10 种（含本节前缀），契约 headings.self_test 为准"
+  },
+  {
+   "script": "rule_contract.py",
+   "usage": "--selftest | --topology | --get <dotted>",
+   "default_behavior": "只读；加载并校验 contracts/rules.json，输出 JSON",
+   "exit_codes": {
+    "0": "正常/校验通过",
+    "1": "契约缺失/畸形或拓扑问题",
+    "2": "用法错误"
+   },
+   "schema": "ltw-rules/1",
+   "notes": "契约唯一来源 contracts/rules.json；缺失/畸形报 E-CONTRACT-MISSING/E-CONTRACT-INVALID；--topology 检查无加载指令、职责头、owner 指针、依赖无环、旧文件名只在 alias 表"
   }
  ],
  "verification": {
@@ -77,8 +89,10 @@
    "python -B scripts/scheduler.py --selftest",
    "python -B scripts/kp_sort.py --selftest",
    "python -B scripts/check_environment.py --selftest",
-   "python -B scripts/verify_explanation.py --selftest"
+   "python -B scripts/verify_explanation.py --selftest",
+   "python -B scripts/rule_contract.py --selftest",
+   "python -B scripts/rule_contract.py --topology"
   ],
-  "note": "六脚本自测覆盖确定性计算与结构校验契约；真实教学回归与故障夹具见批次 E 的 evals。"
+  "note": "七个模块自测覆盖确定性计算、结构校验与契约完整性；真实教学回归与故障夹具见 evals。"
  }
 }

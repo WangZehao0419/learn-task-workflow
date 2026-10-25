@@ -82,13 +82,14 @@ import sys
 import tempfile
 from pathlib import Path
 
-# 同步维护提示：本三组枚举与 task_index.py 顶部同名枚举必须同步修改；
-# ENUM_KP_STATUS / parse_kp_row 与 kp_sort.py 的同名枚举与解析函数必须同步修改；
-# hold_entry_malformed / hold_disposition_excluded 与 task_index.py 的同名函数（本文件另有 hold_is_designed）必须同步修改。
-ENUM_PHASE = ["接料建档", "诊断摸底", "计划确认中", "逐节学习", "复习巩固", "结课", "已完成"]
-ENUM_TYPE = ["知识型", "技能型", "备考型", "材料型"]
-ENUM_FAMILY = ["数学类", "编程类", "语言类", "理论概念类", "记忆密集类"]
-ENUM_STRATEGY = ["先测后教", "先教后测"]
+import rule_contract
+
+# 枚举唯一来源：contracts/rules.json（缺失/畸形即结构化失败）。
+_C = rule_contract.load_or_exit()["constants"]
+ENUM_PHASE = _C["phases"]
+ENUM_TYPE = _C["types"]
+ENUM_FAMILY = _C["subject_families"]
+ENUM_STRATEGY = _C["teaching_strategies"]
 # v6.1 大纲契约：模块目标（M1｜名称｜能力句）与材料覆盖（材料 → M1/M2）
 MODULE_ROW_RE = re.compile(r"^(M\d+)\s*[｜|]\s*([^｜|]+?)\s*[｜|]\s*(.+)$")
 MATERIAL_ROW_RE = re.compile(r"^(.+?)\s*(?:→|->|[｜|])\s*(.+)$")
@@ -97,7 +98,7 @@ CONTRACT_PLACEHOLDER_RE = re.compile(r"<[^>]*>|待填|占位")
 # 只认 KP 编号/知识点之后的类型/视觉任务字段，避免标题里出现「类型：」被误判
 TYPED_FIELD_PREFIXES = ("类型：", "类型:", "视觉任务：", "视觉任务:")
 # 「复习来源阶段」返回点枚举（F04：已完成任务可复习并返回「已完成」；任意字符串被拒）
-ENUM_REVIEW_FROM = ["逐节学习", "结课", "已完成"]
+ENUM_REVIEW_FROM = _C["review_origin_phases"]
 
 # 全程必填；「起点」由 S1 产出，仅在 S1 诊断结束（离开 S0/S1）后必填（见 check()）。
 BASE_REQUIRED = ["当前阶段", "类型", "学科族", "目标"]
@@ -138,11 +139,11 @@ def evidence_strength(text):
 # ── 放行模式结构化作答与闸口判定（R01：关键词出现 ≠ 真实且达标的作答）──
 # 旧实现只查「全文含作答/判分 + 任一非占位评分词」，导致无学员答案、全部答错、
 # 只有标题、无复述清单等均被放行。以下把判分记录解析为**结构化作答行**再判闸口。
-ENUM_START = ["零基础", "入门", "进阶"]
+ENUM_START = _C["starts"]
 DIAG_PREFIXES = ("00-", "0-")   # S1 摸底证据专号（exercises/00-摸底-<日期>.md）
 FINAL_PREFIXES = ("99-",)       # S5 结课综合测验专号（exercises/99-结课综合测验-<日期>.md）
-GATE_RATIO = 2.0 / 3.0          # S3 小节验收默认通过线：≥2/3
-FINAL_RATIO = 4.0 / 5.0         # S5 结课综合测验默认目标线：4/5（备考型可在测验文件写「目标线：a/b」覆盖）
+GATE_RATIO = _C["gates"]["min_ratio"][0] / _C["gates"]["min_ratio"][1]
+FINAL_RATIO = _C["gates"]["final_ratio"][0] / _C["gates"]["final_ratio"][1]
 TARGET_RE = re.compile(r"目标线[：:]\s*(\d+(?:\.\d+)?)\s*/\s*(\d+(?:\.\d+)?)")
 TARGET_DECL_RE = re.compile(r"目标线[：:]\s*([^\s｜|，,。；;]+)")
 ANSWER_RE = re.compile(r"作答[「\"'（(]([^」\"'）)]*)[」\"'）)]")
@@ -265,15 +266,32 @@ def material_key(line):
 def _restate_state(text):
     """复述证据状态：passed / failed / absent（缺复述记录同样不得支撑掌握）。
 
-    v2.5（V05）：按**勾选项**计数（≥2），不再数勾选行数——官方模板把多个关键点写在
-    同一行，旧口径只算 1 项会误拒合法模板。
+    新模板：关键点勾选 ≥ 契约 restatement.keypoints **且**「无事实性错误」已勾。
+    旧模板无「无事实性错误」段时回退总勾选计数（零迁移）。
     """
     for ln in text.splitlines():
         if RESTATE_RE.search(ln) and any(t in ln for t in RESTATE_FAIL_TOKENS):
             return "failed"
     bodies = _section_bodies(text, RESTATE_RE)
     if bodies:
-        return "passed" if _checked_count(bodies) >= 2 else "failed"
+        keypoints = 0
+        has_error_box = False
+        error_checked = False
+        for b in bodies:
+            for ln in b.splitlines():
+                for seg in re.split(r"[｜|]", ln):
+                    if CHECKED_RE.search(seg) and ("关键点" in seg or KP_ID_IN_TEXT_RE.search(seg)):
+                        keypoints += 1
+                    if "无事实性错误" in seg or "无硬错" in seg:
+                        has_error_box = True
+                        if CHECKED_RE.search(seg):
+                            error_checked = True
+        need = int(_C["restatement"]["keypoints"])
+        if has_error_box:
+            # 兼容旧写法：同一行多个关键点且未用竖线分段时，按总勾选数减「无硬错」项回退
+            effective = keypoints if keypoints else max(0, _checked_count(bodies) - 1)
+            return "passed" if (effective >= need and error_checked) else "failed"
+        return "passed" if _checked_count(bodies) >= need else "failed"
     for ln in text.splitlines():
         if RESTATE_RE.search(ln) and any(t in ln for t in RESTATE_PASS_TOKENS):
             return "passed"
@@ -655,11 +673,11 @@ def collect_submission_ids(text, ex_dir, ex_names):
 
 
 # ── 知识清单文件（v2.4）解析 ──
-ENUM_KP_STATUS = ("未讲", "已讲", "暂缓", "排除")
+ENUM_KP_STATUS = tuple(_C["kp"]["states"])
 # v6.1 可选分型：缺失 = 旧任务统一闸口（零迁移）；类型/视觉任务只影响已声明行。
-ENUM_KP_TYPE = ("记忆", "概念", "程序", "设计")
-ENUM_KP_VISUAL = ("识别", "关系", "图表", "比较")
-KP_TYPE_ALIASES = {"memory": "记忆", "concept": "概念", "procedure": "程序", "design": "设计"}
+ENUM_KP_TYPE = tuple(_C["kp"]["types"])
+ENUM_KP_VISUAL = tuple(_C["kp"]["visual_tasks"])
+KP_TYPE_ALIASES = dict(_C["kp"]["type_aliases"])
 KP_VISUAL_ALIASES = {"identification": "识别", "relationship": "关系",
                      "table_graph": "图表", "comparison": "比较"}
 KP_ID_RE = re.compile(r"^KP-(\d+)-(\d+)$")
@@ -925,6 +943,18 @@ def check(task_dir, release=False, proposed=None):
     if proposed.get("phase"):
         fields["当前阶段"] = proposed["phase"]   # 校验拟提交目标阶段，而非磁盘旧状态
 
+    # 小节目标线：progress.md 可选字段；缺省取契约默认线，非法即拦停
+    gate_ratio, gate_label = GATE_RATIO, "小节验收默认线"
+    ratio_field = (fields.get("小节目标线") or "").strip()
+    if ratio_field:
+        m = re.fullmatch(r"(\d+)\s*/\s*(\d+)", ratio_field)
+        if not m or int(m.group(2)) <= 0 or int(m.group(1)) > int(m.group(2)):
+            errors.append({"code": "E-GATE-RATIO-INVALID",
+                           "message": "「小节目标线」非法（须为 0 ≤ a ≤ b 且 b > 0）：" + ratio_field})
+        else:
+            gate_ratio = int(m.group(1)) / int(m.group(2))
+            gate_label = "小节目标线 " + ratio_field
+
     # ── R13 候选差分：真实新增掌握集合必须被声明覆盖（漏查即拦停）──
     if proposed.get("text") is not None and prog.exists():
         try:
@@ -1136,7 +1166,7 @@ def check(task_dir, release=False, proposed=None):
                 warnings.append({"code": "W-UNGRADED-ATTEMPT",
                                  "message": "小节 " + str(num) + " 的判分记录含 " + str(ungraded_n)
                                             + " 条未判记录（不计入闸口分母，需补判或作废）"})
-            for code, msg in gate_evidence(best_text):
+            for code, msg in gate_evidence(best_text, min_ratio=gate_ratio, ratio_label=gate_label):
                 errors.append({"code": code, "message": "小节 " + str(num) + "：" + msg})
 
     # 未解析勾选行：出现勾选语法却未被识别（不得静默）
@@ -1598,7 +1628,8 @@ EV_TYPED_OK = """## 作答与判分
 - 题1：作答「3」｜正确性=对｜独立性=独立｜KP=KP-01-01
 - 题2：作答「表值」｜正确性=对｜独立性=独立｜KP=KP-01-03｜视觉=图表
 ## 复述检查清单
-- [x] KP-01-02：用自己的话解释变量本质
+- [x] 关键点1：用自己的话解释变量本质（KP-01-02）
+- [x] 关键点2：变量赋值
 - [x] 无事实性错误
 """
 KP_PROG_NOHOLD = """# 学习任务：示例
@@ -1709,7 +1740,27 @@ KP_PROG_MULTIKP = KP_PROG_OK.replace(
 
 def selftest():
     ok = True
+    # 复述门：关键点 ≥2 且「无事实性错误」已勾；旧模板回退总计数
+    _restate_cases = [
+        ("## 复述检查清单\n- [x] 关键点1：A\n- [x] 无事实性错误\n", "failed"),
+        ("## 复述检查清单\n- [x] 关键点1：A\n- [x] 关键点2：B\n- [ ] 无事实性错误\n", "failed"),
+        ("## 复述检查清单\n- [x] 关键点1：A\n- [x] 关键点2：B\n- [x] 无事实性错误\n", "passed"),
+        ("## 复述检查清单\n- [x] A\n- [x] B\n", "passed"),
+    ]
+    for _txt, _exp in _restate_cases:
+        ok = ok and _restate_state(_txt) == _exp
     with tempfile.TemporaryDirectory() as td:
+        # 小节目标线：合法/非法解析
+        d_ratio_bad = Path(td) / "ratio-bad"
+        d_ratio_bad.mkdir()
+        (d_ratio_bad / "progress.md").write_text(GOOD.replace("- 复习来源阶段：无\n", "- 复习来源阶段：无\n- 小节目标线：4/3\n"), encoding="utf-8")
+        r_ratio_bad = check(d_ratio_bad)
+        ok = ok and any(e["code"] == "E-GATE-RATIO-INVALID" for e in r_ratio_bad["errors"])
+        d_ratio_ok = Path(td) / "ratio-ok"
+        d_ratio_ok.mkdir()
+        (d_ratio_ok / "progress.md").write_text(GOOD.replace("- 复习来源阶段：无\n", "- 复习来源阶段：无\n- 小节目标线：3/4\n"), encoding="utf-8")
+        r_ratio_ok = check(d_ratio_ok)
+        ok = ok and not any(e["code"] == "E-GATE-RATIO-INVALID" for e in r_ratio_ok["errors"])
         # ① 规范态：小写 [x] + 判分记录 → 通过
         d = Path(td) / "good"
         (d / "exercises").mkdir(parents=True)
@@ -2018,7 +2069,7 @@ def selftest():
         ok = ok and (not r32b["ok"]) and any(e["code"] == "E-REVIEW-ORIGIN" for e in r32b["errors"])
 
         # ㉝ F03：只含「作答/判分」模板（占位行）——历史模式 warning，放行模式 E-EMPTY-EVIDENCE。
-        # 用 data-and-recovery.md 的判分记录模板（含 <学员答案> / Again 占位）直接作夹具。
+        # 用 data.md 的判分记录模板（含 <学员答案> / Again 占位）直接作夹具。
         d33 = Path(td) / "rel-template"
         (d33 / "exercises").mkdir(parents=True)
         (d33 / "progress.md").write_text(UPPER, encoding="utf-8")
@@ -2037,7 +2088,7 @@ def selftest():
         (d33c / "progress.md").write_text(UPPER, encoding="utf-8")
         (d33c / "exercises" / "01-极限-2026-01-01.md").write_text(
             "## 作答与判分\n- 题 1：作答「-3」｜正确性=对｜独立性=独立｜调度档=Good\n"
-            "## 复述检查清单\n- [x] 关键点1：极限定义\n- [x] 无事实性错误\n",
+            "## 复述检查清单\n- [x] 关键点1：极限定义\n- [x] 关键点2：极限唯一性\n- [x] 无事实性错误\n",
             encoding="utf-8")
         ok = ok and check(d33c, release=True)["ok"]
 
@@ -2083,7 +2134,7 @@ def selftest():
                    "- 类型：技能型\n- 学科族：编程类\n- 目标：独立编程\n- 起点：零基础\n\n"
                    "## 学习路线\n- [x] 1. 变量\n")
         EV_OK = ("## 作答与判分\n- 题1：作答「3」｜正确性=对｜独立性=独立｜调度档=Good\n"
-                 "## 复述检查清单\n- [x] 关键点1：变量\n- [x] 无事实性错误\n")
+                 "## 复述检查清单\n- [x] 关键点1：变量\n- [x] 关键点2：变量赋值\n- [x] 无事实性错误\n")
 
         def _codes(name, prog, ev, **kw):
             d = _mk2(name, prog, {"exercises/01-变量-2026-01-01.md": ev} if ev is not None else None)
@@ -2097,7 +2148,7 @@ def selftest():
         ok = ok and (not r36b["ok"]) and "E-NO-GRADED-ATTEMPT" in c36b
         r36c, c36c = _codes("r01-reference-answer", PROG_S3,
                             "## 作答与判分\n- 题1：参考答案：3｜正确性=对｜独立性=独立｜调度档=Good\n"
-                            "## 复述检查清单\n- [x] 关键点1：变量\n- [x] 无事实性错误\n",
+                            "## 复述检查清单\n- [x] 关键点1：变量\n- [x] 关键点2：变量赋值\n- [x] 无事实性错误\n",
                             release=True)
         ok = ok and (not r36c["ok"]) and "E-NO-GRADED-ATTEMPT" in c36c
         # ㊲ 全部答错/Again → E-ALL-FAILED；仅提示后全对 → E-HINT-ONLY
@@ -2116,7 +2167,7 @@ def selftest():
         ok = ok and (not r38a["ok"]) and "E-NO-RESTATEMENT" in c38a and "E-NO-GRADED-ATTEMPT" not in c38a
         r38b, _c38b = _codes("r01-valid", PROG_S3, EV_OK, release=True)
         ok = ok and r38b["ok"] and r38b["checked_lessons"] == [1]
-        restate = "## 复述检查清单\n- [x] 关键点1：变量\n- [x] 无事实性错误\n"
+        restate = "## 复述检查清单\n- [x] 关键点1：变量\n- [x] 关键点2：变量赋值\n- [x] 无事实性错误\n"
         r38_indep, c38_indep = _codes(
             "r01-attempt-indep-conflict", PROG_S3,
             "## 作答与判分\n- 题1：作答「3」｜正确性=对｜独立性=独立｜attempt_id=A1\n"
@@ -2265,7 +2316,7 @@ def selftest():
                    PROG_S3.replace("- [x] 1. 变量\n", "- [x] 1. 循环（lesson_id=L-A）\n"),
                    {"exercises/01-变量-2026-01-01.md":
                     "# 变量，lesson_id=L-A\n## 作答与判分\n- attempt_id=A-1，题1：作答「3」｜正确性=对"
-                    "｜独立性=独立｜调度档=Good\n## 复述检查清单\n- [x] 关键点1\n- [x] 无事实性错误\n"})
+                    "｜独立性=独立｜调度档=Good\n## 复述检查清单\n- [x] 关键点1\n- [x] 关键点2\n- [x] 无事实性错误\n"})
         r47 = check(d47, release=True)
         ok = ok and r47["ok"] and not any(e["code"] == "E-EVIDENCE-ID-MISMATCH"
                                           for e in r47["errors"])
@@ -2294,7 +2345,7 @@ def selftest():
         ok = ok and not any(e["code"] == "E-CURSOR-DANGLING" for e in r49b["errors"])
 
         # ═══ v6.0 判分四态：partial / ungraded / 作废 ═══
-        RESTATE = "## 复述检查清单\n- [x] 关键点1\n- [x] 无事实性错误\n"
+        RESTATE = "## 复述检查清单\n- [x] 关键点1\n- [x] 关键点2\n- [x] 无事实性错误\n"
         EV_PARTIAL_MIX = (
             "## 作答与判分\n"
             "- 题1：作答「3」｜正确性=对｜独立性=独立｜调度档=Good\n"
@@ -2391,7 +2442,7 @@ def selftest():
         r_type_con = check(_mk2("v61-typed-con", KP_PROG_TYPED,
                                 {"知识清单.md": KPLIST_TYPED,
                                  "exercises/01-变量-2026-01-01.md":
-                                 EV_TYPED_OK.replace("KP-01-02：", "关键点：")}), release=True)
+                                 EV_TYPED_OK.replace("KP-01-02", "")}), release=True)
         ok = ok and any(e["code"] == "E-KP-TYPED-GATE" and "KP-01-02" in e["message"]
                         for e in r_type_con["errors"])
         r_type_vis = check(_mk2("v61-typed-vis", KP_PROG_TYPED,

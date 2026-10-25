@@ -176,7 +176,7 @@ def check_item(item: dict[str, Any]) -> dict[str, Any]:
         minimum = parse_version(item.get("min_version"))
         current = sys.version_info[:3]
         ready = minimum is None or current >= minimum
-        result.update(status="ready" if ready else "unavailable", reason_code="ok" if ready else "version_incompatible", detail=f"Python {current[0]}.{current[1]}.{current[2]}；最低要求 {item.get('min_version', '未指定')}")
+        result.update(status="ready" if ready else "needs_setup", reason_code="ok" if ready else "version_incompatible", detail=f"Python {current[0]}.{current[1]}.{current[2]}；最低要求 {item.get('min_version', '未指定')}")
         return result
 
     return result
@@ -208,12 +208,12 @@ def dependency_status(check_results: list[dict[str, Any]], scope: set[str]) -> s
     scoped = [item for item in check_results if check_in_scope(item, scope)]
     required = [item for item in scoped if item["required"]]
     optional = [item for item in scoped if not item["required"]]
-    if any(item["status"] == "missing" for item in required):
-        return "missing"
     if any(item["status"] == "unavailable" for item in required):
         return "unavailable"
+    if any(item["status"] in ("missing", "needs_setup") for item in required):
+        return "needs_setup"
     if any(item["status"] != "ready" for item in optional):
-        return "unavailable"
+        return "needs_setup" if any(item["status"] == "needs_setup" for item in optional) else "unavailable"
     return "ready"
 
 
@@ -308,7 +308,7 @@ def selftest() -> int:
     try:
         globals()["sys"] = SimpleNamespace(version_info=(3, 9, 18))
         ok = ok and check_item({"id": "v", "type": "python", "required": True,
-                                "min_version": "3.10", "capabilities": ["基础"]})["status"] == "unavailable"
+                                "min_version": "3.10", "capabilities": ["基础"]})["status"] == "needs_setup"
         ok = ok and dependency_status(
             [{"id": "g", "required": False, "status": "unavailable", "capabilities": ["KP"]}],
             {"基础"}) == "ready"
@@ -319,7 +319,7 @@ def selftest() -> int:
         with contextlib.redirect_stdout(buf):
             rc_old = main(["--manifest", str(manifest_path), "--capability", "进度校验与证据验证"])
         out_old = json.loads(buf.getvalue())
-        ok = ok and rc_old == 1 and out_old["status"] == "unavailable"
+        ok = ok and rc_old == 1 and out_old["status"] == "needs_setup"
         ok = ok and "functional_degradations" not in out_old and "unmapped_capabilities" not in out_old
         ok = ok and "停止" in out_old["next_action"]
     finally:
@@ -366,13 +366,15 @@ def main(argv=None) -> int:
     scope = set(args.capability) or set(manifest["capabilities"])
     results = []
     has_missing = False
+    has_needs_setup = False
     has_unavailable = False
     for dependency in dependencies:
         check_results = [check_item(item) for item in dependency["checks"]]
         dependency_state = dependency_status(check_results, scope)
         dep_capabilities = [cap for cap in dependency["capabilities"] if cap in scope]
-        if dependency_state == "missing":
+        if dependency_state in ("missing", "needs_setup"):
             has_missing = True
+            has_needs_setup = True
         elif dependency_state != "ready":
             has_unavailable = True
         scoped_checks = [item for item in check_results if check_in_scope(item, scope)]
@@ -389,10 +391,10 @@ def main(argv=None) -> int:
             item["setup"] = filtered_setup(dependency["setup"])
         results.append(item)
 
-    if has_missing:
-        status = "needs_setup"
-    elif has_unavailable:
+    if has_unavailable:
         status = "unavailable"
+    elif has_missing or has_needs_setup:
+        status = "needs_setup"
     else:
         status = "ready"
     output = {

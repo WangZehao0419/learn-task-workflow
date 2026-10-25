@@ -2,6 +2,8 @@
 
 本文件是 `evals.json` 的运行记录载体：machine 侧记录脚本端到端夹具与 selftest 的真实输出；human 回放待真实教学会话产生后回填，并交**独立评分者**（非执行模型）按五轴打分。
 
+> **文件名口径（v6.10.0）**：本文件历史记录中的旧 references 文件名按当时版本保留，旧名→新名映射见 `contracts/rules.json#path_aliases`；现行规范以新职责文件为准。
+
 > **历史口径说明（2026-10-25）**：v6.4–v6.8.1 记录中的“深讲拆节”“预计讲授超过 30 分钟拆节”等表述是**当时版本的历史口径**，不是现行规则。现行统一语义为：深讲数量只影响课时与块级安排，不改变节号；讲义单元数和时间不触发拆节。现行规则以 `SKILL.md` 与 `references/` 为准。
 
 ## 运行记录
@@ -977,3 +979,11 @@ mutation-check: 11/11 mutations detected
 - 验证器加固：`verify-v64-consistency.py` 由 34 项增至 39 项，新增全规范面旧文案扫描，以及“旧深讲拆节”“单元/时间拆节”“深讲数量硬上限”三组 mutation 与合法 30 分钟不误报反例。`evals.json` 的 E108 描述与机器证据计数同步 39。
 - 本轮最终复跑（`D:/me/learn-task-workflow-workspace/rule-audit/final-test-results.json`）：六脚本 selftest 全 0；11 个验证器全 0；JSON 有效；`git diff --check` 0。
 - 边界：E135–E137、真人冷读、延迟迁移和宿主触发率仍未验证；不得据此宣称教学效果提升。未 commit/push。
+
+#### v6.10.0 职责重构与规则单一来源（2026-10-26）
+
+- 结构：11 个 references 重构为 12 个职责文件；共享定义单点化；新增 `contracts/rules.json` 与 `scripts/rule_contract.py`（契约自检 + 拓扑检查）。
+- 行为：小节 2/3 可调（progress.md `小节目标线`，缺省取契约）；复述门改为「关键点 ≥2 且无事实性错误」；Python 低于清单要求 → `needs_setup`；结课非法目标线 → `E-FINAL-INVALID-TARGET` 拦停。
+- 回归：七模块 `--selftest` 全 0；`verify-marker-rules.py`、`verify-readability.py`、`verify-formula-typesetting.py` 全 0；`rule_contract --topology` 0；JSON 有效；`git diff --check` 0。
+- 环境：`skill_ops validate` 仅 `dependency_schema`（本技能使用环境清单 schema 2，skill-studio 校验器期望 schema 1）；`package` 同因阻断，已用等效 ZIP 核对 `contracts/rules.json` 与 `scripts/rule_contract.py` 在包内。
+- 边界：E66–E137 的 human 场景仍未跑；不据此宣称教学效果。

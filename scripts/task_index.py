@@ -38,11 +38,13 @@ import sys
 import tempfile
 from pathlib import Path
 
-# 同步维护提示：本三组枚举与 progress_check.py 顶部同名枚举必须同步修改；
-# hold_entry_malformed / hold_disposition_excluded 与 progress_check.py 的同名函数（该文件另有 hold_is_designed）必须同步修改。
-ENUM_PHASE = ["接料建档", "诊断摸底", "计划确认中", "逐节学习", "复习巩固", "结课", "已完成"]
-ENUM_TYPE = ["知识型", "技能型", "备考型", "材料型"]
-ENUM_FAMILY = ["数学类", "编程类", "语言类", "理论概念类", "记忆密集类"]
+import rule_contract
+
+# 枚举唯一来源：contracts/rules.json（缺失/畸形即结构化失败）。
+_C = rule_contract.load_or_exit()["constants"]
+ENUM_PHASE = _C["phases"]
+ENUM_TYPE = _C["types"]
+ENUM_FAMILY = _C["subject_families"]
 
 FIELD_RE = re.compile(r"^-\s*([^：:]+)[：:]\s*(.*)$")
 # 已完成勾选：x / X 均识别

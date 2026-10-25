@@ -1,0 +1,594 @@
+{
+ "schema": "ltw-rules/1",
+ "version": "6.10.0",
+ "files": [
+  {
+   "id": "routing",
+   "path": "references/routing.md",
+   "layer": 1,
+   "owns": "意图路由、a–f 决策树、快捷指令、生态分工",
+   "depends_on": []
+  },
+  {
+   "id": "workflow",
+   "path": "references/workflow.md",
+   "layer": 1,
+   "owns": "S0–S5、块/KP 定义、闸口、覆盖审计、结课",
+   "depends_on": []
+  },
+  {
+   "id": "assessment",
+   "path": "references/assessment.md",
+   "layer": 1,
+   "owns": "判分四态、复述、题量、出题、调度、校准",
+   "depends_on": [
+    "workflow"
+   ]
+  },
+  {
+   "id": "teaching",
+   "path": "references/teaching.md",
+   "layer": 2,
+   "owns": "课内教学动作、呈现、语气、深度、错因",
+   "depends_on": [
+    "workflow",
+    "assessment"
+   ]
+  },
+  {
+   "id": "handout",
+   "path": "references/handout.md",
+   "layer": 3,
+   "owns": "讲义结构/类型/支持级/P1/P2/格式/自检",
+   "depends_on": [
+    "workflow",
+    "assessment",
+    "teaching"
+   ]
+  },
+  {
+   "id": "data",
+   "path": "references/data.md",
+   "layer": 1,
+   "owns": "目录/schema/字段/迁移/Trace",
+   "depends_on": []
+  },
+  {
+   "id": "failure",
+   "path": "references/failure.md",
+   "layer": 1,
+   "owns": "红线、失败即停、环境就绪、恢复、幂等/不可逆",
+   "depends_on": []
+  },
+  {
+   "id": "operations",
+   "path": "references/operations.md",
+   "layer": 1,
+   "owns": "脚本 CLI/退出码/错误码入口/selftest/路径",
+   "depends_on": []
+  },
+  {
+   "id": "composition",
+   "path": "references/composition.md",
+   "layer": 1,
+   "owns": "跨机制组合与优先级",
+   "depends_on": []
+  },
+  {
+   "id": "subjects",
+   "path": "references/subjects.md",
+   "layer": 1,
+   "owns": "学科族差异、应试技巧包",
+   "depends_on": []
+  },
+  {
+   "id": "formulas",
+   "path": "references/formulas.md",
+   "layer": 1,
+   "owns": "公式/符号排版与验证",
+   "depends_on": []
+  },
+  {
+   "id": "evidence",
+   "path": "references/evidence.md",
+   "layer": 1,
+   "owns": "来源分级、文献依据与边界",
+   "depends_on": []
+  }
+ ],
+ "rules": [
+  {
+   "id": "R1",
+   "owner": "references/workflow.md#逐块推进（最细知识点）",
+   "type": "definition"
+  },
+  {
+   "id": "R2",
+   "owner": "references/workflow.md#逐块推进（最细知识点）",
+   "type": "definition"
+  },
+  {
+   "id": "R3",
+   "owner": "references/assessment.md#判分口径",
+   "type": "definition"
+  },
+  {
+   "id": "R4",
+   "owner": "references/workflow.md#S3 闸口（可检验）",
+   "type": "definition"
+  },
+  {
+   "id": "R5",
+   "owner": "references/workflow.md#S5 结课",
+   "type": "definition"
+  },
+  {
+   "id": "R6",
+   "owner": "references/assessment.md#题量预算与自测≠题组",
+   "type": "definition"
+  },
+  {
+   "id": "R7",
+   "owner": "references/assessment.md#复述证据",
+   "type": "definition"
+  },
+  {
+   "id": "R8",
+   "owner": "references/assessment.md#出题流水线（四步）",
+   "type": "definition"
+  },
+  {
+   "id": "R9",
+   "owner": "references/failure.md#🔴 Critical 红线",
+   "type": "protocol"
+  },
+  {
+   "id": "R10",
+   "owner": "references/data.md#progress.md 字段（唯一事实源）",
+   "type": "schema"
+  },
+  {
+   "id": "R11",
+   "owner": "references/failure.md#环境就绪与阻断",
+   "type": "protocol"
+  },
+  {
+   "id": "R12",
+   "owner": "references/handout.md#1. 一页合同（目标态，11 条）",
+   "type": "definition"
+  },
+  {
+   "id": "R13",
+   "owner": "references/formulas.md#公式与科学符号排版",
+   "type": "definition"
+  },
+  {
+   "id": "R14",
+   "owner": "references/routing.md#入口路由判别决策树（a–f）",
+   "type": "protocol"
+  },
+  {
+   "id": "R15",
+   "owner": "references/failure.md#🔴 Critical 红线",
+   "type": "protocol"
+  },
+  {
+   "id": "R16",
+   "owner": "references/teaching.md#对话轮呈现标记（软默认，所有风格共用）",
+   "type": "definition"
+  },
+  {
+   "id": "R17",
+   "owner": "references/operations.md#脚本清单",
+   "type": "schema"
+  },
+  {
+   "id": "R18",
+   "owner": "references/composition.md#跨机制组合规则",
+   "type": "definition"
+  },
+  {
+   "id": "R19",
+   "owner": "references/evidence.md#来源分级与出处四要素",
+   "type": "definition"
+  },
+  {
+   "id": "R20",
+   "owner": "references/assessment.md#视觉任务证据",
+   "type": "definition"
+  },
+  {
+   "id": "R21",
+   "owner": "references/assessment.md#难度伺服",
+   "type": "definition"
+  },
+  {
+   "id": "R22",
+   "owner": "references/assessment.md#零提示与条件化判定题",
+   "type": "definition"
+  }
+ ],
+ "path_aliases": {
+  "entry-routing.md": "references/routing.md",
+  "phases-and-gates.md": "references/workflow.md",
+  "teaching-loop.md": "references/teaching.md",
+  "lecture-styles.md": "references/teaching.md",
+  "handout-design.md": "references/handout.md",
+  "data-and-recovery.md": "references/data.md",
+  "redlines.md": "references/failure.md",
+  "setup-guide.md": "references/failure.md",
+  "subject-playbooks.md": "references/subjects.md",
+  "formula-typesetting.md": "references/formulas.md",
+  "methodology.md": "references/evidence.md"
+ },
+ "constants": {
+  "phases": [
+   "接料建档",
+   "诊断摸底",
+   "计划确认中",
+   "逐节学习",
+   "复习巩固",
+   "结课",
+   "已完成"
+  ],
+  "types": [
+   "知识型",
+   "技能型",
+   "备考型",
+   "材料型"
+  ],
+  "subject_families": [
+   "数学类",
+   "编程类",
+   "语言类",
+   "理论概念类",
+   "记忆密集类"
+  ],
+  "teaching_strategies": [
+   "先测后教",
+   "先教后测"
+  ],
+  "review_origin_phases": [
+   "逐节学习",
+   "结课",
+   "已完成"
+  ],
+  "starts": [
+   "零基础",
+   "入门",
+   "进阶"
+  ],
+  "grading": {
+   "values": [
+    "对",
+    "部分",
+    "错",
+    "未判"
+   ],
+   "aliases": {
+    "对": [
+     "对",
+     "正确",
+     "✓",
+     "√",
+     "correct"
+    ],
+    "部分": [
+     "部分",
+     "partial"
+    ],
+    "错": [
+     "错",
+     "错误",
+     "✗",
+     "×",
+     "不对",
+     "否",
+     "incorrect"
+    ],
+    "未判": [
+     "未判",
+     "待判",
+     "ungraded"
+    ]
+   }
+  },
+  "kp": {
+   "states": [
+    "未讲",
+    "已讲",
+    "暂缓",
+    "排除"
+   ],
+   "types": [
+    "记忆",
+    "概念",
+    "程序",
+    "设计"
+   ],
+   "visual_tasks": [
+    "识别",
+    "关系",
+    "图表",
+    "比较"
+   ],
+   "type_aliases": {
+    "memory": "记忆",
+    "concept": "概念",
+    "procedure": "程序",
+    "design": "设计"
+   },
+   "visual_aliases": {
+    "identification": "识别",
+    "relationship": "关系",
+    "chart": "图表",
+    "comparison": "比较"
+   }
+  },
+  "gates": {
+   "min_ratio": [
+    2,
+    3
+   ],
+   "final_ratio": [
+    4,
+    5
+   ]
+  },
+  "restatement": {
+   "keypoints": 2
+  },
+  "budget": {
+   "self_test": 2,
+   "exercise_group_min": 2,
+   "exercise_group_max": 3,
+   "unit_check_max": 1,
+   "core_total_max": 6,
+   "l3_review_min": 3,
+   "l3_review_max": 5
+  },
+  "schemas": {
+   "index": "learn-task-index/5",
+   "due_queue": "ltw-due-queue/3",
+   "calibration": "ltw-calibration/3",
+   "manifest": "2"
+  },
+  "headings": {
+   "self_test": [
+    "本节检验问题",
+    "本节自测题",
+    "本节检验题",
+    "本节自测",
+    "本节检验",
+    "检验问题",
+    "自测题",
+    "检验题",
+    "自测",
+    "检验"
+   ],
+   "answer_suffixes": [
+    "答案",
+    "答案区",
+    "答案要点",
+    "答案与解析"
+   ],
+   "lead_words": [
+    "参考答案",
+    "参考概括",
+    "参考译文",
+    "解答",
+    "答案",
+    "证明",
+    "译文",
+    "范文",
+    "例文",
+    "代码",
+    "脚本",
+    "输出",
+    "步骤",
+    "操作",
+    "方案",
+    "设计说明",
+    "解",
+    "答",
+    "Model answer",
+    "Sample answer",
+    "Answer",
+    "Solution",
+    "Proof",
+    "Translation",
+    "Output",
+    "Code",
+    "Script",
+    "Steps",
+    "Key"
+   ],
+   "unicode_denylist": [
+    "→",
+    "✔",
+    "✓",
+    "✅",
+    "√",
+    "≤",
+    "≥",
+    "∪",
+    "⇔",
+    "⇒"
+   ]
+  },
+  "handout": {
+   "type_unit_counts": {
+    "记忆": [
+     5,
+     7
+    ],
+    "概念": [
+     5,
+     7
+    ],
+    "程序": [
+     3,
+     5
+    ],
+    "设计": [
+     1,
+     3
+    ]
+   },
+   "concept_map_threshold": {
+    "concepts": 5,
+    "dependencies": 3
+   }
+  },
+  "reader": {
+   "table_cols_min": 2,
+   "table_cols_max": 4,
+   "svg_font_min": 14,
+   "svg_line_min": 1.5,
+   "overview_cols": 3,
+   "overview_rows_min": 1,
+   "overview_rows_max": 3
+  },
+  "scheduler": {
+   "grade_base": {
+    "hard": 1.4,
+    "good": 2.2,
+    "easy": 3.0
+   },
+   "init_s": {
+    "again": 1.0,
+    "hard": 1.5,
+    "good": 3.0,
+    "easy": 6.0
+   },
+   "d_drift": {
+    "again": 1.0,
+    "hard": 0.5,
+    "good": 0.0,
+    "easy": -1.0
+   },
+   "s_max": 365.0,
+   "r_min": 0.25,
+   "r_max": 2.0,
+   "d_min": 1.0,
+   "d_max": 5.0,
+   "default_s": 3.0,
+   "default_d": 3
+  },
+  "errors": {
+   "E": [
+    "E-ALL-FAILED",
+    "E-ATTEMPT-CONFLICT",
+    "E-BOX",
+    "E-BOX-EMPTY",
+    "E-BOX-FORMAT",
+    "E-BOX-INCOMPLETE",
+    "E-BOX-WRAP",
+    "E-CHANGED-SET-INVALID",
+    "E-CONTRACT-INVALID",
+    "E-CONTRACT-MISSING",
+    "E-CORE-UNLEARNED",
+    "E-CURSOR-DANGLING",
+    "E-EMPTY-EVIDENCE",
+    "E-ENUM-FAMILY",
+    "E-ENUM-PHASE",
+    "E-ENUM-START",
+    "E-ENUM-STRATEGY",
+    "E-ENUM-TYPE",
+    "E-EVIDENCE-ID-MISMATCH",
+    "E-EVIDENCE-REF-MISSING",
+    "E-FINAL-ATTEMPT-CONFLICT",
+    "E-FINAL-BELOW-TARGET",
+    "E-FINAL-BLUEPRINT-GAP",
+    "E-FINAL-INVALID-TARGET",
+    "E-FINAL-NO-EVIDENCE",
+    "E-GATE-RATIO-INVALID",
+    "E-GATE-THRESHOLD",
+    "E-HEADER-BRIEF",
+    "E-HINT-ONLY",
+    "E-IMG-DEADLINK",
+    "E-IMG-READ",
+    "E-KEY-ABILITY-UNMET",
+    "E-KP-TYPED-GATE",
+    "E-LEDGER-RESIDUE",
+    "E-LESSON-ID-DUP",
+    "E-MARKER-LEGACY",
+    "E-MISSING-FIELD",
+    "E-NO-DIAGNOSTIC",
+    "E-NO-EVIDENCE",
+    "E-NO-FINAL-EXAM",
+    "E-NO-GRADED-ATTEMPT",
+    "E-NO-INDEPENDENCE",
+    "E-NO-PROGRESS",
+    "E-NO-RESTATEMENT",
+    "E-NO-ROUTE-STRICT",
+    "E-READ-FILE",
+    "E-REQ-MISSING",
+    "E-REVIEW-ORIGIN",
+    "E-ROUTE-NUMBER",
+    "E-ROUTE-UNDONE",
+    "E-RUBRIC-SUM",
+    "E-THIRD-CONFLICT",
+    "E-THIRD-EXEMPT-MISUSE",
+    "E-TOPOLOGY-DAG",
+    "E-TOPOLOGY-FILE",
+    "E-TOPOLOGY-HEADER",
+    "E-TOPOLOGY-LOAD",
+    "E-TOPOLOGY-OLDNAME",
+    "E-TOPOLOGY-OWNER",
+    "E-UNDECLARED-CHANGES",
+    "E-UNREADABLE-PROGRESS"
+   ],
+   "W": [
+    "W-BOX-WRAP",
+    "W-CONFIDENCE-AMBIGUOUS",
+    "W-CURSOR-DANGLING",
+    "W-CW-LOWCONF",
+    "W-CW-ORPHAN",
+    "W-EMPTY-EVIDENCE",
+    "W-KP",
+    "W-KP-HOLD-CROSS",
+    "W-KP-LIST-MISSING",
+    "W-KP-STATE-MISMATCH",
+    "W-KP-SUMMARY-MISMATCH",
+    "W-MARKER-CONTENT",
+    "W-MATERIAL-COVERAGE-GAP",
+    "W-META-INVALID",
+    "W-MODULE",
+    "W-MODULE-CONTRACT-INCOMPLETE",
+    "W-MULTI-EVIDENCE",
+    "W-NO-COVERAGE",
+    "W-NO-COVERAGE-AUDIT",
+    "W-NO-PROPOSED-STATE",
+    "W-NO-ROUTE",
+    "W-NO-TIER",
+    "W-PROGRESS",
+    "W-PROGRESS-MISSING",
+    "W-PROGRESS-UNREADABLE",
+    "W-READER",
+    "W-READER-ALT",
+    "W-READER-CONCLUSION",
+    "W-READER-EMPHASIS",
+    "W-READER-HEADING",
+    "W-READER-INDEX",
+    "W-READER-OVERVIEW",
+    "W-READER-SVG",
+    "W-READER-TABLE",
+    "W-RUBRIC-SOURCE",
+    "W-SELFTEST-EMPTY",
+    "W-SELFTEST-MISSING",
+    "W-STALE-REVIEW-ORIGIN",
+    "W-STYLE-POINTER",
+    "W-UNGRADED-ATTEMPT",
+    "W-UNICODE-CHAR",
+    "W-UNPARSED-HOLD",
+    "W-UNPARSED-ITEM",
+    "W-UNPARSED-KP",
+    "W-UNPARSED-MATERIAL",
+    "W-UNPARSED-MODULE",
+    "W-UNPARSED-ROUTE",
+    "W-VOIDED-ATTEMPT"
+   ]
+  }
+ }
+}

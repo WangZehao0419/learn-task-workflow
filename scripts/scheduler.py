@@ -78,23 +78,27 @@ import tempfile
 from datetime import date
 from pathlib import Path
 
+import rule_contract
+
 
 class ScheduleError(ValueError):
     """调度参数/范围错误：统一结构化拒绝（exit 2），不让异常栈成为外部协议。"""
 
 
-GRADE_BASE = {"hard": 1.4, "good": 2.2, "easy": 3.0}
-INIT_S = {"again": 1.0, "hard": 1.5, "good": 3.0, "easy": 6.0}
-D_DRIFT = {"again": 1.0, "hard": 0.5, "good": 0.0, "easy": -1.0}
-S_MAX = 365.0
-R_MIN, R_MAX = 0.25, 2.0
-D_MIN, D_MAX = 1.0, 5.0
+# 调度常数唯一来源：contracts/rules.json（缺失/畸形即结构化失败）。
+_C = rule_contract.load_or_exit()["constants"]["scheduler"]
+GRADE_BASE = dict(_C["grade_base"])
+INIT_S = dict(_C["init_s"])
+D_DRIFT = dict(_C["d_drift"])
+S_MAX = float(_C["s_max"])
+R_MIN, R_MAX = float(_C["r_min"]), float(_C["r_max"])
+D_MIN, D_MAX = float(_C["d_min"]), float(_C["d_max"])
 ELAPSED_INF = float("inf")   # 经过天数只要求「有限且 ≥0」：R=elapsed/S 已夹在 [0.25,2.0]，
 # 故长中断（如 10 年）不会放大间隔，无需人为上界（V07/长中断兼容；旧 3650 上界已移除）。
 DATE_MIN_ORD = date.min.toordinal()
 DATE_MAX_ORD = date.max.toordinal()
-DEFAULT_S = 3.0
-DEFAULT_D = 3
+DEFAULT_S = float(_C["default_s"])
+DEFAULT_D = int(_C["default_d"])
 DEFAULT_CAUSE = "知识性"  # v2.2：错因缺省枚举（仅脚本输出侧占位回显，模型不得盲补）
 DEFAULT_LEVEL = "B"       # v2.2：级缺省枚举（同上）
 

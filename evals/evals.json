@@ -1,8 +1,8 @@
 {
  "schema": "ltw-evals/2",
  "skill": "learn-task-workflow",
- "applies_to_version": "6.9.0",
- "updated_at": "2026-10-25",
+ "applies_to_version": "6.10.0",
+ "updated_at": "2026-10-26",
  "grading_axes": [
   "教学正确性",
   "目标匹配",
@@ -60,7 +60,7 @@
  },
  "run_log_ref": "evals/run-log.md（「运行记录」节，run_id: v690-script-hardening-20261025 / v681-finest-kp-block-20261025；历史 v680-block-pacing-20261024 / v673-readability-20261023 / v672-cleanup2-20261023 / v672-cleanup-20261023 / v671-cleanup-20261023 / v670-p1p2-20261023 / v660-stage3-20261023 / v650-stage2-20261023 / v640-consistency-20261023 / v630-selftest-20261023 / v620-selftest-20261022 / v610-selftest-20261022 / v600-selftest-20261022；公式基线见 formula-typesetting-5.5.0-20261017-static）",
  "run_log_note": "v6.9.0 已完成 4 组新旧 LLM 模拟盲评并归档外置 workspace，但真实陪学、E135–E137 真人回放与真人冷读仍未产出；未回填 actual_output / run_id / scores 的条目保持「未验证」，模拟证据不得写成真人结论。",
- "machine_evidence_ref": "包内 scripts/*.py --selftest（六脚本，含讲义结构校验 verify_explanation.py：shaanxi-gaoshu materials 校验通过、退出码 0）；evals/verify-formula-typesetting.py（公式呈现静态契约 56 项检查、退出码 0；属静态证据，非渲染验证）；包外验收复现与真实教学日志不作为技能包运行依赖；evals/verify-marker-rules.py（五要素新编号规则行为契约 19 项检查、退出码 0；临时目录夹具真实运行 verify_explanation.py，属行为级静态证据，非对话回放）；v6.0 追加：scheduler --selftest 断言 2b/7b（同会话抑制、保持复习 reason、ltw-due-queue/3）与 progress_check --selftest 四态组（partial/ungraded/void）均退出码 0；v6.1 追加：progress_check --selftest 分型组（E-KP-TYPED-GATE）与大纲契约/intake 组（W-MODULE-* / E-ENUM-STRATEGY）退出码 0、kp_sort --selftest 分型字段夹具退出码 0；v6.2 追加：evals/verify-v62-docs.py 文档契约（交接/记录/证据、记忆纪律、ask hint、来源备课、选项规则、版本与 E66–E69 登记）退出码 0；v6.3 追加：evals/verify-v63-docs.py 文档契约（出题流水线四步、旧题去重、规划字段、一次修复、视觉任务原始来源、版本与 E71–E73 登记）退出码 0；v6.4 追加：evals/verify-v64-consistency.py 阶段 0 + 理解核心契约（状态行/③豁免/交付标识/L3/单元-KP/头部/深讲与拆节关系（v6.4 历史口径；v6.9.0 改为不强制拆节）/类型单元数/命名/概念地图/理解四证/六问/四段/闭卷/二次定稿 + mutation）退出码 0；v6.5 追加：evals/verify-v65-stage2.py 阶段 2 契约（类型模板/四步流水线/L1-L3/学习者状态/决策日志/修复表 + mutation）退出码 0；v6.6 追加：evals/verify-v66-stage3.py 阶段 3 契约（四向对齐/覆盖行/深度分配/评估例真实性/来源保真 + mutation）退出码 0；v6.7 追加：evals/verify-v67-p1p2.py P1/P2 契约（文本结构/主张—证据/设计量表/主图/质量回路/要点卡/移动端/MVP/教材章节 + mutation）退出码 0；v6.7.1 清理：verify-v67-p1p2.py 19 项（移除教师包/预习与家长侧入口）退出码 0；v6.7.2 清理：移除原 SR-8 安全边界与 E43，原 SR-9 重编号为 SR-8，术语「学生」统一为「学员」；v6.7.3 追加：evals/verify-readability.py 读者版可读性/图表契约（文档 + 样板版面 + mutation + verify_explanation.py --reader）退出码 0；上述 56 项公式契约仍为基线；v6.8 追加：块级节奏文档契约由本次人工复核与 verify-formula-typesetting.py 版本字段校验覆盖，六个脚本 --selftest 退出码 0；task_index schema 4→5（current_block/block_total 可选键，selftest 含 block 夹具）；E135 为 human 场景，未跑，不冒充 machine 证据。v6.8.1 追加：evals/verify-v681-docs.py 最细知识点契约 12 项（含 mutation）退出码 0；verify-v64-consistency.py 34 项退出码 0；E136 为 human 场景，未跑，不冒充 machine 证据。v6.8.2 追加：evals/verify-v682-docs.py 对话轮呈现与语气契约 9 项（含 7 个 mutation 与 1 个畸形输入检查）退出码 0；第四次复审补充 texts=None、非字符串文件值、非法 UTF-8 的兜底实测；全量复审覆盖 11 个 evals 验证器空根、畸形 evals/依赖清单与非法 UTF-8，均无 traceback，verify-readability 缺夹具不再崩溃；E137 为 human 场景，未跑，不冒充 machine 证据。v6.9.0 追加：六脚本 selftest 全绿；11 个 evals 验证器全绿（verify-formula 56、marker 19、readability 24、v62 17、v63 32、v64 39、v65 24、v66 22、v67 19、v681 12、v682 9）；新增伪答案、非法目标线、第 0 节、KP 别名、attempt 冲突、同会话 current-due、reader 缺失/坏编码与 manifest schema 2 回归；4 组新旧盲评 12/12 对 5/12，为 LLM 模拟证据，不是真人学习效果。",
+ "machine_evidence_ref": "包内七个模块 --selftest（task_index / progress_check / scheduler / kp_sort / check_environment / verify_explanation / rule_contract）退出 0；rule_contract --topology 退出 0；evals/verify-marker-rules.py、verify-readability.py、verify-formula-typesetting.py 行为/结构测试退出 0。以上均为静态/行为级证据，不是真人教学回放；E66–E137 的 human 场景未跑，不冒充 machine 证据。",
  "dialogues_ref": "evals/对话对照-批次B.md（设计摘要，非运行日志；真实新旧对照须另附运行输出）",
  "cases": [
   {
@@ -338,7 +338,7 @@
    "prompt": "空/模板判分、路线未完成却申请结课",
    "fixture": "空证据 / 模板证据 / 未完成路线 / 缺综合测验 / 关键能力未讲",
    "pass_condition": "本次放行失败并指出缺的证据",
-   "actual_output": "release 拦截：E-EMPTY-EVIDENCE / E-NO-ATTEMPT / E-ALL-FAILED / E-HINT-ONLY / E-GATE-THRESHOLD / E-NO-RESTATEMENT / E-ROUTE-UNDONE / E-NO-ROUTE-STRICT / E-NO-FINAL-EXAM / E-CORE-UNLEARNED；release_valid_local_baseline 仍 ok=true",
+   "actual_output": "release 拦截：E-EMPTY-EVIDENCE / E-NO-GRADED-ATTEMPT / E-ALL-FAILED / E-HINT-ONLY / E-GATE-THRESHOLD / E-NO-RESTATEMENT / E-ROUTE-UNDONE / E-NO-ROUTE-STRICT / E-NO-FINAL-EXAM / E-CORE-UNLEARNED；release_valid_local_baseline 仍 ok=true",
    "run_id": "rework-20261015-state-acceptance",
    "scores": {
     "教学正确性": null,
@@ -493,7 +493,7 @@
    "scenario": "等差数列通项新记号",
    "kind": "human",
    "prompt": "解释等差数列通项公式 a_n=a_1+(n-1)d 中每个符号的含义，并给一个正确代入的例子。",
-   "fixture": "无脚本任务：新记号首次引入场景（三件套归 lecture-styles.md，本例只验呈现）",
+   "fixture": "无脚本任务：新记号首次引入场景（三件套归 handout.md，本例只验呈现）",
    "pass_condition": "先定义符号再给正确代入例子；上下标可辨",
    "actual_output": null,
    "run_id": null,
@@ -1088,14 +1088,15 @@
    "scenario": "v6.2 文档契约",
    "kind": "machine",
    "prompt": "检查 v6.2 规则是否真正写入对应分册：交接/学习记录/讲授证据、记忆写法纪律、ask hint、来源备课、选项/答案键规则、版本与 eval 登记。",
-   "fixture": "仓库当前 SKILL.md / references / CREDITS.md / setup-guide.md / skill-dependencies.json / evals.json。",
-   "pass_condition": "verify-v62-docs.py 全项 OK、退出码 0；版本不低于 6.2.0；交接/记录/证据三区、记忆纪律、ask hint、来源备课、选项规则均能在对应分册中定位；E66–E69 已登记。",
+   "fixture": "仓库当前 SKILL.md / references / CREDITS.md / failure.md / skill-dependencies.json / evals.json。",
+   "pass_condition": "按 v6.10.0 职责文件复核：相关规则在 data.md / teaching.md / assessment.md 可定位，行为测试退出 0；原 verify-v6x 文档校验脚本已删除，不得据旧脚本宣称通过。",
    "actual_output": null,
    "run_id": null,
    "scores": null,
    "verdict": "未验证",
    "reviewer": null,
-   "machine_ref": "evals/verify-v62-docs.py；2026-10-22 运行退出码 0"
+   "machine_ref": null,
+   "review_note": "原校验脚本已删除（v6.10.0 规则收敛），待行为级重跑。 原校验脚本已删除（v6.10.0 规则收敛），该场景待按新职责文件重跑。"
   },
   {
    "id": "E67",
@@ -1154,14 +1155,15 @@
    "scenario": "v6.3 文档契约",
    "kind": "machine",
    "prompt": "检查 v6.3 规则是否真正写入对应分册：出题流水线四步（探索/规划/生成/修复）、旧题去重、规划字段、一次修复、视觉任务原始来源、版本与 eval 登记。",
-   "fixture": "仓库当前 SKILL.md / references / CREDITS.md / setup-guide.md / skill-dependencies.json / evals.json。",
-   "pass_condition": "verify-v63-docs.py 全项 OK、退出码 0；版本五处不低于 6.3.0；四步与视觉来源规则均能在对应分册定位；E71–E73 已登记。",
+   "fixture": "仓库当前 SKILL.md / references / CREDITS.md / failure.md / skill-dependencies.json / evals.json。",
+   "pass_condition": "按 v6.10.0 职责文件复核：相关规则在 assessment.md 可定位，行为测试退出 0；原 verify-v6x 文档校验脚本已删除，不得据旧脚本宣称通过。",
    "actual_output": null,
    "run_id": null,
    "scores": null,
    "verdict": "未验证",
    "reviewer": null,
-   "machine_ref": "evals/verify-v63-docs.py；2026-10-23 运行退出码 0"
+   "machine_ref": null,
+   "review_note": "原校验脚本已删除（v6.10.0 规则收敛），待行为级重跑。 原校验脚本已删除（v6.10.0 规则收敛），该场景待按新职责文件重跑。"
   },
   {
    "id": "E72",
@@ -1194,28 +1196,30 @@
    "scenario": "v6.4 一致性 + 理解核心契约",
    "kind": "machine",
    "prompt": "检查讲义规则是否已收拢为一页合同、修掉状态行/③ 豁免/交付标识/L3/单元-KP/头部/深讲/类型单元数/命名/概念地图等冲突，并检查理解四证/设计六问/四段支架/闭卷自检/二次定稿/关键能力/冷读是否写入并接线。",
-   "fixture": "仓库当前 SKILL.md / references / CREDITS.md / setup-guide.md / skill-dependencies.json / evals.json / scripts/verify_explanation.py。",
-   "pass_condition": "verify-v64-consistency.py 全项 OK、退出码 0（39 项）；版本五处不低于 6.4.0；handout-design.md 与各分册关键短语可定位；mutation 能抓到 8+ 阈值、状态行合并、设计类标识被删、不拆节规则回退、旧时间拆节或旧深讲数量硬上限文案回流、纯记忆误写、脚本标识多出等回退；理解核心六件套在 handout-design 与 lecture-styles/phases 可定位。",
+   "fixture": "仓库当前 SKILL.md / references / CREDITS.md / failure.md / skill-dependencies.json / evals.json / scripts/verify_explanation.py。",
+   "pass_condition": "按 v6.10.0 职责文件复核：相关规则在 handout.md 可定位，行为测试退出 0；原 verify-v6x 文档校验脚本已删除，不得据旧脚本宣称通过。",
    "actual_output": null,
    "run_id": null,
    "scores": null,
    "verdict": "未验证",
    "reviewer": null,
-   "machine_ref": "evals/verify-v64-consistency.py；39 项检查，2026-10-25 运行退出码 0"
+   "machine_ref": null,
+   "review_note": "原校验脚本已删除（v6.10.0 规则收敛），待行为级重跑。 原校验脚本已删除（v6.10.0 规则收敛），该场景待按新职责文件重跑。"
   },
   {
    "id": "E109",
    "scenario": "v6.5 阶段 2 契约",
    "kind": "machine",
    "prompt": "检查类型模板（记忆/概念/程序/设计）、四步讲义流水线、L1/L2/L3 动态、学习者状态、决策日志/修复表是否写入 handout-design 并接线。",
-   "fixture": "仓库当前 SKILL.md / references / CREDITS.md / setup-guide.md / skill-dependencies.json / evals.json。",
-   "pass_condition": "verify-v65-stage2.py 全项 OK、退出码 0（24 项）；版本五处不低于 6.5.0；类型矩阵/流水线/支持级/学习者状态/决策日志均可定位；lecture-styles/phases/entry-routing/teaching-loop/subject-playbooks 已接线；mutation 能抓到矩阵、L3 产物、专家盲点、决策日志、来源对齐被删等回退；E109–E115 已登记。",
+   "fixture": "仓库当前 SKILL.md / references / CREDITS.md / failure.md / skill-dependencies.json / evals.json。",
+   "pass_condition": "按 v6.10.0 职责文件复核：相关规则在 handout.md 可定位，行为测试退出 0；原 verify-v6x 文档校验脚本已删除，不得据旧脚本宣称通过。",
    "actual_output": null,
    "run_id": null,
    "scores": null,
    "verdict": "未验证",
    "reviewer": null,
-   "machine_ref": "evals/verify-v65-stage2.py；24 项检查，2026-10-23 运行退出码 0"
+   "machine_ref": null,
+   "review_note": "原校验脚本已删除（v6.10.0 规则收敛），待行为级重跑。 原校验脚本已删除（v6.10.0 规则收敛），该场景待按新职责文件重跑。"
   },
   {
    "id": "E110",
@@ -1300,14 +1304,15 @@
    "scenario": "v6.6 阶段 3 契约",
    "kind": "machine",
    "prompt": "检查来源→KP→讲义→题组四向对齐、覆盖行、深度分配、教学例/评估例真实性、来源保真是否写入 handout-design 并接线。",
-   "fixture": "仓库当前 SKILL.md / references / CREDITS.md / setup-guide.md / skill-dependencies.json / evals.json。",
-   "pass_condition": "verify-v66-stage3.py 全项 OK、退出码 0（22 项）；版本五处不低于 6.6.0；四向对齐/覆盖行/深度分配/评估例真实性/来源保真均可定位；SKILL/phases/entry-routing/teaching-loop 已接线；mutation 能抓到四向对齐、覆盖行格式、深度分配、引用上限、评估例真实性被删等回退；E116–E121 已登记。",
+   "fixture": "仓库当前 SKILL.md / references / CREDITS.md / failure.md / skill-dependencies.json / evals.json。",
+   "pass_condition": "按 v6.10.0 职责文件复核：相关规则在 handout.md / evidence.md 可定位，行为测试退出 0；原 verify-v6x 文档校验脚本已删除，不得据旧脚本宣称通过。",
    "actual_output": null,
    "run_id": null,
    "scores": null,
    "verdict": "未验证",
    "reviewer": null,
-   "machine_ref": "evals/verify-v66-stage3.py；22 项检查，2026-10-23 运行退出码 0"
+   "machine_ref": null,
+   "review_note": "原校验脚本已删除（v6.10.0 规则收敛），待行为级重跑。 原校验脚本已删除（v6.10.0 规则收敛），该场景待按新职责文件重跑。"
   },
   {
    "id": "E117",
@@ -1379,14 +1384,15 @@
    "scenario": "v6.7.2 P1/P2 契约",
    "kind": "machine",
    "prompt": "检查 P1（文本结构/主张—证据/设计量表/主图/质量回路/要点卡/移动端/MVP/问题停车位/贯穿案例/难度预算）与 P2（教材章节）是否写入 handout-design 并接线。",
-   "fixture": "仓库当前 SKILL.md / references / CREDITS.md / setup-guide.md / skill-dependencies.json / evals.json。",
-   "pass_condition": "verify-v67-p1p2.py 全项 OK、退出码 0（19 项）；版本五处不低于 6.7.2；P1 与教材章节层规则均可定位；SKILL/entry-routing/phases 已接线；mutation 能抓到文本结构、设计量表、要点卡/间隔、要点卡/调度/扩展区冲突、教材章节被删等回退；E122–E126 已登记。",
+   "fixture": "仓库当前 SKILL.md / references / CREDITS.md / failure.md / skill-dependencies.json / evals.json。",
+   "pass_condition": "按 v6.10.0 职责文件复核：相关规则在 handout.md 可定位，行为测试退出 0；原 verify-v6x 文档校验脚本已删除，不得据旧脚本宣称通过。",
    "actual_output": null,
    "run_id": null,
    "scores": null,
    "verdict": "未验证",
    "reviewer": null,
-   "machine_ref": "evals/verify-v67-p1p2.py；19 项检查，2026-10-23 运行退出码 0"
+   "machine_ref": null,
+   "review_note": "原校验脚本已删除（v6.10.0 规则收敛），待行为级重跑。 原校验脚本已删除（v6.10.0 规则收敛），该场景待按新职责文件重跑。"
   },
   {
    "id": "E123",
@@ -1487,7 +1493,7 @@
    "scenario": "v6.7.3 黑白打印、移动端与证据边界",
    "kind": "machine",
    "prompt": "检查黑白打印/窄屏/行长条款与文献边界是否写入规则，避免把方向支持写成已验证。",
-   "fixture": "references/lecture-styles.md / references/handout-design.md / references/methodology.md。",
+   "fixture": "references/handout.md / references/handout.md / references/evidence.md。",
    "pass_condition": "verify-readability.py 全项 OK、退出码 0：去色可读、窄屏不横向滚动、表格 ≤4 列、行长 25–40 字/上限 48 字写入；中文行长 17–48 与 76 字/行冲突、多媒体效应受先验知识/复杂度/媒介/时长调节写入 methodology 与 handout-design；mutation 删 Mayer 证据被抓到；不把 WCAG 等级当教学效果证据。",
    "actual_output": null,
    "run_id": null,
@@ -1563,5 +1569,6 @@
    "verdict": "未验证",
    "reviewer": null
   }
- ]
+ ],
+ "path_aliases": "contracts/rules.json#path_aliases"
 }
