@@ -897,3 +897,65 @@ mutation-check: 11/11 mutations detected
 - 发现「综合」不是知识点：已从 01A、备课报告、课程表、附录 C 的块清单移出；节 1 场 1 = 12 个知识点块 + 1 节末综合；场 2 暂定 17 块；审计总量约 236 块（暂定，节末综合不计）。
 - `scripts/check_environment.py` 移除已迁移的 `scripts_contract` / `verification` 允许项，环境清单 schema 与 skill-studio 一致；selftest 退出码 0。
 - 复测：六脚本 selftest 0；全部文档契约 0；`01A --reader` 0E/0W；`progress_check` ok；干净副本 `skill_ops validate` 0；preflight 仍只有 1 个 high `task_index.py:295 tmp.unlink`（临时文件清理，人工复核接受）。
+
+### run_id: v682-dialogue-markup-20261025（2026-10-25）
+
+- 技能版本：6.8.2（工作区；未提交、未推送）
+- 类型：machine（文档契约 + 静态脚本回归；非真人回放）
+- 覆盖场景：新增 E137（对话轮呈现与直言语气，human，未验证）；其余保持「未验证」；本次仅做静态契约回归
+
+#### 改动
+
+- `references/lecture-styles.md`：新增「对话轮呈现标记」「讲授与反馈语气契约」；五段由命名标签改为内容契约；总原则补「直言不讳」。
+- `SKILL.md` / `references/teaching-loop.md` / `references/phases-and-gates.md` / `references/data-and-recovery.md`：接入呈现/语气指针与画像「沟通约定」；学员可见话术统一用知识点名称。
+- 版本字段同步：`SKILL.md` / `skill-dependencies.json` / `references/setup-guide.md` / `CREDITS.md` / `evals/evals.json` / `evals/verify-formula-typesetting.py`；`evals.json` updated_at 保持 2026-10-25。
+- `evals/verify-v681-docs.py`：版本断言改为 ≥6.8.1；新增 `evals/verify-v682-docs.py`（6 项，含 5 个 mutation）；`evals/evals.json` 新增 E137，`machine_evidence_ref` 追加本版证据。
+
+#### 结果
+
+- `verify-v682-docs.py` 6/6；`verify-v681-docs.py` 11/11；`verify-formula-typesetting.py` 56/56；`verify-marker-rules.py` 19/19；`verify-readability.py` 22/22；`verify-v62-docs.py` 17/17；`verify-v63-docs.py` 32/32；`verify-v64-consistency.py` 34/34；`verify-v65-stage2.py` 24/24；`verify-v66-stage3.py` 22/22；`verify-v67-p1p2.py` 19/19。
+- 六个脚本 `--selftest` 全 0；`verify_explanation.py --reader` 两个 fixture 退出码 0（`handout-l1-l3` 有 3 条既有 W，无 E）。
+- 干净副本 `skill_ops validate`：0 issues（排除 `.git` / `.trae` / `.workbuddy` / `.idea` / `.screenshots` / `.codex`）；`evals.json` JSON 有效；`git diff --check` 0。
+
+#### 边界
+
+- 只证明规则在场与静态契约通过，不证明真人学习效率或接受度；E137 保持「未验证」，本轮不做真人回放。
+- 对话轮输出无机器校验；`verify_explanation.py` 仍只查讲义，不覆盖对话呈现。
+- 打包/安装未执行；需要时另行确认。
+
+#### 复审补漏（2026-10-25）
+
+- `references/lecture-styles.md`：移除「按阅读时间拆块」的残留时间口径（只按是否含两个独立知识点拆块）；开头能力清单补「对话轮呈现标记」「讲授与反馈语气契约」。
+- `SKILL.md`：参考索引把「五段骨架」改为「五段内容契约」，并补新增两节。
+- `references/phases-and-gates.md`：S3「讲授」动作行补「呈现按「对话轮呈现标记」执行」。
+- 复测：`verify-v682-docs.py` 6/6；`verify-v681-docs.py` 11/11；`verify-formula-typesetting.py` 56/56；`evals.json` JSON 有效；`git diff --check` 0。
+
+#### 第二次复审（2026-10-25）
+
+- 修复 `verify-v682-docs.py` 依赖版本检查漏洞：`any(...)` 对空列表返回 False，清单缺版本或畸形时曾放行；改为 `not dep_versions or any(...)`。实测 `'{"dependencies": []}'` 与 `'not json'` 现在均返回 True（已捕获）。
+- E135 pass_condition「课首公示块清单」改「知识点清单」；`lecture-styles.md` 标题补「呈现 · 语气」；新增「五段落位」与「长期偏好才入画像①」；禁用装饰补「不使用 `#` / `##` 标题」；`data-and-recovery.md` 指针改为同时查「S3 讲授呈现」与示例短语。
+- `verify-v682-docs.py` 新增「删五段落位」「依赖清单缺版本」两项 mutation，总检查数 8（含 7 个 mutation）；`evals.json` `machine_evidence_ref` 同步为 8 项。
+- 复测：`verify-v682-docs.py` 8/8；`verify-v681-docs.py` 11/11；`verify-formula-typesetting.py` 56/56；`evals.json` JSON 有效；`git diff --check` 0。
+
+#### 第三次复审（2026-10-25）
+
+- 规则：五段落位改为「定位放结论后的第一句正文」，消除与「第二段结论」「结论限一句」的冲突；画像口径统一为「明确通用偏好」；标题禁例扩到 `#` 起首所有级别；三标签顺序固定为结论→易错→检验；样例补定位句。
+- 验证器：`verify-v682-docs.py` 与 `verify-v681-docs.py` 增加 `evals` 非 dict、`cases` 非 list、依赖清单传 dict 的兜底，畸形输入不再崩溃且能报 FAIL。
+- 崩溃复现：修复前 `verify-v682` 对 `evals=[]` 抛 `AttributeError`、对 `{"cases": None}` 抛 `TypeError`、对依赖 dict 抛 `TypeError`；`verify-v681` 同样在 `evals=[]` / `cases=None` 崩溃。修复后三组输入均返回非空结果且不抛异常。
+- 计数：`verify-v682-docs.py` 9/9（7 mutation + 1 畸形输入）；`verify-v681-docs.py` 12/12；`verify-formula-typesetting.py` 56/56；其余文档契约脚本全过；E137 pass_condition 补标签顺序与定位位置；`evals.json` `machine_evidence_ref` 同步 12 项 / 9 项。
+- `evals.json` JSON 有效；`git diff --check` 0。
+
+#### 第四次复审（2026-10-25）
+
+- 规则：一段一义补「定位句可放正文首句、只接旧知、不计判断」，与五段落位一致；画像口径改为「明确通用偏好入①层；当轮偏好口头生效；任务级偏好落对应任务或②层作用域」；消费方补「任务级偏好按任务作用域读取」；样例锚点改为「你已确证会一般过去时」。
+- 验证器：两个脚本新增 `text_of` 归一化（`texts=None`、非字符串文件值返回空串）与 `UnicodeDecodeError` 兜底；畸形检查扩展到 `texts=None`、非字符串文件值；非法 UTF-8 文件实测 `read()` 返回空串、不再崩溃。
+- 崩溃复现：修复前 `problems(None, ...)` 抛 `AttributeError`，非字符串文件值抛 `TypeError`，非法 UTF-8 抛 `UnicodeDecodeError`；修复后均返回可判定的失败结果。
+- 复测：`verify-v682-docs.py` 9/9；`verify-v681-docs.py` 12/12；`verify-formula-typesetting.py` 56/56；其余文档契约脚本全过；`evals.json` JSON 有效；`git diff --check` 0。
+
+#### 第五次全量复审（2026-10-25）
+
+- 规则与术语：全量搜索 `块清单`/`先列块`，清除 4 处学员可见旧说法（SKILL 两条、teaching-loop、phases），统一为「知识点清单」；`lecture-styles.md` 五段骨架补「内容覆盖优先，输出顺序按呈现契约，不按下列顺序输出」；E137 pass_condition 补「无 Markdown 标题」。
+- 验证器：8 个验证器的 `read`/`read_text` 统一捕 `UnicodeDecodeError`；v62–v67、readability、v681 在读取 `evals.json` 后统一归一化 `evals`/`cases`，修复 `evals=[]`、`{"cases": null}` 的 `AttributeError`/`TypeError`；`verify-readability` 缺夹具目录时返回失败而不是 `FileNotFoundError`。
+- 全量畸形输入实测：11 个验证器分别面对空根、`evals.json` 为 `[]`/`{"cases":null}`/非 JSON/`{}`、`skill-dependencies.json` 为非 JSON/`[]`/`{}`、`SKILL.md` 与 `evals.json` 非法 UTF-8，均无 traceback；`verify-marker-rules.py` 不消费这些输入，保持退出 0。
+- 全量回归：六脚本 selftest 全 0；v682 9/9、v681 12/12、formula 56/56、marker 19/19、readability 22/22、v62 17/17、v63 32/32、v64 34/34、v65 24/24、v66 22/22、v67 19/19；两个 `--reader` fixture 退出码 0；干净副本 `skill_ops validate` 0 issues；preflight 仍为既有 1 high/169 medium（`task_index.py` 临时文件清理与写盘逻辑），无新增脚本。
+- `evals.json` JSON 有效；`git diff --check` 0；未升版本、未提交。

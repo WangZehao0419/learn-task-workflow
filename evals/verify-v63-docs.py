@@ -31,7 +31,7 @@ class Checker:
 def read(root, rel):
     try:
         return (root / rel).read_text(encoding="utf-8")
-    except OSError:
+    except (OSError, UnicodeDecodeError):
         return ""
 
 
@@ -75,6 +75,10 @@ def main(argv=None):
         evals = json.loads(evals_raw)
     except (TypeError, ValueError):
         evals = {}
+    if not isinstance(evals, dict):
+        evals = {}
+    if not isinstance(evals.get("cases"), list):
+        evals = dict(evals, cases=[])
 
     deps_versions = []
     if isinstance(deps, dict):

@@ -47,7 +47,7 @@ class Checker:
 def read(path):
     try:
         return Path(path).read_text(encoding="utf-8")
-    except OSError:
+    except (OSError, UnicodeDecodeError):
         return ""
 
 
@@ -290,7 +290,12 @@ def doc_problems(skill, lecture, handout, methodology, evals_text, deps_text="")
         data = json.loads(evals_text)
     except (TypeError, ValueError):
         data = {}
-    ids = {c.get("id") for c in data.get("cases", []) if isinstance(c, dict)}
+    if not isinstance(data, dict):
+        data = {}
+    cases = data.get("cases")
+    if not isinstance(cases, list):
+        cases = []
+    ids = {c.get("id") for c in cases if isinstance(c, dict)}
     for cid in ("E129", "E130", "E131", "E132", "E133", "E134"):
         if cid not in ids:
             problems.append("evals 缺 " + cid)
@@ -312,9 +317,12 @@ def run_verify_explanation(root, fixture_dir, reader=False):
 
 
 def mutate_fixture(root, mutate):
+    src = root / "evals" / "fixtures" / "reader-layout"
+    if not src.is_dir():
+        return ["缺少夹具目录：{}".format(src)]
     with tempfile.TemporaryDirectory() as td:
         dst = Path(td) / "fixture"
-        shutil.copytree(root / "evals" / "fixtures" / "reader-layout", dst)
+        shutil.copytree(src, dst)
         mutate(dst)
         sample = dst / Path(SAMPLE_REL).name
         probs = layout_problems(read(sample), dst)
@@ -322,9 +330,12 @@ def mutate_fixture(root, mutate):
 
 
 def reader_output_for_mutation(root, mutate):
+    src = root / "evals" / "fixtures" / "reader-layout"
+    if not src.is_dir():
+        return 1, "缺少夹具目录：{}".format(src)
     with tempfile.TemporaryDirectory() as td:
         dst = Path(td) / "fixture"
-        shutil.copytree(root / "evals" / "fixtures" / "reader-layout", dst)
+        shutil.copytree(src, dst)
         mutate(dst)
         return run_verify_explanation(root, dst, reader=True)
 

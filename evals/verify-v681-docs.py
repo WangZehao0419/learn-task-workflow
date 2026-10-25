@@ -30,13 +30,32 @@ class Checker:
 def read(root, rel):
     try:
         return (root / rel).read_text(encoding="utf-8")
-    except OSError:
+    except (OSError, UnicodeDecodeError):
         return ""
+
+
+def text_of(texts, rel):
+    if not isinstance(texts, dict):
+        return ""
+    value = texts.get(rel, "")
+    return value if isinstance(value, str) else ""
 
 
 def version_in(text, pattern):
     m = re.search(pattern, text or "")
     return m.group(1) if m else ""
+
+
+def parse_version(value):
+    try:
+        return tuple(int(part) for part in str(value).split("."))
+    except ValueError:
+        return ()
+
+
+def ver_at_least(value, minimum):
+    parts = parse_version(value)
+    return bool(parts) and parts >= minimum
 
 
 RULE_FILES = (
@@ -50,7 +69,7 @@ RULE_FILES = (
 )
 
 REQUIRED = {
-    "SKILL.md": ("最细知识点", "独立答对才进下一块", "6.8.1"),
+    "SKILL.md": ("最细知识点", "独立答对才进下一块"),
     "references/phases-and-gates.md": (
         "1 块 = 1 个最细知识点",
         "禁止多概念块",
@@ -85,8 +104,13 @@ LEGACY = (
 
 def problems(texts, evals, deps):
     found = []
+    if not isinstance(evals, dict):
+        evals = {}
+    cases = evals.get("cases")
+    if not isinstance(cases, list):
+        cases = []
     for rel in RULE_FILES:
-        body = texts.get(rel, "")
+        body = text_of(texts, rel)
         for needle in REQUIRED.get(rel, ()):
             if needle not in body:
                 found.append("{} 缺少「{}」".format(rel, needle))
@@ -94,24 +118,47 @@ def problems(texts, evals, deps):
             if needle in body:
                 found.append("{} 仍含旧口径「{}」".format(rel, needle))
 
-    if version_in(texts.get("SKILL.md", ""), r"version:\s*(\d+\.\d+\.\d+)") != "6.8.1":
-        found.append("SKILL.md version 不是 6.8.1")
-    if "适用版本：6.8.1" not in texts.get("references/setup-guide.md", ""):
-        found.append("setup-guide 适用版本不是 6.8.1")
-    if '"applies_to_version": "6.8.1"' not in deps:
-        found.append("skill-dependencies 未声明 6.8.1")
-    if not re.search(r"当前版本说明\*\*：6\.8\.1", texts.get("CREDITS.md", "")):
-        found.append("CREDITS 当前版本说明不是 6.8.1")
-    if evals.get("applies_to_version") != "6.8.1":
-        found.append("evals.json applies_to_version 不是 6.8.1")
+    minimum = (6, 8, 1)
+    if not ver_at_least(
+            version_in(text_of(texts, "SKILL.md"), r"version:\s*(\d+\.\d+\.\d+)"),
+            minimum):
+        found.append("SKILL.md version 低于 6.8.1")
+    if not ver_at_least(
+            version_in(text_of(texts, "references/setup-guide.md"),
+                       r"适用版本：(\d+\.\d+\.\d+)"),
+            minimum):
+        found.append("setup-guide 适用版本低于 6.8.1")
+    if isinstance(deps, dict):
+        deps_data = deps
+    else:
+        try:
+            deps_data = json.loads(deps or "{}")
+        except (ValueError, TypeError):
+            deps_data = {}
+    dep_versions = []
+    if isinstance(deps_data, dict):
+        if "applies_to_version" in deps_data:
+            dep_versions.append(deps_data.get("applies_to_version"))
+        for dep in deps_data.get("dependencies", []):
+            setup = dep.get("setup") if isinstance(dep, dict) else None
+            if isinstance(setup, dict) and "applies_to_version" in setup:
+                dep_versions.append(setup.get("applies_to_version"))
+    if not dep_versions or any(not ver_at_least(v, minimum) for v in dep_versions):
+        found.append("skill-dependencies 未声明 ≥6.8.1")
+    credits_version = version_in(
+        text_of(texts, "CREDITS.md"), r"当前版本说明\*\*：(\d+\.\d+\.\d+)")
+    if not ver_at_least(credits_version, minimum):
+        found.append("CREDITS 当前版本说明低于 6.8.1")
+    if not ver_at_least(evals.get("applies_to_version"), minimum):
+        found.append("evals.json applies_to_version 低于 6.8.1")
     if not any(
         isinstance(case, dict) and case.get("id") == "E136"
-        for case in evals.get("cases", [])
+        for case in cases
     ):
         found.append("evals.json 缺少 E136")
-    formula = texts.get("evals/verify-formula-typesetting.py", "")
-    if "6.8.1" not in formula:
-        found.append("verify-formula-typesetting.py 未同步 6.8.1")
+    formula = text_of(texts, "evals/verify-formula-typesetting.py")
+    if not re.search(r"6\.8\.\d+", formula):
+        found.append("verify-formula-typesetting.py 未同步 6.8.x")
     if "6.8.0" in formula:
         found.append("verify-formula-typesetting.py 仍含 6.8.0")
     return found
@@ -142,10 +189,30 @@ def main(argv=None):
     except ValueError as exc:
         evals = {}
         print("[FAIL] evals.json 不是合法 JSON：{}".format(exc))
+    if not isinstance(evals, dict):
+        evals = {}
+    if not isinstance(evals.get("cases"), list):
+        evals = dict(evals, cases=[])
 
     c = Checker()
     found = problems(texts, evals, deps)
-    c.check("1.1 规则文件与版本字段全部符合 v6.8.1", not found, found)
+    c.check("1.1 规则文件与版本字段全部符合 ≥v6.8.1", not found, found)
+
+    malformed_ok = True
+    malformed_cases = (
+        (texts, []),
+        (texts, {"cases": None, "applies_to_version": "6.8.2"}),
+        (texts, {}),
+        (None, evals),
+        ({"SKILL.md": None}, evals),
+    )
+    for malformed_texts, malformed_evals in malformed_cases:
+        try:
+            malformed_ok = malformed_ok and bool(
+                problems(malformed_texts, malformed_evals, deps))
+        except Exception:
+            malformed_ok = False
+    c.check("1.1b 畸形 texts/evals 输入被捕获且不崩溃", malformed_ok)
 
     c.check("1.2 节内块数不设上限、教材节不按块数拆",
             "节内块数不设上限" in texts["references/phases-and-gates.md"]
@@ -174,7 +241,7 @@ def main(argv=None):
             "不设每节道数上限", "每节 ≤3–4 道")),
         ("redlines 去掉多概念块", mutate(
             texts, "references/redlines.md", "多概念块", "整节投喂")),
-        ("版本回到 6.8.0", mutate(texts, "SKILL.md", "6.8.1", "6.8.0")),
+        ("版本回到 6.8.0", mutate(texts, "SKILL.md", "6.8.2", "6.8.0")),
     )
     for name, mutated in mutations:
         got = problems(mutated, evals, deps)
