@@ -20,7 +20,7 @@ import tempfile
 from pathlib import Path
 
 SCHEMA = "ltw-rules/1"
-REQUIRED_TOP = ("schema", "version", "files", "rules", "path_aliases", "constants")
+REQUIRED_TOP = ("schema", "version", "files", "rules", "path_aliases", "constants", "scenes")
 REQUIRED_CONST = (
     "phases", "types", "subject_families", "teaching_strategies",
     "review_origin_phases", "grading", "kp", "gates", "restatement",
@@ -34,10 +34,12 @@ NUM_REF_RE = re.compile(r"\b([TF]\d{2}|R\d{1,2})\b")
 SCAN_GLOBS = (
     "scripts/*.py",
     "evals/verify-*.py",
-    "references/*.md",
+    "references/**/*.md",
     "contracts/scripts-contract.json",
     "SKILL.md",
 )
+FAMILY_TOKEN = "{family}"
+SUBJECT_DIR = "references/subjects/"
 
 
 class ContractError(ValueError):
@@ -107,6 +109,22 @@ def validate(data: dict) -> dict:
         rids.append(r["id"])
         owners.append(r["owner"])
     _require(not _dup(rids), "E-CONTRACT-INVALID", "rule id 重复：%s" % _dup(rids))
+
+    scenes = data["scenes"]
+    _require(isinstance(scenes, dict) and scenes, "E-CONTRACT-INVALID", "scenes 必须是非空对象")
+    for sid, sc in scenes.items():
+        _require(isinstance(sc, dict), "E-CONTRACT-INVALID", "scenes.%s 必须是对象" % sid)
+        for k in ("label", "files"):
+            _require(k in sc, "E-CONTRACT-INVALID", "scenes.%s 缺 %s" % (sid, k))
+        _require(isinstance(sc["files"], list) and sc["files"],
+                 "E-CONTRACT-INVALID", "scenes.%s.files 必须是非空数组" % sid)
+    for r in rules:
+        if "scenes" in r:
+            _require(isinstance(r["scenes"], list) and r["scenes"],
+                     "E-CONTRACT-INVALID", "rule %s.scenes 必须是非空数组" % r["id"])
+            for sid in r["scenes"]:
+                _require(sid in scenes, "E-CONTRACT-INVALID",
+                         "rule %s 引用未定义场景 %s" % (r["id"], sid))
 
     aliases = data["path_aliases"]
     _require(isinstance(aliases, dict), "E-CONTRACT-INVALID", "path_aliases 必须是对象")
@@ -318,6 +336,103 @@ def check_number_refs(rule_ids: set, texts: list) -> list:
     return issues
 
 
+def _subject_family_files(files: list) -> list:
+    """从 files[] 取学科族文件（subjects/ 下除 common 外），供 {family} 令牌展开。"""
+    fams = []
+    for f in files:
+        p = f["path"]
+        if p.startswith(SUBJECT_DIR) and p != SUBJECT_DIR + "common.md":
+            fams.append(p)
+    return sorted(fams)
+
+
+def _expand_files(files_list: list, family_files: list) -> list:
+    out = []
+    for f in files_list:
+        if FAMILY_TOKEN in f:
+            if not family_files:
+                continue
+            out.extend(f.replace(FAMILY_TOKEN, Path(p).stem) for p in family_files)
+        else:
+            out.append(f)
+    return out
+
+
+def check_scenes(data: dict, root: Path) -> tuple[list, dict]:
+    """E-TOPOLOGY-SCENES：场景注册表、规则覆盖与文件覆盖的一致性。"""
+    issues = []
+    family_files = _subject_family_files(data["files"])
+    if not family_files:
+        issues.append("E-TOPOLOGY-SCENES: files[] 未登记任何学科族文件")
+    expanded = {}
+    for sid, sc in data["scenes"].items():
+        files = _expand_files(sc["files"], family_files)
+        for f in files:
+            if not (root / f).exists():
+                issues.append("E-TOPOLOGY-SCENES: 场景 %s 文件不存在 %s" % (sid, f))
+        expanded[sid] = set(files)
+    covered = set()
+    for files in expanded.values():
+        covered |= files
+    for f in data["files"]:
+        if f["path"] not in covered:
+            issues.append("E-TOPOLOGY-SCENES: 文件未属于任何场景 %s" % f["path"])
+    for r in data["rules"]:
+        scs = r.get("scenes") or []
+        if not scs:
+            issues.append("E-TOPOLOGY-SCENES: 规则未挂场景 %s" % r["id"])
+            continue
+        owner_file = r["owner"].split("#", 1)[0]
+        if not any(owner_file in expanded.get(sid, set()) for sid in scs):
+            issues.append("E-TOPOLOGY-SCENES: 规则 %s owner %s 不在其场景内"
+                          % (r["id"], owner_file))
+    return issues, expanded
+
+
+def check_load_table(root: Path, data: dict, expanded: dict) -> list:
+    """SKILL.md 加载场景表与契约 scenes 一致（E-TOPOLOGY-SCENES）。"""
+    issues = []
+    family_files = _subject_family_files(data["files"])
+    text = (root / "SKILL.md").read_text(encoding="utf-8", errors="replace")
+    rows = {}
+    for ln in text.splitlines():
+        m = re.match(r"^\|\s*`([a-z0-9-]+)`\s*\|", ln)
+        if not m:
+            continue
+        rows[m.group(1)] = set(_expand_files(
+            re.findall(r"`(references/[^`]+)`", ln), family_files))
+    for sid in data["scenes"]:
+        if sid not in rows:
+            issues.append("E-TOPOLOGY-SCENES: SKILL.md 场景表缺行 %s" % sid)
+            continue
+        want = expanded.get(sid, set())
+        got = rows[sid]
+        if got != want:
+            issues.append("E-TOPOLOGY-SCENES: SKILL.md 场景 %s 文件不符（缺 %s 多 %s）"
+                          % (sid, sorted(want - got), sorted(got - want)))
+    return issues
+
+
+def coverage(path: Path | None = None) -> dict:
+    """拓扑检查 + 场景覆盖检查 + SKILL.md 加载表一致性。"""
+    root = skill_root()
+    data = load(path)
+    base = topology(path)
+    issues = list(base["issues"])
+    scene_issues, expanded = check_scenes(data, root)
+    issues += scene_issues
+    issues += check_load_table(root, data, expanded)
+    return {
+        "ok": not issues,
+        "files": base["files"],
+        "rules": base["rules"],
+        "scenes": len(data["scenes"]),
+        "error_codes": base["error_codes"],
+        "version": base["version"],
+        "issues": issues,
+    }
+
+
 def topology(path: Path | None = None) -> dict:
     root = skill_root()
     data = load(path)
@@ -336,9 +451,9 @@ def topology(path: Path | None = None) -> dict:
         # 2. 职责头
         if "<!-- owns:" not in text or "must-not-define:" not in text:
             issues.append("E-TOPOLOGY-HEADER: %s 缺 owns/must-not-define" % f["path"])
-        # 3. 旧文件名只允许出现在 alias 表
+        # 3. 旧文件名只允许出现在 alias 表（路径成分豁免：ops/failure.md 不算含 failure.md）
         for old in data["path_aliases"]:
-            if old in text:
+            if re.search(r"(?<![\w/])" + re.escape(old), text):
                 issues.append("E-TOPOLOGY-OLDNAME: %s 含旧文件名 %s" % (f["path"], old))
 
     # 4. 规则 owner 可解析
@@ -371,14 +486,14 @@ def topology(path: Path | None = None) -> dict:
     issues += code_issues
 
     # 8. operations.md 速查表双向覆盖
-    ops_path = root / "references" / "operations.md"
+    ops_path = root / "references" / "ops" / "scripts.md"
     if ops_path.exists():
         issues += check_mirror(declared, ops_path.read_text(encoding="utf-8", errors="replace"))
     else:
-        issues.append("E-TOPOLOGY-MIRROR: operations.md 不存在")
+        issues.append("E-TOPOLOGY-MIRROR: ops/scripts.md 不存在")
 
     # 9. lead_words 双写一致
-    handout_path = root / "references" / "handout.md"
+    handout_path = root / "references" / "handout" / "pipeline.md"
     if handout_path.exists():
         issues += check_lead_words(data["constants"]["headings"]["lead_words"],
                                    handout_path.read_text(encoding="utf-8", errors="replace"))
@@ -582,6 +697,38 @@ def _selftest() -> int:
 
     chk("dead number ref detected", deadref_catch)
 
+    def cov_ok():
+        r = coverage()
+        assert r["ok"], r["issues"]
+
+    chk("coverage clean", cov_ok)
+
+    def cov_missing_scene():
+        root = skill_root()
+        d = load()
+        d["rules"] = [dict(r, scenes=[]) if r["id"] == "R1" else r for r in d["rules"]]
+        issues, _ = check_scenes(d, root)
+        assert any("R1" in i for i in issues), issues
+
+    chk("coverage missing scene detected", cov_missing_scene)
+
+    def loadtable_drift():
+        root = skill_root()
+        d = load()
+        _, expanded = check_scenes(d, root)
+        text = (root / "SKILL.md").read_text(encoding="utf-8", errors="replace")
+        bad = text.replace("references/ops/formulas.md", "references/ops/formulasX.md", 1)
+        tmp = root / "SKILL.md"
+        orig = tmp.read_text(encoding="utf-8")
+        try:
+            tmp.write_text(bad, encoding="utf-8")
+            issues = check_load_table(root, d, expanded)
+        finally:
+            tmp.write_text(orig, encoding="utf-8")
+        assert issues and all(i.startswith("E-TOPOLOGY-SCENES") for i in issues), issues
+
+    chk("load table drift detected", loadtable_drift)
+
     if failures:
         print("SELFTEST FAILED:", ", ".join(failures))
         return 1
@@ -594,6 +741,7 @@ def main(argv=None) -> int:
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--selftest", action="store_true")
     g.add_argument("--topology", action="store_true")
+    g.add_argument("--coverage", action="store_true")
     g.add_argument("--get", metavar="DOTTED")
     args = ap.parse_args(argv)
     try:
@@ -601,6 +749,10 @@ def main(argv=None) -> int:
             return _selftest()
         if args.topology:
             r = topology()
+            print(json.dumps(r, ensure_ascii=False, indent=1))
+            return 0 if r["ok"] else 1
+        if args.coverage:
+            r = coverage()
             print(json.dumps(r, ensure_ascii=False, indent=1))
             return 0 if r["ok"] else 1
         print(json.dumps(get(args.get), ensure_ascii=False, indent=1))

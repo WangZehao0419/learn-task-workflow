@@ -12,7 +12,7 @@
 - 打包与验证
 - 当前核验
 
-本册是脚本的**操作手册**：怎么调、退出码怎么看、什么时候跑。业务语义在各自 owner：判分与调度见 `assessment.md`，阶段闸口见 `workflow.md`，数据字段见 `data.md`，失败处置见 `failure.md`。
+本册是脚本的**操作手册**：怎么调、退出码怎么看、什么时候跑。业务语义在各自 owner：判分见 `assessment/scoring.md`、调度见 `assessment/scheduling.md`，阶段闸口见 `workflow/gates.md`，数据字段见 `data/progress-schema.md`，失败处置见 `ops/failure.md`。
 
 ## 脚本清单
 
@@ -26,7 +26,7 @@
 | `kp_sort.py` | `<清单文件> [--selftest]` | 只读、零写盘 | 知识型/技能型排序子步 |
 | `check_environment.py` | `[--manifest <路径>] [--capability <名称>]... [--selftest]` | 只读诊断 | 脚本调用出现解释器/版本类失败时诊断一次 |
 | `verify_explanation.py` | `<材料目录或单文件> [--selftest] [--reader]` | 只读静态校验，不写盘 | 讲义定稿前；`--reader` 加跑读者版 W 级检查 |
-| `rule_contract.py` | `--selftest \| --topology` | 只读校验契约与拓扑 | 修改契约/分册结构后、打包前 |
+| `rule_contract.py` | `--selftest \| --topology \| --coverage` | 只读校验契约、拓扑与场景覆盖 | 修改契约/分册结构后、打包前 |
 
 完整参数、退出码与 notes 的机器可读版本见 `contracts/scripts-contract.json`；脚本 docstring 只保留算法/参数说明，不再维护完整错误码表。
 
@@ -54,7 +54,7 @@
 - 完整码表与 notes：`contracts/rules.json.errors`（机器名单）+ `contracts/scripts-contract.json`（脚本参数/退出码/notes）；脚本 docstring 只列常用码与实现说明；下表是触发条件速查。
 - `progress_check` 的新增码：`E-GATE-RATIO-INVALID`（`小节目标线` 非法）、`E-FINAL-INVALID-TARGET`（结课目标线非法，不得回退默认线）。
 - 契约缺失/畸形：`E-CONTRACT-MISSING` / `E-CONTRACT-INVALID`。
-- 业务语义：`assessment.md` 判分/调度；`workflow.md` 闸口；`data.md` 字段；`failure.md` 处置。
+- 业务语义：`assessment/scoring.md` 判分、`assessment/scheduling.md` 调度；`workflow/gates.md` 闸口；`data/progress-schema.md` 字段；`ops/failure.md` 处置。
 
 ### 错误码速查
 
@@ -91,7 +91,8 @@
 | verify_explanation | `W-READER` / `W-READER-ALT` / `W-READER-CONCLUSION` / `W-READER-EMPHASIS` / `W-READER-HEADING` / `W-READER-INDEX` / `W-READER-OVERVIEW` / `W-READER-SVG` / `W-READER-TABLE` | `--reader` 结构项：标题 / 表格 / alt / SVG / 速览 / 回看索引 / 一句话结论 / 强调密度 |
 | verify_explanation | `W-NO-TIER` | 讲义单元缺 tier 标签 |
 | rule_contract | `E-CONTRACT-MISSING` / `E-CONTRACT-INVALID` | 契约缺失 / 畸形 |
-| rule_contract | `E-TOPOLOGY-DAG` / `E-TOPOLOGY-DEADREF` / `E-TOPOLOGY-ERRORCODE` / `E-TOPOLOGY-FILE` / `E-TOPOLOGY-HEADER` / `E-TOPOLOGY-LEADWORDS` / `E-TOPOLOGY-LOAD` / `E-TOPOLOGY-MIRROR` / `E-TOPOLOGY-OLDNAME` / `E-TOPOLOGY-OWNER` / `E-TOPOLOGY-VERSION` | 依赖成环 / 引用未定义编号 / 未声明错误码 / 文件缺失 / 职责头缺失 / lead_words 双写漂移 / 加载指令 / 速查表覆盖缺口 / 旧文件名 / owner 锚点失效 / 版本不一致 |
+| rule_contract | `E-TOPOLOGY-DAG` / `E-TOPOLOGY-DEADREF` / `E-TOPOLOGY-ERRORCODE` / `E-TOPOLOGY-FILE` / `E-TOPOLOGY-HEADER` / `E-TOPOLOGY-LEADWORDS` / `E-TOPOLOGY-LOAD` / `E-TOPOLOGY-MIRROR` / `E-TOPOLOGY-OLDNAME` / `E-TOPOLOGY-OWNER` / `E-TOPOLOGY-SCENES` / `E-TOPOLOGY-VERSION` | 依赖成环 / 引用未定义编号 / 未声明错误码 / 文件缺失 / 职责头缺失 / lead_words 双写漂移 / 加载指令 / 速查表覆盖缺口 / 旧文件名 / owner 锚点失效 / 场景覆盖缺口（文件未挂场景、规则未挂场景、owner 不在场景内、SKILL.md 场景表漂移） / 版本不一致 |
+| verify_load_budget | `E-LOAD-BUDGET` | 加载场景字符量/文件数超预算，或场景内文件缺失 |
 
 > `check_environment.py` 用 `ready` / `needs_setup` / `unavailable` / `manifest_error`（exit 2）状态而不是 E/W 码；`kp_sort.py` 用 exit 1 表示畸形行、依赖环或解释器版本不足。两者详见 `scripts-contract.json`。
 
@@ -115,9 +116,12 @@ python -B scripts/check_environment.py --selftest
 python -B scripts/verify_explanation.py --selftest
 python -B scripts/rule_contract.py --selftest
 python -B scripts/rule_contract.py --topology
+python -B scripts/rule_contract.py --coverage
+python -B evals/verify-formula-typesetting.py
+python -B evals/verify-load-budget.py
 ```
 
-`rule_contract --selftest` 覆盖契约缺失/空文件/非法 JSON/缺键/枚举重复；`--topology` 覆盖无加载指令、职责头齐全、指针可解析、声明依赖无环、旧文件名只在 alias 表。
+`rule_contract --selftest` 覆盖契约缺失/空文件/非法 JSON/缺键/枚举重复；`--topology` 覆盖无加载指令、职责头齐全、指针可解析、声明依赖无环、旧文件名只在 alias 表；`--coverage` 在拓扑之上加场景覆盖（文件/规则挂场景、owner ∈ 场景、SKILL.md 场景表一致）。
 
 ## 打包与验证
 

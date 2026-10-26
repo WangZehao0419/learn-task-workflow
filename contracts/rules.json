@@ -1,96 +1,292 @@
 {
  "schema": "ltw-rules/1",
- "version": "7.0.1",
+ "version": "8.0.0",
  "files": [
   {
-   "id": "routing",
-   "path": "references/routing.md",
+   "id": "triggers",
+   "path": "references/routing/triggers.md",
    "layer": 1,
-   "owns": "意图路由、a–f 决策树、快捷指令、生态分工",
+   "owns": "触发判定、a–f 决策树、语义桥、数据访问条件",
    "depends_on": []
   },
   {
-   "id": "workflow",
-   "path": "references/workflow.md",
+   "id": "shortcuts",
+   "path": "references/routing/shortcuts.md",
    "layer": 1,
-   "owns": "S0–S5、块/KP 定义、闸口、覆盖审计、结课",
-   "depends_on": []
-  },
-  {
-   "id": "assessment",
-   "path": "references/assessment.md",
-   "layer": 1,
-   "owns": "判分四态、复述、题量、出题、调度、校准",
+   "owns": "快捷指令明细",
    "depends_on": [
-    "workflow"
+    "triggers"
    ]
   },
   {
-   "id": "teaching",
-   "path": "references/teaching.md",
+   "id": "ecosystem",
+   "path": "references/routing/ecosystem.md",
+   "layer": 1,
+   "owns": "生态分工与触发优先级",
+   "depends_on": [
+    "triggers"
+   ]
+  },
+  {
+   "id": "gates",
+   "path": "references/workflow/gates.md",
+   "layer": 1,
+   "owns": "入场自检、通用闸口协议",
+   "depends_on": []
+  },
+  {
+   "id": "s0-s2-setup",
+   "path": "references/workflow/s0-s2-setup.md",
+   "layer": 1,
+   "owns": "S0–S2、覆盖对照与排序、考纲权重分层、排期产能基准",
+   "depends_on": [
+    "gates",
+    "evidence"
+   ]
+  },
+  {
+   "id": "s3-block",
+   "path": "references/workflow/s3-block.md",
+   "layer": 1,
+   "owns": "S3 循环体、逐块推进、S3 闸口、节末收尾",
+   "depends_on": [
+    "gates"
+   ]
+  },
+  {
+   "id": "s4-review",
+   "path": "references/workflow/s4-review.md",
+   "layer": 1,
+   "owns": "S4 流程、复习债治理、清除链、错题归档",
+   "depends_on": [
+    "gates",
+    "scheduling"
+   ]
+  },
+  {
+   "id": "s5-close",
+   "path": "references/workflow/s5-close.md",
+   "layer": 1,
+   "owns": "覆盖率审计、S5 结课、综合测验分型",
+   "depends_on": [
+    "gates",
+    "s3-block"
+   ]
+  },
+  {
+   "id": "pacing",
+   "path": "references/workflow/pacing.md",
+   "layer": 1,
+   "owns": "产能基准、休息节律、缓冲日、最小可行日",
+   "depends_on": [
+    "gates"
+   ]
+  },
+  {
+   "id": "lesson-flow",
+   "path": "references/teaching/lesson-flow.md",
    "layer": 2,
-   "owns": "课内教学动作、呈现、语气、深度、错因",
+   "owns": "单节课六拍、核心教学序列、备课、锚定、姿态、样例、新记号",
    "depends_on": [
-    "workflow",
-    "assessment"
+    "s3-block",
+    "scoring"
    ]
   },
   {
-   "id": "handout",
-   "path": "references/handout.md",
+   "id": "interaction",
+   "path": "references/teaching/interaction.md",
+   "layer": 2,
+   "owns": "提问阶梯、反馈、八动作、错因补救、修复动作",
+   "depends_on": [
+    "lesson-flow",
+    "scoring"
+   ]
+  },
+  {
+   "id": "presentation",
+   "path": "references/teaching/presentation.md",
    "layer": 3,
-   "owns": "讲义结构/类型/支持级/P1/P2/格式/自检",
+   "owns": "对话讲授契约、呈现标记、语气、密度、深度契约、类比、风格切换",
    "depends_on": [
-    "workflow",
-    "assessment",
-    "teaching"
+    "lesson-flow",
+    "interaction"
    ]
   },
   {
-   "id": "data",
-   "path": "references/data.md",
+   "id": "handout-pipeline",
+   "path": "references/handout/pipeline.md",
+   "layer": 3,
+   "owns": "讲义合同、一致性裁决、理解核心、四步流水线",
+   "depends_on": [
+    "s3-block",
+    "scoring",
+    "lesson-flow"
+   ]
+  },
+  {
+   "id": "handout-templates",
+   "path": "references/handout/templates.md",
+   "layer": 3,
+   "owns": "类型模板、支持级、学习者状态层、六套风格、概念单元 schema",
+   "depends_on": [
+    "handout-pipeline"
+   ]
+  },
+  {
+   "id": "handout-quality",
+   "path": "references/handout/quality.md",
+   "layer": 3,
+   "owns": "来源真实性、P1/P2、可读性、图像双轨、出厂自检、概念块呈现",
+   "depends_on": [
+    "handout-pipeline",
+    "handout-templates",
+    "presentation"
+   ]
+  },
+  {
+   "id": "scoring",
+   "path": "references/assessment/scoring.md",
    "layer": 1,
-   "owns": "目录/schema/字段/迁移/Trace",
+   "owns": "判分四态、难度伺服、闸口比例、复述证据、视觉任务、批改申诉",
+   "depends_on": [
+    "s3-block"
+   ]
+  },
+  {
+   "id": "generation",
+   "path": "references/assessment/generation.md",
+   "layer": 2,
+   "owns": "题量预算、出题四步、零提示条件化、未讲授过滤",
+   "depends_on": [
+    "scoring"
+   ]
+  },
+  {
+   "id": "scheduling",
+   "path": "references/assessment/scheduling.md",
+   "layer": 2,
+   "owns": "间隔调度、due-queue 与复习预算、校准画像",
+   "depends_on": [
+    "scoring"
+   ]
+  },
+  {
+   "id": "data-layout",
+   "path": "references/data/layout.md",
+   "layer": 1,
+   "owns": "数据根、续学匹配、目录布局、slug、版本号体系",
    "depends_on": []
+  },
+  {
+   "id": "progress-schema",
+   "path": "references/data/progress-schema.md",
+   "layer": 1,
+   "owns": "progress 字段唯一事实源、复习调度字段、下次续学",
+   "depends_on": [
+    "data-layout"
+   ]
+  },
+  {
+   "id": "lists",
+   "path": "references/data/lists.md",
+   "layer": 1,
+   "owns": "知识清单文件、学习者画像",
+   "depends_on": [
+    "data-layout"
+   ]
+  },
+  {
+   "id": "compatibility",
+   "path": "references/data/compatibility.md",
+   "layer": 1,
+   "owns": "字段向后兼容、稳定引用对账、零迁移、数据形态行为表、Trace",
+   "depends_on": [
+    "progress-schema"
+   ]
+  },
+  {
+   "id": "subjects-common",
+   "path": "references/subjects/common.md",
+   "layer": 1,
+   "owns": "学科族总则、类比优先级、视觉任务来源、应试技巧包",
+   "depends_on": []
+  },
+  {
+   "id": "subjects-math",
+   "path": "references/subjects/math.md",
+   "layer": 1,
+   "owns": "该学科族教学差异",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "subjects-programming",
+   "path": "references/subjects/programming.md",
+   "layer": 1,
+   "owns": "该学科族教学差异",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "subjects-language",
+   "path": "references/subjects/language.md",
+   "layer": 1,
+   "owns": "该学科族教学差异",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "subjects-theory",
+   "path": "references/subjects/theory.md",
+   "layer": 1,
+   "owns": "该学科族教学差异",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "subjects-memory",
+   "path": "references/subjects/memory.md",
+   "layer": 1,
+   "owns": "该学科族教学差异",
+   "depends_on": [
+    "subjects-common"
+   ]
   },
   {
    "id": "failure",
-   "path": "references/failure.md",
+   "path": "references/ops/failure.md",
    "layer": 1,
    "owns": "红线、失败即停、环境就绪、恢复、幂等/不可逆",
    "depends_on": []
   },
   {
    "id": "operations",
-   "path": "references/operations.md",
+   "path": "references/ops/scripts.md",
    "layer": 1,
    "owns": "脚本 CLI/退出码/错误码入口/selftest/路径",
    "depends_on": []
   },
   {
    "id": "composition",
-   "path": "references/composition.md",
+   "path": "references/ops/composition.md",
    "layer": 1,
    "owns": "跨机制组合与优先级",
    "depends_on": []
   },
   {
-   "id": "subjects",
-   "path": "references/subjects.md",
-   "layer": 1,
-   "owns": "学科族差异、应试技巧包",
-   "depends_on": []
-  },
-  {
    "id": "formulas",
-   "path": "references/formulas.md",
+   "path": "references/ops/formulas.md",
    "layer": 1,
    "owns": "公式/符号排版与验证",
    "depends_on": []
   },
   {
    "id": "evidence",
-   "path": "references/evidence.md",
+   "path": "references/ops/evidence.md",
    "layer": 1,
    "owns": "来源分级、文献依据与边界",
    "depends_on": []
@@ -99,272 +295,548 @@
  "rules": [
   {
    "id": "R1",
-   "owner": "references/workflow.md#逐块推进（最细知识点）",
-   "type": "definition"
+   "owner": "references/workflow/s3-block.md#逐块推进（最细知识点）",
+   "type": "definition",
+   "scenes": [
+    "s3-teach",
+    "s3-handout",
+    "s3-exercise"
+   ]
   },
   {
    "id": "R2",
-   "owner": "references/workflow.md#逐块推进（最细知识点）",
-   "type": "definition"
+   "owner": "references/workflow/s3-block.md#逐块推进（最细知识点）",
+   "type": "definition",
+   "scenes": [
+    "s3-teach",
+    "s3-handout",
+    "s3-exercise"
+   ]
   },
   {
    "id": "R3",
-   "owner": "references/assessment.md#判分口径",
-   "type": "definition"
+   "owner": "references/assessment/scoring.md#判分口径",
+   "type": "definition",
+   "scenes": [
+    "s3-teach",
+    "s3-exercise",
+    "s4-review",
+    "s5-close"
+   ]
   },
   {
    "id": "R4",
-   "owner": "references/workflow.md#S3 闸口（可检验）",
-   "type": "definition"
+   "owner": "references/workflow/s3-block.md#S3 闸口（可检验）",
+   "type": "definition",
+   "scenes": [
+    "s3-teach",
+    "s3-exercise"
+   ]
   },
   {
    "id": "R5",
-   "owner": "references/workflow.md#S5 结课",
-   "type": "definition"
+   "owner": "references/workflow/s5-close.md#S5 结课",
+   "type": "definition",
+   "scenes": [
+    "s5-close"
+   ]
   },
   {
    "id": "R6",
-   "owner": "references/assessment.md#题量预算与自测≠题组",
-   "type": "definition"
+   "owner": "references/assessment/generation.md#题量预算与自测≠题组",
+   "type": "definition",
+   "scenes": [
+    "s3-exercise",
+    "s4-review",
+    "s5-close"
+   ]
   },
   {
    "id": "R7",
-   "owner": "references/assessment.md#复述证据",
-   "type": "definition"
+   "owner": "references/assessment/scoring.md#复述证据",
+   "type": "definition",
+   "scenes": [
+    "s3-teach",
+    "s3-exercise",
+    "s4-review",
+    "s5-close"
+   ]
   },
   {
    "id": "R8",
-   "owner": "references/assessment.md#出题流水线（四步）",
-   "type": "definition"
+   "owner": "references/assessment/generation.md#出题流水线（四步）",
+   "type": "definition",
+   "scenes": [
+    "s3-exercise",
+    "s4-review",
+    "s5-close"
+   ]
   },
   {
    "id": "R9",
-   "owner": "references/failure.md#🔴 Critical 红线",
-   "type": "protocol"
+   "owner": "references/ops/failure.md#🔴 Critical 红线",
+   "type": "protocol",
+   "scenes": [
+    "failure",
+    "persist",
+    "entry"
+   ]
   },
   {
    "id": "R10",
-   "owner": "references/data.md#progress.md 字段（唯一事实源）",
-   "type": "schema"
+   "owner": "references/data/progress-schema.md#progress.md 字段（唯一事实源）",
+   "type": "schema",
+   "scenes": [
+    "persist",
+    "s4-review"
+   ]
   },
   {
    "id": "R11",
-   "owner": "references/failure.md#环境就绪与阻断",
-   "type": "protocol"
+   "owner": "references/ops/failure.md#环境就绪与阻断",
+   "type": "protocol",
+   "scenes": [
+    "failure"
+   ]
   },
   {
    "id": "R12",
-   "owner": "references/handout.md#1. 一页合同（目标态，11 条）",
-   "type": "definition"
+   "owner": "references/handout/pipeline.md#1. 一页合同（目标态，11 条）",
+   "type": "definition",
+   "scenes": [
+    "s3-handout"
+   ]
   },
   {
    "id": "R13",
-   "owner": "references/formulas.md#公式与科学符号排版",
-   "type": "definition"
+   "owner": "references/ops/formulas.md#公式与科学符号排版",
+   "type": "definition",
+   "scenes": [
+    "formulas",
+    "s3-handout"
+   ]
   },
   {
    "id": "R14",
-   "owner": "references/routing.md#入口路由判别决策树（a–f）",
-   "type": "protocol"
+   "owner": "references/routing/triggers.md#入口路由判别决策树（a–f）",
+   "type": "protocol",
+   "scenes": [
+    "entry"
+   ]
   },
   {
    "id": "R15",
-   "owner": "references/failure.md#🔴 Critical 红线",
-   "type": "protocol"
+   "owner": "references/ops/failure.md#🔴 Critical 红线",
+   "type": "protocol",
+   "scenes": [
+    "failure",
+    "persist",
+    "entry"
+   ]
   },
   {
    "id": "R16",
-   "owner": "references/teaching.md#对话轮呈现标记（软默认，所有风格共用）",
-   "type": "definition"
+   "owner": "references/teaching/presentation.md#对话轮呈现标记（软默认，所有风格共用）",
+   "type": "definition",
+   "scenes": [
+    "s3-deep"
+   ]
   },
   {
    "id": "R17",
-   "owner": "references/operations.md#脚本清单",
-   "type": "schema"
+   "owner": "references/ops/scripts.md#脚本清单",
+   "type": "schema",
+   "scenes": [
+    "persist",
+    "s3-handout",
+    "s3-exercise"
+   ]
   },
   {
    "id": "R18",
-   "owner": "references/composition.md#跨机制组合规则",
-   "type": "definition"
+   "owner": "references/ops/composition.md#跨机制组合规则",
+   "type": "definition",
+   "scenes": [
+    "composition"
+   ]
   },
   {
    "id": "R19",
-   "owner": "references/evidence.md#来源分级与出处四要素",
-   "type": "definition"
+   "owner": "references/ops/evidence.md#来源分级与出处四要素",
+   "type": "definition",
+   "scenes": [
+    "evidence"
+   ]
   },
   {
    "id": "R20",
-   "owner": "references/assessment.md#视觉任务证据",
-   "type": "definition"
+   "owner": "references/assessment/scoring.md#视觉任务证据",
+   "type": "definition",
+   "scenes": [
+    "s3-teach",
+    "s3-exercise"
+   ]
   },
   {
    "id": "R21",
-   "owner": "references/assessment.md#难度伺服",
-   "type": "definition"
+   "owner": "references/assessment/scoring.md#难度伺服",
+   "type": "definition",
+   "scenes": [
+    "s3-teach",
+    "s3-exercise",
+    "s4-review"
+   ]
   },
   {
    "id": "R22",
-   "owner": "references/assessment.md#零提示与条件化判定题",
-   "type": "definition"
+   "owner": "references/assessment/generation.md#零提示与条件化判定题",
+   "type": "definition",
+   "scenes": [
+    "s3-exercise",
+    "s4-review"
+   ]
   },
   {
    "id": "R23",
-   "owner": "references/teaching.md#5.1 教学八动作",
-   "type": "definition"
+   "owner": "references/teaching/interaction.md#5.1 教学八动作",
+   "type": "definition",
+   "scenes": [
+    "s3-teach",
+    "s4-review"
+   ]
   },
   {
    "id": "R24",
-   "owner": "references/teaching.md#2.4 风格切换映射",
-   "type": "definition"
+   "owner": "references/teaching/presentation.md#2.4 风格切换映射",
+   "type": "definition",
+   "scenes": [
+    "s3-deep"
+   ]
   },
   {
    "id": "R25",
-   "owner": "references/teaching.md#定级与猜测答对",
-   "type": "definition"
+   "owner": "references/teaching/interaction.md#定级与猜测答对",
+   "type": "definition",
+   "scenes": [
+    "s3-teach",
+    "s4-review"
+   ]
   },
   {
    "id": "R26",
-   "owner": "references/assessment.md#分块与交错切换",
-   "type": "definition"
+   "owner": "references/assessment/generation.md#分块与交错切换",
+   "type": "definition",
+   "scenes": [
+    "s3-exercise",
+    "s4-review"
+   ]
   },
   {
    "id": "R27",
-   "owner": "references/assessment.md#短题与正式确认",
-   "type": "definition"
+   "owner": "references/assessment/generation.md#短题与正式确认",
+   "type": "definition",
+   "scenes": [
+    "s3-exercise"
+   ]
   },
   {
    "id": "R28",
-   "owner": "references/data.md#续学匹配（多任务与科目别名）",
-   "type": "protocol"
+   "owner": "references/data/layout.md#续学匹配（多任务与科目别名）",
+   "type": "protocol",
+   "scenes": [
+    "entry",
+    "persist",
+    "s0-s2"
+   ]
   },
   {
    "id": "R29",
-   "owner": "references/operations.md#错误码速查",
-   "type": "schema"
+   "owner": "references/ops/scripts.md#错误码速查",
+   "type": "schema",
+   "scenes": [
+    "persist",
+    "s3-handout",
+    "s3-exercise"
+   ]
   },
   {
    "id": "R30",
-   "owner": "references/handout.md#2.11 定稿硬项",
-   "type": "definition"
+   "owner": "references/handout/pipeline.md#2.11 定稿硬项",
+   "type": "definition",
+   "scenes": [
+    "s3-handout"
+   ]
   },
   {
    "id": "R31",
-   "owner": "references/handout.md#0.1 风格选择",
-   "type": "definition"
+   "owner": "references/handout/pipeline.md#0.1 风格选择",
+   "type": "definition",
+   "scenes": [
+    "s3-handout"
+   ]
   },
   {
    "id": "R32",
-   "owner": "references/workflow.md#S2 计划确认中",
-   "type": "protocol"
+   "owner": "references/workflow/s0-s2-setup.md#S2 计划确认中",
+   "type": "protocol",
+   "scenes": [
+    "s0-s2"
+   ]
   },
   {
    "id": "R33",
-   "owner": "references/teaching.md#错因分类与补救（T10）",
-   "type": "definition"
+   "owner": "references/teaching/interaction.md#错因分类与补救（T10）",
+   "type": "definition",
+   "scenes": [
+    "s3-teach",
+    "s4-review"
+   ]
   },
   {
    "id": "T01",
-   "owner": "references/teaching.md#备课短表：先定本次能力，再决定讲什么（T01）",
-   "type": "definition"
+   "owner": "references/teaching/lesson-flow.md#备课短表：先定本次能力，再决定讲什么（T01）",
+   "type": "definition",
+   "scenes": [
+    "s3-teach"
+   ]
   },
   {
    "id": "T03",
-   "owner": "references/evidence.md#核验状态与「不能推出什么」",
-   "type": "definition"
+   "owner": "references/ops/evidence.md#核验状态与「不能推出什么」",
+   "type": "definition",
+   "scenes": [
+    "evidence"
+   ]
   },
   {
    "id": "T04",
-   "owner": "references/data.md#复习调度字段（薄弱点 / 错题本 / 保持复习条目元数据）",
-   "type": "definition"
+   "owner": "references/data/progress-schema.md#复习调度字段（薄弱点 / 错题本 / 保持复习条目元数据）",
+   "type": "definition",
+   "scenes": [
+    "persist",
+    "s4-review"
+   ]
   },
   {
    "id": "T05",
-   "owner": "references/evidence.md#核验状态与「不能推出什么」",
-   "type": "definition"
+   "owner": "references/ops/evidence.md#核验状态与「不能推出什么」",
+   "type": "definition",
+   "scenes": [
+    "evidence"
+   ]
   },
   {
    "id": "T06",
-   "owner": "references/teaching.md#4. 提问与提示起点（T06）",
-   "type": "definition"
+   "owner": "references/teaching/interaction.md#提问与提示起点（T06）",
+   "type": "definition",
+   "scenes": [
+    "s3-teach",
+    "s4-review"
+   ]
   },
   {
    "id": "T08",
-   "owner": "references/teaching.md#交互式工作样例（所有风格共用）",
-   "type": "definition"
+   "owner": "references/teaching/lesson-flow.md#交互式工作样例（所有风格共用）",
+   "type": "definition",
+   "scenes": [
+    "s3-teach"
+   ]
   },
   {
    "id": "T09",
-   "owner": "references/teaching.md#5. 反馈策略（T09）",
-   "type": "definition"
+   "owner": "references/teaching/interaction.md#反馈策略（T09）",
+   "type": "definition",
+   "scenes": [
+    "s3-teach",
+    "s4-review"
+   ]
   },
   {
    "id": "T10",
-   "owner": "references/teaching.md#错因分类与补救（T10）",
-   "type": "definition"
+   "owner": "references/teaching/interaction.md#错因分类与补救（T10）",
+   "type": "definition",
+   "scenes": [
+    "s3-teach",
+    "s4-review"
+   ]
   },
   {
    "id": "T11",
-   "owner": "references/assessment.md#零提示与条件化判定题",
-   "type": "definition"
+   "owner": "references/assessment/generation.md#零提示与条件化判定题",
+   "type": "definition",
+   "scenes": [
+    "s3-exercise",
+    "s4-review"
+   ]
   },
   {
    "id": "F05",
-   "owner": "references/routing.md#入口路由判别决策树（a–f）",
-   "type": "definition"
+   "owner": "references/routing/triggers.md#入口路由判别决策树（a–f）",
+   "type": "definition",
+   "scenes": [
+    "entry"
+   ]
   },
   {
    "id": "F06",
-   "owner": "references/workflow.md#S2 计划确认中",
-   "type": "definition"
+   "owner": "references/workflow/s0-s2-setup.md#S2 计划确认中",
+   "type": "definition",
+   "scenes": [
+    "s0-s2"
+   ]
   },
   {
    "id": "F08",
-   "owner": "references/data.md#下次续学",
-   "type": "definition"
+   "owner": "references/data/progress-schema.md#下次续学",
+   "type": "definition",
+   "scenes": [
+    "persist",
+    "s4-review"
+   ]
   },
   {
    "id": "F09",
-   "owner": "references/data.md#稳定引用 · 对账 · 提交顺序（F09 / F10 / F12）",
-   "type": "definition"
+   "owner": "references/data/compatibility.md#稳定引用 · 对账 · 提交顺序（F09 / F10 / F12）",
+   "type": "definition",
+   "scenes": [
+    "s5-close"
+   ]
   },
   {
    "id": "F10",
-   "owner": "references/data.md#稳定引用 · 对账 · 提交顺序（F09 / F10 / F12）",
-   "type": "definition"
+   "owner": "references/data/compatibility.md#稳定引用 · 对账 · 提交顺序（F09 / F10 / F12）",
+   "type": "definition",
+   "scenes": [
+    "s5-close"
+   ]
   },
   {
    "id": "F11",
-   "owner": "references/data.md#数据根（稳定根）",
-   "type": "definition"
+   "owner": "references/data/layout.md#数据根（稳定根）",
+   "type": "definition",
+   "scenes": [
+    "entry",
+    "persist",
+    "s0-s2"
+   ]
   },
   {
    "id": "F12",
-   "owner": "references/data.md#稳定引用 · 对账 · 提交顺序（F09 / F10 / F12）",
-   "type": "definition"
+   "owner": "references/data/compatibility.md#稳定引用 · 对账 · 提交顺序（F09 / F10 / F12）",
+   "type": "definition",
+   "scenes": [
+    "s5-close"
+   ]
   },
   {
    "id": "F13",
-   "owner": "references/data.md#学习者画像（可选全局文件）",
-   "type": "definition"
+   "owner": "references/data/lists.md#学习者画像（可选全局文件）",
+   "type": "definition",
+   "scenes": [
+    "s0-s2",
+    "persist"
+   ]
   },
   {
    "id": "F14",
-   "owner": "references/failure.md#异常分支与恢复",
-   "type": "definition"
+   "owner": "references/ops/failure.md#异常分支与恢复",
+   "type": "definition",
+   "scenes": [
+    "failure"
+   ]
+  },
+  {
+   "id": "R34",
+   "owner": "references/teaching/lesson-flow.md#单节课六拍",
+   "type": "definition",
+   "scenes": [
+    "s3-teach"
+   ]
+  },
+  {
+   "id": "R35",
+   "owner": "references/assessment/generation.md#出题范围与未讲授过滤（R35）",
+   "type": "definition",
+   "scenes": [
+    "s3-exercise",
+    "s4-review",
+    "s5-close"
+   ]
+  },
+  {
+   "id": "R36",
+   "owner": "references/workflow/s4-review.md#复习债治理（R36）",
+   "type": "protocol",
+   "scenes": [
+    "s4-review"
+   ]
+  },
+  {
+   "id": "R37",
+   "owner": "references/workflow/pacing.md#产能基准与排产（R37）",
+   "type": "definition",
+   "scenes": [
+    "s0-s2"
+   ]
+  },
+  {
+   "id": "R38",
+   "owner": "references/workflow/s0-s2-setup.md#S2 计划确认中",
+   "type": "protocol",
+   "scenes": [
+    "s0-s2"
+   ]
+  },
+  {
+   "id": "R39",
+   "owner": "references/workflow/pacing.md#休息与节律（R39）",
+   "type": "definition",
+   "scenes": [
+    "s0-s2"
+   ]
+  },
+  {
+   "id": "R40",
+   "owner": "references/teaching/interaction.md#修复动作（连错与负反馈，R40）",
+   "type": "definition",
+   "scenes": [
+    "s3-teach",
+    "s4-review"
+   ]
+  },
+  {
+   "id": "R41",
+   "owner": "references/handout/quality.md#概念块与分块呈现（R41）",
+   "type": "definition",
+   "scenes": [
+    "s3-handout"
+   ]
   }
  ],
  "path_aliases": {
-  "entry-routing.md": "references/routing.md",
-  "phases-and-gates.md": "references/workflow.md",
-  "teaching-loop.md": "references/teaching.md",
-  "lecture-styles.md": "references/teaching.md",
-  "handout-design.md": "references/handout.md",
-  "data-and-recovery.md": "references/data.md",
-  "redlines.md": "references/failure.md",
-  "setup-guide.md": "references/failure.md",
-  "subject-playbooks.md": "references/subjects.md",
-  "formula-typesetting.md": "references/formulas.md",
-  "methodology.md": "references/evidence.md"
+  "entry-routing.md": "references/routing/triggers.md",
+  "phases-and-gates.md": "references/workflow/gates.md",
+  "teaching-loop.md": "references/teaching/lesson-flow.md",
+  "lecture-styles.md": "references/teaching/presentation.md",
+  "handout-design.md": "references/handout/pipeline.md",
+  "data-and-recovery.md": "references/data/layout.md",
+  "redlines.md": "references/ops/failure.md",
+  "setup-guide.md": "references/ops/failure.md",
+  "subject-playbooks.md": "references/subjects/common.md",
+  "formula-typesetting.md": "references/ops/formulas.md",
+  "methodology.md": "references/ops/evidence.md",
+  "routing.md": "references/routing/triggers.md",
+  "workflow.md": "references/workflow/gates.md",
+  "teaching.md": "references/teaching/lesson-flow.md",
+  "handout.md": "references/handout/pipeline.md",
+  "data.md": "references/data/layout.md",
+  "assessment.md": "references/assessment/scoring.md",
+  "subjects.md": "references/subjects/common.md",
+  "operations.md": "references/ops/scripts.md",
+  "failure.md": "references/ops/failure.md",
+  "evidence.md": "references/ops/evidence.md",
+  "formulas.md": "references/ops/formulas.md",
+  "composition.md": "references/ops/composition.md"
  },
  "constants": {
   "phases": [
@@ -663,6 +1135,7 @@
     "E-KP-TYPED-GATE",
     "E-LEDGER-RESIDUE",
     "E-LESSON-ID-DUP",
+    "E-LOAD-BUDGET",
     "E-MARKER-LEGACY",
     "E-MISSING-FIELD",
     "E-NO-DIAGNOSTIC",
@@ -691,6 +1164,7 @@
     "E-TOPOLOGY-MIRROR",
     "E-TOPOLOGY-OLDNAME",
     "E-TOPOLOGY-OWNER",
+    "E-TOPOLOGY-SCENES",
     "E-TOPOLOGY-VERSION",
     "E-UNDECLARED-CHANGES",
     "E-UNREADABLE-PROGRESS"
@@ -743,6 +1217,135 @@
     "W-UNPARSED-MODULE",
     "W-UNPARSED-ROUTE",
     "W-VOIDED-ATTEMPT"
+   ]
+  },
+  "scenes_budget": {
+   "files_max": 7,
+   "chars_max": 28000
+  }
+ },
+ "scenes": {
+  "entry": {
+   "label": "入口判别 / 触发边界",
+   "files": [
+    "references/routing/triggers.md"
+   ]
+  },
+  "shortcuts": {
+   "label": "快捷指令",
+   "files": [
+    "references/routing/shortcuts.md"
+   ]
+  },
+  "ecosystem": {
+   "label": "生态分工与优先级",
+   "files": [
+    "references/routing/ecosystem.md"
+   ]
+  },
+  "s0-s2": {
+   "label": "S0–S2 建档/诊断/计划",
+   "files": [
+    "references/workflow/gates.md",
+    "references/workflow/s0-s2-setup.md",
+    "references/workflow/pacing.md",
+    "references/data/layout.md",
+    "references/data/lists.md",
+    "references/subjects/common.md",
+    "references/subjects/{family}.md"
+   ]
+  },
+  "s3-teach": {
+   "label": "S3 讲授（六拍）",
+   "files": [
+    "references/workflow/s3-block.md",
+    "references/teaching/lesson-flow.md",
+    "references/teaching/interaction.md",
+    "references/assessment/scoring.md",
+    "references/subjects/{family}.md"
+   ]
+  },
+  "s3-handout": {
+   "label": "S3 讲义生成",
+   "chars_max": 60000,
+   "files": [
+    "references/workflow/s3-block.md",
+    "references/handout/pipeline.md",
+    "references/handout/templates.md",
+    "references/handout/quality.md",
+    "references/ops/scripts.md"
+   ]
+  },
+  "s3-exercise": {
+   "label": "S3 题组/判分",
+   "files": [
+    "references/workflow/s3-block.md",
+    "references/assessment/generation.md",
+    "references/assessment/scoring.md",
+    "references/subjects/common.md",
+    "references/ops/scripts.md"
+   ]
+  },
+  "s3-deep": {
+   "label": "深讲概念 / 换风格重讲 / 呈现定版",
+   "files": [
+    "references/teaching/presentation.md",
+    "references/handout/templates.md"
+   ]
+  },
+  "s4-review": {
+   "label": "S4 复习与清债",
+   "files": [
+    "references/workflow/s4-review.md",
+    "references/assessment/scheduling.md",
+    "references/assessment/generation.md",
+    "references/teaching/interaction.md",
+    "references/data/progress-schema.md"
+   ]
+  },
+  "s5-close": {
+   "label": "S5 结课",
+   "chars_max": 34000,
+   "files": [
+    "references/workflow/s5-close.md",
+    "references/assessment/scoring.md",
+    "references/assessment/generation.md",
+    "references/handout/quality.md",
+    "references/data/compatibility.md"
+   ]
+  },
+  "persist": {
+   "label": "任何落盘 / 续学",
+   "files": [
+    "references/data/layout.md",
+    "references/data/progress-schema.md",
+    "references/data/lists.md",
+    "references/ops/scripts.md"
+   ],
+   "chars_max": 30000
+  },
+  "failure": {
+   "label": "任何失败 / 环境阻断",
+   "files": [
+    "references/ops/failure.md"
+   ]
+  },
+  "formulas": {
+   "label": "公式/符号输出",
+   "files": [
+    "references/ops/formulas.md"
+   ]
+  },
+  "evidence": {
+   "label": "溯源核验",
+   "files": [
+    "references/ops/evidence.md"
+   ]
+  },
+  "composition": {
+   "label": "跨机制组合",
+   "files": [
+    "references/ops/composition.md"
    ]
   }
  }

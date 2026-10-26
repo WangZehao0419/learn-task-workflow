@@ -64,7 +64,7 @@ def parse_json(raw):
 
 def group_skill(skill_md, c):
     body = skill_md or ""
-    c.check("1.1 SKILL.md 引用 references/formulas.md", "references/formulas.md" in body)
+    c.check("1.1 SKILL.md 引用 references/ops/formulas.md", "references/ops/formulas.md" in body)
     c.check("1.2 SKILL.md 不再引用旧文件名", ("formula-" + "typesetting.md") not in body)
 
 
@@ -92,11 +92,11 @@ def group_formulas(formulas, c):
 def group_crossrefs(teaching, handout, c):
     t = teaching or ""
     h = handout or ""
-    c.check("3.1 teaching.md 引用 formulas.md", "formulas.md" in t)
-    c.check("3.2 teaching.md 含「新记号/新操作讲透」", "## 新记号/新操作讲透" in t)
-    c.check("4.1 handout.md 含「## 图像可视化双轨」", "## 图像可视化双轨" in h)
-    c.check("4.2 handout.md 含「③ 答案」", "③ 答案" in h)
-    c.check("4.3 handout.md 含「完整示例」", "完整示例" in h)
+    c.check("3.1 teaching/ 分册引用 ops/formulas.md", "ops/formulas.md" in t)
+    c.check("3.2 teaching/ 含「新记号/新操作讲透」", "## 新记号/新操作讲透" in t)
+    c.check("4.1 handout/ 含「## 图像可视化双轨」", "## 图像可视化双轨" in h)
+    c.check("4.2 handout/ 含「③ 答案」", "③ 答案" in h)
+    c.check("4.3 handout/ 含「完整示例」", "完整示例" in h)
 
 
 def group_evals(evals_data, c):
@@ -148,16 +148,25 @@ def main(argv=None) -> int:
             else Path(__file__).resolve().parent.parent)
 
     skill_md = read_text(root / "SKILL.md")
-    formulas = read_text(root / "references" / "formulas.md")
-    teaching = read_text(root / "references" / "teaching.md")
-    handout = read_text(root / "references" / "handout.md")
+    formulas = read_text(root / "references" / "ops" / "formulas.md")
+
+    def read_dir(rel):
+        d = root / rel
+        if not d.is_dir():
+            return None
+        parts = [read_text(p) for p in sorted(d.rglob("*.md"))]
+        return "\n".join(x for x in parts if x is not None)
+
+    teaching = read_dir(root / "references" / "teaching")
+    handout = read_dir(root / "references" / "handout")
     evals_raw = read_text(root / "evals" / "evals.json")
 
     scope = [("SKILL.md", skill_md), ("evals/evals.json", evals_raw)]
     refs_dir = root / "references"
     if refs_dir.is_dir():
-        for path in sorted(refs_dir.glob("*.md")):
-            scope.append((f"references/{path.name}", read_text(path)))
+        for path in sorted(refs_dir.rglob("*.md")):
+            rel = path.relative_to(root).as_posix()
+            scope.append((rel, read_text(path)))
 
     c = Checker()
     group_skill(skill_md, c)
