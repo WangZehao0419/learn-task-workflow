@@ -83,6 +83,10 @@ import tempfile
 from pathlib import Path
 
 import rule_contract
+from ltw_parse import (ENUM_KP_TYPE, ENUM_KP_VISUAL, FIELD_RE, HOLD_KEYS,
+                       KP_ID_ANY_RE, KP_ID_RE, KP_TYPE_ALIASES, KP_VISUAL_ALIASES,
+                       ROUTE_RE, hold_disposition_excluded, hold_entry_malformed,
+                       kp_status_base, normalize_kp_id, parse_kp_optional, parse_kp_row)
 
 # 枚举唯一来源：contracts/rules.json（缺失/畸形即结构化失败）。
 _C = rule_contract.load_or_exit()["constants"]
@@ -102,13 +106,8 @@ ENUM_REVIEW_FROM = _C["review_origin_phases"]
 
 # 全程必填；「起点」由 S1 产出，仅在 S1 诊断结束（离开 S0/S1）后必填（见 check()）。
 BASE_REQUIRED = ["当前阶段", "类型", "学科族", "目标"]
-FIELD_RE = re.compile(r"^-\s*([^：:]+)[：:]\s*(.*)$")
-# 已完成勾选：x / X 均识别
-ROUTE_RE = re.compile(r"^-\s*\[([xX ])\]\s*(\d+)\.\s*(.*)$")
 CHECKBOX_RE = re.compile(r"^-\s*\[[^\]]*\]")  # 形如 - [..] 的勾选语法（用于发现未解析行）
 DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
-# 「暂缓与范围外」区块（v2.3）条目应含的三段（自由文本 + 竖线分段，不做枚举硬校验）
-HOLD_KEYS = ("来源", "处置", "触发条件")
 
 # ── 判分证据结构判定（区分真实作答证据与空文件/模板）──
 EVIDENCE_HEAD_RE = re.compile(r"(判分|作答)")
@@ -169,7 +168,6 @@ KEY_ITEM_FLAG = "关键项"
 QNUM_RE = re.compile(r"题\s*(\d+)")
 DATE_IN_NAME_RE = re.compile(r"(\d{4}-\d{2}-\d{2})")
 EVIDENCE_REF_RE = re.compile(r"本次证据[：:]\s*(\S+)")
-KP_ID_ANY_RE = re.compile(r"KP-(\d+)-(\d+)")
 # 正确性/独立性均按**精确枚举**解析：`正确性=不对` 不得被子串 `对` 误判为正确；
 # 正确性四态为 对/部分/错/未判（兼容英文），独立性缺失或 `未测` 均**不得推为独立**。
 # 判分四态别名唯一来源 = 契约 grading.aliases（调度档位词 Good/Easy/Hard/Again 不属四态，保持本地常量）
@@ -593,14 +591,6 @@ def pick_special(ex_names, prefixes):
     return max(cand, key=lambda n: (_file_date(n), n))
 
 
-def normalize_kp_id(kid):
-    """KP 编号归一化：`KP-90-1` ≡ `KP-90-01`（补零兼容；暂缓对账先归一化再比集合）。"""
-    m = KP_ID_ANY_RE.fullmatch(kid or "")
-    if not m:
-        return kid
-    return "KP-{}-{}".format(int(m.group(1)), int(m.group(2)))
-
-
 def _read_evidence(ex_dir, name):
     try:
         return (ex_dir / name).read_text(encoding="utf-8", errors="replace")
@@ -674,105 +664,13 @@ def collect_submission_ids(text, ex_dir, ex_names):
     return ids
 
 
-# ── 知识清单文件（v2.4）解析 ──
-ENUM_KP_STATUS = tuple(_C["kp"]["states"])
-# v6.1 可选分型：缺失 = 旧任务统一闸口（零迁移）；类型/视觉任务只影响已声明行。
-ENUM_KP_TYPE = tuple(_C["kp"]["types"])
-ENUM_KP_VISUAL = tuple(_C["kp"]["visual_tasks"])
-KP_TYPE_ALIASES = dict(_C["kp"]["type_aliases"])
-KP_VISUAL_ALIASES = {"identification": "识别", "relationship": "关系",
-                     "table_graph": "图表", "comparison": "比较"}
-KP_ID_RE = re.compile(r"^KP-(\d+)-(\d+)$")
+# ── 知识清单文件解析（行级原语唯一实现 = ltw_parse；枚举与别名唯一来源 = 契约）──
 KP_ID_IN_TEXT_RE = re.compile(r"KP-\d+-\d+")
 # 稳定引用：路线行与判分记录可声明 lesson_id=…；消费方优先按 ID 匹配，旧资料回退序号
 LESSON_ID_RE = re.compile(r"lesson_id\s*=\s*([A-Za-z0-9_\-]+)")
 # 覆盖范围行合法值：全量 或 已细化至第 N 节（宽容匹配，行缺失视同全量）
 KP_COVER_RE = re.compile(r"^已细化至第\s*\d+\s*节")
 KP_SUMMARY_KEY_RE = re.compile(r"(总|未讲|已讲|暂缓|排除)\s*(\d+)")
-
-
-def kp_status_base(raw):
-    """状态列取枚举基值：容忍尾部（…）括注（如「未讲（已会：摸底证据，日期）」，
-    全角/半角括号双兼容）；「已会（…）」按保守口径归「未讲」基值（信息性标注，留在分母内）。
-    非法返回 None。"""
-    s = raw.strip()
-    if not s:
-        return None
-    if s.startswith("已会"):
-        return "未讲"
-    for st in ENUM_KP_STATUS:
-        if s == st or s.startswith(st + "（") or s.startswith(st + "("):
-            return st
-    return None
-
-
-def parse_kp_optional(segs):
-    """解析 KP 行可选字段（类型/视觉任务）；无字段返回 (None, [])，畸形返回 None。"""
-    kp_type = None
-    visual_tasks = []
-    for seg in segs:
-        if seg.startswith("类型：") or seg.startswith("类型:"):
-            if kp_type is not None:
-                return None
-            raw = re.split(r"[：:]", seg, maxsplit=1)[1].strip()
-            value = raw if raw in ENUM_KP_TYPE else KP_TYPE_ALIASES.get(raw.lower())
-            if value is None:
-                return None
-            kp_type = value
-        elif seg.startswith("视觉任务：") or seg.startswith("视觉任务:"):
-            if visual_tasks:
-                return None
-            raw = re.split(r"[：:]", seg, maxsplit=1)[1].strip()
-            if not raw:
-                return None
-            for tok in re.split(r"[,，、/\s]+", raw):
-                if not tok:
-                    continue
-                value = tok if tok in ENUM_KP_VISUAL else KP_VISUAL_ALIASES.get(tok.lower())
-                if value is None or value in visual_tasks:
-                    return None
-                visual_tasks.append(value)
-            if not visual_tasks:
-                return None
-        else:
-            return None
-    return kp_type, visual_tasks
-
-
-def parse_kp_row(segs):
-    """清单行六段（KP编号｜知识点｜所属小节｜前置｜来源｜状态）+ 可选类型/视觉任务。
-
-    可选字段缺失返回 type=None、visual_tasks=[]（旧任务统一闸口）；畸形返回 None。
-    """
-    if len(segs) < 6:
-        return None
-    kid, title, section, pre, source, status = segs[:6]
-    optional = parse_kp_optional(segs[6:])
-    if optional is None:
-        return None
-    kp_type, visual_tasks = optional
-    m = KP_ID_RE.match(kid)
-    if not m or not title or not section:
-        return None
-    if (not pre.startswith("前置：") or not source.startswith("来源：")
-            or not source[len("来源："):].strip() or not status.startswith("状态：")):
-        return None
-    pre_body = pre[len("前置："):].strip()
-    prereqs = []
-    if pre_body:
-        for p in re.split(r"[,，、\s]+", pre_body):
-            if not p or not KP_ID_RE.match(p):
-                return None
-            prereqs.append(p)
-    raw_status = status[len("状态："):].strip()
-    base = kp_status_base(raw_status)
-    if base is None:
-        return None
-    # 摸底「已会」括注探测（全角/半角括号双兼容）：带括注行豁免 W-KP-STATE-MISMATCH
-    bottom_note = raw_status.startswith("已会") or re.match(r"^未讲[(（]\s*已会", raw_status) is not None
-    return {"id": kid, "sec": int(m.group(1)), "no": int(m.group(2)),
-            "prereqs": prereqs, "status": base, "bottom_note": bottom_note,
-            "type": kp_type, "visual_tasks": visual_tasks}
 
 
 def parse_kp_list(path):
@@ -832,27 +730,6 @@ def parse_kp_list(path):
             "coverage_malformed": coverage_malformed,
             "summary_present": summary_present, "summary": summary,
             "rows": rows, "malformed": malformed, "unreadable": False}
-
-
-def hold_entry_malformed(body):
-    """有竖线分段但缺 来源/处置/触发条件 任一段 → 畸形（纯自由文本行不判畸形）。"""
-    if "｜" not in body and "|" not in body:
-        return False
-    for key in HOLD_KEYS:
-        if not re.search(key + r"[：:]", body):
-            return True
-    return False
-
-
-def hold_disposition_excluded(body):
-    """处置段含「排除」→ 该条按排除处置计（排除侧交叉核对用；无竖线分段判 False）。"""
-    if "｜" not in body and "|" not in body:
-        return False
-    for seg in re.split(r"[｜|]", body):
-        seg = seg.strip()
-        if seg.startswith("处置"):
-            return "排除" in seg
-    return False
 
 
 def hold_is_designed(body):

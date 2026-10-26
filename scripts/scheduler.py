@@ -45,20 +45,21 @@ SKILL.md「判断归模型、数据归脚本」）。
         legacy_double_count / mixed（混排披露 evt_tagged_count、legacy_count）。
         快照口径不做时间窗，不需 --today。脚本只算不判，教学化呈现归模型。
 
-公式契约（不得在调用侧自行更改）：
+公式契约（不得在调用侧自行更改；grade_base / init_s / d_drift / s_max / r_min /
+    r_max / d_min / d_max / default_s / default_d 十项常数唯一来源 = 契约
+    scheduler 块，此处不重复数值）:
     成功档（hard/good/easy）：
-        factor = base(Hard 1.4 / Good 2.2 / Easy 3.0)
-                 * (1 + 0.35*(R-1)) * (1.3 - 0.1*D)
-        R = clamp(elapsed/S, 0.25, 2.0)
-        S' = max(S*factor, S+0.5)，上限 365
+        factor = grade_base[档] * (1 + 0.35*(R-1)) * (1.3 - 0.1*D)
+        R = clamp(elapsed/S, r_min, r_max)
+        S' = max(S*factor, S+0.5)，上限 s_max
     失败档（again）：S' = max(1.0, S*0.3)
-    难度漂移：again +1 / hard +0.5 / easy -1 / good 0，夹 [1,5]（0.5 粒度）
-    新卡：初始 S = again 1.0 / hard 1.5 / good 3.0 / easy 6.0；
-          初始 D = 3 + --init-shift（顺向检索 -1，默认 0，反向问/迁移 +1）
+    难度漂移：again / hard / easy / good 各取 d_drift[档]，夹 [d_min, d_max]（0.5 粒度）
+    新卡：初始 S 取 init_s[档]；初始 D 取 default_d + --init-shift
+          （顺向检索 -1，默认 0，反向问/迁移 +1）
     round 一律四舍五入 0.5 进位（int(x+0.5)），规避银行家舍入歧义。
     信心度仅回显，不进公式（cw 惩罚已由 grade=again 承载，避免双重惩罚）。
-    有效域（所有计算入口先验，NaN/Inf 一律拒绝、exit 2）：S ∈ (0,365]，
-    D ∈ [1,5] 且 0.5 粒度，elapsed 有限且 ≥0（R 已夹 [0.25,2.0]，长中断不放大间隔）；
+    有效域（所有计算入口先验，NaN/Inf 一律拒绝、exit 2）：S ∈ (0, s_max]，
+    D ∈ [d_min, d_max] 且 0.5 粒度，elapsed 有限且 ≥0（R 已夹紧，长中断不放大间隔）；
     日期加法越界（如 9999-12-31 + 间隔）同样结构化拒绝，不裸崩、不输出非有限数
     （json.dumps allow_nan=False）。
 
@@ -79,6 +80,7 @@ from datetime import date
 from pathlib import Path
 
 import rule_contract
+from ltw_parse import FIELD_RE
 
 
 class ScheduleError(ValueError):
@@ -288,7 +290,6 @@ def next_interval(grade, stability=None, difficulty=None, elapsed=None,
 # due-queue：读 progress.md 的薄弱点 / 错题本两区，只读排序输出
 # ---------------------------------------------------------------------------
 
-FIELD_RE = re.compile(r"^-\s*([^：:]+)[：:]\s*(.*)$")
 # 输入行已由 parse_progress_sections 剥去「- 」前缀
 WRONG_LINE_RE = re.compile(r"^\[(\d{4}-\d{2}-\d{2})\]\s*(.*)$")
 META_KEYS = ("S=", "D=", "last=", "due=", "信心=", "cw", "顽固", "evt=", "attempt_id=", "子类=")

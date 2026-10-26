@@ -39,6 +39,8 @@ import tempfile
 from pathlib import Path
 
 import rule_contract
+from ltw_parse import (BLOCK_RE, FIELD_RE, ROUTE_RE, hold_disposition_excluded,
+                       hold_entry_malformed)
 
 # 枚举唯一来源：contracts/rules.json（缺失/畸形即结构化失败）。
 _C = rule_contract.load_or_exit()["constants"]
@@ -46,37 +48,8 @@ ENUM_PHASE = _C["phases"]
 ENUM_TYPE = _C["types"]
 ENUM_FAMILY = _C["subject_families"]
 
-FIELD_RE = re.compile(r"^-\s*([^：:]+)[：:]\s*(.*)$")
-# 已完成勾选：x / X 均识别
-ROUTE_RE = re.compile(r"^-\s*\[([xX ])\]\s*(\d+)\.\s*(.*)$")
-# 「下次续学」小节行里的块位置：「已讲到第 k/总块」→ current_block / block_total
-BLOCK_RE = re.compile(r"(?:已讲到第\s*)?(\d+)\s*/\s*(\d+)\s*块")
-# 「暂缓与范围外」区块条目应含的三段（自由文本 + 竖线分段，不做枚举硬校验）
-HOLD_KEYS = ("来源", "处置", "触发条件")
-
 # 数据根第一层的**合法全局文件**：不得判为「旧版单任务文件」（画像由文档声明为可选全局文件、脚本零感知）
 LEGACY_EXCLUDE = {"profile.md"}
-
-
-def hold_entry_malformed(body):
-    """有竖线分段但缺 来源/处置/触发条件 任一段 → 畸形（纯自由文本行不判畸形）。"""
-    if "｜" not in body and "|" not in body:
-        return False
-    for key in HOLD_KEYS:
-        if not re.search(key + r"[：:]", body):
-            return True
-    return False
-
-
-def hold_disposition_excluded(body):
-    """处置段含「排除」→ 该条按排除处置计（hold_count 仍含该条目；暂缓口径 = hold_count − excluded_count）。"""
-    if "｜" not in body and "|" not in body:
-        return False
-    for seg in re.split(r"[｜|]", body):
-        seg = seg.strip()
-        if seg.startswith("处置"):
-            return "排除" in seg
-    return False
 
 
 def default_root():

@@ -32,12 +32,7 @@ import re
 import sys
 from pathlib import Path
 
-import rule_contract
-
-# 枚举唯一来源：contracts/rules.json（缺失/畸形即结构化失败）。
-_C = rule_contract.load_or_exit()["constants"]
-ENUM_KP_STATUS = tuple(_C["kp"]["states"])
-KP_ID_RE = re.compile(r"^KP-(\d+)-(\d+)$")
+from ltw_parse import KP_ID_RE, normalize_kp_id, parse_kp_row
 
 VALID = """# 知识清单：格式演示（示例仅为格式演示，KP 取舍与依赖声明规则领域无关）
 - 版本：2
@@ -104,65 +99,6 @@ def kp_key(kid):
     if m:
         return (int(m.group(1)), int(m.group(2)))
     return (10 ** 9, 10 ** 9)
-
-
-def normalize_kp_id(kid):
-    """KP 编号规范化：单位数与补零别名归一到两位（KP-1-1 → KP-01-01）。
-
-    仅用于**重复检测与前置匹配**（使「KP-1-1」与「KP-01-01」不产生重复对象、
-    前置引用能跨别名命中）；输出 `order` 仍保留原书写形态（向后兼容）。
-    """
-    m = KP_ID_RE.match(kid or "")
-    if not m:
-        return kid
-    return "KP-{0:02d}-{1:02d}".format(int(m.group(1)), int(m.group(2)))
-
-
-def kp_status_base(raw):
-    """状态列取枚举基值（容忍尾部（…）括注，全角/半角括号双兼容）；仅供校验与计数，不参与排序。"""
-    s = raw.strip()
-    if not s:
-        return None
-    if s.startswith("已会"):
-        return "未讲"
-    for st in ENUM_KP_STATUS:
-        if s == st or s.startswith(st + "（") or s.startswith(st + "("):
-            return st
-    return None
-
-
-def parse_kp_row(segs):
-    """清单行六段（KP编号｜知识点｜所属小节｜前置｜来源｜状态）→ dict；畸形返回 None。
-
-    v6.1 的可选「类型/视觉任务」段由 progress_check 校验；排序只读前六段，忽略附加段。
-    """
-    if len(segs) < 6:
-        return None
-    kid, title, section, pre, source, status = segs[:6]
-    m = KP_ID_RE.match(kid)
-    if not m or not title or not section:
-        return None
-    if (not pre.startswith("前置：") or not source.startswith("来源：")
-            or not source[len("来源："):].strip() or not status.startswith("状态：")):
-        return None
-    pre_body = pre[len("前置："):].strip()
-    prereqs = []
-    if pre_body:
-        for p in re.split(r"[,，、\s]+", pre_body):
-            if not p or not KP_ID_RE.match(p):
-                return None
-            prereqs.append(p)
-    raw_status = status[len("状态："):].strip()
-    base = kp_status_base(raw_status)
-    if base is None:
-        return None
-    # K02：解析显式所属节的序号（仅当形如「小节 N」时）；用于与编号契约（编号第一节 = 所属节）比对
-    sec_decl = None
-    sec_m = re.fullmatch(r"小节\s*(\d+)", section)
-    if sec_m:
-        sec_decl = int(sec_m.group(1))
-    return {"id": kid, "sec": int(m.group(1)), "no": int(m.group(2)),
-            "sec_decl": sec_decl, "prereqs": prereqs, "status": base}
 
 
 def parse_kp_list(text):
