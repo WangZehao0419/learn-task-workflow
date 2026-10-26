@@ -159,7 +159,7 @@
 
 - **仅作评测附加字段**，不替代 evals.json 现有五轴主评分（0–5），不改变现有分数与 verdict 语义。
 - 字段名 formula_checks，五维各 0–2 分，逐维独立记分、不折算，各维附一句理由写入 review_note。
-- 证据字段沿用 evals/run-log.md 口径：prompt、fixture、actual_output、run_id、scores、verdict、reviewer、review_note；run 标识建议 formula-typesetting-<版本>-<YYYYMMDD>-<短commit>。
+- 证据字段固定为：prompt、fixture、actual_output、run_id、scores、verdict、reviewer、review_note；run 标识建议 formula-typesetting-<版本>-<YYYYMMDD>-<短commit>。
 - 评分者独立核对学科内容：**渲染通过不等于学科正确**（见第 4、5 节），渲染检查者不得兼任学科评分。
 - 结构渲染、复制保真两维的评分须引用第 8 节 (d) 的检查结果作为证据。
 

@@ -18,7 +18,7 @@
 | `verify_explanation.py` | `<材料目录或单文件> [--selftest] [--reader]` | 只读静态校验，不写盘 | 讲义定稿前；`--reader` 加跑读者版 W 级检查 |
 | `rule_contract.py` | `--selftest \| --topology` | 只读校验契约与拓扑 | 修改契约/分册结构后、打包前 |
 
-完整参数、退出码与 notes 的机器可读版本见 `evals/scripts-contract.json`；脚本 docstring 只保留算法/参数说明，不再维护完整错误码表。
+完整参数、退出码与 notes 的机器可读版本见 `contracts/scripts-contract.json`；脚本 docstring 只保留算法/参数说明，不再维护完整错误码表。
 
 ## 路径与解释器约定
 
@@ -41,7 +41,7 @@
 
 **错误码入口**：
 
-- 完整码表与 notes：`contracts/rules.json.errors`（机器名单）+ `evals/scripts-contract.json`（脚本参数/退出码/notes）；脚本 docstring 只列常用码与实现说明；下表是触发条件速查。
+- 完整码表与 notes：`contracts/rules.json.errors`（机器名单）+ `contracts/scripts-contract.json`（脚本参数/退出码/notes）；脚本 docstring 只列常用码与实现说明；下表是触发条件速查。
 - `progress_check` 的新增码：`E-GATE-RATIO-INVALID`（`小节目标线` 非法）、`E-FINAL-INVALID-TARGET`（结课目标线非法，不得回退默认线）。
 - 契约缺失/畸形：`E-CONTRACT-MISSING` / `E-CONTRACT-INVALID`。
 - 业务语义：`assessment.md` 判分/调度；`workflow.md` 闸口；`data.md` 字段；`failure.md` 处置。
@@ -119,6 +119,6 @@ python -B scripts/rule_contract.py --topology
 
 ## 当前核验
 
-- 适用版本：6.10.2
-- 核验日期：2026-10-26
+- 适用版本：6.11.0
+- 核验日期：2026-10-27
 - 环境依赖：`skill-dependencies.json`（Python `min_version`）；只有 `check_environment.py` 输出 `ready` 才能继续。
