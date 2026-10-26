@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/1",
- "version": "6.10.2",
+ "version": "6.11.0",
  "files": [
   {
    "id": "routing",
@@ -586,11 +586,15 @@
     "E-THIRD-CONFLICT",
     "E-THIRD-EXEMPT-MISUSE",
     "E-TOPOLOGY-DAG",
+    "E-TOPOLOGY-ERRORCODE",
     "E-TOPOLOGY-FILE",
     "E-TOPOLOGY-HEADER",
+    "E-TOPOLOGY-LEADWORDS",
     "E-TOPOLOGY-LOAD",
+    "E-TOPOLOGY-MIRROR",
     "E-TOPOLOGY-OLDNAME",
     "E-TOPOLOGY-OWNER",
+    "E-TOPOLOGY-VERSION",
     "E-UNDECLARED-CHANGES",
     "E-UNREADABLE-PROGRESS"
    ],

@@ -79,7 +79,7 @@
     "2": "用法错误"
    },
    "schema": "ltw-rules/1",
-   "notes": "契约唯一来源 contracts/rules.json；缺失/畸形报 E-CONTRACT-MISSING/E-CONTRACT-INVALID；--topology 检查无加载指令、职责头、owner 指针、依赖无环、旧文件名只在 alias 表"
+   "notes": "契约唯一来源 contracts/rules.json；缺失/畸形报 E-CONTRACT-MISSING/E-CONTRACT-INVALID；--topology 检查无加载指令、职责头、owner 指针、依赖无环、旧文件名只在 alias 表、版本四方一致、全仓错误码 ⊆ 契约 errors、operations 速查表双向覆盖、lead_words 双写一致"
   }
  ],
  "verification": {

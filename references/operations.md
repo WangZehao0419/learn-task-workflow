@@ -48,7 +48,7 @@
 
 ### 错误码速查
 
-> 按脚本分组；同一行的码共享触发条件。机器名单以 `contracts/rules.json.errors` 为准，共 108 码（已移除废止的 `W-BOX-WRAP`）；本表只补人类可读的触发条件，不重复业务语义。
+> 按脚本分组；同一行的码共享触发条件。机器名单以 `contracts/rules.json.errors` 为准（覆盖完整性由 `rule_contract.py --topology` 校验）；本表只补人类可读的触发条件，不重复业务语义。
 
 | 来源 | 码 | 触发条件（速查） |
 |---|---|---|
@@ -81,7 +81,7 @@
 | verify_explanation | `W-READER` / `W-READER-ALT` / `W-READER-CONCLUSION` / `W-READER-EMPHASIS` / `W-READER-HEADING` / `W-READER-INDEX` / `W-READER-OVERVIEW` / `W-READER-SVG` / `W-READER-TABLE` | `--reader` 结构项：标题 / 表格 / alt / SVG / 速览 / 回看索引 / 一句话结论 / 强调密度 |
 | verify_explanation | `W-NO-TIER` | 讲义单元缺 tier 标签 |
 | rule_contract | `E-CONTRACT-MISSING` / `E-CONTRACT-INVALID` | 契约缺失 / 畸形 |
-| rule_contract | `E-TOPOLOGY-DAG` / `E-TOPOLOGY-FILE` / `E-TOPOLOGY-HEADER` / `E-TOPOLOGY-LOAD` / `E-TOPOLOGY-OLDNAME` / `E-TOPOLOGY-OWNER` | 依赖成环 / 文件缺失 / 职责头缺失 / 加载指令 / 旧文件名 / owner 锚点失效 |
+| rule_contract | `E-TOPOLOGY-DAG` / `E-TOPOLOGY-ERRORCODE` / `E-TOPOLOGY-FILE` / `E-TOPOLOGY-HEADER` / `E-TOPOLOGY-LEADWORDS` / `E-TOPOLOGY-LOAD` / `E-TOPOLOGY-MIRROR` / `E-TOPOLOGY-OLDNAME` / `E-TOPOLOGY-OWNER` / `E-TOPOLOGY-VERSION` | 依赖成环 / 未声明错误码 / 文件缺失 / 职责头缺失 / lead_words 双写漂移 / 加载指令 / 速查表覆盖缺口 / 旧文件名 / owner 锚点失效 / 版本不一致 |
 
 > `check_environment.py` 用 `ready` / `needs_setup` / `unavailable` / `manifest_error`（exit 2）状态而不是 E/W 码；`kp_sort.py` 用 exit 1 表示畸形行、依赖环或解释器版本不足。两者详见 `scripts-contract.json`。
 

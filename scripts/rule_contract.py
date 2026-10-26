@@ -3,6 +3,12 @@
 """规则契约加载与拓扑检查（stdlib-only）。
 
 契约固定为 <技能根>/contracts/rules.json。缺失/畸形时所有调用方必须 fail closed。
+
+--topology 检查：references 无加载指令、owns/must-not-define 职责头、
+R/T/F 规则 owner 锚点可解析、依赖无环、旧文件名只在 alias 表、
+版本四方一致（SKILL.md / rules.json / skill-dependencies.json / evals.json）、
+全仓 E-/W- 错误码 ⊆ 契约 errors、operations.md 速查表与 errors 双向覆盖、
+handout.md canonical 集合与 headings.lead_words 双写一致。
 """
 from __future__ import annotations
 
@@ -20,7 +26,16 @@ REQUIRED_CONST = (
     "review_origin_phases", "grading", "kp", "gates", "restatement",
     "budget", "schemas", "headings", "scheduler", "errors",
 )
-LOAD_DIRECTIVE_RE = re.compile(r"(?:@references/|加载\s*`?references/)")
+LOAD_DIRECTIVE_RE = re.compile(r"(?:@references/|加载\s*`?references/|加载时机)")
+ERROR_CODE_RE = re.compile(r"\b[EW]-[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+\b")
+# 错误码扫描范围：任何提到 E-/W- 码的文件都必须只提契约声明过的码
+SCAN_GLOBS = (
+    "scripts/*.py",
+    "evals/verify-*.py",
+    "references/*.md",
+    "contracts/scripts-contract.json",
+    "SKILL.md",
+)
 OLD_NAMES = (
     "entry-routing.md", "phases-and-gates.md", "teaching-loop.md",
     "lecture-styles.md", "handout-design.md", "data-and-recovery.md",
@@ -218,6 +233,80 @@ def _dag(files: list) -> tuple[bool, str]:
     return True, ""
 
 
+def _skill_md_version(root: Path) -> str:
+    text = (root / "SKILL.md").read_text(encoding="utf-8", errors="replace")
+    m = re.search(r"(?m)^version:\s*(\S+)\s*$", text)
+    return m.group(1) if m else ""
+
+
+def check_versions(skill_version: str, contract_version: str,
+                   deps_path: Path, evals_path: Path) -> list:
+    """版本四方一致：SKILL.md == rules.json == skill-dependencies == evals.json。"""
+    issues = []
+    if not skill_version:
+        issues.append("E-TOPOLOGY-VERSION: SKILL.md frontmatter 缺 version")
+    if skill_version and contract_version != skill_version:
+        issues.append("E-TOPOLOGY-VERSION: rules.json version %s ≠ SKILL.md %s"
+                      % (contract_version, skill_version))
+    try:
+        deps = json.loads(deps_path.read_text(encoding="utf-8"))
+        dep_ver = deps["dependencies"][0]["setup"]["applies_to_version"]
+        if dep_ver != skill_version:
+            issues.append("E-TOPOLOGY-VERSION: skill-dependencies.json applies_to_version %s ≠ SKILL.md %s"
+                          % (dep_ver, skill_version))
+    except (OSError, ValueError, KeyError, IndexError, TypeError):
+        issues.append("E-TOPOLOGY-VERSION: skill-dependencies.json 缺 dependencies[0].setup.applies_to_version")
+    try:
+        ev_ver = json.loads(evals_path.read_text(encoding="utf-8"))["applies_to_version"]
+        if ev_ver != skill_version:
+            issues.append("E-TOPOLOGY-VERSION: evals.json applies_to_version %s ≠ SKILL.md %s"
+                          % (ev_ver, skill_version))
+    except (OSError, ValueError, KeyError):
+        issues.append("E-TOPOLOGY-VERSION: evals.json 缺 applies_to_version")
+    return issues
+
+
+def check_error_codes(declared: set, root: Path) -> tuple[set, list]:
+    """全仓出现的 E-/W- 码必须都在契约 errors 中声明。"""
+    used, where = set(), {}
+    for pattern in SCAN_GLOBS:
+        for p in sorted(root.glob(pattern)):
+            rel = p.relative_to(root).as_posix()
+            for code in ERROR_CODE_RE.findall(p.read_text(encoding="utf-8", errors="replace")):
+                used.add(code)
+                where.setdefault(code, rel)
+    unknown = sorted(used - declared)
+    issues = ["E-TOPOLOGY-ERRORCODE: 未声明码 %s（见于 %s）" % (c, where[c]) for c in unknown]
+    return used, issues
+
+
+def check_mirror(declared: set, ops_text: str) -> list:
+    """operations.md 错误码速查表与契约 errors 双向覆盖。
+
+    逐字覆盖为常规要求；家族根码（如 E-BOX，仅作前缀匹配用、脚本从不逐字
+    发出）可由operations.md 中其任一子码覆盖。
+    """
+    ops_codes = set(ERROR_CODE_RE.findall(ops_text))
+    issues = ["E-TOPOLOGY-MIRROR: operations.md 含未声明码 %s" % c
+              for c in sorted(ops_codes - declared)]
+    for c in sorted(declared - ops_codes):
+        if not any(o.startswith(c + "-") for o in ops_codes):
+            issues.append("E-TOPOLOGY-MIRROR: operations.md 缺码 %s 条目" % c)
+    return issues
+
+
+def check_lead_words(contract_words: list, handout_text: str) -> list:
+    """handout.md canonical 集合与契约 headings.lead_words 双写一致。"""
+    m = re.search(r"\*\*canonical 集合\*\*[^：]*：(.+)", handout_text)
+    if not m:
+        return ["E-TOPOLOGY-LEADWORDS: handout.md 缺 canonical 集合行"]
+    doc_words = set(re.findall(r"`([^`]+)`", m.group(1)))
+    cw = set(contract_words)
+    issues = ["E-TOPOLOGY-LEADWORDS: 契约缺 lead_word %s" % w for w in sorted(doc_words - cw)]
+    issues += ["E-TOPOLOGY-LEADWORDS: handout.md 缺 lead_word %s" % w for w in sorted(cw - doc_words)]
+    return issues
+
+
 def topology(path: Path | None = None) -> dict:
     root = skill_root()
     data = load(path)
@@ -258,10 +347,39 @@ def topology(path: Path | None = None) -> dict:
     if not ok:
         issues.append("E-TOPOLOGY-DAG: " + msg)
 
+    # 6. 版本四方一致
+    skill_version = _skill_md_version(root)
+    issues += check_versions(skill_version, data.get("version", ""),
+                             root / "skill-dependencies.json",
+                             root / "evals" / "evals.json")
+
+    # 7. 全仓错误码 ⊆ 契约声明
+    errs = data["constants"]["errors"]
+    declared = set(errs["E"]) | set(errs["W"])
+    used, code_issues = check_error_codes(declared, root)
+    issues += code_issues
+
+    # 8. operations.md 速查表双向覆盖
+    ops_path = root / "references" / "operations.md"
+    if ops_path.exists():
+        issues += check_mirror(declared, ops_path.read_text(encoding="utf-8", errors="replace"))
+    else:
+        issues.append("E-TOPOLOGY-MIRROR: operations.md 不存在")
+
+    # 9. lead_words 双写一致
+    handout_path = root / "references" / "handout.md"
+    if handout_path.exists():
+        issues += check_lead_words(data["constants"]["headings"]["lead_words"],
+                                   handout_path.read_text(encoding="utf-8", errors="replace"))
+    else:
+        issues.append("E-TOPOLOGY-LEADWORDS: handout.md 不存在")
+
     return {
         "ok": not issues,
         "files": len(files),
         "rules": len(data["rules"]),
+        "error_codes": {"used": len(used), "declared": len(declared)},
+        "version": skill_version,
         "issues": issues,
     }
 
@@ -380,6 +498,48 @@ def _selftest() -> int:
         assert r["ok"], r["issues"]
 
     chk("topology clean", topo_ok)
+
+    def ver_ok():
+        root = skill_root()
+        v = _skill_md_version(root)
+        assert not check_versions(v, v, root / "skill-dependencies.json", root / "evals" / "evals.json")
+
+    chk("versions aligned", ver_ok)
+
+    def ver_drift():
+        root = skill_root()
+        v = _skill_md_version(root)
+        issues = check_versions("9.9.9", v, root / "skill-dependencies.json", root / "evals" / "evals.json")
+        assert issues and all(i.startswith("E-TOPOLOGY-VERSION") for i in issues), issues
+
+    chk("version drift detected", ver_drift)
+
+    def codes_unknown():
+        used, issues = check_error_codes({"E-CONTRACT-INVALID"}, skill_root())
+        assert used, "真实仓库应扫到错误码"
+        assert issues and all(i.startswith("E-TOPOLOGY-ERRORCODE") for i in issues), issues[:3]
+
+    chk("undeclared code detected", codes_unknown)
+
+    def mirror_both_ways():
+        a, b, c = ("E-" + "ZQX" + "-A", "E-" + "ZQX" + "-B", "E-" + "ZRX" + "-C")
+        assert check_mirror({a}, "x `%s` y" % a) == []
+        issues = check_mirror({a, b}, "`%s` 额外 `%s`" % (a, c))
+        assert any(c in i for i in issues) and any(b in i for i in issues), issues
+        root, child = "E-" + "ZSY", "E-" + "ZSY" + "-CHILD"
+        assert check_mirror({root, child}, "`%s` 触发条件" % child) == []
+
+    chk("mirror bidirectional", mirror_both_ways)
+
+    def leadwords_both_ways():
+        t = "**canonical 集合**（脚本必须全部接受）：`解`、`答`"
+        assert check_lead_words(["解", "答"], t) == []
+        issues = check_lead_words(["解", "证明"], t)
+        assert any("证明" in i for i in issues) and any("答" in i for i in issues), issues
+        assert check_lead_words(["解"], "无标记文本") == \
+            ["E-TOPOLOGY-LEADWORDS: handout.md 缺 canonical 集合行"]
+
+    chk("leadwords bidirectional", leadwords_both_ways)
 
     if failures:
         print("SELFTEST FAILED:", ", ".join(failures))
