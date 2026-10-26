@@ -41,10 +41,49 @@
 
 **错误码入口**：
 
-- 完整码表与 notes：`evals/scripts-contract.json`；脚本 docstring 只列常用码与实现说明。
+- 完整码表与 notes：`contracts/rules.json.errors`（机器名单）+ `evals/scripts-contract.json`（脚本参数/退出码/notes）；脚本 docstring 只列常用码与实现说明；下表是触发条件速查。
 - `progress_check` 的新增码：`E-GATE-RATIO-INVALID`（`小节目标线` 非法）、`E-FINAL-INVALID-TARGET`（结课目标线非法，不得回退默认线）。
 - 契约缺失/畸形：`E-CONTRACT-MISSING` / `E-CONTRACT-INVALID`。
 - 业务语义：`assessment.md` 判分/调度；`workflow.md` 闸口；`data.md` 字段；`failure.md` 处置。
+
+### 错误码速查
+
+> 按脚本分组；同一行的码共享触发条件。机器名单以 `contracts/rules.json.errors` 为准，共 108 码（已移除废止的 `W-BOX-WRAP`）；本表只补人类可读的触发条件，不重复业务语义。
+
+| 来源 | 码 | 触发条件（速查） |
+|---|---|---|
+| progress_check | `E-NO-PROGRESS` / `E-UNREADABLE-PROGRESS` / `E-MISSING-FIELD` | 缺 progress.md / 不可读 / 缺必填字段（起点自 S2 起必填） |
+| progress_check | `E-ENUM-PHASE` / `E-ENUM-TYPE` / `E-ENUM-FAMILY` / `E-ENUM-START` / `E-ENUM-STRATEGY` | 阶段 / 类型 / 学科族 / 起点 / 教学策略非法枚举 |
+| progress_check | `E-NO-EVIDENCE` / `E-EMPTY-EVIDENCE` / `E-NO-GRADED-ATTEMPT` / `E-ALL-FAILED` / `E-HINT-ONLY` / `E-NO-INDEPENDENCE` / `E-KEY-ABILITY-UNMET` / `E-GATE-THRESHOLD` / `E-NO-RESTATEMENT` | 已掌握/放行证据缺失或质量不足：文件缺失、空模板、无有效判定、全错、仅提示后对、独立性缺失、关键能力未独立通过、低于比例线、缺复述 |
+| progress_check | `E-KP-TYPED-GATE` | 声明了 KP 类型/视觉任务但缺对应分型证据 |
+| progress_check | `E-REVIEW-ORIGIN` | S4「复习来源阶段」缺失或不在合法返回枚举 |
+| progress_check | `E-ROUTE-UNDONE` / `E-NO-ROUTE-STRICT` / `E-ROUTE-NUMBER` | 结课/已完成但路线未完成 / 路线不可解析 / 路线编号非法 |
+| progress_check | `E-NO-FINAL-EXAM` / `E-FINAL-NO-EVIDENCE` / `E-FINAL-BELOW-TARGET` / `E-FINAL-BLUEPRINT-GAP` / `E-FINAL-INVALID-TARGET` / `E-FINAL-ATTEMPT-CONFLICT` | 结课综合测验缺失 / 空文件 / 未达目标线 / 蓝图未覆盖 / 目标线非法 / 同 attempt 结果冲突 |
+| progress_check | `E-CORE-UNLEARNED` / `E-NO-DIAGNOSTIC` | 关键能力未讲 / 缺 S1 摸底证据 |
+| progress_check | `E-ATTEMPT-CONFLICT` | 同 attempt 结果冲突 |
+| progress_check | `E-EVIDENCE-ID-MISMATCH` / `E-CURSOR-DANGLING` / `E-EVIDENCE-REF-MISSING` / `E-LESSON-ID-DUP` | 证据串节 / 动作游标悬空 / 候选证据不存在 / lesson_id 重复 |
+| progress_check | `E-UNDECLARED-CHANGES` / `E-CHANGED-SET-INVALID` | 候选差分漏查 / 变更集非法 |
+| progress_check | `E-GATE-RATIO-INVALID` | `小节目标线` 非法 |
+| progress_check | `W-EMPTY-EVIDENCE` / `W-UNGRADED-ATTEMPT` / `W-VOIDED-ATTEMPT` | 历史模式空证据 / 未判 / 作废提示（不阻断） |
+| progress_check | `W-NO-ROUTE` / `W-UNPARSED-ROUTE` / `W-NO-COVERAGE` / `W-NO-COVERAGE-AUDIT` | 无路线 / 路线畸形 / 无覆盖 / 缺审计 |
+| progress_check / task_index | `W-UNPARSED-HOLD` / `W-MULTI-EVIDENCE` / `W-CURSOR-DANGLING` / `W-NO-PROPOSED-STATE` | 暂缓条目畸形 / 多份证据 / 游标悬空 / 未提供拟提交状态 |
+| progress_check | `W-KP` / `W-KP-LIST-MISSING` / `W-KP-SUMMARY-MISMATCH` / `W-KP-HOLD-CROSS` / `W-KP-STATE-MISMATCH` | 清单缺失 / 摘要不符 / 双写不交 / 状态不符 |
+| progress_check | `W-UNPARSED-KP` / `W-UNPARSED-MODULE` / `W-UNPARSED-MATERIAL` / `W-MODULE` / `W-MODULE-CONTRACT-INCOMPLETE` / `W-MATERIAL-COVERAGE-GAP` | 清单 / 模块 / 材料条目畸形，或模块目标与材料覆盖契约不完整 |
+| progress_check | `W-STALE-REVIEW-ORIGIN` | 复习来源阶段指向已失效的阶段值 |
+| scheduler | `W-PROGRESS` / `W-PROGRESS-MISSING` / `W-PROGRESS-UNREADABLE` / `W-CONFIDENCE-AMBIGUOUS` / `W-CW-LOWCONF` / `W-CW-ORPHAN` / `W-META-INVALID` | 任务进度缺失/不可读；信心/时序歧义、低信心 cw、孤立 cw、元数据非法；校准不计或跳过 |
+| scheduler | `W-UNPARSED-ITEM` | 调度条目无法解析或缺合法日期，不入队、不猜值 |
+| verify_explanation | `E-BOX` / `E-BOX-EMPTY` / `E-BOX-FORMAT` / `E-BOX-INCOMPLETE` / `E-BOX-WRAP` / `E-MARKER-LEGACY` / `E-HEADER-BRIEF` / `E-REQ-MISSING` | 五要素 / 答案框 / 标记行 / 节首导读缺失或体例错误 |
+| verify_explanation | `E-IMG-DEADLINK` / `E-IMG-READ` / `E-READ-FILE` | 图引用死链 / 图读取失败 / 文件读取失败 |
+| verify_explanation | `E-RUBRIC-SUM` | 给分点量表各点分值之和不等于合计 |
+| verify_explanation | `E-THIRD-CONFLICT` / `E-THIRD-EXEMPT-MISUSE` / `E-LEDGER-RESIDUE` / `W-RUBRIC-SOURCE` | ③ 不适用与 ③ 答案并存 / 豁免被滥用 / 定稿判分记账残留 / 给分点量表缺「官方/训练量表」声明 |
+| verify_explanation | `W-MARKER-CONTENT` / `W-STYLE-POINTER` / `W-UNICODE-CHAR` | 标记行带内容 / 头部复制规则正文 / Unicode denylist 字符；`W-UNICODE-CHAR` 定稿前必须清零 |
+| verify_explanation | `W-SELFTEST-MISSING` / `W-SELFTEST-EMPTY` | 自测/检验题面区缺同族答案区 / 答案区为空或占位 |
+| verify_explanation | `W-READER` / `W-READER-ALT` / `W-READER-CONCLUSION` / `W-READER-EMPHASIS` / `W-READER-HEADING` / `W-READER-INDEX` / `W-READER-OVERVIEW` / `W-READER-SVG` / `W-READER-TABLE` | `--reader` 结构项：标题 / 表格 / alt / SVG / 速览 / 回看索引 / 一句话结论 / 强调密度 |
+| verify_explanation | `W-NO-TIER` | 讲义单元缺 tier 标签 |
+| rule_contract | `E-CONTRACT-MISSING` / `E-CONTRACT-INVALID` | 契约缺失 / 畸形 |
+| rule_contract | `E-TOPOLOGY-DAG` / `E-TOPOLOGY-FILE` / `E-TOPOLOGY-HEADER` / `E-TOPOLOGY-LOAD` / `E-TOPOLOGY-OLDNAME` / `E-TOPOLOGY-OWNER` | 依赖成环 / 文件缺失 / 职责头缺失 / 加载指令 / 旧文件名 / owner 锚点失效 |
+
+> `check_environment.py` 用 `ready` / `needs_setup` / `unavailable` / `manifest_error`（exit 2）状态而不是 E/W 码；`kp_sort.py` 用 exit 1 表示畸形行、依赖环或解释器版本不足。两者详见 `scripts-contract.json`。
 
 **读失败与坏数据**：Markdown/SVG 非法 UTF-8、文件不可读 → 结构化 E 码，继续扫描其余文件并最终 exit 1；单条坏数据降级为 W（不拖垮整队列），整体 `scan_status=failed` 必须停止，不得按部分结果继续。
 
@@ -75,10 +114,11 @@ python -B scripts/rule_contract.py --topology
 - `skill_ops preflight` 记录脚本只读/无网络/无子进程；`skill_ops validate` 检查 frontmatter、引用、占位符、链接、绝对路径与 Python 语法。
 - `skill_ops package` 生成 ZIP，必须包含 `contracts/rules.json` 与 `scripts/rule_contract.py`。
 - 打包前删除 `scripts/__pycache__`；`.trae`/`.workbuddy`/`.codex` 是本地 IDE/记忆目录，打包时用干净副本排除。
+- `task_index.py` 的 `tmp.unlink()` 只清理 `index.json.tmp`；人工复核后可带 `--risk-ack` 打包。
 - `git diff --check` → 0。
 
 ## 当前核验
 
-- 适用版本：6.10.0
+- 适用版本：6.10.1
 - 核验日期：2026-10-26
 - 环境依赖：`skill-dependencies.json`（Python `min_version`）；只有 `check_environment.py` 输出 `ready` 才能继续。

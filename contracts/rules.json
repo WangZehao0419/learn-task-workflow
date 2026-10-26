@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/1",
- "version": "6.10.0",
+ "version": "6.10.1",
  "files": [
   {
    "id": "routing",
@@ -205,6 +205,61 @@
   {
    "id": "R22",
    "owner": "references/assessment.md#零提示与条件化判定题",
+   "type": "definition"
+  },
+  {
+   "id": "R23",
+   "owner": "references/teaching.md#5.1 教学八动作",
+   "type": "definition"
+  },
+  {
+   "id": "R24",
+   "owner": "references/teaching.md#2.4 风格切换映射",
+   "type": "definition"
+  },
+  {
+   "id": "R25",
+   "owner": "references/teaching.md#定级与猜测答对",
+   "type": "definition"
+  },
+  {
+   "id": "R26",
+   "owner": "references/assessment.md#分块与交错切换",
+   "type": "definition"
+  },
+  {
+   "id": "R27",
+   "owner": "references/assessment.md#短题与正式确认",
+   "type": "definition"
+  },
+  {
+   "id": "R28",
+   "owner": "references/data.md#续学匹配（多任务与科目别名）",
+   "type": "protocol"
+  },
+  {
+   "id": "R29",
+   "owner": "references/operations.md#错误码速查",
+   "type": "schema"
+  },
+  {
+   "id": "R30",
+   "owner": "references/handout.md#2.11 定稿硬项",
+   "type": "definition"
+  },
+  {
+   "id": "R31",
+   "owner": "references/handout.md#0.1 风格选择",
+   "type": "definition"
+  },
+  {
+   "id": "R32",
+   "owner": "references/workflow.md#S2 计划确认中",
+   "type": "protocol"
+  },
+  {
+   "id": "R33",
+   "owner": "references/teaching.md#错因分类与补救（T10）",
    "type": "definition"
   }
  ],
@@ -540,7 +595,6 @@
     "E-UNREADABLE-PROGRESS"
    ],
    "W": [
-    "W-BOX-WRAP",
     "W-CONFIDENCE-AMBIGUOUS",
     "W-CURSOR-DANGLING",
     "W-CW-LOWCONF",

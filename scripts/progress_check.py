@@ -438,7 +438,7 @@ def gate_evidence(ev_text, require_restatement=True, require_independence=True,
                   min_ratio=GATE_RATIO, ratio_label="小节验收默认线 2/3"):
     """严格模式闸口判定：返回 [(error_code, message)]（空列表=达标）。
 
-    口径（对齐 phases-and-gates「小节验收」）：真实作答 + 同题完整判定 + 独立性枚举
+    口径（对齐 workflow.md「S3 闸口」）：真实作答 + 同题完整判定 + 独立性枚举
     + 正确率 ≥2/3 + **每项关键能力独立通过** + **复述或目标型作品证据**通过。
     诊断/结课证据合同不同（`require_restatement=False`、`require_independence=False`）。
     """

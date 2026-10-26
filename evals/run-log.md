@@ -987,3 +987,19 @@ mutation-check: 11/11 mutations detected
 - 回归：七模块 `--selftest` 全 0；`verify-marker-rules.py`、`verify-readability.py`、`verify-formula-typesetting.py` 全 0；`rule_contract --topology` 0；JSON 有效；`git diff --check` 0。
 - 环境：`skill_ops validate` 仅 `dependency_schema`（本技能使用环境清单 schema 2，skill-studio 校验器期望 schema 1）；`package` 同因阻断，已用等效 ZIP 核对 `contracts/rules.json` 与 `scripts/rule_contract.py` 在包内。
 - 边界：E66–E137 的 human 场景仍未跑；不据此宣称教学效果。
+
+#### v6.10.1 规则完整性补回与指针修复（2026-10-26）
+
+- run_id：`v6101-rule-parity-20261026`。基线 `8a9099b` / v6.10.0；备份 `.workbuddy/backups/learn-task-workflow-6.10.0-20261026.zip`（42 个 tracked 文件逐文件 SHA-256 一致）。
+- 审计：v6.9.0 `e7d3663` → v6.10.0 逐条二次复核；除上一轮 13 项外，补到官方来源例外、备考型同题限时重做 2 条规则和前置探针“拆出地基块/不假设已会”细则；合计 15 项规则缺口 + 1 组失效指针。
+- 修改：`teaching.md` 补 5.1 八动作、2.4 风格切换映射、六种输出任务定义、定级/猜测答对、备考型限时重做；`assessment.md` 补分块→交错切换、短题/答案键；`workflow.md` 补官方来源条件分支、探针细则、续学回忆题指针；`data.md` 补续学匹配并修所有权/旧名指针；`handout.md` 补 0.1 风格选择、2.11 定稿硬项；`operations.md` 补 109 码错误码速查与 `--risk-ack`；`evidence.md` / `subjects.md` / `routing.md` / `SKILL.md` 补指针与加载成本；`contracts/rules.json` 增至 33 条规则。
+- 回归：`rule_contract --topology` 33 条规则、0 issue；七模块 `--selftest` 全 0；`verify-marker-rules.py` 19/19、`verify-readability.py` 12/12、`verify-formula-typesetting.py` 34/34；错误码速查 109/109（复审移除 `W-BOX-WRAP` 后 108/108，见下条）；三个 JSON 有效；`git diff --check` 0。
+- 边界：E66–E137 的 human 场景仍未跑；不据此宣称教学效果。未运行 `skill_ops validate/package`（本技能使用环境清单 schema 2，skill-studio 校验器期望 schema 1 的历史告警仍在）。
+
+#### v6.10.1 内容提取复审与残余收口（2026-10-26）
+
+- run_id：`v6101-rule-parity-recheck-20261026`。基线 `8a9099b` / v6.10.0；工作树 6.10.1；备份 `.workbuddy/backups/learn-task-workflow-6.10.1-20261026.zip`（42 个 tracked 文件逐文件 SHA-256 一致）。
+- 内容映射：`setup-guide` 8/8 小节 + 7/7 辅助项；`lecture-styles` 24/24 内容块；卡壳信号表、单一风格/选型已补回；未发现 v6.9.0 setup-guide/lecture-styles 内容缺失。
+- 修复：`workflow.md` S2 官方来源改为“任务要求/未要求”两分支，S5 补兼容句；`assessment.md` 校准画像补兼容口径；`contracts/rules.json` 删除已废止 `W-BOX-WRAP`（109→108）；`operations.md` 修正错误码归属（`E-THIRD-*`/`W-RUBRIC-SOURCE` → verify_explanation，`W-PROGRESS-*` → scheduler，`W-UNPARSED-HOLD` 双归属）；`evals.json` machine evidence 改 108/108。
+- 验证：`rule_contract --topology` 33 条规则、0 issue；七模块 `--selftest` 全 0；`verify-marker-rules` 19/19、`verify-readability` 12/12、`verify-formula-typesetting` 34/34；contract/operations/scripts 108/108，source mismatch 0；JSON 有效；`git diff --check` 0。
+- 边界：E66–E137 的 human 场景仍未跑；不据此宣称教学效果。

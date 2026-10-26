@@ -1,7 +1,7 @@
 {
  "schema": "ltw-evals/2",
  "skill": "learn-task-workflow",
- "applies_to_version": "6.10.0",
+ "applies_to_version": "6.10.1",
  "updated_at": "2026-10-26",
  "grading_axes": [
   "教学正确性",
@@ -58,9 +58,9 @@
   },
   "阻断规则": "阻断型用例的学科内容/结构渲染/边界必须为 2，其他适用项不得低于 1。"
  },
- "run_log_ref": "evals/run-log.md（「运行记录」节，run_id: v690-script-hardening-20261025 / v681-finest-kp-block-20261025；历史 v680-block-pacing-20261024 / v673-readability-20261023 / v672-cleanup2-20261023 / v672-cleanup-20261023 / v671-cleanup-20261023 / v670-p1p2-20261023 / v660-stage3-20261023 / v650-stage2-20261023 / v640-consistency-20261023 / v630-selftest-20261023 / v620-selftest-20261022 / v610-selftest-20261022 / v600-selftest-20261022；公式基线见 formula-typesetting-5.5.0-20261017-static）",
+ "run_log_ref": "evals/run-log.md（「运行记录」节，run_id: v6101-rule-parity-recheck-20261026 / v6101-rule-parity-20261026 / v690-script-hardening-20261025 / v681-finest-kp-block-20261025；历史 v680-block-pacing-20261024 / v673-readability-20261023 / v672-cleanup2-20261023 / v672-cleanup-20261023 / v671-cleanup-20261023 / v670-p1p2-20261023 / v660-stage3-20261023 / v650-stage2-20261023 / v640-consistency-20261023 / v630-selftest-20261023 / v620-selftest-20261022 / v610-selftest-20261022 / v600-selftest-20261022；公式基线见 formula-typesetting-5.5.0-20261017-static）",
  "run_log_note": "v6.9.0 已完成 4 组新旧 LLM 模拟盲评并归档外置 workspace，但真实陪学、E135–E137 真人回放与真人冷读仍未产出；未回填 actual_output / run_id / scores 的条目保持「未验证」，模拟证据不得写成真人结论。",
- "machine_evidence_ref": "包内七个模块 --selftest（task_index / progress_check / scheduler / kp_sort / check_environment / verify_explanation / rule_contract）退出 0；rule_contract --topology 退出 0；evals/verify-marker-rules.py、verify-readability.py、verify-formula-typesetting.py 行为/结构测试退出 0。以上均为静态/行为级证据，不是真人教学回放；E66–E137 的 human 场景未跑，不冒充 machine 证据。",
+ "machine_evidence_ref": "包内七个模块 --selftest（task_index / progress_check / scheduler / kp_sort / check_environment / verify_explanation / rule_contract）退出 0；rule_contract --topology 33 条规则、0 issue；v6.10.1 规则补齐后错误码速查覆盖 108/108（W-BOX-WRAP 已废止）；evals/verify-marker-rules.py（19/19）、verify-readability.py（12/12）、verify-formula-typesetting.py（34/34）行为/结构测试退出 0。以上均为静态/行为级证据，不是真人教学回放；E66–E137 的 human 场景未跑，不冒充 machine 证据。",
  "dialogues_ref": "evals/对话对照-批次B.md（设计摘要，非运行日志；真实新旧对照须另附运行输出）",
  "cases": [
   {
@@ -1089,14 +1089,14 @@
    "kind": "machine",
    "prompt": "检查 v6.2 规则是否真正写入对应分册：交接/学习记录/讲授证据、记忆写法纪律、ask hint、来源备课、选项/答案键规则、版本与 eval 登记。",
    "fixture": "仓库当前 SKILL.md / references / CREDITS.md / failure.md / skill-dependencies.json / evals.json。",
-   "pass_condition": "按 v6.10.0 职责文件复核：相关规则在 data.md / teaching.md / assessment.md 可定位，行为测试退出 0；原 verify-v6x 文档校验脚本已删除，不得据旧脚本宣称通过。",
+   "pass_condition": "按 v6.10.1 职责文件复核：相关规则在 data.md / teaching.md / assessment.md 可定位，行为测试退出 0；原 verify-v6x 文档校验脚本已删除，不得据旧脚本宣称通过。",
    "actual_output": null,
    "run_id": null,
    "scores": null,
    "verdict": "未验证",
    "reviewer": null,
    "machine_ref": null,
-   "review_note": "原校验脚本已删除（v6.10.0 规则收敛），待行为级重跑。 原校验脚本已删除（v6.10.0 规则收敛），该场景待按新职责文件重跑。"
+   "review_note": "原校验脚本已删除（v6.10.0 规则收敛），该场景待按新职责文件重跑。"
   },
   {
    "id": "E67",
@@ -1156,14 +1156,14 @@
    "kind": "machine",
    "prompt": "检查 v6.3 规则是否真正写入对应分册：出题流水线四步（探索/规划/生成/修复）、旧题去重、规划字段、一次修复、视觉任务原始来源、版本与 eval 登记。",
    "fixture": "仓库当前 SKILL.md / references / CREDITS.md / failure.md / skill-dependencies.json / evals.json。",
-   "pass_condition": "按 v6.10.0 职责文件复核：相关规则在 assessment.md 可定位，行为测试退出 0；原 verify-v6x 文档校验脚本已删除，不得据旧脚本宣称通过。",
+   "pass_condition": "按 v6.10.1 职责文件复核：相关规则在 assessment.md 可定位，行为测试退出 0；原 verify-v6x 文档校验脚本已删除，不得据旧脚本宣称通过。",
    "actual_output": null,
    "run_id": null,
    "scores": null,
    "verdict": "未验证",
    "reviewer": null,
    "machine_ref": null,
-   "review_note": "原校验脚本已删除（v6.10.0 规则收敛），待行为级重跑。 原校验脚本已删除（v6.10.0 规则收敛），该场景待按新职责文件重跑。"
+   "review_note": "原校验脚本已删除（v6.10.0 规则收敛），该场景待按新职责文件重跑。"
   },
   {
    "id": "E72",
@@ -1197,29 +1197,29 @@
    "kind": "machine",
    "prompt": "检查讲义规则是否已收拢为一页合同、修掉状态行/③ 豁免/交付标识/L3/单元-KP/头部/深讲/类型单元数/命名/概念地图等冲突，并检查理解四证/设计六问/四段支架/闭卷自检/二次定稿/关键能力/冷读是否写入并接线。",
    "fixture": "仓库当前 SKILL.md / references / CREDITS.md / failure.md / skill-dependencies.json / evals.json / scripts/verify_explanation.py。",
-   "pass_condition": "按 v6.10.0 职责文件复核：相关规则在 handout.md 可定位，行为测试退出 0；原 verify-v6x 文档校验脚本已删除，不得据旧脚本宣称通过。",
+   "pass_condition": "按 v6.10.1 职责文件复核：相关规则在 handout.md 可定位，行为测试退出 0；原 verify-v6x 文档校验脚本已删除，不得据旧脚本宣称通过。",
    "actual_output": null,
    "run_id": null,
    "scores": null,
    "verdict": "未验证",
    "reviewer": null,
    "machine_ref": null,
-   "review_note": "原校验脚本已删除（v6.10.0 规则收敛），待行为级重跑。 原校验脚本已删除（v6.10.0 规则收敛），该场景待按新职责文件重跑。"
+   "review_note": "原校验脚本已删除（v6.10.0 规则收敛），该场景待按新职责文件重跑。"
   },
   {
    "id": "E109",
    "scenario": "v6.5 阶段 2 契约",
    "kind": "machine",
-   "prompt": "检查类型模板（记忆/概念/程序/设计）、四步讲义流水线、L1/L2/L3 动态、学习者状态、决策日志/修复表是否写入 handout-design 并接线。",
+   "prompt": "检查类型模板（记忆/概念/程序/设计）、四步讲义流水线、L1/L2/L3 动态、学习者状态、决策日志/修复表是否写入 handout.md 并接线。",
    "fixture": "仓库当前 SKILL.md / references / CREDITS.md / failure.md / skill-dependencies.json / evals.json。",
-   "pass_condition": "按 v6.10.0 职责文件复核：相关规则在 handout.md 可定位，行为测试退出 0；原 verify-v6x 文档校验脚本已删除，不得据旧脚本宣称通过。",
+   "pass_condition": "按 v6.10.1 职责文件复核：相关规则在 handout.md 可定位，行为测试退出 0；原 verify-v6x 文档校验脚本已删除，不得据旧脚本宣称通过。",
    "actual_output": null,
    "run_id": null,
    "scores": null,
    "verdict": "未验证",
    "reviewer": null,
    "machine_ref": null,
-   "review_note": "原校验脚本已删除（v6.10.0 规则收敛），待行为级重跑。 原校验脚本已删除（v6.10.0 规则收敛），该场景待按新职责文件重跑。"
+   "review_note": "原校验脚本已删除（v6.10.0 规则收敛），该场景待按新职责文件重跑。"
   },
   {
    "id": "E110",
@@ -1303,16 +1303,16 @@
    "id": "E116",
    "scenario": "v6.6 阶段 3 契约",
    "kind": "machine",
-   "prompt": "检查来源→KP→讲义→题组四向对齐、覆盖行、深度分配、教学例/评估例真实性、来源保真是否写入 handout-design 并接线。",
+   "prompt": "检查来源→KP→讲义→题组四向对齐、覆盖行、深度分配、教学例/评估例真实性、来源保真是否写入 handout.md 并接线。",
    "fixture": "仓库当前 SKILL.md / references / CREDITS.md / failure.md / skill-dependencies.json / evals.json。",
-   "pass_condition": "按 v6.10.0 职责文件复核：相关规则在 handout.md / evidence.md 可定位，行为测试退出 0；原 verify-v6x 文档校验脚本已删除，不得据旧脚本宣称通过。",
+   "pass_condition": "按 v6.10.1 职责文件复核：相关规则在 handout.md / evidence.md 可定位，行为测试退出 0；原 verify-v6x 文档校验脚本已删除，不得据旧脚本宣称通过。",
    "actual_output": null,
    "run_id": null,
    "scores": null,
    "verdict": "未验证",
    "reviewer": null,
    "machine_ref": null,
-   "review_note": "原校验脚本已删除（v6.10.0 规则收敛），待行为级重跑。 原校验脚本已删除（v6.10.0 规则收敛），该场景待按新职责文件重跑。"
+   "review_note": "原校验脚本已删除（v6.10.0 规则收敛），该场景待按新职责文件重跑。"
   },
   {
    "id": "E117",
@@ -1383,16 +1383,16 @@
    "id": "E122",
    "scenario": "v6.7.2 P1/P2 契约",
    "kind": "machine",
-   "prompt": "检查 P1（文本结构/主张—证据/设计量表/主图/质量回路/要点卡/移动端/MVP/问题停车位/贯穿案例/难度预算）与 P2（教材章节）是否写入 handout-design 并接线。",
+   "prompt": "检查 P1（文本结构/主张—证据/设计量表/主图/质量回路/要点卡/移动端/MVP/问题停车位/贯穿案例/难度预算）与 P2（教材章节）是否写入 handout.md 并接线。",
    "fixture": "仓库当前 SKILL.md / references / CREDITS.md / failure.md / skill-dependencies.json / evals.json。",
-   "pass_condition": "按 v6.10.0 职责文件复核：相关规则在 handout.md 可定位，行为测试退出 0；原 verify-v6x 文档校验脚本已删除，不得据旧脚本宣称通过。",
+   "pass_condition": "按 v6.10.1 职责文件复核：相关规则在 handout.md 可定位，行为测试退出 0；原 verify-v6x 文档校验脚本已删除，不得据旧脚本宣称通过。",
    "actual_output": null,
    "run_id": null,
    "scores": null,
    "verdict": "未验证",
    "reviewer": null,
    "machine_ref": null,
-   "review_note": "原校验脚本已删除（v6.10.0 规则收敛），待行为级重跑。 原校验脚本已删除（v6.10.0 规则收敛），该场景待按新职责文件重跑。"
+   "review_note": "原校验脚本已删除（v6.10.0 规则收敛），该场景待按新职责文件重跑。"
   },
   {
    "id": "E123",
@@ -1493,8 +1493,8 @@
    "scenario": "v6.7.3 黑白打印、移动端与证据边界",
    "kind": "machine",
    "prompt": "检查黑白打印/窄屏/行长条款与文献边界是否写入规则，避免把方向支持写成已验证。",
-   "fixture": "references/handout.md / references/handout.md / references/evidence.md。",
-   "pass_condition": "verify-readability.py 全项 OK、退出码 0：去色可读、窄屏不横向滚动、表格 ≤4 列、行长 25–40 字/上限 48 字写入；中文行长 17–48 与 76 字/行冲突、多媒体效应受先验知识/复杂度/媒介/时长调节写入 methodology 与 handout-design；mutation 删 Mayer 证据被抓到；不把 WCAG 等级当教学效果证据。",
+   "fixture": "references/handout.md / references/evidence.md。",
+   "pass_condition": "verify-readability.py 全项 OK、退出码 0：去色可读、窄屏不横向滚动、表格 ≤4 列、行长 25–40 字/上限 48 字写入；中文行长 17–48 与 76 字/行冲突、多媒体效应受先验知识/复杂度/媒介/时长调节写入 evidence.md 与 handout.md；mutation 删 Mayer 证据被抓到；不把 WCAG 等级当教学效果证据。",
    "actual_output": null,
    "run_id": null,
    "scores": null,
