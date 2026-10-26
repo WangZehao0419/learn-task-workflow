@@ -261,6 +261,96 @@
    "id": "R33",
    "owner": "references/teaching.md#错因分类与补救（T10）",
    "type": "definition"
+  },
+  {
+   "id": "T01",
+   "owner": "references/teaching.md#备课短表：先定本次能力，再决定讲什么（T01）",
+   "type": "definition"
+  },
+  {
+   "id": "T03",
+   "owner": "references/evidence.md#核验状态与「不能推出什么」",
+   "type": "definition"
+  },
+  {
+   "id": "T04",
+   "owner": "references/data.md#复习调度字段（薄弱点 / 错题本 / 保持复习条目元数据）",
+   "type": "definition"
+  },
+  {
+   "id": "T05",
+   "owner": "references/evidence.md#核验状态与「不能推出什么」",
+   "type": "definition"
+  },
+  {
+   "id": "T06",
+   "owner": "references/teaching.md#4. 提问与提示起点（T06）",
+   "type": "definition"
+  },
+  {
+   "id": "T08",
+   "owner": "references/teaching.md#交互式工作样例（所有风格共用）",
+   "type": "definition"
+  },
+  {
+   "id": "T09",
+   "owner": "references/teaching.md#5. 反馈策略（T09）",
+   "type": "definition"
+  },
+  {
+   "id": "T10",
+   "owner": "references/teaching.md#错因分类与补救（T10）",
+   "type": "definition"
+  },
+  {
+   "id": "T11",
+   "owner": "references/assessment.md#零提示与条件化判定题",
+   "type": "definition"
+  },
+  {
+   "id": "F05",
+   "owner": "references/routing.md#入口路由判别决策树（a–f）",
+   "type": "definition"
+  },
+  {
+   "id": "F06",
+   "owner": "references/workflow.md#S2 计划确认中",
+   "type": "definition"
+  },
+  {
+   "id": "F08",
+   "owner": "references/data.md#下次续学",
+   "type": "definition"
+  },
+  {
+   "id": "F09",
+   "owner": "references/data.md#稳定引用 · 对账 · 提交顺序（F09 / F10 / F12）",
+   "type": "definition"
+  },
+  {
+   "id": "F10",
+   "owner": "references/data.md#稳定引用 · 对账 · 提交顺序（F09 / F10 / F12）",
+   "type": "definition"
+  },
+  {
+   "id": "F11",
+   "owner": "references/data.md#数据根（稳定根）",
+   "type": "definition"
+  },
+  {
+   "id": "F12",
+   "owner": "references/data.md#稳定引用 · 对账 · 提交顺序（F09 / F10 / F12）",
+   "type": "definition"
+  },
+  {
+   "id": "F13",
+   "owner": "references/data.md#学习者画像（可选全局文件）",
+   "type": "definition"
+  },
+  {
+   "id": "F14",
+   "owner": "references/failure.md#异常分支与恢复",
+   "type": "definition"
   }
  ],
  "path_aliases": {
@@ -326,11 +416,14 @@
      "正确",
      "✓",
      "√",
-     "correct"
+     "correct",
+     "Correct"
     ],
     "部分": [
      "部分",
-     "partial"
+     "部分正确",
+     "partial",
+     "Partial"
     ],
     "错": [
      "错",
@@ -338,13 +431,16 @@
      "✗",
      "×",
      "不对",
+     "不正确",
      "否",
-     "incorrect"
+     "incorrect",
+     "Incorrect"
     ],
     "未判": [
      "未判",
      "待判",
-     "ungraded"
+     "ungraded",
+     "Ungraded"
     ]
    }
   },
@@ -586,6 +682,7 @@
     "E-THIRD-CONFLICT",
     "E-THIRD-EXEMPT-MISUSE",
     "E-TOPOLOGY-DAG",
+    "E-TOPOLOGY-DEADREF",
     "E-TOPOLOGY-ERRORCODE",
     "E-TOPOLOGY-FILE",
     "E-TOPOLOGY-HEADER",

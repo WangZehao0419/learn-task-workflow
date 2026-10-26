@@ -141,6 +141,7 @@ import rule_contract
 
 # ── denylist:已被 LaTeX 约定取代的 Unicode 写法(顺序即输出消息中的展示顺序)──
 _C = rule_contract.load_or_exit()["constants"]
+READER = _C["reader"]
 DENY_CHARS = "".join(_C["headings"]["unicode_denylist"])
 CIRCLED = "①②③④⑤⑥⑦⑧⑨⑩"
 # 交付标识:可复现答案的起笔,覆盖数学/编程/语言/文科/记忆/设计/精读各族
@@ -517,11 +518,11 @@ def _svg_reader_problems(path):
     if re.search(r"(?:href|xlink:href)\s*=\s*[\"']https?://", text, re.I):
         problems.append("含外部引用")
     for raw in re.findall(r"font-size\s*=\s*[\"']([0-9.]+)", text):
-        if float(raw) < 14:
-            problems.append("字号 {} < 14".format(raw))
+        if float(raw) < READER["svg_font_min"]:
+            problems.append("字号 {} < {}".format(raw, READER["svg_font_min"]))
     for raw in re.findall(r"stroke-width\s*=\s*[\"']([0-9.]+)", text):
-        if float(raw) < 1.5:
-            problems.append("线宽 {} < 1.5".format(raw))
+        if float(raw) < READER["svg_line_min"]:
+            problems.append("线宽 {} < {}".format(raw, READER["svg_line_min"]))
     return problems
 
 
@@ -552,9 +553,10 @@ def reader_checks(lines, doc, vis, fence, base_dir, box_rows, add):
                 "表格缺表头分隔行——补齐「| 列名 | … |」与「|---|---|」")
             continue
         header = _table_cells(lines[block[0]])
-        if len(header) < 2 or len(header) > 4:
+        if len(header) < READER["table_cols_min"] or len(header) > READER["table_cols_max"]:
             add("W", "W-READER-TABLE", block[0],
-                "表格列数 {}——手机端保持 2–4 列,宽表拆成列表或两张表".format(len(header)))
+                "表格列数 {}——手机端保持 {}–{} 列,宽表拆成列表或两张表".format(
+                    len(header), READER["table_cols_min"], READER["table_cols_max"]))
         if any(not c for c in header):
             add("W", "W-READER-TABLE", block[0],
                 "表头存在空列名——每列写清名称,单位放表头")
@@ -599,19 +601,22 @@ def reader_checks(lines, doc, vis, fence, base_dir, box_rows, add):
                 break
         if len(block) < 2:
             add("W", "W-READER-OVERVIEW", start,
-                "本节速览表缺失或不完整——用 3 列「要解决的问题 | 一句话结论 | 用在哪」")
+                "本节速览表缺失或不完整——用 {} 列「要解决的问题 | 一句话结论 | 用在哪」".format(
+                    READER["overview_cols"]))
         else:
             cols = len(_table_cells(lines[block[0]]))
-            if cols != 3:
+            if cols != READER["overview_cols"]:
                 add("W", "W-READER-OVERVIEW", block[0],
-                    "本节速览应为 3 列,实际 {}".format(cols))
+                    "本节速览应为 {} 列,实际 {}".format(READER["overview_cols"], cols))
             data_rows = len(block) - 2
-            if not 1 <= data_rows <= 3:
+            if not READER["overview_rows_min"] <= data_rows <= READER["overview_rows_max"]:
                 add("W", "W-READER-OVERVIEW", block[0],
-                    "本节速览数据行 {}——只留 1–3 行,对应 1–3 项关键能力".format(data_rows))
+                    "本节速览数据行 {}——只留 {}–{} 行,对应关键能力项".format(
+                        data_rows, READER["overview_rows_min"], READER["overview_rows_max"]))
     else:
         add("W", "W-READER-OVERVIEW", 0,
-            "读者版缺 ## 本节速览——用 3 列「要解决的问题 | 一句话结论 | 用在哪」")
+            "读者版缺 ## 本节速览——用 {} 列「要解决的问题 | 一句话结论 | 用在哪」".format(
+                READER["overview_cols"]))
 
     # 5. 回看索引三行 + 位置(答案区之后,停车位/扩展区之前)
     if "## 回看索引" in lines:

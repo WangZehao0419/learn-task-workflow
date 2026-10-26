@@ -248,7 +248,7 @@ def build_index(root, tasks, legacy, root_exists, unreadable=None,
                 scan_status="ok", scan_error=None):
     # 派生缓存：字段排序稳定、不含易变时间戳，保证幂等。
     return {
-        "schema": "learn-task-index/5",  # 加键（scan_status/scan_error；current_block/block_total；failed 时 task_count=null）逐次升 schema，消费方按存在性读取
+        "schema": _C["schemas"]["index"],  # 含 scan_status/scan_error、current_block/block_total；failed 时 task_count=null；消费方按存在性读取
         "data_root": str(Path(root)),
         "root_exists": root_exists,
         "scan_status": scan_status,
@@ -274,7 +274,7 @@ def write_index_if_changed(root, index):
     · 原子替换：先写同目录 `<name>.tmp`，再 `os.replace` 覆盖——中断不产生半截 JSON。
     · 区分「未变化」与「写入失败」，失败保留原缓存并向 stderr 告警。
     · 既有缓存**编码非法/内容损坏**时视为可重建派生数据：告警后直接重建，
-      不因 UnicodeDecodeError 裸崩（R10）。
+      不因 UnicodeDecodeError 裸崩。
     """
     path = Path(root) / "index.json"
     payload = json.dumps(index, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
@@ -478,13 +478,13 @@ def selftest():
         ok = ok and cache.read_text(encoding="utf-8") == before_write_fail
         ok = ok and not (canonical / "index.json.tmp").exists()
 
-        # R10：stdout 契约含 write_status（机器可读，不靠解析 stderr 自然语言）
+        # stdout 契约含 write_status（机器可读，不靠解析 stderr 自然语言）
         buf_out, buf_err = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(buf_out), contextlib.redirect_stderr(buf_err):
             main(["--root", str(canonical)])
         ok = ok and json.loads(buf_out.getvalue())["write_status"] is None  # 未写索引 → None
 
-        # R10：partial 扫描不得覆盖上次完整缓存（一个 progress 不可读 → 2 任务缓存保留）
+        # partial 扫描不得覆盖上次完整缓存（一个 progress 不可读 → 2 任务缓存保留）
         canonical2 = Path(td) / "ws2" / ".learning"
         for slug in ("alpha", "beta"):
             (canonical2 / slug).mkdir(parents=True)
@@ -515,7 +515,7 @@ def selftest():
         ok = ok and payload_partial["write_status"] == "skipped_incomplete_scan"  # 机器可读跳过原因
         ok = ok and cache2.read_text(encoding="utf-8") == complete_cache  # 完整缓存未被覆盖
 
-        # R10：坏编码缓存 → 告警重建，不 UnicodeDecodeError 裸崩
+        # 坏编码缓存 → 告警重建，不 UnicodeDecodeError 裸崩
         cache2.write_bytes(b"\xff\xfe\x80invalid-utf8")
         buf_out, buf_err = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(buf_out), contextlib.redirect_stderr(buf_err):
@@ -565,7 +565,7 @@ def main(argv=None):
 
     # 仅当数据根为规范数据根（<工作区根>/.learning）、是合法目录、且**枚举完整（ok）**时才物化索引；
     # 枚举失败（failed）与部分扫描（partial）绝不覆盖上次完整缓存——partial 仍返回可读任务与
-    # unreadable 原因，但缓存保持上一次完整版本（R10）。非规范根保持只读并向 stderr 明示。
+    # unreadable 原因，但缓存保持上一次完整版本。非规范根保持只读并向 stderr 明示。
     write_status = None
     if args.write_index and exists and root.is_dir():
         if not is_canonical_data_root(root):

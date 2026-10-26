@@ -86,7 +86,9 @@ class ScheduleError(ValueError):
 
 
 # 调度常数唯一来源：contracts/rules.json（缺失/畸形即结构化失败）。
-_C = rule_contract.load_or_exit()["constants"]["scheduler"]
+_CONSTANTS = rule_contract.load_or_exit()["constants"]
+_C = _CONSTANTS["scheduler"]
+_SCHEMAS = _CONSTANTS["schemas"]
 GRADE_BASE = dict(_C["grade_base"])
 INIT_S = dict(_C["init_s"])
 D_DRIFT = dict(_C["d_drift"])
@@ -94,7 +96,7 @@ S_MAX = float(_C["s_max"])
 R_MIN, R_MAX = float(_C["r_min"]), float(_C["r_max"])
 D_MIN, D_MAX = float(_C["d_min"]), float(_C["d_max"])
 ELAPSED_INF = float("inf")   # 经过天数只要求「有限且 ≥0」：R=elapsed/S 已夹在 [0.25,2.0]，
-# 故长中断（如 10 年）不会放大间隔，无需人为上界（V07/长中断兼容；旧 3650 上界已移除）。
+# 故长中断（如 10 年）不会放大间隔，无需人为上界（长中断兼容）。
 DATE_MIN_ORD = date.min.toordinal()
 DATE_MAX_ORD = date.max.toordinal()
 DEFAULT_S = float(_C["default_s"])
@@ -291,7 +293,7 @@ FIELD_RE = re.compile(r"^-\s*([^：:]+)[：:]\s*(.*)$")
 WRONG_LINE_RE = re.compile(r"^\[(\d{4}-\d{2}-\d{2})\]\s*(.*)$")
 META_KEYS = ("S=", "D=", "last=", "due=", "信心=", "cw", "顽固", "evt=", "attempt_id=", "子类=")
 # ↑ v2.5：`evt=`/`attempt_id=` 也列为元数据挂载标记——仅含 `evt=` 的弱项投影（无 S/D/cw）
-#   此前不被拆出，导致同一次作答的投影无法归组合并（V07/evt_only_partial_projection）。
+#   此前不被拆出，导致同一次作答的投影无法归组合并。
 # 元数据逐键严格格式（分隔后整 token fullmatch）：只认合法前缀会把 S=3oops 截成 3、
 # 信心=50 截成 5，把坏内容当有效观测——v2.4 起一律 fullmatch，坏 token 显式记入
 # invalid_tokens 并降级（走缺省链），不再「截前缀修正」。
@@ -357,7 +359,7 @@ def parse_meta(meta_text):
         if tok == "顽固":
             meta["顽固"] = True
             continue
-        # 信心单独处理：区分「数值原信心」「回顾性时序标志」「重复键」「坏值」（V07）
+        # 信心单独处理：区分「数值原信心」「回顾性时序标志」「重复键」「坏值」
         m = re.fullmatch(r"信心=(\S+)", tok)
         if m:
             g = m.group(1)
@@ -618,7 +620,7 @@ def due_queue_output(root, slug_filter, today, show_all):
               "S", "D", "migrated", "teach")
     fields = fields + ("错因", "级", "meta_default", "reason")  # 加键回显；排序契约不动
     return {
-        "schema": "ltw-due-queue/3",
+        "schema": _SCHEMAS["due_queue"],
         "today": today.isoformat(),
         "root": str(Path(root)),
         "queue": [{**{k: e[k] for k in fields if k != "reason"},
@@ -815,7 +817,7 @@ def calibration_output(root, slug_filter):
     entries, warnings = read_progress_entries(root, slug_filter)
     per_slug, parse_warnings = calibration_from_progress_texts(entries)
     return {
-        "schema": "ltw-calibration/3",  # v2.4：加 orphan/low/conflict/dedup 计数与口径披露键，升 schema
+        "schema": _SCHEMAS["calibration"],  # 含 orphan/low/conflict/dedup 计数与口径披露键
         "root": str(Path(root)),
         "per_slug": per_slug,
         "warnings": warnings + parse_warnings,
@@ -1401,7 +1403,7 @@ def selftest():
         rc17 = main(["due-queue", "--root", str(root17), "--today", "2026-10-12"])
         ok = ok and rc17 == 0
 
-    # 断言 18：T04 校准去重与畸形率——同一作答事件（evt=E1）的较多投影只计一次；
+    # 断言 18：校准去重与畸形率——同一作答事件（evt=E1）的较多投影只计一次；
     # cw 多于有信心的条目 → rate 不展示（null + rate_valid False + 原因）。
     fix_t04 = ("# 学习任务：校准T04\n- 当前阶段：复习巩固\n- 复习来源阶段：逐节学习\n"
                "- 类型：知识型\n- 学科族：数学类\n- 目标：自测\n- 起点：入门\n\n## 薄弱点\n"
@@ -1494,7 +1496,7 @@ def selftest():
         date.fromisoformat("2026-10-15"))
     ok = ok and any(w.startswith("W-META-INVALID") for w in w23)
 
-    # 断言 24（V07）：信心/时序身份歧义不得产出有效比率
+    # 断言 24：信心/时序身份歧义不得产出有效比率
     ok = ok and parse_meta("信心=回顾性")["invalid_tokens"] == []      # 回顾性是合法时序标志
     ok = ok and parse_meta("信心=回顾性")["信心_retro"] is True
     ok = ok and parse_meta("信心=5，信心=2")["dup_keys"] == ["信心"]     # 重复信心 → 记入歧义键

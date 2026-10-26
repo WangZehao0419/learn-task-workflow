@@ -28,6 +28,8 @@ REQUIRED_CONST = (
 )
 LOAD_DIRECTIVE_RE = re.compile(r"(?:@references/|加载\s*`?references/|加载时机)")
 ERROR_CODE_RE = re.compile(r"\b[EW]-[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+\b")
+# references/SKILL.md 中引用的 T/F/R 设计编号（如（T11）（F05）（R05））必须有契约 rules 定义
+NUM_REF_RE = re.compile(r"\b([TF]\d{2}|R\d{1,2})\b")
 # 错误码扫描范围：任何提到 E-/W- 码的文件都必须只提契约声明过的码
 SCAN_GLOBS = (
     "scripts/*.py",
@@ -35,12 +37,6 @@ SCAN_GLOBS = (
     "references/*.md",
     "contracts/scripts-contract.json",
     "SKILL.md",
-)
-OLD_NAMES = (
-    "entry-routing.md", "phases-and-gates.md", "teaching-loop.md",
-    "lecture-styles.md", "handout-design.md", "data-and-recovery.md",
-    "redlines.md", "setup-guide.md", "subject-playbooks.md",
-    "formula-typesetting.md", "methodology.md",
 )
 
 
@@ -106,7 +102,7 @@ def validate(data: dict) -> dict:
         _require(isinstance(r, dict), "E-CONTRACT-INVALID", "rules 条目必须是对象")
         for k in ("id", "owner", "type"):
             _require(k in r, "E-CONTRACT-INVALID", "rules 条目缺少 %s" % k)
-        _require(re.match(r"^R\d+$", str(r["id"])) is not None,
+        _require(re.match(r"^[RTF]\d+$", str(r["id"])) is not None,
                  "E-CONTRACT-INVALID", "rule id 非法：%s" % r["id"])
         rids.append(r["id"])
         owners.append(r["owner"])
@@ -307,6 +303,21 @@ def check_lead_words(contract_words: list, handout_text: str) -> list:
     return issues
 
 
+def check_number_refs(rule_ids: set, texts: list) -> list:
+    """references/SKILL.md 引用的 T/F/R 设计编号必须都在契约 rules 中有定义。
+
+    R 记号做零值归一（（R05）≡ R5）；T/F 记号固定两位数字形。
+    """
+    issues = []
+    for name, text in texts:
+        for m in NUM_REF_RE.finditer(text):
+            tok = m.group(1)
+            norm = "R%d" % int(tok[1:]) if tok[0] == "R" else tok
+            if norm not in rule_ids:
+                issues.append("E-TOPOLOGY-DEADREF: %s 引用未定义编号 %s" % (name, tok))
+    return issues
+
+
 def topology(path: Path | None = None) -> dict:
     root = skill_root()
     data = load(path)
@@ -326,7 +337,7 @@ def topology(path: Path | None = None) -> dict:
         if "<!-- owns:" not in text or "must-not-define:" not in text:
             issues.append("E-TOPOLOGY-HEADER: %s 缺 owns/must-not-define" % f["path"])
         # 3. 旧文件名只允许出现在 alias 表
-        for old in OLD_NAMES:
+        for old in data["path_aliases"]:
             if old in text:
                 issues.append("E-TOPOLOGY-OLDNAME: %s 含旧文件名 %s" % (f["path"], old))
 
@@ -373,6 +384,18 @@ def topology(path: Path | None = None) -> dict:
                                    handout_path.read_text(encoding="utf-8", errors="replace"))
     else:
         issues.append("E-TOPOLOGY-LEADWORDS: handout.md 不存在")
+
+    # 10. T/F/R 编号引用必有定义
+    rule_ids = {r["id"] for r in data["rules"]}
+    ref_texts = []
+    skill_path = root / "SKILL.md"
+    if skill_path.exists():
+        ref_texts.append(("SKILL.md", skill_path.read_text(encoding="utf-8", errors="replace")))
+    for f in files:
+        p = root / f["path"]
+        if p.exists():
+            ref_texts.append((f["path"], p.read_text(encoding="utf-8", errors="replace")))
+    issues += check_number_refs(rule_ids, ref_texts)
 
     return {
         "ok": not issues,
@@ -540,6 +563,24 @@ def _selftest() -> int:
             ["E-TOPOLOGY-LEADWORDS: handout.md 缺 canonical 集合行"]
 
     chk("leadwords bidirectional", leadwords_both_ways)
+
+    def deadref_ok():
+        root = skill_root()
+        d = load()
+        ids = {r["id"] for r in d["rules"]}
+        texts = [(f["path"], (root / f["path"]).read_text(encoding="utf-8", errors="replace"))
+                 for f in d["files"]]
+        texts.append(("SKILL.md", (root / "SKILL.md").read_text(encoding="utf-8", errors="replace")))
+        assert not check_number_refs(ids, texts), "真实仓库存在未定义编号引用"
+
+    chk("number refs defined", deadref_ok)
+
+    def deadref_catch():
+        issues = check_number_refs({"R5", "T01"}, [("t.md", "见（R05）与（T01），但（F99）未定义")])
+        assert len(issues) == 1 and "F99" in issues[0], issues
+        assert issues[0].startswith("E-TOPOLOGY-DEADREF")
+
+    chk("dead number ref detected", deadref_catch)
 
     if failures:
         print("SELFTEST FAILED:", ", ".join(failures))
