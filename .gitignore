@@ -8,3 +8,6 @@ __pycache__/
 .trae
 .workbuddy/
 outputs/
+
+.zcode/
+.screenshots/
