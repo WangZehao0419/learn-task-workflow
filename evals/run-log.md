@@ -1003,3 +1003,11 @@ mutation-check: 11/11 mutations detected
 - 修复：`workflow.md` S2 官方来源改为“任务要求/未要求”两分支，S5 补兼容句；`assessment.md` 校准画像补兼容口径；`contracts/rules.json` 删除已废止 `W-BOX-WRAP`（109→108）；`operations.md` 修正错误码归属（`E-THIRD-*`/`W-RUBRIC-SOURCE` → verify_explanation，`W-PROGRESS-*` → scheduler，`W-UNPARSED-HOLD` 双归属）；`evals.json` machine evidence 改 108/108。
 - 验证：`rule_contract --topology` 33 条规则、0 issue；七模块 `--selftest` 全 0；`verify-marker-rules` 19/19、`verify-readability` 12/12、`verify-formula-typesetting` 34/34；contract/operations/scripts 108/108，source mismatch 0；JSON 有效；`git diff --check` 0。
 - 边界：E66–E137 的 human 场景仍未跑；不据此宣称教学效果。
+
+#### v6.10.2 迁移审计残余补漏（2026-10-26）
+
+- run_id：`v6102-rule-parity-20261026`。基线 `5d4600e` / v6.10.1；备份 `.workbuddy/backups/learn-task-workflow-6.10.1-pre-6.10.2-20261026.zip`（42 个 tracked 文件逐文件 SHA-256 一致）。
+- 审计：v6.9.0 `e7d3663` → v6.10.1 全量逐条复核；确认 v6.10.0 的 15 项已补回；新增发现 5 项：S4 加载 `teaching.md`、S3 讲义/题组拆行、未作答题组优先、讲义草稿留存、深度审计不替代小节闸口。冲突点按 `8a9099b`/`5d4600e` 提交信息裁决，新规则优先，不回退。
+- 修改：`SKILL.md` 拆 S3 加载行并补 S4 `teaching.md`；`assessment.md` 补未作答题组优先；`handout.md` §2.1 补草稿留存；`workflow.md` S3 深讲概念补闸口守卫；版本 6.10.1→6.10.2，同步 contract / dependencies / operations / CREDITS / evals 元数据。
+- 验证：`rule_contract --topology` 33 条规则、0 issue；七模块 `--selftest` 全 0；`verify-marker-rules` 19/19、`verify-readability` 12/12、`verify-formula-typesetting` 34/34；JSON 有效；`git diff --check` 0；错误码闭包旧 76 码仅 `W-BOX-WRAP` 废止。
+- 边界：E66–E137 的 human 场景仍未跑；不据此宣称教学效果。

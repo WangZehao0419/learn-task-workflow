@@ -119,6 +119,6 @@ python -B scripts/rule_contract.py --topology
 
 ## 当前核验
 
-- 适用版本：6.10.1
+- 适用版本：6.10.2
 - 核验日期：2026-10-26
 - 环境依赖：`skill-dependencies.json`（Python `min_version`）；只有 `check_environment.py` 输出 `ready` 才能继续。
