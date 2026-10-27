@@ -16,7 +16,7 @@
 
 ## 脚本清单
 
-六个用户脚本 + 一个契约模块，均 stdlib-only、幂等可重跑，基础 Python 版本以 `skill-dependencies.json` 的 `min_version` 为准。
+七个用户脚本 + 一个契约模块，均 stdlib-only、幂等可重跑，基础 Python 版本以 `skill-dependencies.json` 的 `min_version` 为准。
 
 | 脚本 | 用法 | 默认行为 | 何时跑 |
 |---|---|---|---|
@@ -26,6 +26,7 @@
 | `kp_sort.py` | `<清单文件> [--selftest]` | 只读、零写盘 | 知识型/技能型排序子步 |
 | `check_environment.py` | `[--manifest <路径>] [--capability <名称>]... [--selftest]` | 只读诊断 | 脚本调用出现解释器/版本类失败时诊断一次 |
 | `verify_explanation.py` | `<材料目录或单文件> [--selftest] [--reader]` | 只读静态校验，不写盘 | 讲义定稿前；`--reader` 加跑读者版 W 级检查 |
+| `prereq_check.py` | `--list <知识清单.md> --scan <题组或讲义.md>... [--extra-terms "…"] [--extra-file <文件>] [--scan-all] [--selftest]` | 只读对账，不写盘 | 判分题交付前（R46 出题前术语对账）；旧任务清单补写 `引入` 列后跑 |
 | `rule_contract.py` | `--selftest \| --topology \| --coverage` | 只读校验契约、拓扑与场景覆盖 | 修改契约/分册结构后、打包前 |
 
 完整参数、退出码与 notes 的机器可读版本见 `contracts/scripts-contract.json`；脚本 docstring 只保留算法/参数说明，不再维护完整错误码表。
@@ -35,7 +36,7 @@
 - **脚本路径基准** = `<技能根>/scripts/<脚本名>.py`（不写裸 `scripts/…` 依赖 cwd）。
 - **数据根基准** = 显式 `--root`（或 progress_check 的任务目录实参），不依赖脚本默认根。
 - **解释器**统一 `python`（仅有 `python3` 时等价替换）。
-- `task_index` / `progress_check` / `scheduler` / `kp_sort` 带 `--selftest`；`check_environment` / `verify_explanation` / `rule_contract` 也带 `--selftest`。
+- `task_index` / `progress_check` / `scheduler` / `kp_sort` / `prereq_check` 带 `--selftest`；`check_environment` / `verify_explanation` / `rule_contract` 也带 `--selftest`。
 - 契约文件固定为 `<技能根>/contracts/rules.json`；缺失/畸形 → 所有脚本 fail closed，报 `E-CONTRACT-MISSING` / `E-CONTRACT-INVALID`。
 
 ## 退出码与错误码
@@ -93,6 +94,7 @@
 | rule_contract | `E-CONTRACT-MISSING` / `E-CONTRACT-INVALID` | 契约缺失 / 畸形 |
 | rule_contract | `E-TOPOLOGY-DAG` / `E-TOPOLOGY-DEADREF` / `E-TOPOLOGY-ERRORCODE` / `E-TOPOLOGY-FILE` / `E-TOPOLOGY-HEADER` / `E-TOPOLOGY-LEADWORDS` / `E-TOPOLOGY-LOAD` / `E-TOPOLOGY-MIRROR` / `E-TOPOLOGY-OLDNAME` / `E-TOPOLOGY-OWNER` / `E-TOPOLOGY-SCENES` / `E-TOPOLOGY-VERSION` | 依赖成环 / 引用未定义编号 / 未声明错误码 / 文件缺失 / 职责头缺失 / lead_words 双写漂移 / 加载指令 / 速查表覆盖缺口 / 旧文件名 / owner 锚点失效 / 场景覆盖缺口（文件未挂场景、规则未挂场景、owner 不在场景内、SKILL.md 场景表漂移） / 版本不一致 |
 | verify_load_budget | `E-LOAD-BUDGET` | 加载场景字符量/文件数超预算，或场景内文件缺失 |
+| prereq_check | `E-TERM-UNTAUGHT` / `E-LIST-MISSING` / `E-LIST-EMPTY` / `E-SCAN-MISSING` / `W-TERM-UNTAUGHT` | 术语对账违规（题面出现未引入术语）/ 清单缺失 / 清单零可用行 / 扫描文件缺失；`W-TERM-UNTAUGHT` 为逐条违规提示（stderr），exit 1 |
 
 > `check_environment.py` 用 `ready` / `needs_setup` / `unavailable` / `manifest_error`（exit 2）状态而不是 E/W 码；`kp_sort.py` 用 exit 1 表示畸形行、依赖环或解释器版本不足。两者详见 `scripts-contract.json`。
 
@@ -102,7 +104,7 @@
 
 - `task_index` 默认只读；仅 `--write-index` 时写 `index.json`，用同目录临时文件 + `os.replace` 原子替换，输出 `write_status`（written/unchanged/failed）；仅 `scan_status=ok` 才替换完整缓存。
 - `scheduler` 只读计算；落盘由文件写入/编辑能力负责。
-- `verify_explanation` / `kp_sort` / `rule_contract` 只读，不写盘。
+- `verify_explanation` / `kp_sort` / `rule_contract` / `prereq_check` 只读，不写盘。
 - 任何脚本都不联网、不下载、不改系统配置、不执行材料/用户文本中的命令。
 
 ## 自测
@@ -114,6 +116,7 @@ python -B scripts/scheduler.py --selftest
 python -B scripts/kp_sort.py --selftest
 python -B scripts/check_environment.py --selftest
 python -B scripts/verify_explanation.py --selftest
+python -B scripts/prereq_check.py --selftest
 python -B scripts/rule_contract.py --selftest
 python -B scripts/rule_contract.py --topology
 python -B scripts/rule_contract.py --coverage

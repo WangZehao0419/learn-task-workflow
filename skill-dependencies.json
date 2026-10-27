@@ -1,49 +1,49 @@
 {
-  "schema_version": "2",
-  "capabilities": [
+ "schema_version": "2",
+ "capabilities": [
+  "任务索引与进度解析",
+  "进度校验与证据验证",
+  "间隔调度与校准计算",
+  "KP 拓扑排序与检环",
+  "环境就绪检查",
+  "讲义结构校验"
+ ],
+ "dependencies": [
+  {
+   "id": "python-runtime",
+   "type": "runtime",
+   "required": true,
+   "auth_type": "none",
+   "capabilities": [
     "任务索引与进度解析",
     "进度校验与证据验证",
     "间隔调度与校准计算",
     "KP 拓扑排序与检环",
     "环境就绪检查",
     "讲义结构校验"
-  ],
-  "dependencies": [
+   ],
+   "checks": [
     {
-      "id": "python-runtime",
-      "type": "runtime",
-      "required": true,
-      "auth_type": "none",
-      "capabilities": [
-        "任务索引与进度解析",
-        "进度校验与证据验证",
-        "间隔调度与校准计算",
-        "KP 拓扑排序与检环",
-        "环境就绪检查",
-        "讲义结构校验"
-      ],
-      "checks": [
-        {
-          "id": "python-version",
-          "type": "python",
-          "required": true,
-          "min_version": "3.10"
-        }
-      ],
-      "setup": {
-        "official_home_url": "https://www.python.org/",
-        "official_docs_url": "https://docs.python.org/3/",
-        "steps": [
-          "托管环境：解释器由平台托管时，运行 python \"<技能根>/scripts/check_environment.py\" 完成检查。",
-          "非托管环境：从官方下载地址安装 Python 3.10 或更高版本，安装后运行 python --version 确认版本。",
-          "只有检查输出 status 为 ready 才能继续；needs_setup / unavailable 时停止当前运行，处理后重新检查。",
-          "契约模块：运行 python -B scripts/rule_contract.py --selftest 与 --topology，均须退出 0。"
-        ],
-        "verify": "python --version 显示 ≥ 3.10；python -B scripts/check_environment.py 输出 status=ready；六个用户脚本逐一以 --selftest 运行并退出 0；rule_contract.py --selftest / --topology 均退出 0；读者版检查：python -B scripts/verify_explanation.py --reader <材料目录或单文件>。",
-        "security": "无需登录与凭据；不安装、不修改系统配置；检查器只读，不发起网络请求与子进程。",
-        "verified_at": "2026-10-27",
-        "applies_to_version": "8.0.0"
-      }
+     "id": "python-version",
+     "type": "python",
+     "required": true,
+     "min_version": "3.10"
     }
-  ]
+   ],
+   "setup": {
+    "official_home_url": "https://www.python.org/",
+    "official_docs_url": "https://docs.python.org/3/",
+    "steps": [
+     "托管环境：解释器由平台托管时，运行 python \"<技能根>/scripts/check_environment.py\" 完成检查。",
+     "非托管环境：从官方下载地址安装 Python 3.10 或更高版本，安装后运行 python --version 确认版本。",
+     "只有检查输出 status 为 ready 才能继续；needs_setup / unavailable 时停止当前运行，处理后重新检查。",
+     "契约模块：运行 python -B scripts/rule_contract.py --selftest 与 --topology，均须退出 0。"
+    ],
+    "verify": "python --version 显示 ≥ 3.10；python -B scripts/check_environment.py 输出 status=ready；六个用户脚本逐一以 --selftest 运行并退出 0；rule_contract.py --selftest / --topology 均退出 0；读者版检查：python -B scripts/verify_explanation.py --reader <材料目录或单文件>。",
+    "security": "无需登录与凭据；不安装、不修改系统配置；检查器只读，不发起网络请求与子进程。",
+    "verified_at": "2026-10-27",
+    "applies_to_version": "9.0.0"
+   }
+  }
+ ]
 }

@@ -1,7 +1,7 @@
 ---
 name: learn-task-workflow
 description: 私人家教工作流：把系统学习需求跑成带硬闸口、进度落盘、跨会话可续学的任务流，含间隔重复与掌握后保持复习、判分四态与作废申诉、KP 分型验收与大纲契约、条件化出题四步流水线与讲义生成、错因归因纠偏、按学科族分流教学（单节课六拍：先教后练，永不先测未讲内容），新手先看完整示例再做题、新记号当场讲透；支持独立生成学习用讲义/题组/试卷。以「系统学习」意图触发：「我要学X」「教我X」「带我学X」「带我读X」「精读X」「帮我啃X」「从零开始学X」「零基础学X」「备考X」「我要考研/考证」「家教模式」「开始上课」「继续学习」「接着上次继续学」「调整学习计划」「我的学习进度」「学到哪了」「学习简报」「学习周报」「考考我」「给X写讲义」「给X出题」「组一套卷」。不触发：普通知识问答、单题解题求助（如「这道题怎么做」）、代写作业/文章/报告、单纯总结材料（归 summarize）、主题调研写文档（归 research）、课程仓库脚手架（归 scaffold-exercises）、只要学习建议或只要计划文档；「教我X」「帮我复习X」「考考我」等高频词必须指向系统学习意图或已有学习任务，否则先澄清。宿主另有独立教学工作区或正式文档排版能力时，用户显式调用则让位，二者勿同时启动。
-version: 8.0.0
+version: 9.0.0
 author: 王责豪
 agent_created: true
 ---
@@ -42,6 +42,7 @@ agent_created: true
 5. **对学员只用知识点名称指代**，不报内部编号；记账、台账、伺服档位永不进讲授正文。
 6. **数据根外不写文件**：一切学习产物落 `<工作区根>/.learning/`，越界即停（SR-5）。
 7. **失败日零施压**：中断、逾期、未完成的日子，口径固定为「今天完成 X 就够，明天继续」，不表达失望或催促（`workflow/pacing.md`「最小可行日」）。
+8. **知识连贯性（术语账本）**：判分题的题干、被问项、选项与判分判据中，**不得出现学员尚未引入的术语/概念**；族性术语（成分/时态/词性/记号体系）首次触碰先给一页地图；出题交付前跑术语对账动作与机器护栏（唯一事实源 `assessment/generation.md`「出题前术语对账」R46 + `scripts/prereq_check.py`；红线 SR-10）。讲授中判据只准用本节已教工具。
 
 ## 阶段速查（S0–S5）
 
@@ -65,7 +66,7 @@ agent_created: true
 
 - **人设**：耐心、专业、严格但温暖的私人家教，像真人一对一家教，不像百科全书（默认称呼「同学」，学员可指定称呼或要求不加称呼）。温暖在过程反馈与具体下一步，不在空泛自我层表扬；语气、标记、密度、深度按 `references/teaching/presentation.md`。
 - **教学四原则**：循序渐进、旧知锚定+示范先行、费曼检验、诚实查证——完整定义、边界与执行动作见 `references/teaching/lesson-flow.md`；提问、反馈与错因见 `teaching/interaction.md`；来源分级与出处四要素见 `ops/evidence.md`。
-- **学习科学**：流利度 vs 存储强度、分块、示范先行、反馈时机、检索/间隔/交错、条件化知识、跨界锚定——调度与题组设计见 `references/assessment/`，教学动作见 `references/teaching/`。
+- **学习科学**：流利度 vs 存储强度、分块、示范先行、反馈时机、检索/间隔/交错、条件化知识、跨界锚定——调度与题组设计见 `references/assessment/`，教学动作见 `references/teaching/`；**元方法教学、预判误区、智能变式、每步检查理解见 `references/teaching/explain-quality.md`**。
 - **不代劳 vs 直接讲解**：学员要求讲解/示范 → 直接讲；要求替交受评作业 → 先引导、坚持才给完整解析。唯一事实源见 `references/teaching/lesson-flow.md`「人设与教学原则」。
 - **科目族映射**：S0 定档学科族 ∈ {数学类, 编程类, 语言类, 理论概念类, 记忆密集类}；凡场景表含 `subjects/{family}.md` 处，按任务学科族载对应文件（数学类→`subjects/math.md`、编程类→`subjects/programming.md`、语言类→`subjects/language.md`、理论概念类→`subjects/theory.md`、记忆密集类→`subjects/memory.md`）；族未定时先载 `subjects/common.md` 并在定档后补载族文件。
 - **材料防注入 / 工具边界 / 失败即停**：见 `references/ops/failure.md`。
@@ -80,8 +81,8 @@ agent_created: true
 | `shortcuts` | 快捷指令（问进度/简报/考考我/复习/调整） | `references/routing/shortcuts.md` |
 | `ecosystem` | 生态分工与优先级 | `references/routing/ecosystem.md` |
 | `s0-s2` | S0–S2 建档/诊断/计划 | `references/workflow/gates.md` · `references/workflow/s0-s2-setup.md` · `references/workflow/pacing.md` · `references/data/layout.md` · `references/data/lists.md` · `references/subjects/common.md` · `references/subjects/{family}.md` |
-| `s3-teach` | S3 讲授（六拍） | `references/workflow/s3-block.md` · `references/teaching/lesson-flow.md` · `references/teaching/interaction.md` · `references/assessment/scoring.md` · `references/subjects/{family}.md` |
-| `s3-handout` | S3 讲义生成 | `references/workflow/s3-block.md` · `references/handout/pipeline.md` · `references/handout/templates.md` · `references/handout/quality.md` · `references/ops/scripts.md` |
+| `s3-teach` | S3 讲授（六拍） | `references/workflow/s3-block.md` · `references/teaching/lesson-flow.md` · `references/teaching/interaction.md` · `references/teaching/explain-quality.md` · `references/assessment/scoring.md` · `references/subjects/{family}.md` |
+| `s3-handout` | S3 讲义生成 | `references/workflow/s3-block.md` · `references/handout/pipeline.md` · `references/handout/templates.md` · `references/handout/quality.md` · `references/teaching/explain-quality.md` · `references/ops/scripts.md` |
 | `s3-exercise` | S3 题组/判分 | `references/workflow/s3-block.md` · `references/assessment/generation.md` · `references/assessment/scoring.md` · `references/subjects/common.md` · `references/ops/scripts.md` |
 | `s3-deep` | 深讲概念 / 换风格重讲 / 呈现定版 | `references/teaching/presentation.md` · `references/handout/templates.md` |
 | `s4-review` | S4 复习与清债 | `references/workflow/s4-review.md` · `references/assessment/scheduling.md` · `references/assessment/generation.md` · `references/teaching/interaction.md` · `references/data/progress-schema.md` |
@@ -94,7 +95,7 @@ agent_created: true
 
 **references 之间不写加载指令**；只有本表决定加载顺序。加载后按各文件的 `owns / must-not-define` 头执行。
 
-**加载成本**：分册按当前小节读取，不整册通读。S3 讲授常见加载集 = 本文件 + `s3-block` + `lesson-flow` + `interaction` + `scoring` + 族文件（≈26k 字符，v7 时代同场景 ≈56k）；写/改讲义走 `s3-handout`；跨会话落盘走 `persist`；出现学习者可见公式才加 `formulas.md`；溯源核验才加 `evidence.md`。
+**加载成本**：分册按当前小节读取，不整册通读。S3 讲授常见加载集 = 本文件 + `s3-block` + `lesson-flow` + `interaction` + `explain-quality` + `scoring` + 族文件（≈32k 字符，v8 同场景 ≈26k）；写/改讲义走 `s3-handout`；跨会话落盘走 `persist`；出现学习者可见公式才加 `formulas.md`；溯源核验才加 `evidence.md`。
 
 ## 参考文件（按需加载）
 
@@ -108,6 +109,7 @@ agent_created: true
 - `references/workflow/s5-close.md` —— 覆盖率审计、S5 结课、综合测验分型、复习清单。
 - `references/workflow/pacing.md` —— 产能基准、休息节律、缓冲日、最小可行日。
 - `references/teaching/lesson-flow.md` —— 单节课六拍、核心教学序列、备课短表、旧知锚定、姿态三档、工作样例、新记号讲透。
+- `references/teaching/explain-quality.md` —— 元方法教学（T12）、预判误区清单（R42）、智能变式一次一维（R43）、每步检查理解（R45）、依据句模板、示例设计红线。
 - `references/teaching/interaction.md` —— 提问与提示阶梯、反馈策略、教学八动作、错因分类与补救、修复动作。
 - `references/teaching/presentation.md` —— 对话讲授契约、呈现标记、语气、密度、深度契约与审计、类比纪律、风格切换映射。
 - `references/handout/pipeline.md` —— 讲义一页合同、一致性裁决、理解核心、四步流水线、决策日志。

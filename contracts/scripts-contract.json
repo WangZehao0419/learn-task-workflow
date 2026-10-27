@@ -80,6 +80,17 @@
    },
    "schema": "ltw-rules/1",
    "notes": "契约唯一来源 contracts/rules.json；缺失/畸形报 E-CONTRACT-MISSING/E-CONTRACT-INVALID；--topology 检查无加载指令、职责头、owner 指针、依赖无环、旧文件名只在 alias 表、版本四方一致、全仓错误码 ⊆ 契约 errors、operations 速查表双向覆盖、lead_words 双写一致、T/F/R 编号引用必有定义"
+  },
+  {
+   "script": "prereq_check.py",
+   "usage": "--list <知识清单.md> --scan <题组或讲义.md>... [--extra-terms \"...\"] [--extra-file <文件>] [--scan-all] [--selftest]",
+   "default_behavior": "只读对账，不写盘",
+   "exit_codes": {
+    "0": "干净（无未引入术语命中）",
+    "1": "存在命中（输出违规清单）",
+    "2": "用法/文件错误"
+   },
+   "notes": "R46 出题前术语对账的机器护栏：已引入集合 = 已讲 KP 引入列 ∪ 已讲 KP 名称 ∪ --extra-terms/--extra-file 追加；默认只扫题面区标题（## 题组/自测/检验/练习）之后到下一 ## 之前，--scan-all 扫全文；违规逐条输出 W-TERM-UNTAUGHT 到 stderr，JSON 汇总到 stdout；清单零可用行 exit 2（E-LIST-EMPTY），不猜不补造"
   }
  ],
  "verification": {
@@ -90,9 +101,10 @@
    "python -B scripts/kp_sort.py --selftest",
    "python -B scripts/check_environment.py --selftest",
    "python -B scripts/verify_explanation.py --selftest",
+   "python -B scripts/prereq_check.py --selftest",
    "python -B scripts/rule_contract.py --selftest",
    "python -B scripts/rule_contract.py --topology"
   ],
-  "note": "七个模块自测覆盖确定性计算、结构校验与契约完整性；真实教学回归与故障夹具见 evals。"
+  "note": "八个模块自测覆盖确定性计算、结构校验、契约完整性与术语对账；真实教学回归与故障夹具见 evals。"
  }
 }

@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/1",
- "version": "8.0.0",
+ "version": "9.0.0",
  "files": [
   {
    "id": "triggers",
@@ -290,6 +290,15 @@
    "layer": 1,
    "owns": "来源分级、文献依据与边界",
    "depends_on": []
+  },
+  {
+   "id": "explain-quality",
+   "path": "references/teaching/explain-quality.md",
+   "layer": 1,
+   "owns": "元方法教学（T12/R44）、预判误区清单（R42）、智能变式一次一维（R43）、每步检查理解（R45）、依据句模板、示例设计红线",
+   "depends_on": [
+    "lesson-flow"
+   ]
   }
  ],
  "rules": [
@@ -811,6 +820,61 @@
    "scenes": [
     "s3-handout"
    ]
+  },
+  {
+   "id": "R42",
+   "owner": "references/teaching/explain-quality.md#预判误区清单（R42）",
+   "type": "definition",
+   "scenes": [
+    "s3-teach",
+    "s3-handout"
+   ]
+  },
+  {
+   "id": "R43",
+   "owner": "references/teaching/explain-quality.md#智能变式一次一维（R43）",
+   "type": "definition",
+   "scenes": [
+    "s3-exercise",
+    "s4-review",
+    "s3-handout"
+   ]
+  },
+  {
+   "id": "R44",
+   "owner": "references/teaching/explain-quality.md#元方法教学（T12）",
+   "type": "definition",
+   "scenes": [
+    "s3-teach",
+    "s3-handout"
+   ]
+  },
+  {
+   "id": "R45",
+   "owner": "references/teaching/explain-quality.md#每步检查理解（R45）",
+   "type": "definition",
+   "scenes": [
+    "s3-teach"
+   ]
+  },
+  {
+   "id": "R46",
+   "owner": "references/assessment/generation.md#出题前术语对账（R46）",
+   "type": "definition",
+   "scenes": [
+    "s3-teach",
+    "s3-exercise",
+    "s4-review",
+    "s5-close"
+   ]
+  },
+  {
+   "id": "T12",
+   "owner": "references/teaching/explain-quality.md#元方法教学（T12）",
+   "type": "definition",
+   "scenes": [
+    "s3-teach"
+   ]
   }
  ],
  "path_aliases": {
@@ -1167,7 +1231,11 @@
     "E-TOPOLOGY-SCENES",
     "E-TOPOLOGY-VERSION",
     "E-UNDECLARED-CHANGES",
-    "E-UNREADABLE-PROGRESS"
+    "E-UNREADABLE-PROGRESS",
+    "E-LIST-MISSING",
+    "E-LIST-EMPTY",
+    "E-SCAN-MISSING",
+    "E-TERM-UNTAUGHT"
    ],
    "W": [
     "W-CONFIDENCE-AMBIGUOUS",
@@ -1216,12 +1284,13 @@
     "W-UNPARSED-MATERIAL",
     "W-UNPARSED-MODULE",
     "W-UNPARSED-ROUTE",
-    "W-VOIDED-ATTEMPT"
+    "W-VOIDED-ATTEMPT",
+    "W-TERM-UNTAUGHT"
    ]
   },
   "scenes_budget": {
    "files_max": 7,
-   "chars_max": 28000
+   "chars_max": 34000
   }
  },
  "scenes": {
@@ -1261,6 +1330,7 @@
     "references/workflow/s3-block.md",
     "references/teaching/lesson-flow.md",
     "references/teaching/interaction.md",
+    "references/teaching/explain-quality.md",
     "references/assessment/scoring.md",
     "references/subjects/{family}.md"
    ]
@@ -1270,6 +1340,7 @@
    "chars_max": 60000,
    "files": [
     "references/workflow/s3-block.md",
+    "references/teaching/explain-quality.md",
     "references/handout/pipeline.md",
     "references/handout/templates.md",
     "references/handout/quality.md",

@@ -23,3 +23,17 @@
 1. 先定位两个机制的 owner 小节，按 owner 定义执行；本册只决定顺序、优先级与互不替代关系。
 2. owner 之间若出现实质冲突，按 `SKILL.md` 的裁决顺序（同一规则冲突归其 owner）处理；不得在本册另立第三条规则。
 3. 本册不新增闸口或阈值；涉及数字时写契约键（`contracts/rules.json`），不重复打印数值。
+
+## 跨文件意图唯一 owner（intent-map，v9）
+
+一条意图只允许一个 owner 小节定义口径，其余文件**只引用不复述**；本表是登记处与仲裁依据。新增跨文件意图时先在此登记，再写正文；发现某意图出现第二处定义 → 回 owner，重复处改引用。
+
+| 意图 | 唯一 owner（口径） | 动作落点 | 引用方（只许引用，不得重定义） |
+|---|---|---|---|
+| 未教不出题 / 出题域 | `assessment/generation.md`「出题范围与未讲授过滤（R35）」 | 同上 | SKILL.md 常驻#1（常驻层）、`teaching/lesson-flow.md` 核心序列、`workflow/s4-review.md` 复习债、`assessment/scheduling.md` due-queue 前置 |
+| 未教术语不进题面 / 判据 | `assessment/generation.md`「出题前术语对账（R46）」 | 同上 + `scripts/prereq_check.py` | SKILL.md 常驻#8、`ops/failure.md` SR-10、`subjects/language.md` 术语纪律、`data/lists.md` 引入字段 |
+| 零基础确证（不假设已会） | `teaching/lesson-flow.md`「课首与旧知锚定·确证铁律」 | 同上 | `teaching/presentation.md` 类比纪律、`teaching/interaction.md` 卡壳协议豁免、`handout/templates.md` 学习者状态层 |
+| 前置依赖检查 | `workflow/s3-block.md`「前置依赖检查」（运行时）+ `workflow/s0-s2-setup.md` 步骤 5（构建时排序） | `scripts/kp_sort.py` | `teaching/lesson-flow.md` 备课短表「必需先修」 |
+| 示例与检验不同题 / 不泄底 | `handout/quality.md`「讲解出厂自检」第 2.2 项 | `scripts/verify_explanation.py` | `teaching/explain-quality.md` 示例设计红线（教学动作层重申） |
+| 变式真变 | `assessment/generation.md`「零提示与条件化判定题·变式真变」 | 同上 | `ops/composition.md` 检索变式行、`workflow/s4-review.md`；结构判据（一次一维）在 `teaching/explain-quality.md`「智能变式一次一维（R43）」 |
+| 先教后练 | `teaching/lesson-flow.md`「核心教学序列（硬规则）」 | 同上 | SKILL.md 常驻#1、六拍、`handout/pipeline.md` 四段支架 |
