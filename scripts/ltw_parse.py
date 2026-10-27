@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""progress.md 与知识清单的共享行级解析原语（单一实现）。
+"""progress.md 与课程体系.md 的共享行级解析原语（单一实现）。
 
 task_index / progress_check / kp_sort / scheduler 复用同一实现，防止字段行、
 路线行、暂缓条目、KP 行的解析口径在各脚本间分叉。只收行级与字符级原语；
@@ -17,10 +17,10 @@ import rule_contract
 
 _C = rule_contract.load_or_exit()["constants"]
 
-# progress.md 字段行 / 学习路线勾选行 / 「下次续学」块位置行
+# progress.md 字段行 / 课程体系节路线勾选行 / 「下次续学」目位置行
 FIELD_RE = re.compile(r"^-\s*([^：:]+)[：:]\s*(.*)$")
 ROUTE_RE = re.compile(r"^-\s*\[([xX ])\]\s*(\d+)\.\s*(.*)$")
-BLOCK_RE = re.compile(r"(?:已讲到第\s*)?(\d+)\s*/\s*(\d+)\s*块")
+BLOCK_RE = re.compile(r"(?:已讲到第\s*)?(\d+)\s*/\s*(\d+)\s*目(?!\s*[标录])")
 # 「暂缓与范围外」条目应含的三段（自由文本 + 竖线分段，不做枚举硬校验）
 HOLD_KEYS = ("来源", "处置", "触发条件")
 # KP 编号：行首锚定版（KP_ID_RE）供整字段校验；未锚定版（KP_ID_ANY_RE）供归一化与文本抽取
@@ -83,11 +83,21 @@ def hold_disposition_excluded(body):
 
 
 def parse_kp_optional(segs):
-    """解析 KP 行可选字段（类型/视觉任务）；无字段返回 (None, [])，畸形返回 None。"""
+    """解析目行可选字段（类型/视觉任务/引入）；无字段返回 (None, [], "")，畸形返回 None。
+
+    `引入：` 登记该目首次引入的术语（R46 出题前术语对账账本，分号/顿号分隔），
+    解析为原文整段（切分交由 prereq_check），不参与枚举校验。"""
     kp_type = None
     visual_tasks = []
+    intro = ""
     for seg in segs:
-        if seg.startswith("类型：") or seg.startswith("类型:"):
+        if seg.startswith("引入：") or seg.startswith("引入:"):
+            if intro:
+                return None
+            intro = re.split(r"[：:]", seg, maxsplit=1)[1].strip()
+            if not intro:
+                return None
+        elif seg.startswith("类型：") or seg.startswith("类型:"):
             if kp_type is not None:
                 return None
             raw = re.split(r"[：:]", seg, maxsplit=1)[1].strip()
@@ -112,14 +122,14 @@ def parse_kp_optional(segs):
                 return None
         else:
             return None
-    return kp_type, visual_tasks
+    return kp_type, visual_tasks, intro
 
 
 def parse_kp_row(segs):
-    """清单行六段（KP编号｜知识点｜所属小节｜前置｜来源｜状态）+ 可选类型/视觉任务 → dict。
+    """课程体系目行六段（KP编号｜目名｜所属节｜前置｜来源｜状态）+ 可选类型/视觉任务 → dict。
 
     可选字段缺失返回 type=None、visual_tasks=[]（旧任务统一闸口）；畸形返回 None。
-    附带 sec_decl（显式「小节 N」序号，供与编号契约「编号第一节 = 所属节」比对）
+    附带 sec_decl（显式「节 N」序号，供与编号契约「编号节序 = 所属节」比对）
     与 bottom_note（摸底「已会」括注探测，带括注行豁免 W-KP-STATE-MISMATCH）。
     """
     if len(segs) < 6:
@@ -128,7 +138,7 @@ def parse_kp_row(segs):
     optional = parse_kp_optional(segs[6:])
     if optional is None:
         return None
-    kp_type, visual_tasks = optional
+    kp_type, visual_tasks, intro = optional
     m = KP_ID_RE.match(kid)
     if not m or not title or not section:
         return None
@@ -146,13 +156,14 @@ def parse_kp_row(segs):
     base = kp_status_base(raw_status)
     if base is None:
         return None
-    # K02：解析显式所属节的序号（仅当形如「小节 N」时）
+    # K02：解析显式所属节的序号（仅当形如「节 N」时）
     sec_decl = None
-    sec_m = re.fullmatch(r"小节\s*(\d+)", section)
+    sec_m = re.fullmatch(r"节\s*(\d+)", section)
     if sec_m:
         sec_decl = int(sec_m.group(1))
     # 摸底「已会」括注探测（全角/半角括号双兼容）
     bottom_note = raw_status.startswith("已会") or re.match(r"^未讲[(（]\s*已会", raw_status) is not None
     return {"id": kid, "sec": int(m.group(1)), "no": int(m.group(2)),
             "sec_decl": sec_decl, "prereqs": prereqs, "status": base,
-            "bottom_note": bottom_note, "type": kp_type, "visual_tasks": visual_tasks}
+            "bottom_note": bottom_note, "type": kp_type, "visual_tasks": visual_tasks,
+            "intro": intro}

@@ -23,10 +23,10 @@
 | `task_index.py` | `--root <数据根> [--write-index \| --no-write-index] [--selftest]` | 只读、不物化 `index.json`（写缓存为显式 opt-in） | 会话开始/续学/问进度 |
 | `progress_check.py` | `<任务目录> [--release] [--proposed-phase <阶段>] [--staged <候选快照>] [--changed-lessons <正整数列表>] [--selftest]` | 历史/日常校验（warning 非阻断旧任务） | 闸口推进前；新增掌握/结课/跨阶段加 `--release` |
 | `scheduler.py` | `next-interval \| due-queue \| calibration [--selftest]` | 只读计算，输出 JSON；落盘由文件写入能力负责 | 判分后算 S'/D'/due；开节前查到期队列；S4 开场校准 |
-| `kp_sort.py` | `<清单文件> [--selftest]` | 只读、零写盘 | 知识型/技能型排序子步 |
+| `kp_sort.py` | `<课程体系.md> [--selftest]` | 只读、零写盘 | 知识型/技能型排序子步 |
 | `check_environment.py` | `[--manifest <路径>] [--capability <名称>]... [--selftest]` | 只读诊断 | 脚本调用出现解释器/版本类失败时诊断一次 |
 | `verify_explanation.py` | `<材料目录或单文件> [--selftest] [--reader]` | 只读静态校验，不写盘 | 讲义定稿前；`--reader` 加跑读者版 W 级检查 |
-| `prereq_check.py` | `--list <知识清单.md> --scan <题组或讲义.md>... [--extra-terms "…"] [--extra-file <文件>] [--scan-all] [--selftest]` | 只读对账，不写盘 | 判分题交付前（R46 出题前术语对账）；旧任务清单补写 `引入` 列后跑 |
+| `prereq_check.py` | `--list <课程体系.md> --scan <题组或讲义.md>... [--extra-terms "…"] [--extra-file <文件>] [--scan-all] [--selftest]` | 只读对账，不写盘 | 判分题交付前（R46 出题前术语对账）；目行补登记 `引入` 列后跑 |
 | `rule_contract.py` | `--selftest \| --topology \| --coverage` | 只读校验契约、拓扑与场景覆盖 | 修改契约/分册结构后、打包前 |
 
 完整参数、退出码与 notes 的机器可读版本见 `contracts/scripts-contract.json`；脚本 docstring 只保留算法/参数说明，不再维护完整错误码表。
@@ -53,7 +53,7 @@
 **错误码入口**：
 
 - 完整码表与 notes：`contracts/rules.json.errors`（机器名单）+ `contracts/scripts-contract.json`（脚本参数/退出码/notes）；脚本 docstring 只列常用码与实现说明；下表是触发条件速查。
-- `progress_check` 的新增码：`E-GATE-RATIO-INVALID`（`小节目标线` 非法）、`E-FINAL-INVALID-TARGET`（结课目标线非法，不得回退默认线）。
+- `progress_check` 的新增码：`E-GATE-RATIO-INVALID`（`节目标线` 非法）、`E-FINAL-INVALID-TARGET`（结课目标线非法，不得回退默认线）。
 - 契约缺失/畸形：`E-CONTRACT-MISSING` / `E-CONTRACT-INVALID`。
 - 业务语义：`assessment/scoring.md` 判分、`assessment/scheduling.md` 调度；`workflow/gates.md` 闸口；`data/progress-schema.md` 字段；`ops/failure.md` 处置。
 
@@ -74,12 +74,12 @@
 | progress_check | `E-ATTEMPT-CONFLICT` | 同 attempt 结果冲突 |
 | progress_check | `E-EVIDENCE-ID-MISMATCH` / `E-CURSOR-DANGLING` / `E-EVIDENCE-REF-MISSING` / `E-LESSON-ID-DUP` | 证据串节 / 动作游标悬空 / 候选证据不存在 / lesson_id 重复 |
 | progress_check | `E-UNDECLARED-CHANGES` / `E-CHANGED-SET-INVALID` | 候选差分漏查 / 变更集非法 |
-| progress_check | `E-GATE-RATIO-INVALID` | `小节目标线` 非法 |
+| progress_check | `E-GATE-RATIO-INVALID` | `节目标线` 非法 |
 | progress_check | `W-EMPTY-EVIDENCE` / `W-UNGRADED-ATTEMPT` / `W-VOIDED-ATTEMPT` | 历史模式空证据 / 未判 / 作废提示（不阻断） |
 | progress_check | `W-NO-ROUTE` / `W-UNPARSED-ROUTE` / `W-NO-COVERAGE` / `W-NO-COVERAGE-AUDIT` | 无路线 / 路线畸形 / 无覆盖 / 缺审计 |
 | progress_check / task_index | `W-UNPARSED-HOLD` / `W-MULTI-EVIDENCE` / `W-CURSOR-DANGLING` / `W-NO-PROPOSED-STATE` | 暂缓条目畸形 / 多份证据 / 游标悬空 / 未提供拟提交状态 |
-| progress_check | `W-KP` / `W-KP-LIST-MISSING` / `W-KP-SUMMARY-MISMATCH` / `W-KP-HOLD-CROSS` / `W-KP-STATE-MISMATCH` | 清单缺失 / 摘要不符 / 双写不交 / 状态不符 |
-| progress_check | `W-UNPARSED-KP` / `W-UNPARSED-MODULE` / `W-UNPARSED-MATERIAL` / `W-MODULE` / `W-MODULE-CONTRACT-INCOMPLETE` / `W-MATERIAL-COVERAGE-GAP` | 清单 / 模块 / 材料条目畸形，或模块目标与材料覆盖契约不完整 |
+| progress_check | `W-KP` / `W-KP-LIST-MISSING` / `W-KP-SUMMARY-MISMATCH` / `W-KP-HOLD-CROSS` / `W-KP-STATE-MISMATCH` | 课程体系缺失 / 覆盖摘要不符 / 双写不交 / 状态不符 |
+| progress_check | `W-UNPARSED-KP` / `W-UNPARSED-MODULE` / `W-UNPARSED-MATERIAL` / `W-MODULE` / `W-MODULE-CONTRACT-INCOMPLETE` / `W-MATERIAL-COVERAGE-GAP` | 课程体系目行 / 章规划行 / 材料条目畸形，或章规划与材料覆盖契约不完整 |
 | progress_check | `W-STALE-REVIEW-ORIGIN` | 复习来源阶段指向已失效的阶段值 |
 | scheduler | `W-PROGRESS` / `W-PROGRESS-MISSING` / `W-PROGRESS-UNREADABLE` / `W-CONFIDENCE-AMBIGUOUS` / `W-CW-LOWCONF` / `W-CW-ORPHAN` / `W-META-INVALID` | 任务进度缺失/不可读；信心/时序歧义、低信心 cw、孤立 cw、元数据非法；校准不计或跳过 |
 | scheduler | `W-UNPARSED-ITEM` | 调度条目无法解析或缺合法日期，不入队、不猜值 |
@@ -136,6 +136,6 @@ python -B evals/verify-load-budget.py
 
 ## 当前核验
 
-- 适用版本：6.11.0
-- 核验日期：2026-10-27
+- 适用版本：9.2.0
+- 核验日期：2026-10-28
 - 环境依赖：`skill-dependencies.json`（Python `min_version`）；只有 `check_environment.py` 输出 `ready` 才能继续。

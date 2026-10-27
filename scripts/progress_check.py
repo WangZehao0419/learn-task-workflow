@@ -4,17 +4,17 @@
 
 用途：技能在跨阶段推进前调用，做四件事：
   1) 校验 progress.md 的必填字段与枚举合法性；
-  2) 验证「已掌握（[x]/[X]）」小节是否都有对应的 exercises/ 判分记录（落盘证据）；
+  2) 验证「已掌握（[x]/[X]）」节是否都有对应的 exercises/ 判分记录（落盘证据）；
   3) 覆盖完整性只读告警（v2.3，warning 非 error，不阻断旧任务）：
      W-NO-COVERAGE-AUDIT（结课/已完成缺「暂缓与范围外」区块或缺审计记录）、
      W-UNPARSED-HOLD（暂缓条目畸形计 0）、
      W-EMPTY-EVIDENCE（判分记录文件存在但内容无「判分/作答」结构——空文件或模板），
      并在 coverage 字段回显 hold_count / excluded_count / hold_unparsed / route_undone / audit_record_found。
   4) KP 清单只读告警（v2.4，全部 warning 非 error，不阻断旧任务；仅 progress.md
-     记有「知识清单」指针的任务才触发，旧任务零触发）：
+     或 progress.md 记有「课程体系」指针时触发）：
      W-KP-STATE-MISMATCH（小节已掌握 × 清单该节存在无摸底括注的「未讲」KP；
      带「已会」括注行豁免）、
-     W-UNPARSED-KP（清单行畸形/状态非法/前置引用不存在/重复编号/覆盖范围行畸形或写法偏差，
+     W-UNPARSED-KP（目行畸形/状态非法/前置引用不存在/重复编号/覆盖范围行畸形或写法偏差，
      不计入摘要计数）、
      W-KP-SUMMARY-MISMATCH（覆盖摘要行计数与逐行实际不符；rows 空但摘要行有值照常核对）、
      W-KP-LIST-MISSING（指针存在但文件不存在或不可读）、
@@ -40,17 +40,16 @@
       否则 E-KEY-ABILITY-UNMET（关键项错不被简单题抵消）。
     · **复述 / 目标型证据**：复述清单按**勾选项**计数（≥2，兼容同行多勾选）；
       「操作作品验收」类区块含 ≥2 个已勾选核验项可**等价替代**；二者皆无 → E-NO-RESTATEMENT。
-    · **分型验收（v6.1）**：知识清单 KP 声明类型/视觉任务时，记忆/程序要 `KP=<id>` 的独立正确
+    · **分型验收**：课程体系目行声明类型/视觉任务时，记忆/程序要 `KP=<id>` 的独立正确
       attempt，概念/设计要复述勾选行含该 KP，视觉任务要 `KP=<id>｜视觉=<任务>` 的独立正确
       attempt；否则 E-KP-TYPED-GATE。未声明类型的旧任务不触发。
-    · **大纲契约 / intake（v6.1）**：模块目标/材料覆盖结构提示（W-MODULE-*），
-      教学策略存在但非枚举 → E-ENUM-STRATEGY；两区/字段缺失对旧任务合法。
+    · **章规划契约**：章规划/材料覆盖结构提示（W-MODULE-*，读 课程体系.md）；两区缺失合法。
     · 空文件/仅含模板字样的判分记录 → E-EMPTY-EVIDENCE。
     · **阶段证据按内容而非文件名**：S2 须有**可用**的 00 摸底（E-NO-DIAGNOSTIC）；
       结课/已完成须有**可用**的 99 综合测验（缺文件 E-NO-FINAL-EXAM、空文件 E-FINAL-NO-EVIDENCE、
       未达目标线 E-FINAL-BELOW-TARGET、纳入 KP 未覆盖 E-FINAL-BLUEPRINT-GAP）；
-      空或不可解析（含混合不可解析）路线 → E-NO-ROUTE-STRICT；未勾选小节 → E-ROUTE-UNDONE；
-      清单纳入口径下仍有「未讲」关键能力 KP → E-CORE-UNLEARNED。
+      空或不可解析（含混合不可解析）路线 → E-NO-ROUTE-STRICT；未勾选节 → E-ROUTE-UNDONE；
+      纳入口径下仍有「未讲」关键能力目行 → E-CORE-UNLEARNED。
     · **候选差分覆盖**：给 `--staged` 时由**磁盘原状态与候选状态的真实差集**推导新增掌握；
       `--changed-lessons` 必须覆盖该差集（否则 E-UNDECLARED-CHANGES）、编号须属候选已掌握
       （否则 E-CHANGED-SET-INVALID）；未声明时默认只校验差集。
@@ -67,8 +66,8 @@
     · 严格闸口校验的是**拟提交目标状态**：`--proposed-phase` 覆盖目标阶段、`--staged` 传
       候选 progress 快照；两者皆缺时只校验当前落盘状态，输出 proposed_state_supplied:false
       + W-NO-PROPOSED-STATE，明示「目标变更未被校验」。
-    · `--changed-lessons` 为显式增量机制：只校验本次新增掌握的小节，旧资料不阻断无关新节；
-      输出 checked_lessons 回显本次严格校验覆盖的小节号。
+    · `--changed-lessons` 为显式增量机制：只校验本次新增掌握的节，旧资料不阻断无关新节；
+      输出 checked_lessons 回显本次严格校验覆盖的节号。
 
 历史模式保留 warning 级、不阻断旧任务（旧数据只有真实性告警时仍可继续教学）。
 
@@ -93,11 +92,10 @@ _C = rule_contract.load_or_exit()["constants"]
 ENUM_PHASE = _C["phases"]
 ENUM_TYPE = _C["types"]
 ENUM_FAMILY = _C["subject_families"]
-ENUM_STRATEGY = _C["teaching_strategies"]
-# v6.1 大纲契约：模块目标（M1｜名称｜能力句）与材料覆盖（材料 → M1/M2）
-MODULE_ROW_RE = re.compile(r"^(M\d+)\s*[｜|]\s*([^｜|]+?)\s*[｜|]\s*(.+)$")
+# 章规划契约：章规划行（章1｜章名｜能力句）与材料覆盖（材料 → 章1/章2）
+MODULE_ROW_RE = re.compile(r"^(章\d+)\s*[｜|]\s*([^｜|]+?)\s*[｜|]\s*(.+)$")
 MATERIAL_ROW_RE = re.compile(r"^(.+?)\s*(?:→|->|[｜|])\s*(.+)$")
-MODULE_REF_RE = re.compile(r"M\d+")
+MODULE_REF_RE = re.compile(r"章\d+")
 CONTRACT_PLACEHOLDER_RE = re.compile(r"<[^>]*>|待填|占位")
 # 只认 KP 编号/知识点之后的类型/视觉任务字段，避免标题里出现「类型：」被误判
 TYPED_FIELD_PREFIXES = ("类型：", "类型:", "视觉任务：", "视觉任务:")
@@ -435,7 +433,7 @@ def parse_target_ratio(ev_text):
 
 
 def gate_evidence(ev_text, require_restatement=True, require_independence=True,
-                  min_ratio=GATE_RATIO, ratio_label="小节验收默认线 2/3"):
+                  min_ratio=GATE_RATIO, ratio_label="节验收默认线 2/3"):
     """严格模式闸口判定：返回 [(error_code, message)]（空列表=达标）。
 
     口径（对齐 workflow.md「S3 闸口」）：真实作答 + 同题完整判定 + 独立性枚举
@@ -664,7 +662,7 @@ def collect_submission_ids(text, ex_dir, ex_names):
     return ids
 
 
-# ── 知识清单文件解析（行级原语唯一实现 = ltw_parse；枚举与别名唯一来源 = 契约）──
+# ── 课程体系目行解析（行级原语唯一实现 = ltw_parse；枚举与别名唯一来源 = 契约）──
 KP_ID_IN_TEXT_RE = re.compile(r"KP-\d+-\d+")
 # 稳定引用：路线行与判分记录可声明 lesson_id=…；消费方优先按 ID 匹配，旧资料回退序号
 LESSON_ID_RE = re.compile(r"lesson_id\s*=\s*([A-Za-z0-9_\-]+)")
@@ -674,7 +672,7 @@ KP_SUMMARY_KEY_RE = re.compile(r"(总|未讲|已讲|暂缓|排除)\s*(\d+)")
 
 
 def parse_kp_list(path):
-    """解析知识清单文件（只读）。返回 dict：version / coverage_range（None=行缺失，视同全量）/
+    """解析课程体系.md 目行（只读）。返回 dict：version / coverage_range（None=行缺失，视同全量）/
     coverage_malformed（含「覆盖范围」字样但未解析为合法值）/ summary_present / summary /
     rows / malformed / unreadable。
     - 头行键名全角/半角冒号双兼容（与 progress.md 字段行 FIELD_RE 半角宽容口径对齐）；
@@ -693,8 +691,12 @@ def parse_kp_list(path):
     summary_present = False
     summary = {}
     rows, malformed = [], []
+    section = None
     for raw in text.splitlines():
         line = raw.strip()
+        if line.startswith("## "):
+            section = line[3:].strip()
+            continue
         if not line or line.startswith("#"):
             continue
         if re.match(r"^-\s*版本[：:]", line):
@@ -713,17 +715,17 @@ def parse_kp_list(path):
             # 含「覆盖范围」字样却非合法头行（写法偏差/BOM 残缺）→ 分批标注失效不得静默
             coverage_malformed = True
             continue
-        if line.startswith("- ") and ("｜" in line or "|" in line):
+        if section == "学习路线" and line.startswith("- ") and ("｜" in line or "|" in line):
             body = line[2:].strip()
             first = re.split(r"[｜|]", body, maxsplit=1)[0].strip()
             if KP_ID_RE.match(first):
-                row = parse_kp_row([s.strip() for s in re.split(r"[｜|]", body)])
+                row = parse_kp_row([x.strip() for x in re.split(r"[｜|]", body)])
                 if row is None:
                     malformed.append(body)
                 else:
                     rows.append(row)
-            elif re.match(r"^(版本|对照源|排序规则|覆盖范围|覆盖摘要|最近更新)[：:]", first):
-                continue  # 文件头行（含 ｜ 分段的覆盖摘要行），非 KP 行
+            elif CHECKBOX_RE.match(line):
+                continue  # 节行（ROUTE_RE 口径），非目行
             else:
                 malformed.append(body)
     return {"version": version, "coverage_range": coverage_range,
@@ -733,31 +735,57 @@ def parse_kp_list(path):
 
 
 def hold_is_designed(body):
-    """滚雪球候选 / 来源：范围护栏 → 设计性范围外条目（按设计留在 progress.md、不入清单，不计入暂缓基数）。"""
+    """滚雪球候选 / 来源：范围护栏 → 设计性范围外条目（按设计留在 progress.md、不入目行，不计入暂缓基数）。"""
     return "滚雪球候选" in body or re.search(r"来源[：:]\s*范围护栏", body) is not None
+
+
+def parse_routes(text):
+    """从课程体系.md「学习路线」区解析节行（ROUTE_RE）与未解析勾选行。"""
+    lessons = []          # (num, done, label)
+    unparsed_routes = []  # 学习路线区出现勾选语法却未匹配的行
+    section = None
+    for raw in (text or "").splitlines():
+        line = raw.rstrip()
+        if line.startswith("## "):
+            section = line[3:].strip()
+            continue
+        if section != "学习路线":
+            continue
+        s = line.strip()
+        m = ROUTE_RE.match(s)
+        if m:
+            lessons.append((int(m.group(2)), m.group(1).lower() == "x", m.group(3).strip()))
+        elif CHECKBOX_RE.match(s):
+            unparsed_routes.append(s)
+    return lessons, unparsed_routes
+
+
+def parse_log(text):
+    """从记忆.md「学习日志」区提取条目行（审计记录检索用）。"""
+    log_lines = []
+    section = None
+    for raw in (text or "").splitlines():
+        line = raw.rstrip()
+        if line.startswith("## "):
+            section = line[3:].strip()
+            continue
+        if section == "学习日志":
+            s = line.strip()
+            if s.startswith("- "):
+                log_lines.append(s[2:].strip())
+    return log_lines
 
 
 def parse(text):
     fields = {}
     section = None
     sections = set()
-    lessons = []        # (num, done, label)
-    unparsed_routes = []  # 学习路线区出现勾选语法却未匹配的行
     hold_entries = []   # 「暂缓与范围外」条目（非「无」行）
-    log_lines = []      # 学习日志条目行
     for raw in text.splitlines():
         line = raw.rstrip()
         if line.startswith("## "):
             section = line[3:].strip()
             sections.add(section)
-            continue
-        if section == "学习路线":
-            s = line.strip()
-            m = ROUTE_RE.match(s)
-            if m:
-                lessons.append((int(m.group(2)), m.group(1).lower() == "x", m.group(3).strip()))
-            elif CHECKBOX_RE.match(s):
-                unparsed_routes.append(s)
             continue
         if section == "暂缓与范围外":
             s = line.strip()
@@ -766,17 +794,12 @@ def parse(text):
                 if body not in ("无", "无。"):
                     hold_entries.append(body)
             continue
-        if section == "学习日志":
-            s = line.strip()
-            if s.startswith("- "):
-                log_lines.append(s[2:].strip())
-            continue
         m = FIELD_RE.match(line.strip())
         if m and section is None:
             key = m.group(1).strip()
             if key not in fields:
                 fields[key] = m.group(2).strip()
-    return fields, lessons, unparsed_routes, sections, hold_entries, log_lines
+    return fields, sections, hold_entries
 
 
 def check(task_dir, release=False, proposed=None):
@@ -785,7 +808,7 @@ def check(task_dir, release=False, proposed=None):
     proposed（拟提交状态）：可选 dict，键：
       text            —— 拟提交的 progress.md 候选快照文本（校验该对象而非磁盘现状）
       phase           —— 拟提交的目标阶段（覆盖候选文本中的「当前阶段」）
-      changed_lessons —— 本次新增掌握的小节编号列表；给定时严格证据校验只覆盖这些小节
+      changed_lessons —— 本次新增掌握的节编号列表；给定时严格证据校验只覆盖这些节
                          （显式增量机制，旧资料不阻断无关新节）
     未提供 proposed 时只校验当前落盘状态：目标变更（拟转阶段/拟新增掌握）未被校验，
     输出 `proposed_state_supplied:false` + W-NO-PROPOSED-STATE 明示（不得据此声称已校验）。
@@ -795,12 +818,12 @@ def check(task_dir, release=False, proposed=None):
     proposed_state_supplied = bool(proposed.get("text") is not None or proposed.get("phase"))
     declared_changes = proposed.get("changed_lessons")
     errors, warnings = [], []
-    checked_lessons = []      # 本次严格证据校验覆盖的小节号（增量机制透明化）
-    mandatory_unlearned_ids = []   # 结课时仍「未讲」的关键能力 KP（清单纳入口径）
-    included_kp_ids = []      # 纳入出题分母的 KP（状态 ∈ {未讲, 已讲}）——结课蓝图覆盖核对用
+    checked_lessons = []      # 本次严格证据校验覆盖的节号（增量机制透明化）
+    mandatory_unlearned_ids = []   # 结课时仍「未讲」的关键能力目行（纳入口径）
+    included_kp_ids = []      # 纳入出题分母的目行（状态 ∈ {未讲, 已讲}）——结课蓝图覆盖核对用
     delta = None              # 候选快照相对磁盘原状态的**真实新增掌握**集合
-    evidence_used = []        # 各小节实际选用的判分证据文件（确定性选取透明化）
-    lesson_evidence = {}      # 小节号 -> 判分记录全文（v6.1 分型验收复用，避免重复选证据）
+    evidence_used = []        # 各节实际选用的判分证据文件（确定性选取透明化）
+    lesson_evidence = {}      # 节号 -> 判分记录全文（分型验收复用，避免重复选证据）
     prog = task_dir / "progress.md"
     if proposed.get("text") is not None:
         text = proposed["text"]
@@ -818,21 +841,35 @@ def check(task_dir, release=False, proposed=None):
                                 "message": "progress.md 存在但不可读（可能是目录或无权限）"}],
                     "warnings": [], "coverage": None,
                     "proposed_state_supplied": proposed_state_supplied}
-    fields, lessons, unparsed_routes, sections, hold_entries, log_lines = parse(text)
+    fields, sections, hold_entries = parse(text)
     if proposed.get("phase"):
         fields["当前阶段"] = proposed["phase"]   # 校验拟提交目标阶段，而非磁盘旧状态
+    # 三簿分工：节路线读课程体系.md（规划簿），学习日志读记忆.md（叙事簿）
+    curr_path = task_dir / "课程体系.md"
+    curriculum_text = None
+    if curr_path.exists():
+        try:
+            curriculum_text = curr_path.read_text(encoding="utf-8-sig", errors="replace")
+        except OSError:
+            curriculum_text = None
+    lessons, unparsed_routes = parse_routes(curriculum_text)
+    try:
+        mem_text = (task_dir / "记忆.md").read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        mem_text = ""
+    log_lines = parse_log(mem_text)
 
-    # 小节目标线：progress.md 可选字段；缺省取契约默认线，非法即拦停
-    gate_ratio, gate_label = GATE_RATIO, "小节验收默认线"
-    ratio_field = (fields.get("小节目标线") or "").strip()
+    # 节目标线：progress.md 可选字段；缺省取契约默认线，非法即拦停
+    gate_ratio, gate_label = GATE_RATIO, "节验收默认线"
+    ratio_field = (fields.get("节目标线") or "").strip()
     if ratio_field:
         m = re.fullmatch(r"(\d+)\s*/\s*(\d+)", ratio_field)
         if not m or int(m.group(2)) <= 0 or int(m.group(1)) > int(m.group(2)):
             errors.append({"code": "E-GATE-RATIO-INVALID",
-                           "message": "「小节目标线」非法（须为 0 ≤ a ≤ b 且 b > 0）：" + ratio_field})
+                           "message": "「节目标线」非法（须为 0 ≤ a ≤ b 且 b > 0）：" + ratio_field})
         else:
             gate_ratio = int(m.group(1)) / int(m.group(2))
-            gate_label = "小节目标线 " + ratio_field
+            gate_label = "节目标线 " + ratio_field
 
     # ── 候选差分：真实新增掌握集合必须被声明覆盖（漏查即拦停）──
     if proposed.get("text") is not None and prog.exists():
@@ -841,23 +878,22 @@ def check(task_dir, release=False, proposed=None):
         except OSError:
             disk_text = None
         if disk_text is not None:
-            _df, disk_lessons, _du, _ds, _dh, _dl = parse(disk_text)
-            disk_done = {n for n, d, _lbl in disk_lessons if d}
+            disk_done = {n for n, d, _lbl in parse_routes(curriculum_text)[0] if d}
             cand_done = {n for n, d, _lbl in lessons if d}
             delta = sorted(cand_done - disk_done)
             if declared_changes is not None:
                 unknown = sorted(n for n in declared_changes if n not in cand_done)
                 if unknown:
                     errors.append({"code": "E-CHANGED-SET-INVALID",
-                                   "message": "--changed-lessons 含候选态并未掌握的小节编号："
+                                   "message": "--changed-lessons 含候选态并未掌握的节编号："
                                               + "、".join(str(n) for n in unknown)})
                 if not set(delta).issubset(set(declared_changes)):
                     errors.append({"code": "E-UNDECLARED-CHANGES",
-                                   "message": "候选快照新增掌握的小节未被 --changed-lessons 覆盖（漏查）：新增 "
+                                               "message": "候选快照新增掌握的节未被 --changed-lessons 覆盖（漏查）：新增 "
                                               + "、".join(str(n) for n in delta)
                                               + "；声明 " + "、".join(str(n) for n in declared_changes)
                                               + "——须逐一校验证据或修正声明"})
-    # 实际严格校验范围：显式声明 > 候选差分 > 全部已掌握小节
+    # 实际严格校验范围：显式声明 > 候选差分 > 全部已掌握节
     if declared_changes is not None:
         changed_lessons = list(declared_changes)
     elif delta is not None:
@@ -894,36 +930,30 @@ def check(task_dir, release=False, proposed=None):
                            "message": "「复习来源阶段」取值非法: " + review_from +
                                       "（合法枚举：" + " / ".join(ENUM_REVIEW_FROM) + "）"})
 
-    # v6.1 intake/大纲契约：均为可选字段，旧任务缺失不触发；存在则校验结构。
-    strategy = fields.get("教学策略", "")
-    if strategy and strategy not in ENUM_STRATEGY:
-        errors.append({"code": "E-ENUM-STRATEGY",
-                       "message": "「教学策略」取值非法: " + strategy +
-                                  "（合法枚举：" + " / ".join(ENUM_STRATEGY) + "）"})
-    module_items = named_section_items(text, "模块目标")
-    material_items = named_section_items(text, "材料覆盖")
-    source_materials = [x for x in named_section_items(text, "材料")
+    # 章规划契约（读课程体系.md）：均为可选区；缺失合法，存在则校验结构。
+    module_items = named_section_items(curriculum_text or "", "章规划")
+    material_items = named_section_items(curriculum_text or "", "材料覆盖")
+    source_materials = [x for x in named_section_items(curriculum_text or "", "材料")
                         if not CONTRACT_PLACEHOLDER_RE.search(x)]
-    # 无材料任务只写模块目标合法；只有「有材料但没覆盖」或「有覆盖但没目标」才算契约不完整。
+    # 无材料任务只写章规划合法；只有「有材料但没覆盖」或「有覆盖但没章」才算契约不完整。
     if (module_items and source_materials and not material_items) or (material_items and not module_items):
         warnings.append({"code": "W-MODULE-CONTRACT-INCOMPLETE",
-                         "message": "「模块目标」与「材料覆盖」只出现了一个；"
-                                    "新任务建议两区同时给出（旧任务无此区属合法形态）"})
+                         "message": "课程体系.md「章规划」与「材料覆盖」只出现了一个；建议两区同时给出"})
     for item in module_items:
         if CONTRACT_PLACEHOLDER_RE.search(item) or not MODULE_ROW_RE.match(item):
             warnings.append({"code": "W-UNPARSED-MODULE",
-                             "message": "「模块目标」行畸形或仍是占位（应为 M1 ｜ 模块名 ｜ 学完能独立……）：" + item})
+                             "message": "「章规划」行畸形或仍是占位（应为 章1 ｜ 章名 ｜ 学完能独立……）：" + item})
     for item in material_items:
         m = MATERIAL_ROW_RE.match(item)
         if (CONTRACT_PLACEHOLDER_RE.search(item) or not m
                 or not MODULE_REF_RE.search(m.group(2))):
             warnings.append({"code": "W-UNPARSED-MATERIAL",
-                             "message": "「材料覆盖」行畸形或仍是占位（应为 材料 → M1 / M2）：" + item})
+                             "message": "「材料覆盖」行畸形或仍是占位（应为 材料 → 章1 / 章2）：" + item})
     if module_items and material_items:
         if len(material_items) < len(source_materials):
             warnings.append({"code": "W-MATERIAL-COVERAGE-GAP",
                              "message": "「材料覆盖」条目少于「材料」条目（" + str(len(material_items))
-                                        + " < " + str(len(source_materials)) + "）；请核对每份材料至少归入一个模块"})
+                                        + " < " + str(len(source_materials)) + "）；请核对每份材料至少归入一个章"})
         else:
             key_counts = {}
             for material in source_materials:
@@ -940,7 +970,7 @@ def check(task_dir, release=False, proposed=None):
                                      "message": "材料未在「材料覆盖」中出现：" + material
                                                 + "（字面未匹配，若用了简称/改名请人工核对）"})
 
-    # 落盘证据：已掌握小节必须有 exercises/ 判分记录
+    # 落盘证据：已掌握节必须有 exercises/ 判分记录
     ex_dir = task_dir / "exercises"
     ex_names = []
     if ex_dir.is_dir():
@@ -951,7 +981,7 @@ def check(task_dir, release=False, proposed=None):
     dup_ids = sorted({i for i in route_id_list if route_id_list.count(i) > 1})
     if dup_ids:
         errors.append({"code": "E-LESSON-ID-DUP",
-                       "message": "学习路线存在重复 lesson_id（同一证据会被两节共用、无法判定归属）："
+                       "message": "节路线存在重复 lesson_id（同一证据会被两节共用、无法判定归属）："
                                   + "、".join(dup_ids)})
     # 候选状态可为本次提交**显式引用**判分证据（`- 本次证据：<文件名>`）
     ev_ref_m = EVIDENCE_REF_RE.search(text)
@@ -959,13 +989,13 @@ def check(task_dir, release=False, proposed=None):
     invalid_lesson_nums = sorted({num for num, _done, _label in lessons if num < 1})
     if invalid_lesson_nums:
         errors.append({"code": "E-ROUTE-NUMBER",
-                       "message": "学习路线小节编号必须是正整数；00/0 专用于 S1 摸底证据："
+                       "message": "节编号必须是正整数；00/0 专用于 S1 摸底证据："
                                   + "、".join(str(num) for num in invalid_lesson_nums)})
     for num, done, label in lessons:
         if num < 1 or not done:
             continue
         if changed_lessons is not None and num not in changed_lessons:
-            continue   # 增量：只校验本次新增掌握的小节，旧资料不阻断无关新节
+            continue   # 增量：只校验本次新增掌握的节，旧资料不阻断无关新节
         checked_lessons.append(num)
         # 编号宽容匹配：同时接受两位补零 "01-" 与单位数 "1-"
         prefixes = ("{:02d}-".format(num), "{}-".format(num))
@@ -990,12 +1020,12 @@ def check(task_dir, release=False, proposed=None):
                     mism.append(n + "（lesson_id=" + m.group(1) + "）")
             if mism:
                 errors.append({"code": "E-EVIDENCE-ID-MISMATCH",
-                               "message": "小节 " + str(num) + "（lesson_id=" + route_id +
+                               "message": "节 " + str(num) + "（lesson_id=" + route_id +
                                           "）的判分证据声明了另一稳定 ID：" + "、".join(mism) +
                                           "——按序号回退串到了他节证据，拒绝放行"})
         if not hit:
             errors.append({"code": "E-NO-EVIDENCE",
-                           "message": "小节 " + str(num) + " 标已掌握，但 exercises/ 无判分记录（" +
+                           "message": "节 " + str(num) + " 标已掌握，但 exercises/ 无判分记录（" +
                                       prefixes[0] + "* 或 " + prefixes[1] + "*）"})
             continue
         # 确定性选证据（显式引用优先；否则「日期最新 → 字典序最大」），不看枚举顺序
@@ -1006,7 +1036,7 @@ def check(task_dir, release=False, proposed=None):
             continue
         if multi:
             warnings.append({"code": "W-MULTI-EVIDENCE",
-                             "message": "小节 " + str(num) + " 存在多份结构真实（real）的判分证据，已按"
+                             "message": "节 " + str(num) + " 存在多份结构真实（real）的判分证据，已按"
                                         "「日期最新 → 字典序最大」确定性选定 " + str(chosen) +
                                         "；如需以特定提交为准，请在候选状态写 `- 本次证据：<文件名>`"})
         if chosen:
@@ -1026,7 +1056,7 @@ def check(task_dir, release=False, proposed=None):
         if best != "real":
             kind = ("空文件或无作答/判分结构" if best == "empty"
                     else "仅含「作答/判分」模板、无真实结果")
-            empty_msg = ("小节 " + str(num) + " 的判分记录未提供可用证据（" + kind +
+            empty_msg = ("节 " + str(num) + " 的判分记录未提供可用证据（" + kind +
                          "）：" + "、".join(sorted(hit)))
             if release:
                 errors.append({"code": "E-EMPTY-EVIDENCE", "message": empty_msg})
@@ -1039,19 +1069,19 @@ def check(task_dir, release=False, proposed=None):
             ungraded_n = sum(1 for a in parsed_ev["attempts"] if a["result"] == "ungraded")
             if voided_n:
                 warnings.append({"code": "W-VOIDED-ATTEMPT",
-                                 "message": "小节 " + str(num) + " 的判分记录含 " + str(voided_n)
+                                 "message": "节 " + str(num) + " 的判分记录含 " + str(voided_n)
                                             + " 条作废记录（保留原行审计，不计入闸口）"})
             if ungraded_n:
                 warnings.append({"code": "W-UNGRADED-ATTEMPT",
-                                 "message": "小节 " + str(num) + " 的判分记录含 " + str(ungraded_n)
+                                 "message": "节 " + str(num) + " 的判分记录含 " + str(ungraded_n)
                                             + " 条未判记录（不计入闸口分母，需补判或作废）"})
             for code, msg in gate_evidence(best_text, min_ratio=gate_ratio, ratio_label=gate_label):
-                errors.append({"code": code, "message": "小节 " + str(num) + "：" + msg})
+                errors.append({"code": code, "message": "节 " + str(num) + "：" + msg})
 
     # 未解析勾选行：出现勾选语法却未被识别（不得静默）
     for line in unparsed_routes:
         warnings.append({"code": "W-UNPARSED-ROUTE",
-                         "message": "学习路线存在未解析的勾选行（应为 \"- [x] N. 小节名\"）：" + line})
+                         "message": "课程体系学习路线存在未解析的勾选行（应为 \"- [x] N. 节名\"）：" + line})
 
     # ── 覆盖完整性（v2.3，只读告警：warning 非 error，不阻断旧任务） ──
     hold_section_present = "暂缓与范围外" in sections
@@ -1067,28 +1097,28 @@ def check(task_dir, release=False, proposed=None):
         warnings.append({"code": "W-UNPARSED-HOLD",
                          "message": "「暂缓与范围外」存在未解析条目（应含 来源/处置/触发条件 竖线分段）：" + body})
 
-    # 粒度核对：暂缓/排除条目须与清单 KP 行**一一对应**（一行一条目）；
+    # 粒度核对：暂缓/排除条目须与课程体系目行**一一对应**（一行一条目）；
     # 设计性范围外（滚雪球候选）不受此限（本就不入清单）。
     for body in base_holds:
         if hold_is_designed(body):
             continue
         if len(re.findall(r"KP-\d+-\d+", body)) >= 2:
             warnings.append({"code": "W-UNPARSED-HOLD",
-                             "message": "「暂缓与范围外」条目含多个 KP 编号（粒度不符：暂缓/排除条目应与清单 KP 行一一对应、一行一条目）：" + body})
+                             "message": "「暂缓与范围外」条目含多个 KP 编号（粒度不符：暂缓/排除条目应与课程体系目行一一对应、一行一条目）：" + body})
 
     if phase in ("结课", "已完成"):
         if release and route_undone > 0:
-            # 放行模式：不得凭仍有未勾选小节的路线声称结课/已完成
+            # 放行模式：不得凭仍有未勾选节的路线声称结课/已完成
             errors.append({"code": "E-ROUTE-UNDONE",
                            "message": "阶段为「" + phase + "」但学习路线仍有 " + str(route_undone) +
-                                      " 个未勾选小节——不得凭未完成路线声称结课/已完成"})
+                                      " 个未勾选节——不得凭未完成路线声称结课/已完成"})
         if not hold_section_present:
             warnings.append({"code": "W-NO-COVERAGE-AUDIT",
                              "message": "结课/已完成任务缺「暂缓与范围外」区块（旧任务属合法「未审计」形态，"
                                         "不阻断；建议下次正常文件写入/编辑时顺带补区块并补跑覆盖审计）"})
         if not audit_record_found:
             warnings.append({"code": "W-NO-COVERAGE-AUDIT",
-                             "message": "学习日志未发现覆盖审计记录（需同时含「审计」关键词与 YYYY-MM-DD 日期），"
+                             "message": "记忆.md 学习日志未发现覆盖审计记录（需同时含「审计」关键词与 YYYY-MM-DD 日期），"
                                         "转结课前应完成覆盖率审计（warning，不阻断）"})
 
     coverage = {
@@ -1100,34 +1130,33 @@ def check(task_dir, release=False, proposed=None):
         "audit_record_found": audit_record_found,
     }
 
-    # ── KP 清单只读告警（v2.4；无指针旧任务零触发，warning 非 error，不阻断） ──
-    kp_pointer = fields.get("知识清单", "")
-    if kp_pointer:
-        list_name = re.split(r"[｜|]", kp_pointer)[0].strip()
-        list_path = task_dir / list_name
-        if not list_path.exists():
+    # ── 课程体系目行只读告警（warning 非 error，不阻断） ──
+    kp_pointer = fields.get("课程体系", "")
+    list_name = "课程体系.md"
+    list_path = task_dir / list_name
+    if not list_path.exists() and kp_pointer:
+        warnings.append({"code": "W-KP-LIST-MISSING",
+                         "message": "progress.md 记有课程体系指针但文件不存在：" + list_name})
+    if list_path.exists() or (kp_pointer and list_path.exists()):
+        kp = parse_kp_list(list_path)
+        if kp["unreadable"]:
+            # 指向目录/不可读文件：降级为 W 级告警 + 正常 JSON 输出，杜绝 traceback 裸崩
             warnings.append({"code": "W-KP-LIST-MISSING",
-                             "message": "progress.md 记有知识清单指针但文件不存在：" + list_name})
+                             "message": "课程体系指针指向的文件不可读（可能是同名目录或无权限）：" + list_name})
         else:
-            kp = parse_kp_list(list_path)
-            if kp["unreadable"]:
-                # 指针指向目录/不可读文件：降级为 W 级告警 + 正常 JSON 输出，杜绝 traceback 裸崩
-                warnings.append({"code": "W-KP-LIST-MISSING",
-                                 "message": "progress.md 记有知识清单指针但文件不可读（可能是同名目录或无权限）：" + list_name})
-            else:
                 for body in kp["malformed"]:
                     warnings.append({"code": "W-UNPARSED-KP",
-                                     "message": "知识清单存在未解析行（必需六字段：KP编号｜知识点｜所属小节｜前置｜来源｜状态；"
+                                     "message": "课程体系存在未解析目行（必需六字段：KP编号｜目名｜所属节｜前置｜来源｜状态；"
                                                 "可选：类型：记忆/概念/程序/设计、视觉任务：识别/关系/图表/比较；"
                                                 "畸形行不计入摘要计数）：" + body})
                     if release and has_typed_extra(body):
                         errors.append({"code": "E-KP-TYPED-GATE",
-                                       "message": "知识清单行声明了类型/视觉任务但字段畸形，分型门无法验收："
+                                       "message": "课程体系目行声明了类型/视觉任务但字段畸形，分型门无法验收："
                                                   + body})
                 cr = kp["coverage_range"]
                 if kp["coverage_malformed"] or (cr is not None and cr != "全量" and not KP_COVER_RE.match(cr)):
                     warnings.append({"code": "W-UNPARSED-KP",
-                                     "message": "知识清单「覆盖范围」行畸形（应为「全量」或「已细化至第 N 节，其余待细化」）；"
+                                     "message": "课程体系「覆盖范围」行畸形（应为「全量」或「已细化至第 N 节，其余待细化」）；"
                                                 "分批标注写法偏差不得静默失效：" +
                                                 (cr if cr is not None else "<未能解析出值>")})
                 # KP 编号查重（沿用不计入摘要计数口径）：封堵不跑 kp_sort 类型（备考/材料型）的静默重复
@@ -1154,16 +1183,16 @@ def check(task_dir, release=False, proposed=None):
                         typed_errors = typed_gate_errors(ev_text, typed_rows)
                         if typed_errors:
                             errors.append({"code": "E-KP-TYPED-GATE",
-                                           "message": "小节 " + str(num) + " 分型验收未通过："
+                                           "message": "节 " + str(num) + " 分型验收未通过："
                                                       + "；".join(typed_errors)})
                 for i in dup_ids:
                     warnings.append({"code": "W-UNPARSED-KP",
-                                     "message": "知识清单存在重复 KP 编号（重复行不计入摘要计数）：" + i})
+                                     "message": "课程体系存在重复 KP 编号（重复行不计入摘要计数）：" + i})
                 for r in rows_unique:
                     for p in r["prereqs"]:
                         if normalize_kp_id(p) not in seen_ids:
                             warnings.append({"code": "W-UNPARSED-KP",
-                                             "message": "知识清单 " + r["id"] + " 前置引用不存在的 KP：" + p})
+                                             "message": "课程体系 " + r["id"] + " 前置引用不存在的 KP：" + p})
                 # 摘要核对与双写交叉核对：rows 为空但摘要行有值（如「清单仅写『无』却称总 4」）照常核对，不静默
                 actual = {"总": len(rows_unique), "未讲": 0, "已讲": 0, "暂缓": 0, "排除": 0}
                 for r in rows_unique:
@@ -1173,7 +1202,7 @@ def check(task_dir, release=False, proposed=None):
                 if rows_unique or summary_has_value:
                     if not kp["summary_present"] or any(kp["summary"].get(k) != v for k, v in actual.items()):
                         warnings.append({"code": "W-KP-SUMMARY-MISMATCH",
-                                         "message": ("知识清单覆盖摘要行{state}（脚本核对权威）：实际 总 {总} ｜ 未讲 {未讲} ｜ "
+                                         "message": ("课程体系覆盖摘要行{state}（脚本核对权威）：实际 总 {总} ｜ 未讲 {未讲} ｜ "
                                                      "已讲 {已讲} ｜ 暂缓 {暂缓} ｜ 排除 {排除}")
                                                     .format(state="缺失" if not kp["summary_present"] else "计数与逐行实际不符",
                                                             **actual)})
@@ -1194,24 +1223,24 @@ def check(task_dir, release=False, proposed=None):
                     if kp["summary_present"] and "暂缓" in kp["summary"]:
                         if kp_hold_ids != prg_hold_ids:
                             warnings.append({"code": "W-KP-HOLD-CROSS",
-                                             "message": "暂缓侧双写账本按对象 ID 对账不一致——仅清单暂缓："
+                                             "message": "暂缓侧双写账本按对象 ID 对账不一致——仅目行暂缓："
                                                         + ("、".join(sorted(kp_hold_ids - prg_hold_ids)) or "无")
                                                         + "；仅在 progress.md 暂缓："
                                                         + ("、".join(sorted(prg_hold_ids - kp_hold_ids)) or "无")
-                                                        + "（清单摘要暂缓数 " + str(kp["summary"]["暂缓"]) +
+                                                        + "（覆盖摘要暂缓数 " + str(kp["summary"]["暂缓"]) +
                                                         "，区块可比暂缓条目数 " + str(len(prg_hold_ids)) +
                                                         "）——先核对差异项是否为『滚雪球候选』等设计性范围外条目"
                                                         "（属设计性差异可忽略）；非设计性差异才提醒补齐另一侧（warning，不阻断）"})
                     if kp["summary_present"] and "排除" in kp["summary"]:
                         if kp_excl_ids != prg_excl_ids:
                             warnings.append({"code": "W-KP-HOLD-CROSS",
-                                             "message": "排除侧双写账本按对象 ID 对账不一致——仅清单排除："
+                                             "message": "排除侧双写账本按对象 ID 对账不一致——仅目行排除："
                                                         + ("、".join(sorted(kp_excl_ids - prg_excl_ids)) or "无")
                                                         + "；仅在 progress.md 处置排除："
                                                         + ("、".join(sorted(prg_excl_ids - kp_excl_ids)) or "无")
-                                                        + "（清单摘要排除数 " + str(kp["summary"]["排除"]) +
+                                                        + "（覆盖摘要排除数 " + str(kp["summary"]["排除"]) +
                                                         "，区块处置排除条目数 " + str(len(prg_excl_ids)) +
-                                                        "）——核对清单『排除』状态与区块『处置：经用户确认排除』是否对齐，"
+                                                        "）——核对目行『排除』状态与区块『处置：经用户确认排除』是否对齐，"
                                                         "提醒补齐另一侧（warning，不阻断）"})
                 if rows_unique:
                     done_secs = {num for num, done, _lbl in lessons if done}
@@ -1232,15 +1261,15 @@ def check(task_dir, release=False, proposed=None):
                         flagged = [r for r in rows_in if r["status"] == "未讲" and not r["bottom_note"]]
                         if sec in done_secs and flagged:
                             warnings.append({"code": "W-KP-STATE-MISMATCH",
-                                             "message": "小节 " + str(sec) + " 勾选「已掌握」，但清单内该节存在「未讲」KP：" +
+                                             "message": "节 " + str(sec) + " 勾选「已掌握」，但课程体系该节存在「未讲」目行：" +
                                                         "、".join(r["id"] for r in flagged) +
-                                                        "（可能是清单滞后，提醒在节末落盘更新时补齐；"
+                                                        "（可能是账本滞后，提醒在节末落盘更新时补齐；"
                                                         "带『已会（摸底证据）』括注的 KP 属预期形态——信息性标注留在分母，"
                                                         "不触发本告警；其是否移出分母（标排除）在结课前覆盖率审计时经用户确认，"
                                                         "勿在节末自行翻转）"})
 
     if not lessons and not unparsed_routes:
-        warnings.append({"code": "W-NO-ROUTE", "message": "尚无学习路线（S2 前正常）"})
+        warnings.append({"code": "W-NO-ROUTE", "message": "尚无学习路线（课程体系.md 缺失或学习路线区为空；S2 前正常）"})
     if review_from and review_from != "无" and phase != "复习巩固":
         warnings.append({"code": "W-STALE-REVIEW-ORIGIN",
                          "message": "非复习巩固阶段仍留有「复习来源阶段」，确认是否应清空"})
@@ -1298,13 +1327,13 @@ def check(task_dir, release=False, proposed=None):
             # 空路线 / 不可解析路线不得凭「零个未完成行」放行（结课范围不可证明）
             if not lessons:
                 errors.append({"code": "E-NO-ROUTE-STRICT",
-                               "message": "阶段为「" + phase + "」但学习路线缺失或不可解析"
+                               "message": "阶段为「" + phase + "」但课程体系学习路线缺失或不可解析"
                                           "（" + ("存在未解析勾选行" if unparsed_routes else "无勾选行") +
                                           "）——不得据此声称结课"})
             elif unparsed_routes:
                 # 混合「可解析 + 不可解析」路线同样是范围不可证明
                 errors.append({"code": "E-NO-ROUTE-STRICT",
-                               "message": "阶段为「" + phase + "」但学习路线含未解析勾选行："
+                               "message": "阶段为「" + phase + "」但课程体系学习路线含未解析勾选行："
                                           + "；".join(unparsed_routes) +
                                           "——结课范围不可证明，须先修正路线"})
             fin = pick_special(ex_names, FINAL_PREFIXES)
@@ -1318,7 +1347,7 @@ def check(task_dir, release=False, proposed=None):
                                           "——空文件或仅凭文件名不得证明结课"})
             else:
                 ftext = _read_evidence(ex_dir, fin)
-                # 结课证据合同不同于小节：另按真实分值与目标线，不套「复述 / 逐关键能力独立」
+                # 结课证据合同不同于节验收：另按真实分值与目标线，不套「复述 / 逐关键能力独立」
                 target = parse_target_ratio(ftext)
                 invalid_target = target is None and TARGET_DECL_RE.search(ftext)
                 if invalid_target:
@@ -1357,7 +1386,7 @@ def check(task_dir, release=False, proposed=None):
                                               "——须按能力—任务—评分点蓝图逐项对应"})
             if mandatory_unlearned_ids:
                 errors.append({"code": "E-CORE-UNLEARNED",
-                               "message": "阶段为「" + phase + "」但清单内仍有关键能力 KP 状态「未讲」：" +
+                               "message": "阶段为「" + phase + "」但课程体系仍有关键能力目行状态「未讲」：" +
                                           "、".join(mandatory_unlearned_ids) +
                                           "——关键能力缺可判分证据，不得结课"})
 
@@ -1420,16 +1449,20 @@ DONE_OK = """# 学习任务：示例
 - 目标：通过考试
 - 起点：入门
 
-## 学习路线
-- [x] 1. 词法
-- [x] 2. 句法
-
 ## 暂缓与范围外
 - 插入语 ｜ 来源：S2 对照 ｜ 处置：暂缓 ｜ 触发条件：用户要求
 - 倒装句 ｜ 来源：范围护栏 ｜ 处置：暂缓 ｜ 触发条件：阶段末审计
+"""
+# 审计记录落记忆.md（叙事簿）
+MEM_AUDIT = """# 记忆：示例
 
 ## 学习日志
 - 2026-10-11：覆盖率审计——对照源考纲共 12 项，差异 1 项已补讲
+"""
+MEM_PLAIN = """# 记忆：示例
+
+## 学习日志
+- 2026-10-10：讲了词法
 """
 # 畸形暂缓条目（有竖线分段但缺「触发条件」）→ W-UNPARSED-HOLD，非 error
 HOLD_BAD = """# 学习任务：示例
@@ -1448,7 +1481,7 @@ HOLD_BAD = """# 学习任务：示例
 """
 
 # ── v2.4 KP 清单夹具 ──
-KPLIST_OK = """# 知识清单：示例
+KPLIST_OK = """# 课程体系：示例
 - 版本：1
 - 对照源：自拟总纲
 - 排序规则：拓扑序（依赖边见各行前置列）
@@ -1456,10 +1489,14 @@ KPLIST_OK = """# 知识清单：示例
 - 最近更新：2026-10-11
 - 覆盖摘要：总 4 ｜ 未讲 2 ｜ 已讲 1 ｜ 暂缓 1 ｜ 排除 0
 
-- KP-01-01 ｜ 变量命名 ｜ 小节 1 ｜ 前置：  ｜ 来源：目录 1.1 ｜ 状态：已讲
-- KP-02-01 ｜ 循环与迭代 ｜ 小节 2 ｜ 前置：KP-01-01 ｜ 来源：目录 1.2 ｜ 状态：未讲
-- KP-02-02 ｜ 递归初步 ｜ 小节 2 ｜ 前置：KP-02-01 ｜ 来源：目录 1.2 ｜ 状态：未讲（已会：摸底题 2 全对，2026-10-11）
-- KP-03-01 ｜ 高级主题 ｜ 小节 3 ｜ 前置：KP-02-01 ｜ 来源：目录 1.3 ｜ 状态：暂缓
+## 学习路线
+### 章1 ｜ 基础
+- [x] 1. 变量
+- [ ] 2. 循环
+- KP-01-01 ｜ 变量命名 ｜ 节 1 ｜ 前置：  ｜ 来源：目录 1.1 ｜ 状态：已讲
+- KP-02-01 ｜ 循环与迭代 ｜ 节 2 ｜ 前置：KP-01-01 ｜ 来源：目录 1.2 ｜ 状态：未讲
+- KP-02-02 ｜ 递归初步 ｜ 节 2 ｜ 前置：KP-02-01 ｜ 来源：目录 1.2 ｜ 状态：未讲（已会：摸底题 2 全对，2026-10-11）
+- KP-03-01 ｜ 高级主题 ｜ 节 3 ｜ 前置：KP-02-01 ｜ 来源：目录 1.3 ｜ 状态：暂缓
 """
 KP_PROG_OK = """# 学习任务：示例
 - 数据根：<root>
@@ -1468,7 +1505,7 @@ KP_PROG_OK = """# 学习任务：示例
 - 学科族：编程类
 - 目标：入门
 - 起点：零基础
-- 知识清单：知识清单.md ｜ 版本 1 ｜ 总 4
+- 课程体系：课程体系.md ｜ 版本 1 ｜ 总 4
 
 ## 学习路线
 - [x] 1. 变量
@@ -1479,7 +1516,7 @@ KP_PROG_OK = """# 学习任务：示例
 """
 
 # v6.1 分型夹具：同一小节内 记忆 + 概念 + 程序/视觉 三类 KP
-KPLIST_TYPED = """# 知识清单：分型示例
+KPLIST_TYPED = """# 课程体系：分型示例
 - 版本：1
 - 对照源：自拟总纲
 - 排序规则：拓扑序
@@ -1487,9 +1524,12 @@ KPLIST_TYPED = """# 知识清单：分型示例
 - 最近更新：2026-10-22
 - 覆盖摘要：总 3 ｜ 未讲 0 ｜ 已讲 3 ｜ 暂缓 0 ｜ 排除 0
 
-- KP-01-01 ｜ 变量命名 ｜ 小节 1 ｜ 前置：  ｜ 来源：目录 1.1 ｜ 状态：已讲 ｜ 类型：记忆
-- KP-01-02 ｜ 变量本质 ｜ 小节 1 ｜ 前置：KP-01-01 ｜ 来源：目录 1.1 ｜ 状态：已讲 ｜ 类型：概念
-- KP-01-03 ｜ 读变量表 ｜ 小节 1 ｜ 前置：KP-01-02 ｜ 来源：目录 1.1 ｜ 状态：已讲 ｜ 类型：程序 ｜ 视觉任务：图表
+## 学习路线
+### 章1 ｜ 基础
+- [x] 1. 变量
+- KP-01-01 ｜ 变量命名 ｜ 节 1 ｜ 前置：  ｜ 来源：目录 1.1 ｜ 状态：已讲 ｜ 类型：记忆
+- KP-01-02 ｜ 变量本质 ｜ 节 1 ｜ 前置：KP-01-01 ｜ 来源：目录 1.1 ｜ 状态：已讲 ｜ 类型：概念
+- KP-01-03 ｜ 读变量表 ｜ 节 1 ｜ 前置：KP-01-02 ｜ 来源：目录 1.1 ｜ 状态：已讲 ｜ 类型：程序 ｜ 视觉任务：图表
 """
 KP_PROG_TYPED = """# 学习任务：分型示例
 - 数据根：<root>
@@ -1498,7 +1538,7 @@ KP_PROG_TYPED = """# 学习任务：分型示例
 - 学科族：编程类
 - 目标：入门
 - 起点：零基础
-- 知识清单：知识清单.md ｜ 版本 1 ｜ 总 3
+- 课程体系：课程体系.md ｜ 版本 1 ｜ 总 3
 
 ## 学习路线
 - [x] 1. 变量
@@ -1518,7 +1558,7 @@ KP_PROG_NOHOLD = """# 学习任务：示例
 - 学科族：编程类
 - 目标：入门
 - 起点：零基础
-- 知识清单：知识清单.md ｜ 版本 1 ｜ 总 4
+- 课程体系：课程体系.md ｜ 版本 1 ｜ 总 4
 
 ## 学习路线
 - [x] 1. 变量
@@ -1531,51 +1571,61 @@ KP_PROG_NA = """# 学习任务：示例
 - 学科族：编程类
 - 目标：入门
 - 起点：零基础
-- 知识清单：知识清单.md ｜ 版本 1 ｜ 总 2
+- 课程体系：课程体系.md ｜ 版本 1 ｜ 总 2
 
 ## 学习路线
 - [ ] 1. 变量
 - [ ] 2. 循环
 """
 # 畸形清单：状态非法 / 前置引用不存在 / 行缺段 / 覆盖范围行畸形（各计 1 条 W-UNPARSED-KP）
-KPLIST_BAD = """# 知识清单：示例
+KPLIST_BAD = """# 课程体系：示例
 - 版本：1
 - 对照源：自拟总纲
 - 覆盖范围：大概全量
 - 最近更新：2026-10-11
 - 覆盖摘要：总 2 ｜ 未讲 2 ｜ 已讲 0 ｜ 暂缓 0 ｜ 排除 0
 
-- KP-01-01 ｜ 变量命名 ｜ 小节 1 ｜ 前置：  ｜ 来源：目录 1.1 ｜ 状态：学会
-- KP-02-01 ｜ 循环 ｜ 小节 2 ｜ 前置：KP-09-09 ｜ 来源：目录 1.2 ｜ 状态：未讲
-- KP-02-02 ｜ 递归 ｜ 小节 2 ｜ 前置：KP-02-01 ｜ 来源：目录 1.2 ｜ 状态：未讲
-- KP-03-01 ｜ 尾行缺段 ｜ 小节 3 ｜ 前置：KP-02-02 ｜ 来源：目录 1.3
+## 学习路线
+### 章1 ｜ 基础
+- [ ] 1. 变量
+- [ ] 2. 循环
+- KP-01-01 ｜ 变量命名 ｜ 节 1 ｜ 前置：  ｜ 来源：目录 1.1 ｜ 状态：学会
+- KP-02-01 ｜ 循环 ｜ 节 2 ｜ 前置：KP-09-09 ｜ 来源：目录 1.2 ｜ 状态：未讲
+- KP-02-02 ｜ 递归 ｜ 节 2 ｜ 前置：KP-02-01 ｜ 来源：目录 1.2 ｜ 状态：未讲
+- KP-03-01 ｜ 尾行缺段 ｜ 节 3 ｜ 前置：KP-02-02 ｜ 来源：目录 1.3
 """
 # 半角括号已会变体：不得报畸形或硬失败
 KPLIST_HALFPAREN = KPLIST_OK.replace("状态：未讲（已会：摸底题 2 全对，2026-10-11）",
                                      "状态：未讲(已会：摸底题 2 全对，2026-10-11)")
 # rows 空 + 摘要行有值（矛盾态）：必须出 W-KP-SUMMARY-MISMATCH
-KPLIST_EMPTY_NOSUM = """# 知识清单：无行有摘要矛盾态
+KPLIST_EMPTY_NOSUM = """# 课程体系：无行有摘要矛盾态
 - 版本：1
 - 覆盖范围：全量
 - 覆盖摘要：总 4 ｜ 未讲 4 ｜ 已讲 0 ｜ 暂缓 0 ｜ 排除 0
 
+## 学习路线
+### 章1 ｜ 基础
+- [ ] 1. 变量
 - 无
 """
 # 重复编号：重复行不计入摘要计数（unique 2 与摘要总 2 一致）
-KPLIST_DUP = """# 知识清单：重复编号夹具
+KPLIST_DUP = """# 课程体系：重复编号夹具
 - 版本：1
 - 覆盖范围：全量
 - 覆盖摘要：总 2 ｜ 未讲 2 ｜ 已讲 0 ｜ 暂缓 0 ｜ 排除 0
 
-- KP-01-01 ｜ 甲 ｜ 小节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲
-- KP-01-01 ｜ 甲重复 ｜ 小节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲
-- KP-01-02 ｜ 乙 ｜ 小节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲
+## 学习路线
+### 章1 ｜ 基础
+- [ ] 1. 变量
+- KP-01-01 ｜ 甲 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲
+- KP-01-01 ｜ 甲重复 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲
+- KP-01-02 ｜ 乙 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲
 """
 KPLIST_ALIAS_DUP = KPLIST_DUP.replace("KP-01-01 ｜ 甲重复", "KP-1-1 ｜ 甲重复")
 KPLIST_ALIAS_PRE = (KPLIST_DUP
-                    .replace("- KP-01-01 ｜ 甲重复 ｜ 小节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲\n", "")
-                    .replace("KP-01-02 ｜ 乙 ｜ 小节 1 ｜ 前置：  ｜",
-                             "KP-01-02 ｜ 乙 ｜ 小节 1 ｜ 前置：KP-1-1 ｜"))
+                    .replace("- KP-01-01 ｜ 甲重复 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲\n", "")
+                    .replace("KP-01-02 ｜ 乙 ｜ 节 1 ｜ 前置：  ｜",
+                             "KP-01-02 ｜ 乙 ｜ 节 1 ｜ 前置：KP-1-1 ｜"))
 # 半角冒号覆盖范围行：宽容解析不告警
 KPLIST_HALFCOLON = KPLIST_OK.replace("- 覆盖范围：全量", "- 覆盖范围:全量")
 # 含「覆盖范围」字样但非合法头行（写法偏差）：必须出 W-UNPARSED-KP，不静默失效
@@ -1588,8 +1638,8 @@ KPLIST_ALLBOTTOM = (KPLIST_OK
 KP_PROG_SNOWBALL = KP_PROG_OK + "- 后续章节候选项 ｜ 来源：范围护栏 ｜ 处置：暂缓 ｜ 触发条件：用户要求 ｜ 滚雪球候选\n"
 # 排除侧夹具：清单排除 1、暂缓侧一致 → 仅排除侧 HOLD-CROSS
 KPLIST_EXCL = (KPLIST_OK
-               .replace("- KP-02-02 ｜ 递归初步 ｜ 小节 2 ｜ 前置：KP-02-01 ｜ 来源：目录 1.2 ｜ 状态：未讲（已会：摸底题 2 全对，2026-10-11）",
-                        "- KP-02-02 ｜ 递归初步 ｜ 小节 2 ｜ 前置：KP-02-01 ｜ 来源：目录 1.2 ｜ 状态：排除")
+               .replace("- KP-02-02 ｜ 递归初步 ｜ 节 2 ｜ 前置：KP-02-01 ｜ 来源：目录 1.2 ｜ 状态：未讲（已会：摸底题 2 全对，2026-10-11）",
+                        "- KP-02-02 ｜ 递归初步 ｜ 节 2 ｜ 前置：KP-02-01 ｜ 来源：目录 1.2 ｜ 状态：排除")
                .replace("总 4 ｜ 未讲 2 ｜ 已讲 1 ｜ 暂缓 1 ｜ 排除 0",
                         "总 4 ｜ 未讲 1 ｜ 已讲 1 ｜ 暂缓 1 ｜ 排除 1"))
 # 场景 A 夹具：区块仅一条「处置：经用户确认排除」+ 清单暂缓 0/排除 1（两侧口径对齐 → 零 HOLD-CROSS）
@@ -1600,8 +1650,8 @@ KPLIST_ONLYEXCL_OK = (KPLIST_OK
                                "总 4 ｜ 未讲 2 ｜ 已讲 1 ｜ 暂缓 0 ｜ 排除 1"))
 # 场景 C 夹具：区块仅一条排除条目 + 清单排除 0（暂缓 0）→ 恰 1 条排除侧 HOLD-CROSS
 KPLIST_NOEXCL = (KPLIST_OK
-                 .replace("- KP-03-01 ｜ 高级主题 ｜ 小节 3 ｜ 前置：KP-02-01 ｜ 来源：目录 1.3 ｜ 状态：暂缓",
-                          "- KP-03-01 ｜ 高级主题 ｜ 小节 3 ｜ 前置：KP-02-01 ｜ 来源：目录 1.3 ｜ 状态：未讲")
+                 .replace("- KP-03-01 ｜ 高级主题 ｜ 节 3 ｜ 前置：KP-02-01 ｜ 来源：目录 1.3 ｜ 状态：暂缓",
+                          "- KP-03-01 ｜ 高级主题 ｜ 节 3 ｜ 前置：KP-02-01 ｜ 来源：目录 1.3 ｜ 状态：未讲")
                  .replace("总 4 ｜ 未讲 2 ｜ 已讲 1 ｜ 暂缓 1 ｜ 排除 0",
                           "总 4 ｜ 未讲 3 ｜ 已讲 1 ｜ 暂缓 0 ｜ 排除 0"))
 # 重叠夹具：同一条目既「滚雪球候选」又「处置：排除」（暂缓基数须互斥判定、不得为负）
@@ -1617,6 +1667,31 @@ KP_PROG_MULTIKP = KP_PROG_OK.replace(
     "- 高级主题 KP-03-01、KP-03-02 ｜ 来源：S2 对照 ｜ 处置：暂缓 ｜ 触发条件：用户要求")
 
 
+CURR_TMPL = ("# 课程体系：夹具\n- 版本：1\n- 覆盖范围：全量\n\n## 学习路线\n### 章1 ｜ 基础\n")
+
+
+def _split_progress(text):
+    """夹具助手：把 progress 文本中的「## 学习路线」块迁到课程体系（仅夹具用，非生产逻辑）。"""
+    lines = text.splitlines()
+    out, route, in_route = [], [], False
+    for ln in lines:
+        if ln.strip() == "## 学习路线":
+            in_route = True
+            continue
+        if in_route and ln.startswith("## "):
+            in_route = False
+        if in_route:
+            route.append(ln)
+        else:
+            out.append(ln)
+    prog = "\n".join(out).rstrip() + "\n"
+    while route and not route[-1].strip():
+        route.pop()
+    if route:
+        return prog, CURR_TMPL + "\n".join(route) + "\n"
+    return prog, None
+
+
 def selftest():
     ok = True
     # 复述门：关键点 ≥2 且「无事实性错误」已勾；旧模板回退总计数
@@ -1629,21 +1704,23 @@ def selftest():
     for _txt, _exp in _restate_cases:
         ok = ok and _restate_state(_txt) == _exp
     with tempfile.TemporaryDirectory() as td:
-        # 小节目标线：合法/非法解析
+        # 节目标线：合法/非法解析
         d_ratio_bad = Path(td) / "ratio-bad"
         d_ratio_bad.mkdir()
-        (d_ratio_bad / "progress.md").write_text(GOOD.replace("- 复习来源阶段：无\n", "- 复习来源阶段：无\n- 小节目标线：4/3\n"), encoding="utf-8")
+        (d_ratio_bad / "progress.md").write_text(GOOD.replace("- 复习来源阶段：无\n", "- 复习来源阶段：无\n- 节目标线：4/3\n"), encoding="utf-8")
         r_ratio_bad = check(d_ratio_bad)
         ok = ok and any(e["code"] == "E-GATE-RATIO-INVALID" for e in r_ratio_bad["errors"])
         d_ratio_ok = Path(td) / "ratio-ok"
         d_ratio_ok.mkdir()
-        (d_ratio_ok / "progress.md").write_text(GOOD.replace("- 复习来源阶段：无\n", "- 复习来源阶段：无\n- 小节目标线：3/4\n"), encoding="utf-8")
+        (d_ratio_ok / "progress.md").write_text(GOOD.replace("- 复习来源阶段：无\n", "- 复习来源阶段：无\n- 节目标线：3/4\n"), encoding="utf-8")
         r_ratio_ok = check(d_ratio_ok)
         ok = ok and not any(e["code"] == "E-GATE-RATIO-INVALID" for e in r_ratio_ok["errors"])
         # ① 规范态：小写 [x] + 判分记录 → 通过
         d = Path(td) / "good"
         (d / "exercises").mkdir(parents=True)
-        (d / "progress.md").write_text(GOOD, encoding="utf-8")
+        prog_g, curr_g = _split_progress(GOOD)
+        (d / "progress.md").write_text(prog_g, encoding="utf-8")
+        (d / "课程体系.md").write_text(curr_g, encoding="utf-8")
         (d / "exercises" / "01-变量-2026-01-01.md").write_text("## 作答与判分\n- 题1：Good", encoding="utf-8")
         r = check(d)
         ok = ok and r["ok"]
@@ -1651,7 +1728,9 @@ def selftest():
         # ② 无证据 + 复习返回点缺失 → 拦截
         d2 = Path(td) / "bad"
         d2.mkdir()
-        (d2 / "progress.md").write_text(BAD, encoding="utf-8")
+        prog_b, curr_b = _split_progress(BAD)
+        (d2 / "progress.md").write_text(prog_b, encoding="utf-8")
+        (d2 / "课程体系.md").write_text(curr_b, encoding="utf-8")
         r2 = check(d2)
         codes = [e["code"] for e in r2["errors"]]
         ok = ok and (not r2["ok"]) and ("E-NO-EVIDENCE" in codes) and ("E-REVIEW-ORIGIN" in codes)
@@ -1666,7 +1745,9 @@ def selftest():
         # ④ 大写 [X] + 判分记录 → 通过且无 W-NO-ROUTE
         d4 = Path(td) / "upper"
         (d4 / "exercises").mkdir(parents=True)
-        (d4 / "progress.md").write_text(UPPER, encoding="utf-8")
+        prog_u, curr_u = _split_progress(UPPER)
+        (d4 / "progress.md").write_text(prog_u, encoding="utf-8")
+        (d4 / "课程体系.md").write_text(curr_u, encoding="utf-8")
         (d4 / "exercises" / "01-极限-2026-01-01.md").write_text("## 作答与判分\n- 题1：Good", encoding="utf-8")
         r4 = check(d4)
         ok = ok and r4["ok"] and not any(w["code"] == "W-NO-ROUTE" for w in r4["warnings"])
@@ -1674,14 +1755,16 @@ def selftest():
         # ⑤ 大写 [X] 但无判分记录 → 被拦截
         d5 = Path(td) / "upper-noex"
         d5.mkdir()
-        (d5 / "progress.md").write_text(UPPER, encoding="utf-8")
+        (d5 / "progress.md").write_text(prog_u, encoding="utf-8")
+        (d5 / "课程体系.md").write_text(curr_u, encoding="utf-8")
         r5 = check(d5)
         ok = ok and (not r5["ok"]) and any(e["code"] == "E-NO-EVIDENCE" for e in r5["errors"])
 
         # ⑥ 单位数编号判分记录 → 通过（宽容匹配，不假阳性）
         d6 = Path(td) / "single"
         (d6 / "exercises").mkdir(parents=True)
-        (d6 / "progress.md").write_text(UPPER, encoding="utf-8")
+        (d6 / "progress.md").write_text(prog_u, encoding="utf-8")
+        (d6 / "课程体系.md").write_text(curr_u, encoding="utf-8")
         (d6 / "exercises" / "1-极限-2026-01-01.md").write_text("## 作答与判分\n- 题1：Good", encoding="utf-8")
         r6 = check(d6)
         ok = ok and r6["ok"]
@@ -1690,6 +1773,9 @@ def selftest():
         d7 = Path(td) / "done-ok"
         (d7 / "exercises").mkdir(parents=True)
         (d7 / "progress.md").write_text(DONE_OK, encoding="utf-8")
+        (d7 / "课程体系.md").write_text(
+            "# 课程体系：示例\n- 版本：1\n\n## 学习路线\n### 章1 ｜ 语言\n- [x] 1. 词法\n- [x] 2. 句法\n", encoding="utf-8")
+        (d7 / "记忆.md").write_text(MEM_AUDIT, encoding="utf-8")
         (d7 / "exercises" / "01-词法-2026-01-01.md").write_text("## 作答与判分\n- 题1：Good", encoding="utf-8")
         (d7 / "exercises" / "02-句法-2026-01-02.md").write_text("## 作答与判分\n- 题1：Good", encoding="utf-8")
         r7 = check(d7)
@@ -1704,7 +1790,10 @@ def selftest():
         d8 = Path(td) / "done-noaudit"
         d8.mkdir()
         (d8 / "progress.md").write_text(
-            DONE_OK.split("## 暂缓与范围外")[0] + "## 学习日志\n- 2026-10-10：讲了词法\n", encoding="utf-8")
+            DONE_OK.split("## 暂缓与范围外")[0], encoding="utf-8")
+        (d8 / "课程体系.md").write_text(
+            "# 课程体系：示例\n- 版本：1\n\n## 学习路线\n### 章1 ｜ 语言\n- [x] 1. 词法\n- [x] 2. 句法\n", encoding="utf-8")
+        (d8 / "记忆.md").write_text(MEM_PLAIN, encoding="utf-8")
         (d8 / "exercises").mkdir()
         (d8 / "exercises" / "01-词法-2026-01-01.md").write_text("## 作答与判分\n- 题1：Good", encoding="utf-8")
         (d8 / "exercises" / "02-句法-2026-01-02.md").write_text("## 作答与判分\n- 题1：Good", encoding="utf-8")
@@ -1715,7 +1804,9 @@ def selftest():
         # ⑨ 畸形暂缓条目（有竖线缺字段）→ W-UNPARSED-HOLD 且非 error、计 0
         d9 = Path(td) / "hold-bad"
         d9.mkdir()
-        (d9 / "progress.md").write_text(HOLD_BAD, encoding="utf-8")
+        prog_h, curr_h = _split_progress(HOLD_BAD)
+        (d9 / "progress.md").write_text(prog_h, encoding="utf-8")
+        (d9 / "课程体系.md").write_text(curr_h, encoding="utf-8")
         r9 = check(d9)
         c9 = r9["coverage"]
         ok = ok and r9["ok"]  # 畸形条目是告警不是错误
@@ -1734,7 +1825,7 @@ def selftest():
         (d11 / "progress.md").write_text(KP_PROG_OK, encoding="utf-8")
         (d11 / "exercises").mkdir()
         (d11 / "exercises" / "01-变量-2026-01-01.md").write_text("## 作答与判分\n- 题1：Good", encoding="utf-8")
-        (d11 / "知识清单.md").write_text(KPLIST_OK, encoding="utf-8")
+        (d11 / "课程体系.md").write_text(KPLIST_OK, encoding="utf-8")
         r11 = check(d11)
         ok = ok and r11["ok"]
         ok = ok and not any(w["code"].startswith("W-KP") or w["code"] == "W-UNPARSED-KP"
@@ -1744,10 +1835,12 @@ def selftest():
         # ⑫ 小节勾选「已掌握」× 清单该节 KP 全「未讲」→ W-KP-STATE-MISMATCH（warning 非 error）
         d12 = Path(td) / "kp-state"
         d12.mkdir()
-        (d12 / "progress.md").write_text(KP_PROG_OK, encoding="utf-8")
+        prog_k, curr_k = _split_progress(KP_PROG_OK)
+        (d12 / "progress.md").write_text(prog_k, encoding="utf-8")
+        (d12 / "课程体系.md").write_text(curr_k, encoding="utf-8")
         (d12 / "exercises").mkdir()
         (d12 / "exercises" / "01-变量-2026-01-01.md").write_text("## 作答与判分\n- 题1：Good", encoding="utf-8")
-        (d12 / "知识清单.md").write_text(
+        (d12 / "课程体系.md").write_text(
             KPLIST_OK.replace("状态：已讲", "状态：未讲").replace("未讲 2 ｜ 已讲 1", "未讲 3 ｜ 已讲 0"),
             encoding="utf-8")
         r12 = check(d12)
@@ -1759,7 +1852,7 @@ def selftest():
         # ⑬ 指针存在但文件不存在 → W-KP-LIST-MISSING（warning 非 error）
         d13 = Path(td) / "kp-missing"
         d13.mkdir()
-        (d13 / "progress.md").write_text(KP_PROG_OK, encoding="utf-8")
+        (d13 / "progress.md").write_text(prog_k, encoding="utf-8")  # 有指针、无课程体系文件
         (d13 / "exercises").mkdir()
         (d13 / "exercises" / "01-变量-2026-01-01.md").write_text("## 作答与判分\n- 题1：Good", encoding="utf-8")
         r13 = check(d13)
@@ -1773,7 +1866,7 @@ def selftest():
         d14 = Path(td) / "kp-bad"
         d14.mkdir()
         (d14 / "progress.md").write_text(KP_PROG_NA, encoding="utf-8")
-        (d14 / "知识清单.md").write_text(KPLIST_BAD, encoding="utf-8")
+        (d14 / "课程体系.md").write_text(KPLIST_BAD, encoding="utf-8")
         r14 = check(d14)
         ok = ok and r14["ok"]
         ok = ok and sum(1 for w in r14["warnings"] if w["code"] == "W-UNPARSED-KP") == 4
@@ -1782,10 +1875,11 @@ def selftest():
         # ⑮ 覆盖摘要行计数与逐行实际不符 → W-KP-SUMMARY-MISMATCH（warning 非 error）
         d15 = Path(td) / "kp-sum"
         d15.mkdir()
-        (d15 / "progress.md").write_text(KP_PROG_OK, encoding="utf-8")
+        (d15 / "progress.md").write_text(prog_k, encoding="utf-8")
+        (d15 / "课程体系.md").write_text(curr_k, encoding="utf-8")
         (d15 / "exercises").mkdir()
         (d15 / "exercises" / "01-变量-2026-01-01.md").write_text("## 作答与判分\n- 题1：Good", encoding="utf-8")
-        (d15 / "知识清单.md").write_text(
+        (d15 / "课程体系.md").write_text(
             KPLIST_OK.replace("总 4 ｜ 未讲 2 ｜ 已讲 1", "总 4 ｜ 未讲 1 ｜ 已讲 2"), encoding="utf-8")
         r15 = check(d15)
         ok = ok and r15["ok"]
@@ -1799,7 +1893,7 @@ def selftest():
         (d16 / "progress.md").write_text(KP_PROG_NOHOLD, encoding="utf-8")
         (d16 / "exercises").mkdir()
         (d16 / "exercises" / "01-变量-2026-01-01.md").write_text("## 作答与判分\n- 题1：Good", encoding="utf-8")
-        (d16 / "知识清单.md").write_text(KPLIST_OK, encoding="utf-8")
+        (d16 / "课程体系.md").write_text(KPLIST_OK, encoding="utf-8")
         r16 = check(d16)
         ok = ok and r16["ok"]
         ok = ok and sum(1 for w in r16["warnings"] if w["code"] == "W-KP-HOLD-CROSS") == 1
@@ -1816,10 +1910,13 @@ def selftest():
         def _kp_warnings(r):
             return [w for w in r["warnings"] if w["code"].startswith("W-KP") or w["code"] == "W-UNPARSED-KP"]
 
-        def _mk(task_text, list_text, make_list=True, with_ex=True, list_name="知识清单.md"):
+        def _mk(task_text, list_text, make_list=True, with_ex=True, list_name="课程体系.md"):
             d = Path(td) / ("r2-" + str(len(list(Path(td).iterdir()))))
             d.mkdir()
-            (d / "progress.md").write_text(task_text, encoding="utf-8")
+            prog, curr = _split_progress(task_text)
+            (d / "progress.md").write_text(prog, encoding="utf-8")
+            if curr:
+                (d / "课程体系.md").write_text(curr, encoding="utf-8")
             if with_ex:
                 (d / "exercises").mkdir()
                 (d / "exercises" / "01-变量-2026-01-01.md").write_text("## 作答与判分\n- 题1：Good", encoding="utf-8")
@@ -1855,9 +1952,9 @@ def selftest():
         ok = ok and r21["coverage"]["hold_count"] == 2
 
         # ㉒ 指针指向同名目录 → W-KP-LIST-MISSING 级 W 告警，不裸崩、正常 JSON、exit 0
-        r22 = check(_mk(KP_PROG_OK, KPLIST_OK, make_list=False))
+        r22 = check(_mk(_split_progress(KP_PROG_OK)[0], KPLIST_OK, make_list=False))
         d22 = Path(r22["task_dir"])
-        (d22 / "知识清单.md").mkdir()  # 同名目录
+        (d22 / "课程体系.md").mkdir()  # 指针指向同名目录 → 不可读，降级 W
         r22 = check(d22)
         ok = ok and r22["ok"]
         ok = ok and sum(1 for w in _kp_warnings(r22) if w["code"] == "W-KP-LIST-MISSING") == 1
@@ -1885,7 +1982,8 @@ def selftest():
         # ㉖ 判分文件存在但内容无「判分/作答」→ W-EMPTY-EVIDENCE（warning 级不阻断）
         d26 = Path(td) / "empty-ev"
         (d26 / "exercises").mkdir(parents=True)
-        (d26 / "progress.md").write_text(GOOD, encoding="utf-8")
+        (d26 / "progress.md").write_text(prog_g, encoding="utf-8")
+        (d26 / "课程体系.md").write_text(curr_g, encoding="utf-8")
         (d26 / "exercises" / "01-变量-2026-01-01.md").write_text("# 空文件", encoding="utf-8")
         r26 = check(d26)
         ok = ok and r26["ok"]  # warning 不影响 ok
@@ -1951,7 +2049,8 @@ def selftest():
         # 用 data.md 的判分记录模板（含 <学员答案> / Again 占位）直接作夹具。
         d33 = Path(td) / "rel-template"
         (d33 / "exercises").mkdir(parents=True)
-        (d33 / "progress.md").write_text(UPPER, encoding="utf-8")
+        (d33 / "progress.md").write_text(prog_u, encoding="utf-8")
+        (d33 / "课程体系.md").write_text(curr_u, encoding="utf-8")
         (d33 / "exercises" / "01-极限-2026-01-01.md").write_text(
             "## 作答与判分（模板）\n- 题 1：作答「<学员答案>」｜信心=<1-5>｜<Good|Hard|Again>\n",
             encoding="utf-8")
@@ -1964,7 +2063,8 @@ def selftest():
         # 即放行」正是被验收判为误放行的行为，此处精确更新（非删断言）。
         d33c = Path(td) / "rel-real"
         (d33c / "exercises").mkdir(parents=True)
-        (d33c / "progress.md").write_text(UPPER, encoding="utf-8")
+        (d33c / "progress.md").write_text(prog_u, encoding="utf-8")
+        (d33c / "课程体系.md").write_text(curr_u, encoding="utf-8")
         (d33c / "exercises" / "01-极限-2026-01-01.md").write_text(
             "## 作答与判分\n- 题 1：作答「-3」｜正确性=对｜独立性=独立｜调度档=Good\n"
             "## 复述检查清单\n- [x] 关键点1：极限定义\n- [x] 关键点2：极限唯一性\n- [x] 无事实性错误\n",
@@ -1974,10 +2074,12 @@ def selftest():
         # ㉞ 放行模式——阶段结课但学习路线仍有未勾选小节 → E-ROUTE-UNDONE
         d34 = Path(td) / "rel-undone"
         (d34 / "exercises").mkdir(parents=True)
-        (d34 / "progress.md").write_text(
+        prog34, curr34 = _split_progress(
             "# 学习任务：结课未完成\n- 数据根：<root>\n- 当前阶段：结课\n"
             "- 类型：知识型\n- 学科族：数学类\n- 目标：自测\n- 起点：入门\n\n"
-            "## 学习路线\n- [x] 1. 甲\n- [ ] 2. 乙\n", encoding="utf-8")
+            "## 学习路线\n- [x] 1. 甲\n- [ ] 2. 乙\n")
+        (d34 / "progress.md").write_text(prog34, encoding="utf-8")
+        (d34 / "课程体系.md").write_text(curr34, encoding="utf-8")
         (d34 / "exercises" / "01-甲-2026-01-01.md").write_text("## 作答与判分\n- 题1：Good", encoding="utf-8")
         r34 = check(d34, release=True)
         ok = ok and (not r34["ok"]) and any(e["code"] == "E-ROUTE-UNDONE" for e in r34["errors"])
@@ -1986,13 +2088,14 @@ def selftest():
         # 合法通过、无告警（脚本对未知可选字段零感知，旧任务加键不需迁移）
         d35 = Path(td) / "cursor"
         (d35 / "exercises").mkdir(parents=True)
-        (d35 / "progress.md").write_text(
+        prog35, curr35 = _split_progress(
             "# 学习任务：可选新字段\n- 数据根：<root>\n- 当前阶段：逐节学习\n"
             "- 类型：技能型\n- 学科族：编程类\n- 目标：入门\n- 起点：零基础\n\n"
             "## 学习路线\n- [x] 1. 极限\n\n"
             "## 薄弱点\n- 某点：表现（S=3.0，D=3，last=2026-10-09，due=2026-10-10，信心=4，cw，evt=E1）\n\n"
-            "## 下次续学\n- 动作游标：批改 ｜ 待回应：01-极限 题1 ｜ 最后提交：E1\n",
-            encoding="utf-8")
+            "## 下次续学\n- 动作游标：批改 ｜ 待回应：01-极限 题1 ｜ 最后提交：E1\n")
+        (d35 / "progress.md").write_text(prog35, encoding="utf-8")
+        (d35 / "课程体系.md").write_text(curr35, encoding="utf-8")
         (d35 / "exercises" / "01-极限-2026-01-01.md").write_text(
             "## 作答与判分\n- 题 1：作答「x」｜信心=5｜Good\n", encoding="utf-8")
         r35 = check(d35)
@@ -2002,7 +2105,10 @@ def selftest():
         def _mk2(name, progress_text, files=None):
             d = Path(td) / name
             d.mkdir()
-            (d / "progress.md").write_text(progress_text, encoding="utf-8")
+            prog, curr = _split_progress(progress_text)
+            (d / "progress.md").write_text(prog, encoding="utf-8")
+            if curr:
+                (d / "课程体系.md").write_text(curr, encoding="utf-8")
             for rel, txt in (files or {}).items():
                 fp = d / rel
                 fp.parent.mkdir(parents=True, exist_ok=True)
@@ -2129,19 +2235,20 @@ def selftest():
         below = [e for e in r40e["errors"] if e["code"] == "E-FINAL-BELOW-TARGET"]
         ok = ok and (not r40e["ok"]) and len(below) == 1 and "正确率 0/1" in below[0]["message"]
         # ㊶ 已完成但清单纳入口径下仍有「未讲」关键能力 KP → E-CORE-UNLEARNED
-        KPLIST_CORE = ("# 知识清单：示例\n- 版本：1\n- 对照源：自拟总纲\n"
+        KPLIST_CORE = ("# 课程体系：示例\n- 版本：1\n- 对照源：自拟总纲\n"
                        "- 排序规则：拓扑序\n- 覆盖范围：全量\n- 最近更新：2026-01-01\n"
                        "- 覆盖摘要：总 1 ｜ 未讲 1 ｜ 已讲 0 ｜ 暂缓 0 ｜ 排除 0\n\n"
-                       "- KP-01-01 ｜ 变量 ｜ 小节 1 ｜ 前置：  ｜ 来源：总纲 ｜ 状态：未讲\n")
+                       "## 学习路线\n### 章1 ｜ 基础\n- [x] 1. 变量\n"
+                       "- KP-01-01 ｜ 变量 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 ｜ 状态：未讲\n")
         r41, c41 = _codes("r01-core", DONE_HEAD + "## 学习路线\n- [x] 1. 变量\n",
                           EV_OK, release=True)
-        # 「知识清单」指针须写在元信息区（首个二级标题之前）才被解析——单独补齐并重校验
+        # 「课程体系」指针须写在元信息区（首个二级标题之前）才被解析——单独补齐并重校验
         d41 = Path(r41["task_dir"])
         prog41 = (d41 / "progress.md").read_text(encoding="utf-8")
         (d41 / "progress.md").write_text(
-            prog41.replace("- 起点：零基础\n", "- 起点：零基础\n- 知识清单：知识清单.md\n"),
+            prog41.replace("- 起点：零基础\n", "- 起点：零基础\n- 课程体系：课程体系.md\n"),
             encoding="utf-8")
-        (d41 / "知识清单.md").write_text(KPLIST_CORE, encoding="utf-8")
+        (d41 / "课程体系.md").write_text(KPLIST_CORE, encoding="utf-8")
         (d41 / "exercises" / "99-结课综合测验-2026-01-01.md").write_text(EV_OK, encoding="utf-8")
         r41 = check(d41, release=True)
         ok = ok and (not r41["ok"]) and any(e["code"] == "E-CORE-UNLEARNED" for e in r41["errors"])
@@ -2200,13 +2307,13 @@ def selftest():
         ok = ok and r47["ok"] and not any(e["code"] == "E-EVIDENCE-ID-MISMATCH"
                                           for e in r47["errors"])
         # ㊽ 数量相同但对象不同 → W-KP-HOLD-CROSS（旧口径只比数量、直接放行）
-        d48 = _mk2("r09-kpids", KP_PROG_OK, {"知识清单.md":
-                   "# 知识清单：示例\n- 版本：1\n- 对照源：自拟总纲\n- 排序规则：拓扑序\n"
+        d48 = _mk2("r09-kpids", KP_PROG_OK, {"课程体系.md":
+                   "# 课程体系：示例\n- 版本：1\n- 对照源：自拟总纲\n- 排序规则：拓扑序\n"
                    "- 覆盖范围：全量\n- 最近更新：2026-01-01\n"
-                   "- 覆盖摘要：总 1 ｜ 未讲 0 ｜ 已讲 0 ｜ 暂缓 1 ｜ 排除 0\n\n"
-                   "- KP-90-01 ｜ 甲 ｜ 小节 90 ｜ 前置：  ｜ 来源：总纲 ｜ 状态：暂缓\n"})
+                   "- 覆盖摘要：总 1 ｜ 未讲 0 ｜ 已讲 0 ｜ 暂缓 1 ｜ 排除 0\n\n## 学习路线\n### 章9 ｜ 暂存\n"
+                   "- KP-90-01 ｜ 甲 ｜ 节 90 ｜ 前置：  ｜ 来源：总纲 ｜ 状态：暂缓\n"})
         r48 = check(d48, release=True)
-        ok = ok and any(w["code"] == "W-KP-HOLD-CROSS" and "仅清单暂缓" in w["message"]
+        ok = ok and any(w["code"] == "W-KP-HOLD-CROSS" and "仅目行暂缓" in w["message"]
                         for w in r48["warnings"])
         # ㊾ 游标指向不存在的判分记录/提交 ID → E-CURSOR-DANGLING（放行模式，两条各计）
         d49 = _mk2("r09-cursor",
@@ -2307,127 +2414,123 @@ def selftest():
 
         # ═══ v6.1 分型验收：记忆/程序要独立正确；概念/设计要定性复述；视觉任务要独立证据 ═══
         d_type = _mk2("v61-typed-ok", KP_PROG_TYPED,
-                      {"知识清单.md": KPLIST_TYPED,
+                      {"课程体系.md": KPLIST_TYPED,
                        "exercises/01-变量-2026-01-01.md": EV_TYPED_OK})
         r_type = check(d_type, release=True)
         ok = ok and r_type["ok"]
         ok = ok and not any(e["code"] == "E-KP-TYPED-GATE" for e in r_type["errors"])
         r_type_mem = check(_mk2("v61-typed-mem", KP_PROG_TYPED,
-                                {"知识清单.md": KPLIST_TYPED,
+                                {"课程体系.md": KPLIST_TYPED,
                                  "exercises/01-变量-2026-01-01.md":
                                  EV_TYPED_OK.replace("｜KP=KP-01-01", "")}), release=True)
         ok = ok and any(e["code"] == "E-KP-TYPED-GATE" and "KP-01-01" in e["message"]
                         for e in r_type_mem["errors"])
         r_type_con = check(_mk2("v61-typed-con", KP_PROG_TYPED,
-                                {"知识清单.md": KPLIST_TYPED,
+                                {"课程体系.md": KPLIST_TYPED,
                                  "exercises/01-变量-2026-01-01.md":
                                  EV_TYPED_OK.replace("KP-01-02", "")}), release=True)
         ok = ok and any(e["code"] == "E-KP-TYPED-GATE" and "KP-01-02" in e["message"]
                         for e in r_type_con["errors"])
         r_type_vis = check(_mk2("v61-typed-vis", KP_PROG_TYPED,
-                                {"知识清单.md": KPLIST_TYPED,
+                                {"课程体系.md": KPLIST_TYPED,
                                  "exercises/01-变量-2026-01-01.md":
                                  EV_TYPED_OK.replace("｜视觉=图表", "")}), release=True)
         ok = ok and any(e["code"] == "E-KP-TYPED-GATE" and "视觉任务" in e["message"]
                         for e in r_type_vis["errors"])
         # 可选字段畸形：类型非法 -> W-UNPARSED-KP；缺类型/视觉字段的旧行仍合法
         r_type_bad = check(_mk2("v61-typed-bad", KP_PROG_TYPED,
-                                {"知识清单.md": KPLIST_TYPED.replace("类型：记忆", "类型：乱写"),
+                                {"课程体系.md": KPLIST_TYPED.replace("类型：记忆", "类型：乱写"),
                                  "exercises/01-变量-2026-01-01.md": EV_TYPED_OK}), release=True)
         ok = ok and any(w["code"] == "W-UNPARSED-KP" for w in r_type_bad["warnings"])
         ok = ok and any(e["code"] == "E-KP-TYPED-GATE" and "畸形" in e["message"]
                         for e in r_type_bad["errors"])
         r_type_title = check(_mk2("v61-typed-title-only", KP_PROG_TYPED,
-                                  {"知识清单.md": "# 知识清单：标题含类型\n- 版本：1\n"
+                                  {"课程体系.md": "# 课程体系：标题含类型\n- 版本：1\n"
                                                    "- 覆盖摘要：总 1 ｜ 未讲 0 ｜ 已讲 1 ｜ 暂缓 0 ｜ 排除 0\n\n"
-                                                   "- KP-01-01 ｜ 类型转换 ｜ 小节 1 ｜ 前置：  ｜ 来源：目录\n",
+                                                   "## 学习路线\n### 章1 ｜ 基础\n- [x] 1. 变量\n"
+                                                   "- KP-01-01 ｜ 类型转换 ｜ 节 1 ｜ 前置：  ｜ 来源：目录\n",
                                    "exercises/01-变量-2026-01-01.md": EV_TYPED_OK}), release=True)
         ok = ok and any(w["code"] == "W-UNPARSED-KP" for w in r_type_title["warnings"])
         ok = ok and not any(e["code"] == "E-KP-TYPED-GATE" for e in r_type_title["errors"])
         r_type_missing_status = check(_mk2("v61-typed-missing-status", KP_PROG_TYPED,
-                                           {"知识清单.md": "# 知识清单：缺状态\n- 版本：1\n"
+                                           {"课程体系.md": "# 课程体系：缺状态\n- 版本：1\n"
                                                             "- 覆盖摘要：总 1 ｜ 未讲 0 ｜ 已讲 1 ｜ 暂缓 0 ｜ 排除 0\n\n"
-                                                            "- KP-01-01 ｜ 变量 ｜ 小节 1 ｜ 前置：  ｜ 来源：目录 ｜ 类型：概念\n",
+                                                            "## 学习路线\n### 章1 ｜ 基础\n- [x] 1. 变量\n"
+                                                            "- KP-01-01 ｜ 变量 ｜ 节 1 ｜ 前置：  ｜ 来源：目录 ｜ 类型：概念\n",
                                             "exercises/01-变量-2026-01-01.md": EV_TYPED_OK}), release=True)
         ok = ok and any(e["code"] == "E-KP-TYPED-GATE" for e in r_type_missing_status["errors"])
         r_type_old = check(_mk2("v61-typed-old", KP_PROG_OK,
-                                {"知识清单.md": KPLIST_OK,
+                                {"课程体系.md": KPLIST_OK,
                                  "exercises/01-变量-2026-01-01.md": EV_TYPED_OK}), release=True)
         ok = ok and not any(e["code"] == "E-KP-TYPED-GATE" for e in r_type_old["errors"])
         r_type_half = check(_mk2("v61-typed-half-colon", KP_PROG_TYPED,
-                                 {"知识清单.md": KPLIST_TYPED.replace("类型：概念", "类型:概念")
+                                 {"课程体系.md": KPLIST_TYPED.replace("类型：概念", "类型:概念")
                                   .replace("视觉任务：图表", "视觉任务:图表"),
                                   "exercises/01-变量-2026-01-01.md": EV_TYPED_OK}), release=True)
         ok = ok and r_type_half["ok"]
         ok = ok and not any(w["code"] == "W-UNPARSED-KP" for w in r_type_half["warnings"])
         r_type_alias = check(_mk2("v61-typed-alias", KP_PROG_TYPED,
-                                  {"知识清单.md": KPLIST_TYPED.replace("KP-01-01", "KP-1-1"),
+                                  {"课程体系.md": KPLIST_TYPED.replace("KP-01-01", "KP-1-1"),
                                    "exercises/01-变量-2026-01-01.md": EV_TYPED_OK}), release=True)
         ok = ok and r_type_alias["ok"]
 
-        # ═══ v6.1 大纲契约 + intake ═══
-        MOD_OK = ("## 模块目标\n- M1 ｜ 变量 ｜ 学完能独立读写变量\n\n"
-                  "## 材料覆盖\n- 教材 1.1 → M1\n\n"
-                  "## 材料\n- 教材 1.1\n\n## 学习路线")
-        prog_contract = PROG_S3.replace("## 学习路线", MOD_OK)
-        r_c = check(_mk2("v61-contract-ok", prog_contract,
-                         {"exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
+        # ═══ 章规划契约（读课程体系.md）═══
+        ROUTE_1 = "## 学习路线\n### 章1 ｜ 基础\n- [x] 1. 变量\n"
+
+        def _curr(regions=""):
+            return "# 课程体系：示例\n- 版本：1\n\n" + regions + ROUTE_1
+
+        r_c = check(_mk2("v61-contract-ok", PROG_S3,
+                         {"课程体系.md": _curr("## 章规划\n- 章1 ｜ 变量 ｜ 学完能独立读写变量\n\n"
+                                          "## 材料覆盖\n- 教材 1.1 → 章1\n\n"
+                                          "## 材料\n- 教材 1.1\n"),
+                          "exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
         ok = ok and r_c["ok"]
-        ok = ok and not any(w["code"].startswith("W-MODULE") or w["code"].startswith("W-UNPARSED-MODULE")
-                            or w["code"].startswith("W-UNPARSED-MATERIAL") or w["code"] == "W-MATERIAL-COVERAGE-GAP"
-                            for w in r_c["warnings"])
-        r_ci = check(_mk2("v61-contract-incomplete",
-                          PROG_S3.replace("## 学习路线", "## 模块目标\n- M1 ｜ 变量 ｜ 学完能读写变量\n\n"
-                                                          "## 材料\n- 教材 1.1\n\n## 学习路线"),
-                          {"exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
+        ok = ok and not any(w["code"].startswith("W-MODULE") or w["code"] == "W-UNPARSED-MATERIAL"
+                            or w["code"] == "W-MATERIAL-COVERAGE-GAP" for w in r_c["warnings"])
+        r_ci = check(_mk2("v61-contract-incomplete", PROG_S3,
+                          {"课程体系.md": _curr("## 章规划\n- 章1 ｜ 变量 ｜ 学完能读写变量\n\n## 材料\n- 教材 1.1\n"),
+                           "exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
         ok = ok and any(w["code"] == "W-MODULE-CONTRACT-INCOMPLETE" for w in r_ci["warnings"])
-        r_cno = check(_mk2("v61-contract-no-material",
-                           PROG_S3.replace("## 学习路线", "## 模块目标\n- M1 ｜ 变量 ｜ 学完能读写变量\n\n## 学习路线"),
-                           {"exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
+        r_cno = check(_mk2("v61-contract-no-material", PROG_S3,
+                           {"课程体系.md": _curr("## 章规划\n- 章1 ｜ 变量 ｜ 学完能读写变量\n"),
+                            "exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
         ok = ok and not any(w["code"] == "W-MODULE-CONTRACT-INCOMPLETE" for w in r_cno["warnings"])
-        r_cm = check(_mk2("v61-contract-module-bad",
-                          PROG_S3.replace("## 学习路线", "## 模块目标\n- 变量模块\n\n## 材料覆盖\n- 教材 → M1\n\n## 学习路线"),
-                          {"exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
+        r_cm = check(_mk2("v61-contract-module-bad", PROG_S3,
+                          {"课程体系.md": _curr("## 章规划\n- 章名缺编号\n\n## 材料覆盖\n- 教材 → 章1\n"),
+                           "exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
         ok = ok and any(w["code"] == "W-UNPARSED-MODULE" for w in r_cm["warnings"])
-        r_cmat = check(_mk2("v61-contract-material-bad",
-                            PROG_S3.replace("## 学习路线", "## 模块目标\n- M1 ｜ 变量 ｜ 学完能读写变量\n\n## 材料覆盖\n- 教材 M1\n\n## 学习路线"),
-                            {"exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
+        r_cmat = check(_mk2("v61-contract-material-bad", PROG_S3,
+                            {"课程体系.md": _curr("## 章规划\n- 章1 ｜ 变量 ｜ 学完能读写变量\n\n## 材料覆盖\n- 教材 章1\n"),
+                             "exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
         ok = ok and any(w["code"] == "W-UNPARSED-MATERIAL" for w in r_cmat["warnings"])
-        r_cgap = check(_mk2("v61-contract-gap",
-                            PROG_S3.replace("## 学习路线", "## 模块目标\n- M1 ｜ 变量 ｜ 学完能读写变量\n\n"
-                                                          "## 材料覆盖\n- 教材 1.1 → M1\n\n"
-                                                          "## 材料\n- 教材 1.1\n- 教材 1.2\n\n## 学习路线"),
-                            {"exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
+        r_cgap = check(_mk2("v61-contract-gap", PROG_S3,
+                            {"课程体系.md": _curr("## 章规划\n- 章1 ｜ 变量 ｜ 学完能读写变量\n\n"
+                                             "## 材料覆盖\n- 教材 1.1 → 章1\n\n"
+                                             "## 材料\n- 教材 1.1\n- 教材 1.2\n"),
+                             "exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
         ok = ok and any(w["code"] == "W-MATERIAL-COVERAGE-GAP" for w in r_cgap["warnings"])
-        r_cph = check(_mk2("v61-contract-placeholder",
-                           PROG_S3.replace("## 学习路线", "## 模块目标\n- M1 ｜ <模块名> ｜ <学完能独立……>\n\n"
-                                                           "## 材料\n- 教材 1.1\n\n"
-                                                           "## 材料覆盖\n- <材料> → M1\n\n## 学习路线"),
-                           {"exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
+        r_cph = check(_mk2("v61-contract-placeholder", PROG_S3,
+                           {"课程体系.md": _curr("## 章规划\n- 章1 ｜ <章名> ｜ <学完能独立……>\n\n"
+                                            "## 材料\n- 教材 1.1\n\n"
+                                            "## 材料覆盖\n- <材料> → 章1\n"),
+                            "exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
         ok = ok and any(w["code"] == "W-UNPARSED-MODULE" for w in r_cph["warnings"])
         ok = ok and any(w["code"] == "W-UNPARSED-MATERIAL" for w in r_cph["warnings"])
-        r_cdup = check(_mk2("v61-contract-duplicate-cover",
-                            PROG_S3.replace("## 学习路线", "## 模块目标\n- M1 ｜ 变量 ｜ 学完能读写变量\n\n"
-                                                          "## 材料覆盖\n- 教材 1.1 → M1\n- 教材 1.1 → M2\n\n"
-                                                          "## 材料\n- 教材 1.1\n- 教材 1.2\n\n## 学习路线"),
-                            {"exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
+        r_cdup = check(_mk2("v61-contract-duplicate-cover", PROG_S3,
+                            {"课程体系.md": _curr("## 章规划\n- 章1 ｜ 变量 ｜ 学完能读写变量\n\n"
+                                             "## 材料覆盖\n- 教材 1.1 → 章1\n- 教材 1.1 → 章2\n\n"
+                                             "## 材料\n- 教材 1.1\n- 教材 1.2\n"),
+                             "exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
         ok = ok and any(w["code"] == "W-MATERIAL-COVERAGE-GAP" and "教材 1.2" in w["message"]
                         for w in r_cdup["warnings"])
-        r_cprefix = check(_mk2("v61-contract-same-prefix",
-                               PROG_S3.replace("## 学习路线", "## 模块目标\n- M1 ｜ 变量 ｜ 学完能读写变量\n\n"
-                                                             "## 材料覆盖\n- 数学（上册） → M1\n- 数学（上册） → M2\n\n"
-                                                             "## 材料\n- 数学（上册）\n- 数学（下册）\n\n## 学习路线"),
-                               {"exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
+        r_cprefix = check(_mk2("v61-contract-same-prefix", PROG_S3,
+                               {"课程体系.md": _curr("## 章规划\n- 章1 ｜ 变量 ｜ 学完能读写变量\n\n"
+                                                "## 材料覆盖\n- 数学（上册） → 章1\n- 数学（上册） → 章2\n\n"
+                                                "## 材料\n- 数学（上册）\n- 数学（下册）\n"),
+                                "exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
         ok = ok and any(w["code"] == "W-MATERIAL-COVERAGE-GAP" and "数学（下册）" in w["message"]
                         for w in r_cprefix["warnings"])
-        r_s = check(_mk2("v61-strategy-ok",
-                         PROG_S3.replace("- 起点：零基础\n", "- 起点：零基础\n- 教学策略：先教后测\n"),
-                         {"exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
-        ok = ok and r_s["ok"]
-        r_sbad = check(_mk2("v61-strategy-bad",
-                            PROG_S3.replace("- 起点：零基础\n", "- 起点：零基础\n- 教学策略：随便教\n"),
-                            {"exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
-        ok = ok and any(e["code"] == "E-ENUM-STRATEGY" for e in r_sbad["errors"])
 
         for args in (["x", "--changed-lessons", "0"],
                      ["x", "--changed-lessons", ""],

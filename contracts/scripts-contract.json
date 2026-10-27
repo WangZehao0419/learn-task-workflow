@@ -10,19 +10,19 @@
     "2": "用法错误",
     "3": "枚举失败 scan_status=failed（不覆盖既有缓存）"
    },
-   "schema": "learn-task-index/5",
-   "notes": "scan_status=partial/failed 时任务集合不完整，调用方必须停止枚举/续学并修复数据后重跑，不得按部分结果继续；failed 时 task_count=null（未知≠0）；任务含 current_block/block_total（可选，来自「下次续学」的已讲到第 k/总块，缺失为 null）；写缓存用同目录临时文件 + os.replace 原子替换，区分 written/unchanged/failed；--root 可省略（走默认根），路径存在但非目录 → 3（scan_status=failed），路径不存在 → 1"
+   "schema": "learn-task-index/6",
+   "notes": "scan_status=partial/failed 时任务集合不完整，调用方必须停止枚举/续学并修复数据后重跑，不得按部分结果继续；failed 时 task_count=null（未知≠0）；任务含 current_item/item_total（可选，来自「下次续学」的已讲到第 k/N 目，缺失为 null）与 route_count（来自课程体系.md 节路线勾选数，课程体系缺失为 null）；写缓存用同目录临时文件 + os.replace 原子替换，区分 written/unchanged/failed；--root 可省略（走默认根），路径存在但非目录 → 3（scan_status=failed），路径不存在 → 1"
   },
   {
    "script": "progress_check.py",
    "usage": "<任务目录> [--release] [--proposed-phase <阶段>] [--staged <候选快照>] [--changed-lessons <正整数列表>] [--selftest]",
-   "default_behavior": "历史/日常校验（warning 非阻断旧任务）",
+   "default_behavior": "校验（warning 非阻断）",
    "exit_codes": {
     "0": "通过",
     "1": "不通过",
     "2": "用法错误"
    },
-   "notes": "--release 放行模式：判分四态 correct/partial/incorrect/ungraded；partial 入分母不入分子，ungraded 与作废行不入分母（W-VOIDED-ATTEMPT / W-UNGRADED-ATTEMPT）；参考答案/标准答案/正确答案不构成学员作答；路线和 changed-lessons 仅接受正整数；KP 查重与前置统一别名归一；同 attempt 的结果/独立性/KP 冲突报 E-ATTEMPT-CONFLICT；非法显式目标线报 E-FINAL-INVALID-TARGET；KP 类型/视觉任务声明后分型验收（E-KP-TYPED-GATE）；模块目标/材料覆盖结构提示（W-MODULE-CONTRACT-INCOMPLETE / W-UNPARSED-MODULE / W-UNPARSED-MATERIAL / W-MATERIAL-COVERAGE-GAP）；教学策略枚举（E-ENUM-STRATEGY）；空/模板证据 E-EMPTY-EVIDENCE；结课/已完成未完成路线 E-ROUTE-UNDONE；复习来源阶段枚举 {逐节学习, 结课, 已完成}；起点自进入 S2 起必填；小节目标线可选字段缺省取 gates.min_ratio，非法报 E-GATE-RATIO-INVALID；复述门要求关键点 ≥ restatement.keypoints 且「无事实性错误」已勾，旧模板无该项时回退总勾选计数"
+   "notes": "--release 放行模式：判分四态 correct/partial/incorrect/ungraded；partial 入分母不入分子，ungraded 与作废行不入分母（W-VOIDED-ATTEMPT / W-UNGRADED-ATTEMPT）；参考答案/标准答案/正确答案不构成学员作答；节号和 changed-lessons 仅接受正整数；目行 KP 查重与前置统一别名归一（课程体系.md 为目清单唯一来源）；同 attempt 的结果/独立性/KP 冲突报 E-ATTEMPT-CONFLICT；非法显式目标线报 E-FINAL-INVALID-TARGET；KP 类型/视觉任务声明后分型验收（E-KP-TYPED-GATE）；章规划/材料覆盖结构提示（W-MODULE-CONTRACT-INCOMPLETE / W-UNPARSED-MODULE / W-UNPARSED-MATERIAL / W-MATERIAL-COVERAGE-GAP）；空/模板证据 E-EMPTY-EVIDENCE；结课/已完成未完成路线 E-ROUTE-UNDONE；复习来源阶段枚举 {逐节学习, 结课, 已完成}；起点自进入 S2 起必填；节目标线可选字段缺省取 gates.min_ratio，非法报 E-GATE-RATIO-INVALID；复述门要求关键点 ≥ restatement.keypoints 且「无事实性错误」已勾"
   },
   {
    "script": "scheduler.py",
@@ -40,13 +40,13 @@
   },
   {
    "script": "kp_sort.py",
-   "usage": "<清单文件> [--selftest]",
+   "usage": "<课程体系.md> [--selftest]",
    "exit_codes": {
     "0": "正常",
     "1": "畸形行 / 依赖环 / 解释器版本不足 / 疑似解析失败",
     "2": "用法错误"
    },
-   "notes": "空合法清单与疑似解析失败分离；KP 编号别名归一（KP-1-1 ≡ KP-01-01）；环路径输出稳定"
+   "notes": "空合法课程体系与疑似解析失败分离；KP 编号别名归一（KP-1-1 ≡ KP-01-01）；环路径输出稳定"
   },
   {
    "script": "check_environment.py",
@@ -83,14 +83,14 @@
   },
   {
    "script": "prereq_check.py",
-   "usage": "--list <知识清单.md> --scan <题组或讲义.md>... [--extra-terms \"...\"] [--extra-file <文件>] [--scan-all] [--selftest]",
+   "usage": "--list <课程体系.md> --scan <题组或讲义.md>... [--extra-terms \"...\"] [--extra-file <文件>] [--scan-all] [--selftest]",
    "default_behavior": "只读对账，不写盘",
    "exit_codes": {
     "0": "干净（无未引入术语命中）",
     "1": "存在命中（输出违规清单）",
     "2": "用法/文件错误"
    },
-   "notes": "R46 出题前术语对账的机器护栏：已引入集合 = 已讲 KP 引入列 ∪ 已讲 KP 名称 ∪ --extra-terms/--extra-file 追加；默认只扫题面区标题（## 题组/自测/检验/练习）之后到下一 ## 之前，--scan-all 扫全文；违规逐条输出 W-TERM-UNTAUGHT 到 stderr，JSON 汇总到 stdout；清单零可用行 exit 2（E-LIST-EMPTY），不猜不补造"
+   "notes": "R46 出题前术语对账的机器护栏：已引入集合 = 已讲目行引入列 ∪ 已讲 KP 名称 ∪ --extra-terms/--extra-file 追加；默认只扫题面区标题（## 题组/自测/检验/练习）之后到下一 ## 之前，--scan-all 扫全文；违规逐条输出 W-TERM-UNTAUGHT 到 stderr，JSON 汇总到 stdout；课程体系零可用目行 exit 2（E-LIST-EMPTY），不猜不补造"
   }
  ],
  "verification": {

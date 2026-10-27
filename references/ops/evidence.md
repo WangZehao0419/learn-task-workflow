@@ -42,7 +42,7 @@
 | 示范先行 / 完整工作样例（`teaching/lesson-flow.md`） | Sweller 认知负荷理论：新手先学完整样例优于直接解题（Sweller & Cooper 1985 起） | 已验证 |
 | 样例撤除 / 高起点跳样例（`teaching/lesson-flow.md`） | 专长反转效应：Kalyuga, Ayres, Chandler & Sweller 2003——熟练度升高后支架优势缩小乃至反转 | 已验证 |
 | 分块 → 交错切换判据（`assessment/generation.md` 题组；`workflow/s3-block.md`） | Rohrer & Taylor 2007：练习期分块 89% vs 混练 60%，一周后反转 63% vs 20%（d=1.34，错因多为「算对但选错公式」）；Brunmair & Richter 2019 元分析 g=0.42 | **切换时序为推断级**：两态各有据，「先分块后切交错」的先后顺序无直接实验 |
-| 块级讲授 / 按最细知识点分段（workflow「逐块推进」） | Mayer 多媒体学习分段原则（Mayer & Moreno 2003；Mayer 2009）：分段呈现优于连续整段，学习者可在段间加工；Sweller 认知负荷理论：新手工作记忆容量有限 | **分段优于整段，但块尺寸由最细知识点决定**：按「1 道题能独立检验」切块，不设固定分钟阈值；段长受材料复杂度、先验知识与交互方式调节 |
+| 目级讲授 / 按最细知识点分段（workflow「逐目推进」） | Mayer 多媒体学习分段原则（Mayer & Moreno 2003；Mayer 2009）：分段呈现优于连续整段，学习者可在段间加工；Sweller 认知负荷理论：新手工作记忆容量有限 | **分段优于整段，但目尺寸由最细知识点决定**：按「1 道题能独立检验」切目，不设固定分钟阈值；段长受材料复杂度、先验知识与交互方式调节 |
 | 判定题 / 条件化出题（`assessment/generation.md`） | 惰性知识（Whitehead 1929 inert ideas）；Gick & Holyoak 1980 类比迁移失败（仅 ~10% 自发解出）；Quilici & Mayer 1996：分类练习显著改善「选对统计检验」的能力 | 已验证（判定题训练有直接证据） |
 | 延迟自评 / postdiction（`assessment/scoring.md` 判分） | Nelson & Dunlosky 1991 延迟 JOL 效应：延迟数分钟的自评远好于即时；Pierce & Smith 2001：考后自评优于事前预测 | 「隔一刻钟」为经验值（文献为「延迟数分钟」级）；**反馈后补报属回顾性（postdiction）测量、与原信心不是同一种测量**——本技能仅将**反馈前**收集的信心用于 cw/校准 |
 | cw 优先修复（自信但错先复习）（`assessment/scheduling.md` 调度） | Butterfield & Metcalfe 2001 起 hypercorrection：高信心错答经反馈更易被纠正 | 已验证（cw 机制的直接背书） |

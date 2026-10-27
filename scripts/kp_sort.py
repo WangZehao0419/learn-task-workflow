@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""kp_sort.py - 知识清单 KP 依赖拓扑排序与检环（确定性，stdlib-only）。
+"""kp_sort.py - 课程体系目行 KP 依赖拓扑排序与检环（确定性，stdlib-only）。
 
 用途：知识型/技能型任务在 S2「排序」子步调用（见 references/workflow.md），
-对知识清单文件（行式六字段 + 可选类型/视觉任务，格式见 references/data.md
-「知识清单文件」）按各行「前置」声明的依赖边计算合法拓扑序。判断归模型（依赖边真实性、
+对课程体系文件（行式六字段 + 可选类型/视觉任务，格式见 references/data.md
+「课程体系文件」）按各行「前置」声明的依赖边计算合法拓扑序。判断归模型（依赖边真实性、
 该不该有边），排序与检环归本脚本；只读零写盘。可选分型字段由 progress_check 校验，
 本脚本只读前六段并忽略附加段。
 
@@ -34,62 +34,62 @@ from pathlib import Path
 
 from ltw_parse import KP_ID_RE, normalize_kp_id, parse_kp_row
 
-VALID = """# 知识清单：格式演示（示例仅为格式演示，KP 取舍与依赖声明规则领域无关）
+VALID = """# 课程体系：格式演示（示例仅为格式演示，KP 取舍与依赖声明规则领域无关）
 - 版本：2
 - 排序规则：拓扑序（依赖边见各行前置列）
 - 覆盖范围：全量
 - 覆盖摘要：总 5 ｜ 未讲 5 ｜ 已讲 0 ｜ 暂缓 0 ｜ 排除 0
 
-- KP-01-01 ｜ 概念甲 ｜ 小节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲
-- KP-01-02 ｜ 概念乙 ｜ 小节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲
-- KP-02-01 ｜ 方法丙 ｜ 小节 2 ｜ 前置：KP-01-02 ｜ 来源：总纲 1.2 ｜ 状态：未讲
-- KP-02-02 ｜ 综合题 ｜ 小节 2 ｜ 前置：KP-02-01，KP-01-01 ｜ 来源：总纲 1.2 ｜ 状态：未讲
-- KP-03-01 ｜ 应用 ｜ 小节 3 ｜ 前置：  ｜ 来源：总纲 1.3 ｜ 状态：未讲
+- KP-01-01 ｜ 概念甲 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲
+- KP-01-02 ｜ 概念乙 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲
+- KP-02-01 ｜ 方法丙 ｜ 节 2 ｜ 前置：KP-01-02 ｜ 来源：总纲 1.2 ｜ 状态：未讲
+- KP-02-02 ｜ 综合题 ｜ 节 2 ｜ 前置：KP-02-01，KP-01-01 ｜ 来源：总纲 1.2 ｜ 状态：未讲
+- KP-03-01 ｜ 应用 ｜ 节 3 ｜ 前置：  ｜ 来源：总纲 1.3 ｜ 状态：未讲
 """
-CYCLE = """# 知识清单：含环夹具
+CYCLE = """# 课程体系：含环夹具
 - 版本：1
 
-- KP-01-01 ｜ 甲 ｜ 小节 1 ｜ 前置：KP-01-03 ｜ 来源：总纲 1.1 ｜ 状态：未讲
-- KP-01-02 ｜ 乙 ｜ 小节 1 ｜ 前置：KP-01-01 ｜ 来源：总纲 1.1 ｜ 状态：未讲
-- KP-01-03 ｜ 丙 ｜ 小节 1 ｜ 前置：KP-01-02 ｜ 来源：总纲 1.1 ｜ 状态：未讲
+- KP-01-01 ｜ 甲 ｜ 节 1 ｜ 前置：KP-01-03 ｜ 来源：总纲 1.1 ｜ 状态：未讲
+- KP-01-02 ｜ 乙 ｜ 节 1 ｜ 前置：KP-01-01 ｜ 来源：总纲 1.1 ｜ 状态：未讲
+- KP-01-03 ｜ 丙 ｜ 节 1 ｜ 前置：KP-01-02 ｜ 来源：总纲 1.1 ｜ 状态：未讲
 """
-MALFORMED = """# 知识清单：畸形夹具
+MALFORMED = """# 课程体系：畸形夹具
 - 版本：1
 
-- KP-01-01 ｜ 缺状态段 ｜ 小节 1 ｜ 前置：  ｜ 来源：总纲 1.1
+- KP-01-01 ｜ 缺状态段 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 1.1
 """
-BAD_PREREQ = """# 知识清单：前置悬空夹具
+BAD_PREREQ = """# 课程体系：前置悬空夹具
 - 版本：1
 
-- KP-01-01 ｜ 甲 ｜ 小节 1 ｜ 前置：KP-09-09 ｜ 来源：总纲 1.1 ｜ 状态：未讲
+- KP-01-01 ｜ 甲 ｜ 节 1 ｜ 前置：KP-09-09 ｜ 来源：总纲 1.1 ｜ 状态：未讲
 """
-WIDE = """# 知识清单：单位数宽容夹具
+WIDE = """# 课程体系：单位数宽容夹具
 - 版本：1
 
-- KP-1-2 ｜ 乙 ｜ 小节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲
-- KP-1-10 ｜ 丙 ｜ 小节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲
-- KP-1-1 ｜ 甲 ｜ 小节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲
+- KP-1-2 ｜ 乙 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲
+- KP-1-10 ｜ 丙 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲
+- KP-1-1 ｜ 甲 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲
 """
-MIXED = """# 知识清单：状态混合夹具（order 含全部行，excluded/held 单独计数）
+MIXED = """# 课程体系：状态混合夹具（order 含全部行，excluded/held 单独计数）
 - 版本：1
 
-- KP-01-01 ｜ 甲 ｜ 小节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：已讲
-- KP-01-02 ｜ 乙 ｜ 小节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：排除
-- KP-02-01 ｜ 丙 ｜ 小节 2 ｜ 前置：KP-01-01 ｜ 来源：总纲 1.2 ｜ 状态：暂缓
-- KP-02-02 ｜ 丁 ｜ 小节 2 ｜ 前置：  ｜ 来源：总纲 1.2 ｜ 状态：未讲(已会：摸底全对，2026-10-11)
+- KP-01-01 ｜ 甲 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：已讲
+- KP-01-02 ｜ 乙 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：排除
+- KP-02-01 ｜ 丙 ｜ 节 2 ｜ 前置：KP-01-01 ｜ 来源：总纲 1.2 ｜ 状态：暂缓
+- KP-02-02 ｜ 丁 ｜ 节 2 ｜ 前置：  ｜ 来源：总纲 1.2 ｜ 状态：未讲(已会：摸底全对，2026-10-11)
 """
-HALF_WIDTH_HEADER = """# 知识清单：半角头行夹具（头行冒号半角/全角双兼容，与 progress_check 口径对齐）
+HALF_WIDTH_HEADER = """# 课程体系：半角头行夹具（头行冒号半角/全角双兼容，与 progress_check 口径对齐）
 - 版本: 7
 - 覆盖范围: 全量
 
-- KP-01-01 ｜ 甲 ｜ 小节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲
+- KP-01-01 ｜ 甲 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲
 """
-TYPED = """# 知识清单：分型字段夹具（排序只读前六段）
+TYPED = """# 课程体系：分型字段夹具（排序只读前六段）
 - 版本：1
 - 覆盖范围：全量
 
-- KP-01-01 ｜ 甲 ｜ 小节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲 ｜ 类型：概念
-- KP-01-02 ｜ 乙 ｜ 小节 1 ｜ 前置：KP-01-01 ｜ 来源：总纲 1.1 ｜ 状态：未讲 ｜ 类型：记忆 ｜ 视觉任务：识别, 关系
+- KP-01-01 ｜ 甲 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲 ｜ 类型：概念
+- KP-01-02 ｜ 乙 ｜ 节 1 ｜ 前置：KP-01-01 ｜ 来源：总纲 1.1 ｜ 状态：未讲 ｜ 类型：记忆 ｜ 视觉任务：识别, 关系
 """
 
 
@@ -122,18 +122,22 @@ def parse_kp_list(text):
         if line.startswith("- ") and ("｜" in line or "|" in line):
             body = line[2:].strip()
             first = re.split(r"[｜|]", body, maxsplit=1)[0].strip()
+            if first.startswith("["):
+                continue  # 节路线勾选行（ROUTE_RE 口径），非目行
+            if re.match(r"^章\d+$", first):
+                continue  # 章规划行（章1｜章名｜能力句），非目行
             if KP_ID_RE.match(first):
                 row = parse_kp_row([s.strip() for s in re.split(r"[｜|]", body)])
                 if row is None:
                     malformed.append(body)
                 else:
                     rows.append(row)
-            elif re.match(r"^(版本|对照源|排序规则|覆盖范围|覆盖摘要|最近更新)[：:]", first):
+            elif re.match(r"^(版本|对照源|排序规则|覆盖范围|覆盖摘要|最近更新|对照结论)[：:]", first):
                 continue  # 文件头行（含 ｜ 分段的覆盖摘要行），非 KP 行
             else:
                 malformed.append(body)
         elif line.startswith("- ") and KP_ID_RE.match(line[2:].strip().split(" ", 1)[0]):
-            # KP 行缺竖线分段（如「- KP-01-01 变量命名 小节 1」）→ 计畸形，
+            # 目行缺竖线分段（如「- KP-01-01 变量命名 节 1」）→ 计畸形，
             # 不得静默吞成「空合法清单」成功（P1）
             malformed.append(line[2:].strip())
     return {"version": version, "sort_rule": sort_rule, "rows": rows, "malformed": malformed}
@@ -189,7 +193,7 @@ def sort_from_text(text):
     """清单文本 → (结果 dict, 退出码)。纯函数，零副作用。"""
     parsed = parse_kp_list(text)
     if parsed["malformed"]:
-        return ({"error": "清单存在畸形行（六字段：KP编号｜知识点｜所属小节｜前置｜来源｜状态）："
+        return ({"error": "清单存在畸形行（六字段：KP编号｜知识点｜所属节｜前置｜来源｜状态）："
                           + parsed["malformed"][0],
                  "malformed_count": len(parsed["malformed"])}, 1)
     rows = parsed["rows"]
@@ -211,7 +215,7 @@ def sort_from_text(text):
         # → 疑似解析失败，不得静默吞成「空成功」（P1）
         if re.search(r"KP-\d+-\d+", text):
             return ({"error": "疑似解析失败：文本含 KP 编号但未解析出任何合法 KP 行"
-                              "（检查六字段：KP编号｜知识点｜所属小节｜前置｜来源｜状态）",
+                              "（检查六字段：KP编号｜知识点｜所属节｜前置｜来源｜状态）",
                      "kp_token_found": True}, 1)
         exc_n, held_n = _counts(rows)
         return ({"order": [], "version": parsed["version"], "count": 0,
@@ -221,7 +225,7 @@ def sort_from_text(text):
     sec_conflicts = [r for r in rows if r["sec_decl"] is not None and r["sec_decl"] != r["sec"]]
     if sec_conflicts:
         return ({"error": "KP 显式所属节与编号冲突：" + "、".join(
-                    "{0}（编号节 {1}，声明小节 {2}）".format(r["id"], r["sec"], r["sec_decl"])
+                    "{0}（编号节 {1}，声明节 {2}）".format(r["id"], r["sec"], r["sec_decl"])
                     for r in sec_conflicts),
                  "section_conflicts": [{"id": r["id"], "id_section": r["sec"],
                                         "declared_section": r["sec_decl"]} for r in sec_conflicts]}, 1)
@@ -353,24 +357,24 @@ def selftest():
     ok = ok and resh["order"] == ["KP-01-01"] and resh["count"] == 1
 
     # ⑧ P1 空/疑似解析失败分离：显式「无」清单 → 成功空 order
-    empty_ok = "# 知识清单：空\n- 版本：1\n- 覆盖范围：全量\n\n- 无\n"
+    empty_ok = "# 课程体系：空\n- 版本：1\n- 覆盖范围：全量\n\n- 无\n"
     rese, codee = sort_from_text(empty_ok)
     ok = ok and codee == 0 and rese.get("order") == [] and rese.get("count") == 0
 
     # ⑨ P1 缺竖线分段的 KP 行 → 计畸形（不静默吞为空成功）
-    no_sep = "# 知识清单：缺分隔\n- 版本：1\n\n- KP-01-01 变量命名 小节 1 前置 来源 状态 未讲\n"
+    no_sep = "# 课程体系：缺分隔\n- 版本：1\n\n- KP-01-01 变量命名 节 1 前置 来源 状态 未讲\n"
     resn, coden = sort_from_text(no_sep)
     ok = ok and coden != 0 and "畸形" in resn.get("error", "")
 
     # ⑩ P1 含 KP 编号痕迹却零解析行（且无畸形行）→ 疑似解析失败，不吞为空成功
-    ghost = "# 知识清单：幽灵\n- 版本：1\n- 覆盖摘要：总 1 ｜ 未讲 1 ｜ 已讲 0 ｜ 暂缓 0 ｜ 排除 0\n\n参考 KP-01-01\n"
+    ghost = "# 课程体系：幽灵\n- 版本：1\n- 覆盖摘要：总 1 ｜ 未讲 1 ｜ 已讲 0 ｜ 暂缓 0 ｜ 排除 0\n\n参考 KP-01-01\n"
     resg, codeg = sort_from_text(ghost)
     ok = ok and codeg != 0 and resg.get("kp_token_found") is True
 
     # ⑪ P1 别名归一：KP-1-1 与 KP-01-01 视为同一 KP → 重复报错（不产生两个对象）
-    alias_dup = ("# 知识清单：别名重复\n- 版本：1\n\n"
-                 "- KP-01-01 ｜ 甲 ｜ 小节 1 ｜ 前置：  ｜ 来源：总纲 ｜ 状态：未讲\n"
-                 "- KP-1-1 ｜ 甲别名 ｜ 小节 1 ｜ 前置：  ｜ 来源：总纲 ｜ 状态：未讲\n")
+    alias_dup = ("# 课程体系：别名重复\n- 版本：1\n\n"
+                 "- KP-01-01 ｜ 甲 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 ｜ 状态：未讲\n"
+                 "- KP-1-1 ｜ 甲别名 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 ｜ 状态：未讲\n")
     resd, coded = sort_from_text(alias_dup)
     ok = ok and coded != 0 and "重复" in resd.get("error", "")
 
@@ -379,42 +383,42 @@ def selftest():
     ok = ok and codet == 0 and rest.get("order") == ["KP-01-01", "KP-01-02"]
 
     # ⑫ P1 别名前置：前置用单位数 KP-1-1，目标写补零 KP-01-01 → 能命中，不误报不存在
-    alias_pre = ("# 知识清单：别名前置\n- 版本：1\n\n"
-                 "- KP-01-01 ｜ 甲 ｜ 小节 1 ｜ 前置：  ｜ 来源：总纲 ｜ 状态：未讲\n"
-                 "- KP-01-02 ｜ 乙 ｜ 小节 1 ｜ 前置：KP-1-1 ｜ 来源：总纲 ｜ 状态：未讲\n")
+    alias_pre = ("# 课程体系：别名前置\n- 版本：1\n\n"
+                 "- KP-01-01 ｜ 甲 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 ｜ 状态：未讲\n"
+                 "- KP-01-02 ｜ 乙 ｜ 节 1 ｜ 前置：KP-1-1 ｜ 来源：总纲 ｜ 状态：未讲\n")
     resa, codea = sort_from_text(alias_pre)
     ok = ok and codea == 0 and resa["order"].index("KP-01-01") < resa["order"].index("KP-01-02")
 
     # ⑬ K01 硬先修教学阻塞：纳入项的硬前置被暂缓/排除 → 显式 blocker（不是成功序让调用侧自行过滤）
-    held_pre = ("# 知识清单：暂缓硬先修\n- 版本：1\n\n"
-                "- KP-01-01 ｜ 甲 ｜ 小节 1 ｜ 前置：  ｜ 来源：总纲 ｜ 状态：暂缓\n"
-                "- KP-02-01 ｜ 乙 ｜ 小节 2 ｜ 前置：KP-01-01 ｜ 来源：总纲 ｜ 状态：未讲\n")
+    held_pre = ("# 课程体系：暂缓硬先修\n- 版本：1\n\n"
+                "- KP-01-01 ｜ 甲 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 ｜ 状态：暂缓\n"
+                "- KP-02-01 ｜ 乙 ｜ 节 2 ｜ 前置：KP-01-01 ｜ 来源：总纲 ｜ 状态：未讲\n")
     resh2, codeh2 = sort_from_text(held_pre)
     ok = ok and codeh2 != 0 and resh2.get("blockers")
     ok = ok and resh2["blockers"][0]["prerequisite"] == "KP-01-01"
     ok = ok and resh2["blockers"][0]["prerequisite_status"] == "暂缓"
-    excluded_pre = ("# 知识清单：排除硬先修\n- 版本：1\n\n"
-                    "- KP-01-01 ｜ 甲 ｜ 小节 1 ｜ 前置：  ｜ 来源：总纲 ｜ 状态：排除\n"
-                    "- KP-02-01 ｜ 乙 ｜ 小节 2 ｜ 前置：KP-01-01 ｜ 来源：总纲 ｜ 状态：已讲\n")
+    excluded_pre = ("# 课程体系：排除硬先修\n- 版本：1\n\n"
+                    "- KP-01-01 ｜ 甲 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 ｜ 状态：排除\n"
+                    "- KP-02-01 ｜ 乙 ｜ 节 2 ｜ 前置：KP-01-01 ｜ 来源：总纲 ｜ 状态：已讲\n")
     resex, codeex = sort_from_text(excluded_pre)
     ok = ok and codeex != 0 and resex["blockers"][0]["prerequisite_status"] == "排除"
 
-    # ⑭ K02 显式所属节与编号冲突：编号节 1 却声明「小节 99」→ 拒绝并结构化说明
-    sec_conf = ("# 知识清单：所属节冲突\n- 版本：1\n\n"
-                "- KP-01-01 ｜ 甲 ｜ 小节 99 ｜ 前置：  ｜ 来源：总纲 ｜ 状态：未讲\n")
+    # ⑭ K02 显式所属节与编号冲突：编号节 1 却声明「节 99」→ 拒绝并结构化说明
+    sec_conf = ("# 课程体系：所属节冲突\n- 版本：1\n\n"
+                "- KP-01-01 ｜ 甲 ｜ 节 99 ｜ 前置：  ｜ 来源：总纲 ｜ 状态：未讲\n")
     ress, codes = sort_from_text(sec_conf)
     ok = ok and codes != 0 and "冲突" in ress.get("error", "")
     ok = ok and ress.get("section_conflicts", [{}])[0].get("declared_section") == 99
     # 一致时不禁用：编号节与显式所属节相符 → 正常排序
-    sec_ok = ("# 知识清单：所属节一致\n- 版本：1\n\n"
-              "- KP-01-01 ｜ 甲 ｜ 小节 1 ｜ 前置：  ｜ 来源：总纲 ｜ 状态：未讲\n")
+    sec_ok = ("# 课程体系：所属节一致\n- 版本：1\n\n"
+              "- KP-01-01 ｜ 甲 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 ｜ 状态：未讲\n")
     ok = ok and sort_from_text(sec_ok)[1] == 0
 
     # ⑮ K03 环路径：真实闭环（首尾同节点）、不含无环叶、且 error 不拼接第三方异常文本
-    leaf_cycle = ("# 知识清单：环含无环叶\n- 版本：1\n\n"
-                  "- KP-01-01 ｜ 甲 ｜ 小节 1 ｜ 前置：  ｜ 来源：总纲 ｜ 状态：未讲\n"
-                  "- KP-01-02 ｜ 乙 ｜ 小节 1 ｜ 前置：KP-01-01，KP-01-03 ｜ 来源：总纲 ｜ 状态：未讲\n"
-                  "- KP-01-03 ｜ 丙 ｜ 小节 1 ｜ 前置：KP-01-01，KP-01-02 ｜ 来源：总纲 ｜ 状态：未讲\n")
+    leaf_cycle = ("# 课程体系：环含无环叶\n- 版本：1\n\n"
+                  "- KP-01-01 ｜ 甲 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 ｜ 状态：未讲\n"
+                  "- KP-01-02 ｜ 乙 ｜ 节 1 ｜ 前置：KP-01-01，KP-01-03 ｜ 来源：总纲 ｜ 状态：未讲\n"
+                  "- KP-01-03 ｜ 丙 ｜ 节 1 ｜ 前置：KP-01-01，KP-01-02 ｜ 来源：总纲 ｜ 状态：未讲\n")
     resl, codel = sort_from_text(leaf_cycle)
     cyc = resl.get("cycle", [])
     ok = ok and codel != 0 and cyc and cyc[0] == cyc[-1] and "KP-01-01" not in cyc
@@ -430,7 +434,7 @@ def selftest():
 
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="kp_sort.py")
-    ap.add_argument("kp_list", nargs="?", default=None, help="知识清单文件路径（显式实参，不依赖 cwd）")
+    ap.add_argument("kp_list", nargs="?", default=None, help="课程体系.md 文件路径（显式实参，不依赖 cwd）")
     ap.add_argument("--selftest", action="store_true")
     args = ap.parse_args(argv)
     if args.selftest:

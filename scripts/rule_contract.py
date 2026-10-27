@@ -22,7 +22,7 @@ from pathlib import Path
 SCHEMA = "ltw-rules/1"
 REQUIRED_TOP = ("schema", "version", "files", "rules", "path_aliases", "constants", "scenes")
 REQUIRED_CONST = (
-    "phases", "types", "subject_families", "teaching_strategies",
+    "phases", "types", "subject_families",
     "review_origin_phases", "grading", "kp", "gates", "restatement",
     "budget", "schemas", "headings", "scheduler", "errors",
 )
@@ -136,7 +136,7 @@ def validate(data: dict) -> dict:
     _require(isinstance(c, dict), "E-CONTRACT-INVALID", "constants 必须是对象")
     for k in REQUIRED_CONST:
         _require(k in c, "E-CONTRACT-INVALID", "constants 缺少 %s" % k)
-    for key in ("phases", "types", "subject_families", "teaching_strategies", "review_origin_phases"):
+    for key in ("phases", "types", "subject_families", "review_origin_phases"):
         _require(isinstance(c[key], list) and c[key], "E-CONTRACT-INVALID", "%s 必须是非空数组" % key)
         _require(not _dup(c[key]), "E-CONTRACT-INVALID", "%s 有重复值：%s" % (key, _dup(c[key])))
 

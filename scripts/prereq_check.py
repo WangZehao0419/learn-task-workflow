@@ -4,14 +4,14 @@
 
 用途：
   判分题交付前，扫描题组/讲义文本中出现的「未引入术语」——即：某知识点的
-  「引入」列登记的术语（或该 KP 名称本身），在知识清单中该 KP 仍为「未讲/暂缓/排除」
+  「引入」列登记的术语（或该 KP 名称本身），在课程体系中该 KP 仍为「未讲/暂缓/排除」
   状态，却出现在了待交付的题目文本里。这正是「未教术语进判分题」教学事故
   （R46 / SR-10）的机器可检形态。
 
 对账集合（已引入 = 三者并集）：
-  1. 知识清单中状态为「已讲」的 KP 的「引入」列术语；
+  1. 课程体系中状态为「已讲」的 KP 的「引入」列术语；
   2. 状态为「已讲」的 KP 名称本身（清单行第 2 段）；
-  3. --extra-terms 追加（地基块/术语地图/摸底证据里已给过定义的术语，
+  3. --extra-terms 追加（地基目/术语地图/摸底证据里已给过定义的术语，
      逗号或分号分隔；也可用 --extra-file 传一个每行一个术语的文件）。
 
 扫描范围（默认）：文件中「## 题组」「## 自测」「## 检验」等题面区标题行之后、
@@ -19,7 +19,7 @@
 （术语原样出现在文本中），长度 <2 的单字不参与匹配。
 
 输入：
-  python -B scripts/prereq_check.py --list <知识清单.md> --scan <题组或讲义.md>... 
+  python -B scripts/prereq_check.py --list <课程体系.md> --scan <题组或讲义.md>... 
       [--extra-terms "术语1,术语2"] [--extra-file <术语清单.txt>] [--scan-all]
   python -B scripts/prereq_check.py --selftest
 
@@ -140,16 +140,16 @@ def _selftest() -> int:
         print(("PASS " if cond else "FAIL ") + name)
         ok = ok and cond
 
-    list_md = """# 知识清单：测试
-- KP-01-01 ｜ 主语与谓语 ｜ 小节 1 ｜ 前置：  ｜ 来源：p.3 ｜ 状态：已讲 ｜ 引入：谓语；主语
-- KP-02-01 ｜ 定语从句 ｜ 小节 2 ｜ 前置：KP-01-01 ｜ 来源：p.132 ｜ 状态：未讲 ｜ 引入：定语；先行词
-- KP-02-02 ｜ 状语 ｜ 小节 2 ｜ 前置： ｜ 来源：p.152 ｜ 状态：未讲（已会：摸底，2026-10-11）｜ 引入：状语
+    list_md = """# 课程体系：测试
+- KP-01-01 ｜ 主语与谓语 ｜ 节 1 ｜ 前置：  ｜ 来源：p.3 ｜ 状态：已讲 ｜ 引入：谓语；主语
+- KP-02-01 ｜ 定语从句 ｜ 节 2 ｜ 前置：KP-01-01 ｜ 来源：p.132 ｜ 状态：未讲 ｜ 引入：定语；先行词
+- KP-02-02 ｜ 状语 ｜ 节 2 ｜ 前置： ｜ 来源：p.152 ｜ 状态：未讲（已会：摸底，2026-10-11）｜ 引入：状语
 """
     q_clean = "# 题\n\n## 题组\n1. 找出下句的主语与谓语：The dog runs.\n\n## 参考答案\n- 略\n"
     q_bad = "# 题\n\n## 题组\n1. 找出下句的主语、谓语，并指出定语是哪个词：The red dog runs.\n2. 主语与谓语各是什么？\n\n## 参考答案\n- 略\n"
 
     with tempfile.TemporaryDirectory() as td:
-        lp = Path(td) / "知识清单.md"
+        lp = Path(td) / "课程体系.md"
         lp.write_text(list_md, encoding="utf-8")
         taught, untaught, usable = parse_list(lp)
         chk("usable rows = 3", usable == 3)
@@ -185,7 +185,7 @@ def _selftest() -> int:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="出题前术语对账（R46）")
-    ap.add_argument("--list", required=False, help="知识清单.md 路径")
+    ap.add_argument("--list", required=False, help="课程体系.md 路径")
     ap.add_argument("--scan", action="append", default=[], help="待扫描的题组/讲义文件（可多次）")
     ap.add_argument("--extra-terms", default="", help="追加已引入术语（逗号/分号分隔）")
     ap.add_argument("--extra-file", default="", help="追加已引入术语文件（每行一个）")

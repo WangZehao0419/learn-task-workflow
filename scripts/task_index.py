@@ -18,8 +18,10 @@
     输出：每任务含 hold_count（「暂缓与范围外」区块合规条目总数，含处置为「排除」的条目）、
           excluded_count（区块内处置为「排除」的合规条目数）与 hold_unparsed（畸形条目数，
           计 0 并向 stderr 出 W-UNPARSED-HOLD 告警）；暂缓口径 = hold_count − excluded_count；
-          schema 为 learn-task-index/5，消费方按存在性读取新键（scan_status / scan_error /
-          current_block / block_total）。
+          任务含 route_done/route_total（来自课程体系.md「学习路线」节行勾选，课程体系缺失为 null）与
+          current_item/item_total（来自「下次续学」的已讲到第 k/N 目，缺失为 null）；
+          schema 为 learn-task-index/6，消费方按存在性读取新键（scan_status / scan_error /
+          current_item / item_total / route_done / route_total）。
     scan_status：ok（完整枚举、无不可读条目）/ partial（完整枚举但有不可读条目）/
                  failed（无法枚举——root 非目录或列目录失败；tasks 不可信，task_count 置 null，
                  不得当「无任务」处理）。
@@ -64,27 +66,18 @@ def is_canonical_data_root(path):
 
 
 def parse_progress(text):
-    """从 progress.md 提取关键字段与列表计数（纯文本解析，无第三方依赖）。"""
+    """从 progress.md（状态簿）提取关键字段与列表计数（纯文本解析，无第三方依赖）。"""
     fields = {}
     section = None
-    route_done = 0
-    route_total = 0
     weak_points = []
     wrong_items = 0
     hold_entries = []   # 「暂缓与范围外」条目（非「无」行）
-    block_done = None   # 「下次续学」小节行的块位置（可选，缺失为 None）
+    block_done = None   # 「下次续学」节行的目位置（可选，缺失为 None）
     block_total = None
     for raw in text.splitlines():
         line = raw.rstrip()
         if line.startswith("## "):
             section = line[3:].strip()
-            continue
-        if section == "学习路线":
-            m = ROUTE_RE.match(line.strip())
-            if m:
-                route_total += 1
-                if m.group(1).lower() == "x":
-                    route_done += 1
             continue
         if section == "薄弱点":
             s = line.strip()
@@ -118,8 +111,6 @@ def parse_progress(text):
     valid_holds = [b for b in hold_entries if not hold_entry_malformed(b)]
     return {
         "fields": fields,
-        "route_done": route_done,
-        "route_total": route_total,
         "weak_points": weak_points,
         "wrong_items": wrong_items,
         "hold_count": len(valid_holds),  # 区块合规条目总数（含处置为排除的条目）；畸形条目计 0
@@ -130,7 +121,26 @@ def parse_progress(text):
     }
 
 
-def classify(parsed):
+def parse_curriculum(text):
+    """从课程体系.md（规划簿）「学习路线」区提取节行勾选计数。"""
+    section = None
+    route_done = 0
+    route_total = 0
+    for raw in text.splitlines():
+        line = raw.rstrip()
+        if line.startswith("## "):
+            section = line[3:].strip()
+            continue
+        if section == "学习路线":
+            m = ROUTE_RE.match(line.strip())
+            if m:
+                route_total += 1
+                if m.group(1).lower() == "x":
+                    route_done += 1
+    return {"route_done": route_done, "route_total": route_total}
+
+
+def classify(parsed, curriculum=None):
     phase = parsed["fields"].get("当前阶段", "")
     return {
         "phase": phase,
@@ -139,14 +149,14 @@ def classify(parsed):
         "type_valid": parsed["fields"].get("类型", "") in ENUM_TYPE,
         "family": parsed["fields"].get("学科族", ""),
         "family_valid": parsed["fields"].get("学科族", "") in ENUM_FAMILY,
-        "current_lesson": parsed["fields"].get("当前小节", ""),
-        "current_block": parsed.get("block_done"),
-        "block_total": parsed.get("block_total"),
+        "current_lesson": parsed["fields"].get("当前节", ""),
+        "current_item": parsed.get("block_done"),
+        "item_total": parsed.get("block_total"),
+        "route_done": (curriculum or {}).get("route_done"),
+        "route_total": (curriculum or {}).get("route_total"),
         "review_from": parsed["fields"].get("复习来源阶段", ""),
         "last_update": parsed["fields"].get("最近更新", ""),
         "data_root": parsed["fields"].get("数据根", ""),
-        "route_done": parsed["route_done"],
-        "route_total": parsed["route_total"],
         "weak_point_count": len(parsed["weak_points"]),
         "wrong_item_count": parsed["wrong_items"],
         "hold_count": parsed["hold_count"],
@@ -200,6 +210,16 @@ def scan(root):
                         unreadable.append({"slug": p.name, "error": "unreadable"})
                         continue
                     info = classify(parse_progress(text))
+                    curriculum_path = p / "课程体系.md"
+                    if curriculum_path.exists():
+                        try:
+                            ctext = curriculum_path.read_text(encoding="utf-8", errors="replace")
+                            info = classify(parse_progress(text), parse_curriculum(ctext))
+                            info["curriculum_missing"] = False
+                        except OSError:
+                            info["curriculum_missing"] = True
+                    else:
+                        info["curriculum_missing"] = True
                     info["slug"] = p.name
                     info["progress"] = str(prog.relative_to(root).as_posix())
                     info["has_materials"] = (p / "materials").is_dir()
@@ -221,7 +241,7 @@ def build_index(root, tasks, legacy, root_exists, unreadable=None,
                 scan_status="ok", scan_error=None):
     # 派生缓存：字段排序稳定、不含易变时间戳，保证幂等。
     return {
-        "schema": _C["schemas"]["index"],  # 含 scan_status/scan_error、current_block/block_total；failed 时 task_count=null；消费方按存在性读取
+        "schema": _C["schemas"]["index"],  # 含 scan_status/scan_error、current_item/item_total、route_done/route_total；failed 时 task_count=null；消费方按存在性读取
         "data_root": str(Path(root)),
         "root_exists": root_exists,
         "scan_status": scan_status,
@@ -296,12 +316,8 @@ SAMPLE = """# 学习任务：示例
 - 当前阶段：逐节学习
 - 类型：技能型
 - 学科族：编程类
-- 当前小节：2
+- 当前节：2
 - 复习来源阶段：无
-
-## 学习路线
-- [X] 1. 变量
-- [ ] 2. 循环
 
 ## 薄弱点
 - 循环边界：off-by-one
@@ -313,17 +329,27 @@ SAMPLE = """# 学习任务：示例
 - 无
 """
 
+# 课程体系夹具（规划簿）：章/节路线 + 目行
+CURRICULUM_SAMPLE = """# 课程体系：示例
+- 版本：1
+- 覆盖范围：全量
+- 覆盖摘要：总 2 ｜ 未讲 1 ｜ 已讲 1 ｜ 暂缓 0 ｜ 排除 0
+
+## 学习路线
+### 章1 ｜ 基础
+- [X] 1. 变量
+  - KP-01-01 ｜ 变量命名 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：已讲
+- [ ] 2. 循环
+  - KP-02-01 ｜ 循环与迭代 ｜ 节 2 ｜ 前置：KP-01-01 ｜ 来源：总纲 1.2 ｜ 状态：未讲
+"""
+
 # 暂缓区块夹具：2 条合规暂缓条目 + 1 条畸形（有竖线缺「触发条件」）
 HOLD_SAMPLE = """# 学习任务：示例
 - 数据根：<root>
 - 当前阶段：逐节学习
 - 类型：材料型
 - 学科族：数学类
-- 当前小节：2
-
-## 学习路线
-- [x] 1. 第一章
-- [ ] 2. 第二章
+- 当前节：2
 
 ## 暂缓与范围外
 - 插入语 ｜ 来源：S2 对照 ｜ 处置：暂缓 ｜ 触发条件：用户要求
@@ -332,22 +358,24 @@ HOLD_SAMPLE = """# 学习任务：示例
 - 超纲从句 ｜ 来源：S2 对照 ｜ 处置：经用户确认排除 ｜ 触发条件：无
 """
 
-# 块游标夹具：从「下次续学」小节行解析「已讲到第 2/5 块」
-BLOCK_SAMPLE = SAMPLE + "\n## 下次续学\n- 阶段：逐节学习；小节：第 2 节（已讲到第 2/5 块）；先收作业：无；先复习：无\n"
-# 兼容：标题带后缀 + 无「已讲到第」前缀
-BLOCK_SAMPLE_ALT = SAMPLE + "\n## 下次续学（v6.8）\n- 小节：第 2 节（第 2/5 块）\n"
+# 目游标夹具：从「下次续学」节行解析「已讲到第 2/5 目」
+BLOCK_SAMPLE = SAMPLE + "\n## 下次续学\n- 阶段：逐节学习；节：第 2 节（已讲到第 2/5 目「循环边界」）；先收作业：无；先复习：无\n"
+# 宽松形态：无「已讲到第」前缀（同一格式族）
+BLOCK_SAMPLE_ALT = SAMPLE + "\n## 下次续学\n- 节：第 2 节（第 2/5 目「循环边界」）\n"
 
 
 def selftest():
     parsed = parse_progress(SAMPLE)
-    info = classify(parsed)
+    curriculum = parse_curriculum(CURRICULUM_SAMPLE)
+    info = classify(parsed, curriculum)
     ok = (
         info["phase"] == "逐节学习"
         and info["phase_valid"]
         and info["type_valid"]
         and info["family_valid"]
-        and info["route_done"] == 1          # 大写 [X] 也被计入
+        and info["route_done"] == 1          # 大写 [X] 也被计入（课程体系节路线）
         and info["route_total"] == 2
+        and info["current_lesson"] == "2"
         and info["weak_point_count"] == 1
         and info["wrong_item_count"] == 1
         # 无暂缓项（「无」行）→ hold_count 0，无畸形
@@ -363,17 +391,21 @@ def selftest():
     legacy_info = classify(parse_progress(SAMPLE.split("## 暂缓与范围外")[0]))
     ok = ok and legacy_info["hold_count"] == 0 and legacy_info["hold_unparsed"] == 0
     ok = ok and legacy_info["excluded_count"] == 0
-    # 块游标：有「已讲到第 k/总块」→ 解析；无 → None（旧档案零迁移）
+    # 目游标：有「已讲到第 k/N 目」→ 解析；无 → None
     block_info = classify(parse_progress(BLOCK_SAMPLE))
-    ok = ok and block_info["current_block"] == 2 and block_info["block_total"] == 5
+    ok = ok and block_info["current_item"] == 2 and block_info["item_total"] == 5
     block_alt = classify(parse_progress(BLOCK_SAMPLE_ALT))
-    ok = ok and block_alt["current_block"] == 2 and block_alt["block_total"] == 5
-    ok = ok and info["current_block"] is None and info["block_total"] is None
+    ok = ok and block_alt["current_item"] == 2 and block_alt["item_total"] == 5
+    ok = ok and info["current_item"] is None and info["item_total"] is None
+    # 无课程体系 → route 计数 null（缺失合法，消费方按存在性读取）
+    bare = classify(parse_progress(SAMPLE))
+    ok = ok and bare["route_total"] is None and bare["route_done"] is None
     with tempfile.TemporaryDirectory() as td:
         root = Path(td) / ".learning"
         d = root / "python"
         (d / "exercises").mkdir(parents=True)
         (d / "progress.md").write_text(SAMPLE, encoding="utf-8")
+        (d / "课程体系.md").write_text(CURRICULUM_SAMPLE, encoding="utf-8")
         # 旧版单文件：大写扩展名应被识别；合法全局画像 profile.md 不得被判为旧版文件
         (root / "旧版笔记.MD").write_text("旧内容", encoding="utf-8")
         (root / "profile.md").write_text("# 学习者画像\n- 类比领域：做饭\n", encoding="utf-8")
@@ -387,7 +419,9 @@ def selftest():
         ok = ok and "profile.md" not in legacy  # 全局画像不得被判为旧版单任务文件
         ok = ok and unreadable == []
         ok = ok and scan_status == "ok" and scan_error is None
-        ok = ok and idx["schema"] == "learn-task-index/5"
+        ok = ok and idx["schema"] == "learn-task-index/6"
+        ok = ok and tasks[0]["route_total"] == 2 and tasks[0]["route_done"] == 1
+        ok = ok and tasks[0]["curriculum_missing"] is False
         ok = ok and w1 == "written" and w2 == "unchanged"  # 幂等：第二次不重写
         ok = ok and not (root / "index.json.tmp").exists()  # 原子替换不留半截
         # 非规范数据根（临时目录）不物化 index.json（保持只读）
@@ -399,7 +433,7 @@ def selftest():
         # 默认只读：规范根下**不带** --write-index 也不物化（缓存写入改为显式 opt-in）
         canonical0 = Path(td) / "ws0" / ".learning"
         (canonical0 / "python").mkdir(parents=True)
-        (canonical0 / "python" / "progress.md").write_text(SAMPLE, encoding="utf-8")
+        (canonical0 / "python" / "progress.md").write_text(SAMPLE, encoding="utf-8")  # 无课程体系 → route null
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
             rc_nw = main(["--root", str(canonical0)])
         ok = ok and rc_nw == 0 and not (canonical0 / "index.json").exists()
@@ -409,6 +443,7 @@ def selftest():
         canonical = Path(td) / "ws" / ".learning"
         (canonical / "python").mkdir(parents=True)
         (canonical / "python" / "progress.md").write_text(SAMPLE, encoding="utf-8")
+        (canonical / "python" / "课程体系.md").write_text(CURRICULUM_SAMPLE, encoding="utf-8")
         buf_out, buf_err = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(buf_out), contextlib.redirect_stderr(buf_err):
             rc_ok = main(["--root", str(canonical), "--write-index"])
@@ -462,6 +497,7 @@ def selftest():
         for slug in ("alpha", "beta"):
             (canonical2 / slug).mkdir(parents=True)
             (canonical2 / slug / "progress.md").write_text(SAMPLE, encoding="utf-8")
+            (canonical2 / slug / "课程体系.md").write_text(CURRICULUM_SAMPLE, encoding="utf-8")
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
             main(["--root", str(canonical2), "--write-index"])
         cache2 = canonical2 / "index.json"

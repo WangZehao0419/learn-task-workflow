@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/1",
- "version": "9.1.0",
+ "version": "9.2.0",
  "files": [
   {
    "id": "triggers",
@@ -48,7 +48,7 @@
    "id": "s3-block",
    "path": "references/workflow/s3-block.md",
    "layer": 1,
-   "owns": "S3 循环体、逐块推进、S3 闸口、节末收尾",
+   "owns": "S3 循环体、逐目推进、S3 闸口、节末收尾",
    "depends_on": [
     "gates"
    ]
@@ -136,7 +136,7 @@
    "id": "handout-quality",
    "path": "references/handout/quality.md",
    "layer": 3,
-   "owns": "来源真实性、P1/P2、可读性、图像双轨、出厂自检、概念块呈现",
+   "owns": "来源真实性、P1/P2、可读性、图像双轨、出厂自检、分块呈现",
    "depends_on": [
     "handout-pipeline",
     "handout-templates",
@@ -181,16 +181,16 @@
    "id": "progress-schema",
    "path": "references/data/progress-schema.md",
    "layer": 1,
-   "owns": "progress 字段唯一事实源、复习调度字段、下次续学",
+   "owns": "progress 状态簿字段唯一事实源、复习调度字段、下次续学与目游标",
    "depends_on": [
     "data-layout"
    ]
   },
   {
-   "id": "lists",
-   "path": "references/data/lists.md",
+   "id": "curriculum",
+   "path": "references/data/curriculum.md",
    "layer": 1,
-   "owns": "知识清单文件、学习者画像",
+   "owns": "三簿分工、课程体系文件、记忆文件、学习者画像",
    "depends_on": [
     "data-layout"
    ]
@@ -199,7 +199,7 @@
    "id": "compatibility",
    "path": "references/data/compatibility.md",
    "layer": 1,
-   "owns": "字段向后兼容、稳定引用对账、零迁移、数据形态行为表、Trace",
+   "owns": "稳定引用对账、提交顺序、Trace",
    "depends_on": [
     "progress-schema"
    ]
@@ -304,7 +304,7 @@
  "rules": [
   {
    "id": "R1",
-   "owner": "references/workflow/s3-block.md#逐块推进（最细知识点）",
+   "owner": "references/workflow/s3-block.md#逐目推进（最细知识点）",
    "type": "definition",
    "scenes": [
     "s3-teach",
@@ -314,7 +314,7 @@
   },
   {
    "id": "R2",
-   "owner": "references/workflow/s3-block.md#逐块推进（最细知识点）",
+   "owner": "references/workflow/s3-block.md#逐目推进（最细知识点）",
    "type": "definition",
    "scenes": [
     "s3-teach",
@@ -739,7 +739,7 @@
   },
   {
    "id": "F13",
-   "owner": "references/data/lists.md#学习者画像（可选全局文件）",
+   "owner": "references/data/curriculum.md#学习者画像（可选全局文件）",
    "type": "definition",
    "scenes": [
     "s0-s2",
@@ -815,7 +815,7 @@
   },
   {
    "id": "R41",
-   "owner": "references/handout/quality.md#概念块与分块呈现（R41）",
+   "owner": "references/handout/quality.md#分块呈现（R41）",
    "type": "definition",
    "scenes": [
     "s3-handout"
@@ -925,10 +925,6 @@
    "理论概念类",
    "记忆密集类"
   ],
-  "teaching_strategies": [
-   "先测后教",
-   "先教后测"
-  ],
   "review_origin_phases": [
    "逐节学习",
    "结课",
@@ -1035,7 +1031,7 @@
    "l3_review_max": 5
   },
   "schemas": {
-   "index": "learn-task-index/5",
+   "index": "learn-task-index/6",
    "due_queue": "ltw-due-queue/3",
    "calibration": "ltw-calibration/3",
    "manifest": "2"
@@ -1319,7 +1315,7 @@
     "references/workflow/s0-s2-setup.md",
     "references/workflow/pacing.md",
     "references/data/layout.md",
-    "references/data/lists.md",
+    "references/data/curriculum.md",
     "references/subjects/common.md",
     "references/subjects/{family}.md"
    ]
@@ -1337,7 +1333,7 @@
   },
   "s3-handout": {
    "label": "S3 讲义生成",
-   "chars_max": 60000,
+   "chars_max": 64000,
    "files": [
     "references/workflow/s3-block.md",
     "references/teaching/explain-quality.md",
@@ -1390,7 +1386,7 @@
    "files": [
     "references/data/layout.md",
     "references/data/progress-schema.md",
-    "references/data/lists.md",
+    "references/data/curriculum.md",
     "references/ops/scripts.md"
    ],
    "chars_max": 30000
