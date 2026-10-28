@@ -37,7 +37,7 @@
 - **数据根基准** = 显式 `--root`（或 progress_check 的任务目录实参），不依赖脚本默认根。
 - **解释器**统一 `python`（仅有 `python3` 时等价替换）。
 - `task_index` / `progress_check` / `scheduler` / `kp_sort` / `prereq_check` 带 `--selftest`；`check_environment` / `verify_explanation` / `rule_contract` 也带 `--selftest`。
-- 契约文件固定为 `<技能根>/contracts/rules.json`；缺失/畸形 → 所有脚本 fail closed，报 `E-CONTRACT-MISSING` / `E-CONTRACT-INVALID`。
+- 契约文件固定为 `<技能根>/contracts/rules.json`；缺失/畸形 → 依赖契约的脚本一律 fail closed，报 `E-CONTRACT-MISSING` / `E-CONTRACT-INVALID`（`prereq_check`、`check_environment` 不读契约，不在其列）。
 
 ## 退出码与错误码
 
@@ -122,6 +122,8 @@ python -B scripts/rule_contract.py --topology
 python -B scripts/rule_contract.py --coverage
 python -B evals/verify-formula-typesetting.py
 python -B evals/verify-load-budget.py
+python -B evals/verify-marker-rules.py
+python -B evals/verify-readability.py
 ```
 
 `rule_contract --selftest` 覆盖契约缺失/空文件/非法 JSON/缺键/枚举重复；`--topology` 覆盖无加载指令、职责头齐全、指针可解析、声明依赖无环、旧文件名只在 alias 表；`--coverage` 在拓扑之上加场景覆盖（文件/规则挂场景、owner ∈ 场景、SKILL.md 场景表一致）。
@@ -136,6 +138,6 @@ python -B evals/verify-load-budget.py
 
 ## 当前核验
 
-- 适用版本：9.3.1
-- 核验日期：2026-10-28
+- 适用版本：9.3.2
+- 核验日期：2026-10-29
 - 环境依赖：`skill-dependencies.json`（Python `min_version`）；只有 `check_environment.py` 输出 `ready` 才能继续。
