@@ -11,3 +11,7 @@ outputs/
 
 .zcode/
 .screenshots/
+
+# 个人学习数据与临时脚本，不入库（含学员隐私，仓库在 GitHub 公开）
+review_inputs/
+.tmp_*.py

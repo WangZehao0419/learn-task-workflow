@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/1",
- "version": "9.2.0",
+ "version": "9.3.1",
  "files": [
   {
    "id": "triggers",
@@ -1130,7 +1130,9 @@
    "svg_line_min": 1.5,
    "overview_cols": 3,
    "overview_rows_min": 1,
-   "overview_rows_max": 3
+   "overview_rows_max": 3,
+   "prose_line_max_chars": 200,
+   "list_depth_max": 3
   },
   "scheduler": {
    "grade_base": {
@@ -1244,6 +1246,7 @@
     "W-KP-LIST-MISSING",
     "W-KP-STATE-MISMATCH",
     "W-KP-SUMMARY-MISMATCH",
+    "W-LEDGER-DRAFT",
     "W-MARKER-CONTENT",
     "W-MATERIAL-COVERAGE-GAP",
     "W-META-INVALID",
@@ -1261,9 +1264,11 @@
     "W-READER",
     "W-READER-ALT",
     "W-READER-CONCLUSION",
+    "W-READER-DEEPNEST",
     "W-READER-EMPHASIS",
     "W-READER-HEADING",
     "W-READER-INDEX",
+    "W-READER-LONGLINE",
     "W-READER-OVERVIEW",
     "W-READER-SVG",
     "W-READER-TABLE",

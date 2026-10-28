@@ -117,6 +117,14 @@ def main(argv=None) -> int:
         p = d / "assets" / Path(SVG_REL).name
         p.write_text(read(p).replace(' viewBox="0 0 640 240"', ""), encoding="utf-8")
 
+    def mut_long_line(d):
+        p = d / Path(SAMPLE_REL).name
+        p.write_text(read(p) + "这" * 260 + "\n", encoding="utf-8")
+
+    def mut_deep_nest(d):
+        p = d / Path(SAMPLE_REL).name
+        p.write_text(read(p) + "- 甲\n  - 乙\n    - 丙\n      - 丁\n", encoding="utf-8")
+
     def mut_bad_encoding(d):
         p = d / Path(SAMPLE_REL).name
         p.write_bytes(b"\xff\xfe\xfa")
@@ -128,6 +136,8 @@ def main(argv=None) -> int:
         ("图片 alt 变空", mut_empty_alt, "W-READER-ALT"),
         ("标题跳级", mut_heading_skip, "W-READER-HEADING"),
         ("SVG 缺 viewBox", mut_svg_viewbox, "W-READER-SVG"),
+        ("超长正文行", mut_long_line, "W-READER-LONGLINE"),
+        ("列表嵌套 4 层", mut_deep_nest, "W-READER-DEEPNEST"),
     )
     for name, fn, code in mutations:
         rc, out = run_mutation(root, fn)

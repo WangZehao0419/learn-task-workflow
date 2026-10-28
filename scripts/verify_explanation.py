@@ -83,10 +83,11 @@
    Markdown 图片语法 `![](<相对路径>)` 须指向真实文件,缺失报 E-IMG-DEADLINK;
    http(s)/data: 等外部地址与锚点不查。
 
-【规则表(13 类检查 / 29 个规则码;末组 W-READER-* 仅 --reader 启用)】
+【规则表(13 类检查 / 32 个规则码;末组 W-READER-* 仅 --reader 启用)】
 | 规则码           | 级 | 触发条件                                                            |
 |------------------|----|---------------------------------------------------------------------|
-| E-LEDGER-RESIDUE | E  | 定稿文件正文含判分记账状态行(「状态(…):已通过/关闭/讲授中」等);草稿不查 |
+| E-LEDGER-RESIDUE | E  | 定稿文件正文含判分记账状态行(「状态(…):已通过/关闭/讲授中」等) |
+| W-LEDGER-DRAFT   | W  | 草稿文件正文含台账状态行(同上形态)——学员会读草稿;证据移 progress.md/题组后删除 |
 | E-REQ-MISSING    | E  | 概念单元五要素缺失(单元级;纯概念标「③ 不适用」时②③ 豁免,①④⑤仍查;参照级标「③ 不适用(参照级)」时②③④⑤ 豁免,仅查①) |
 | W-UNICODE-CHAR   | W  | 讲义可见正文出现 denylist 字符(→ ✔ ✓ ✅ √ ≤ ≥ ∪ ⇔ ⇒)               |
 | E-BOX-FORMAT     | E  | 答案框内出现句中 ①–⑩ 分点编号 / → ⇒ 箭头 / ✓ ✔ ✅ 验算标记 / 讲解批注行(围栏代码块内不查;√ 视为根号,不算验算标记) |
@@ -115,6 +116,8 @@
 | W-READER-INDEX   | W  | 读者版 `## 回看索引` 缺「核心一句话/最容易错/下一步」;仅 `--reader`    |
 | W-READER-CONCLUSION | W | 启用 `## 本节速览` 时概念单元首行缺「一句话结论:」;纯概念/参照/L3 豁免;仅 `--reader` |
 | W-READER-EMPHASIS | W | 读者版连续两段普通段落都出现 ≥2 处加粗;仅 `--reader`              |
+| W-READER-LONGLINE | W | 读者版单条可见正文行超 200 字(公式/代码剥除后计长;标题/表格/引用/答案框/答案区豁免);仅 `--reader` |
+| W-READER-DEEPNEST | W | 读者版列表嵌套超过 3 层;仅 `--reader` |
 
 denylist 口径:任务点名字符(→ ✓ √ ≤ ≥ ∪ ⇔)及其同族验算/箭头标记(✔ ✅ ⇒);
 乘号「×」、全角「＝」等修辞/排版字符未纳入,避免误伤中文修辞用法。
@@ -530,7 +533,7 @@ def reader_checks(lines, doc, vis, fence, base_dir, box_rows, add):
     """读者版 P1 可读性检查(W 级,只在 --reader 时执行,不阻断旧讲义)。
 
     这里只查可静态判定的结构项:标题层级、表格、图片 alt/SVG、速览/回看索引、
-    概念首行一句话结论、段落强调。语义上的“是否更易读”仍归人工读者验证。
+    概念首行一句话结论、段落强调、超长正文行、列表嵌套。语义上的“是否更易读”仍归人工读者验证。
     """
     # 1. 标题层级不跳级
     prev = 0
@@ -666,6 +669,36 @@ def reader_checks(lines, doc, vis, fence, base_dir, box_rows, add):
                 "连续两段都用了加粗——只给术语首现/关键判断/易错点;术语密集段可例外,其余改普通文字")
         prev_emphasis = count >= 2
 
+    # 8. 超长正文行:一行塞多个逻辑层(vis 已剥公式与代码,长度即可读长度)
+    limit = READER["prose_line_max_chars"]
+    answer_ranges = doc["selftest"]
+    for i, ln in enumerate(lines):
+        if fence[i] or i in box_rows:
+            continue
+        if any(s <= i < e for s, e in answer_ranges):
+            continue
+        s = vis[i].strip()
+        if not s or s.startswith(("#", "|", ">")):
+            continue
+        if len(s) > limit:
+            add("W", "W-READER-LONGLINE", i,
+                "单行可见正文 {} 字——一行塞了多个逻辑层;按「一段一义」拆句拆段,"
+                "推导每步一行,台账/重复内容移出正文".format(len(s)))
+
+    # 9. 列表嵌套深度:>3 层扫读困难
+    depth_max = READER["list_depth_max"]
+    for i, ln in enumerate(lines):
+        if fence[i]:
+            continue
+        m = re.match(r"^(\s*)(?:[-*+]|\d+[.、)])\s", ln)
+        if not m:
+            continue
+        depth = len(m.group(1).expandtabs(4)) // 2 + 1
+        if depth > depth_max:
+            add("W", "W-READER-DEEPNEST", i,
+                "列表嵌套 {} 层——超过 {} 层扫读困难;提升层级或拆成小节".format(
+                    depth, depth_max))
+
 
 def check_text(text, rel, base_dir=None, reader=False):
     """校验单份讲义文本,返回 findings 列表(已按 文件→行号→规则码 排序)。
@@ -700,7 +733,7 @@ def check_text(text, rel, base_dir=None, reader=False):
     def in_ext(idx):
         return any(s <= idx < e for s, e in ext_ranges)
 
-    # ── 规则 1:定稿判分记账残留(草稿不查)──
+    # ── 规则 1:判分记账残留(定稿 E;草稿 W——学员会读草稿,台账行同样是噪音)──
     ledger_rows = set()
     for i, ln in enumerate(lines):
         if LEDGER_RE.search(ln) and LEDGER_WORD_RE.search(ln):
@@ -709,6 +742,10 @@ def check_text(text, rel, base_dir=None, reader=False):
                 add("E", "E-LEDGER-RESIDUE", i,
                     "定稿内判分记账残留(「状态(日期):已通过/关闭/讲授中」等状态行)——"
                     "历史证据移 exercises/ 与 progress.md,定稿须记账零残留")
+            else:
+                add("W", "W-LEDGER-DRAFT", i,
+                    "草稿内台账状态行——判分记账只留 progress.md 与题组文件,"
+                    "学员会读草稿;移交证据后删除本行")
 
     # ── 规则 2:概念单元五要素(单元级,不得全文件计数代替)──
     legacy_units = []
@@ -1709,9 +1746,11 @@ def selftest():
         len(codes(r, "E-LEDGER-RESIDUE")) == 1
         and codes(r, "E-LEDGER-RESIDUE")[0][3] == ledger_line)
 
-    # ③ 草稿不查记账
-    chk("草稿不报记账残留",
-        len(codes(check_text(FIX_LEDGER_DRAFT, "draft.md"), "E-LEDGER-RESIDUE")) == 0)
+    # ③ 草稿台账:W 提示,不报 E
+    r_draft = check_text(FIX_LEDGER_DRAFT, "draft.md")
+    chk("草稿台账行报 W-LEDGER-DRAFT 且不报 E-LEDGER-RESIDUE",
+        len(codes(r_draft, "W-LEDGER-DRAFT")) == 1
+        and len(codes(r_draft, "E-LEDGER-RESIDUE")) == 0)
 
     # ④ 概念单元级计数:两概念其一缺④只报该单元
     r = check_text(FIX_UNITS, "units.md")
@@ -1925,6 +1964,15 @@ def selftest():
     r = check_text(FIX_OK, "reader-missing.md", reader=True)
     chk("reader 缺本节速览报 W-READER-OVERVIEW",
         len(codes(r, "W-READER-OVERVIEW")) == 1)
+    r_long = check_text(_HEAD + _unit("> 解:一步。\n") + "这" * 260 + "\n",
+                        "longline.md", reader=True)
+    chk("reader 超长正文行报 W-READER-LONGLINE",
+        len(codes(r_long, "W-READER-LONGLINE")) == 1)
+    r_nest = check_text(_HEAD + _unit("> 解:一步。\n")
+                        + "- 甲\n  - 乙\n    - 丙\n      - 丁\n",
+                        "deepnest.md", reader=True)
+    chk("reader 列表嵌套 4 层报 W-READER-DEEPNEST",
+        len(codes(r_nest, "W-READER-DEEPNEST")) == 1)
 
     # ㉔ 退出码:0=无 E / 1=有 E / 2=用法或路径错误
     with tempfile.TemporaryDirectory() as td:

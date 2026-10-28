@@ -86,10 +86,10 @@
 | verify_explanation | `E-BOX` / `E-BOX-EMPTY` / `E-BOX-FORMAT` / `E-BOX-INCOMPLETE` / `E-BOX-WRAP` / `E-MARKER-LEGACY` / `E-HEADER-BRIEF` / `E-REQ-MISSING` | 五要素 / 答案框 / 标记行 / 节首导读缺失或体例错误 |
 | verify_explanation | `E-IMG-DEADLINK` / `E-IMG-READ` / `E-READ-FILE` | 图引用死链 / 图读取失败 / 文件读取失败 |
 | verify_explanation | `E-RUBRIC-SUM` | 给分点量表各点分值之和不等于合计 |
-| verify_explanation | `E-THIRD-CONFLICT` / `E-THIRD-EXEMPT-MISUSE` / `E-LEDGER-RESIDUE` / `W-RUBRIC-SOURCE` | ③ 不适用与 ③ 答案并存 / 豁免被滥用 / 定稿判分记账残留 / 给分点量表缺「官方/训练量表」声明 |
+| verify_explanation | `E-THIRD-CONFLICT` / `E-THIRD-EXEMPT-MISUSE` / `E-LEDGER-RESIDUE` / `W-LEDGER-DRAFT` / `W-RUBRIC-SOURCE` | ③ 不适用与 ③ 答案并存 / 豁免被滥用 / 定稿判分记账残留 / 草稿内台账状态行（学员会读草稿） / 给分点量表缺「官方/训练量表」声明 |
 | verify_explanation | `W-MARKER-CONTENT` / `W-STYLE-POINTER` / `W-UNICODE-CHAR` | 标记行带内容 / 头部复制规则正文 / Unicode denylist 字符；`W-UNICODE-CHAR` 定稿前必须清零 |
 | verify_explanation | `W-SELFTEST-MISSING` / `W-SELFTEST-EMPTY` | 自测/检验题面区缺同族答案区 / 答案区为空或占位 |
-| verify_explanation | `W-READER` / `W-READER-ALT` / `W-READER-CONCLUSION` / `W-READER-EMPHASIS` / `W-READER-HEADING` / `W-READER-INDEX` / `W-READER-OVERVIEW` / `W-READER-SVG` / `W-READER-TABLE` | `--reader` 结构项：标题 / 表格 / alt / SVG / 速览 / 回看索引 / 一句话结论 / 强调密度 |
+| verify_explanation | `W-READER` / `W-READER-ALT` / `W-READER-CONCLUSION` / `W-READER-DEEPNEST` / `W-READER-EMPHASIS` / `W-READER-HEADING` / `W-READER-INDEX` / `W-READER-LONGLINE` / `W-READER-OVERVIEW` / `W-READER-SVG` / `W-READER-TABLE` | `--reader` 结构项：标题 / 表格 / alt / SVG / 速览 / 回看索引 / 一句话结论 / 强调密度 / 超长正文行（>200 字） / 列表嵌套（>3 层） |
 | verify_explanation | `W-NO-TIER` | 讲义单元缺 tier 标签 |
 | rule_contract | `E-CONTRACT-MISSING` / `E-CONTRACT-INVALID` | 契约缺失 / 畸形 |
 | rule_contract | `E-TOPOLOGY-DAG` / `E-TOPOLOGY-DEADREF` / `E-TOPOLOGY-ERRORCODE` / `E-TOPOLOGY-FILE` / `E-TOPOLOGY-HEADER` / `E-TOPOLOGY-LEADWORDS` / `E-TOPOLOGY-LOAD` / `E-TOPOLOGY-MIRROR` / `E-TOPOLOGY-OLDNAME` / `E-TOPOLOGY-OWNER` / `E-TOPOLOGY-SCENES` / `E-TOPOLOGY-VERSION` | 依赖成环 / 引用未定义编号 / 未声明错误码 / 文件缺失 / 职责头缺失 / lead_words 双写漂移 / 加载指令 / 速查表覆盖缺口 / 旧文件名 / owner 锚点失效 / 场景覆盖缺口（文件未挂场景、规则未挂场景、owner 不在场景内、SKILL.md 场景表漂移） / 版本不一致 |
@@ -136,6 +136,6 @@ python -B evals/verify-load-budget.py
 
 ## 当前核验
 
-- 适用版本：9.2.0
+- 适用版本：9.3.1
 - 核验日期：2026-10-28
 - 环境依赖：`skill-dependencies.json`（Python `min_version`）；只有 `check_environment.py` 输出 `ready` 才能继续。
