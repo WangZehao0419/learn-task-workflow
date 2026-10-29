@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/1",
- "version": "9.3.2",
+ "version": "9.4.0",
  "files": [
   {
    "id": "triggers",
@@ -208,14 +208,14 @@
    "id": "subjects-common",
    "path": "references/subjects/common.md",
    "layer": 1,
-   "owns": "学科族总则、类比优先级、视觉任务来源、应试技巧包",
+   "owns": "学科族总则、学科族判档表、跨族处理、类比优先级、误区库消费纪律、视觉任务来源、对照源族联动、应试技巧包",
    "depends_on": []
   },
   {
    "id": "subjects-math",
    "path": "references/subjects/math.md",
    "layer": 1,
-   "owns": "该学科族教学差异",
+   "owns": "数学类判档、讲授侧重、类比库、题型阶梯、误区库、记号纪律、复习侧重、答案形态、备考侧重",
    "depends_on": [
     "subjects-common"
    ]
@@ -224,7 +224,7 @@
    "id": "subjects-programming",
    "path": "references/subjects/programming.md",
    "layer": 1,
-   "owns": "该学科族教学差异",
+   "owns": "编程类判档、讲授侧重（PRIMM/子目标标注）、类比库、题型阶梯、误区库、实跑纪律、复习侧重、答案形态、备考侧重",
    "depends_on": [
     "subjects-common"
    ]
@@ -233,7 +233,7 @@
    "id": "subjects-language",
    "path": "references/subjects/language.md",
    "layer": 1,
-   "owns": "该学科族教学差异",
+   "owns": "语言类（外语+母语语文）判档、讲授侧重（规则先行/POA/词汇分级）、零基础语言协议、类比库、题型阶梯、误区库、复习侧重、答案形态、备考侧重",
    "depends_on": [
     "subjects-common"
    ]
@@ -242,7 +242,7 @@
    "id": "subjects-theory",
    "path": "references/subjects/theory.md",
    "layer": 1,
-   "owns": "该学科族教学差异",
+   "owns": "理论概念类判档、讲授侧重（类比/反驳式呈现/案例）、类比库、题型阶梯、误区库、术语纪律、复习侧重、答案形态、备考侧重",
    "depends_on": [
     "subjects-common"
    ]
@@ -251,7 +251,7 @@
    "id": "subjects-memory",
    "path": "references/subjects/memory.md",
    "layer": 1,
-   "owns": "该学科族教学差异",
+   "owns": "记忆密集类判档、讲授侧重（框架先行/双编码/配对教法分界）、类比库、题型阶梯、误区库、复习侧重、答案形态、备考侧重",
    "depends_on": [
     "subjects-common"
    ]
@@ -1355,6 +1355,7 @@
     "references/assessment/generation.md",
     "references/assessment/scoring.md",
     "references/subjects/common.md",
+    "references/subjects/{family}.md",
     "references/ops/scripts.md"
    ]
   },
@@ -1372,7 +1373,8 @@
     "references/assessment/scheduling.md",
     "references/assessment/generation.md",
     "references/teaching/interaction.md",
-    "references/data/progress-schema.md"
+    "references/data/progress-schema.md",
+    "references/subjects/{family}.md"
    ]
   },
   "s5-close": {
