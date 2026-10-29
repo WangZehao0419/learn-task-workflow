@@ -1235,6 +1235,17 @@ def selftest():
         ok = ok and len(out_r["queue"]) == 1
         ok = ok and out_r["queue"][0]["kind"] == "保持"
         ok = ok and out_r["queue"][0]["reason"].startswith("保持复习")
+        # 断言 7c：calibration 输出 schema 与契约一致（ltw-calibration/4），
+        # 防止 schema 字符串在 rules.json 与 scripts-contract.json 之间再度漂移
+        (root_r / "slug-mix").mkdir()
+        (root_r / "slug-mix" / "progress.md").write_text(
+            FIX_R + "\n## 薄弱点\n- 某点（S=3.0，D=3，last=2026-10-19，"
+            "due=2026-10-20，信心=4，cw）\n", encoding="utf-8")
+        cal_out = calibration_output(root_r, "slug-mix")
+        ok = ok and cal_out["schema"] == _SCHEMAS["calibration"]
+        ok = ok and cal_out["schema"] == "ltw-calibration/4"
+        ok = ok and cal_out["per_slug"][0]["rate_valid"] is True
+        ok = ok and cal_out["per_slug"][0]["overconfidence_rate"] == 1.0
 
     # 断言 8：畸形输入 -> exit 2（不谎报成功）
     bad_calls = [

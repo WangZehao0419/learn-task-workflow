@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/1",
- "version": "9.6.0",
+ "version": "9.6.1",
  "files": [
   {
    "id": "triggers",
@@ -831,7 +831,7 @@
   },
   {
    "id": "R23",
-   "owner": "references/teaching/interaction.md#5.1 教学八动作",
+   "owner": "references/teaching/interaction.md#教学八动作",
    "type": "definition",
    "scenes": [
     "s3-teach",
@@ -840,7 +840,7 @@
   },
   {
    "id": "R24",
-   "owner": "references/teaching/presentation.md#2.4 风格切换映射",
+   "owner": "references/teaching/presentation.md#风格切换映射",
    "type": "definition",
    "scenes": [
     "s3-deep"
@@ -1289,7 +1289,7 @@
   "schemas": {
    "index": "learn-task-index/7",
    "due_queue": "ltw-due-queue/3",
-   "calibration": "ltw-calibration/3",
+   "calibration": "ltw-calibration/4",
    "manifest": "2"
   },
   "headings": {

@@ -126,6 +126,6 @@
 
 ## 版本号体系
 
-两层版本互不混淆：**包版本**（SKILL.md frontmatter `version`，以该字段为准）；**数据 schema 版本**（脚本输出 `schema` 键，如 `learn-task-index/6`、`ltw-due-queue/3`、`ltw-calibration/3`——加键不破坏消费方时 +1，消费方按存在性读取新键）。
+两层版本互不混淆：**包版本**（SKILL.md frontmatter `version`，以该字段为准）；**数据 schema 版本**（脚本输出 `schema` 键，如 `learn-task-index/7`、`ltw-due-queue/3`、`ltw-calibration/4`——加键不破坏消费方时 +1，消费方按存在性读取新键）。
 
 **升版规则**：major = 闸口通过线/对外契约行为变更（如 S5 测验通过线分型、数据布局重构）；minor = 向后兼容的机制新增（如新增告警码、可选字段）；patch = 修复与表述修正。包内不保留改动历史（零史纪律），版本演进仅以包版本号体现。

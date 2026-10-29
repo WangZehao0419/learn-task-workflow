@@ -10,7 +10,7 @@
     "2": "用法错误",
     "3": "枚举失败 scan_status=failed（不覆盖既有缓存）"
    },
-   "schema": "learn-task-index/6",
+   "schema": "learn-task-index/7",
    "notes": "scan_status=partial/failed 时任务集合不完整，调用方必须停止枚举/续学并修复数据后重跑，不得按部分结果继续；failed 时 task_count=null（未知≠0）；任务含 current_item/item_total（可选，来自「下次续学」的已讲到第 k/N 目，缺失为 null）与 route_count（来自课程体系.md 节路线勾选数，课程体系缺失为 null）；写缓存用同目录临时文件 + os.replace 原子替换，区分 written/unchanged/failed；--root 可省略（走默认根），路径存在但非目录 → 3（scan_status=failed），路径不存在 → 1"
   },
   {

@@ -20,7 +20,7 @@
           计 0 并向 stderr 出 W-UNPARSED-HOLD 告警）；暂缓口径 = hold_count − excluded_count；
           任务含 route_done/route_total（来自课程体系.md「学习路线」节行勾选，课程体系缺失为 null）与
           current_item/item_total（来自「下次续学」的已讲到第 k/N 目，缺失为 null）；
-          schema 为 learn-task-index/6，消费方按存在性读取新键（scan_status / scan_error /
+          schema 为 learn-task-index/7，消费方按存在性读取新键（scan_status / scan_error /
           current_item / item_total / route_done / route_total）。
     scan_status：ok（完整枚举、无不可读条目）/ partial（完整枚举但有不可读条目）/
                  failed（无法枚举——root 非目录或列目录失败；tasks 不可信，task_count 置 null，
