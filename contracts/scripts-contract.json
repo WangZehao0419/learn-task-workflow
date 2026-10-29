@@ -71,7 +71,7 @@
   },
   {
    "script": "rule_contract.py",
-   "usage": "--selftest | --topology | --get <dotted>",
+   "usage": "--selftest | --topology | --coverage | --get <dotted>",
    "default_behavior": "只读；加载并校验 contracts/rules.json，输出 JSON",
    "exit_codes": {
     "0": "正常/校验通过",
@@ -79,7 +79,7 @@
     "2": "用法错误"
    },
    "schema": "ltw-rules/1",
-   "notes": "契约唯一来源 contracts/rules.json；缺失/畸形报 E-CONTRACT-MISSING/E-CONTRACT-INVALID；--topology 检查无加载指令、职责头、owner 指针、依赖无环、旧文件名只在 alias 表、版本四方一致、全仓错误码 ⊆ 契约 errors、operations 速查表双向覆盖、lead_words 双写一致、T/F/R 编号引用必有定义"
+   "notes": "契约唯一来源 contracts/rules.json；缺失/畸形报 E-CONTRACT-MISSING/E-CONTRACT-INVALID；--topology 检查无加载指令、职责头、owner 指针、依赖无环、旧文件名只在 alias 表（含路径形式）、版本四方一致、全仓错误码 ⊆ 契约 errors、operations 速查表双向覆盖、lead_words 双写一致、T/F/R 编号引用必有定义；--coverage 另加场景覆盖与 SKILL.md 场景表一致性，其中 {group}/{discipline} 令牌按 constants.group_slugs/discipline_slugs 展开。"
   },
   {
    "script": "prereq_check.py",

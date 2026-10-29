@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/1",
- "version": "9.4.0",
+ "version": "9.5.0",
  "files": [
   {
    "id": "triggers",
@@ -208,50 +208,365 @@
    "id": "subjects-common",
    "path": "references/subjects/common.md",
    "layer": 1,
-   "owns": "学科族总则、学科族判档表、跨族处理、类比优先级、误区库消费纪律、视觉任务来源、对照源族联动、应试技巧包",
+   "owns": "三轴分层与取用顺序、学科→学科群判定表、学科包准入判据、跨群裁决、掌握深度标尺（SOLO/DOK/Bloom）、误区库消费纪律、类比优先级、视觉任务来源、应试技巧包",
    "depends_on": []
   },
   {
-   "id": "subjects-math",
-   "path": "references/subjects/math.md",
+   "id": "subjects-math-plan",
+   "path": "references/subjects/math-plan.md",
    "layer": 1,
-   "owns": "数学类判档、讲授侧重、类比库、题型阶梯、误区库、记号纪律、复习侧重、答案形态、备考侧重",
+   "owns": "数学与统计群：群边界与借用、内容结构与前置链、目标深度锚点、排期侧重",
    "depends_on": [
     "subjects-common"
    ]
   },
   {
-   "id": "subjects-programming",
-   "path": "references/subjects/programming.md",
+   "id": "subjects-math-teach",
+   "path": "references/subjects/math-teach.md",
    "layer": 1,
-   "owns": "编程类判档、讲授侧重（PRIMM/子目标标注）、类比库、题型阶梯、误区库、实跑纪律、复习侧重、答案形态、备考侧重",
+   "owns": "数学与统计群：六拍内群差异、学科思维实践、表征体系、类比库、记号与术语纪律、标准流程示范",
    "depends_on": [
     "subjects-common"
    ]
   },
   {
-   "id": "subjects-language",
-   "path": "references/subjects/language.md",
+   "id": "subjects-math-practice",
+   "path": "references/subjects/math-practice.md",
    "layer": 1,
-   "owns": "语言类（外语+母语语文）判档、讲授侧重（规则先行/POA/词汇分级）、零基础语言协议、类比库、题型阶梯、误区库、复习侧重、答案形态、备考侧重",
+   "owns": "数学与统计群：题型阶梯、群级共享误区库、判定题构造、答案形态与最小单元、视觉任务、给分点结构",
    "depends_on": [
     "subjects-common"
    ]
   },
   {
-   "id": "subjects-theory",
-   "path": "references/subjects/theory.md",
+   "id": "subjects-math-review",
+   "path": "references/subjects/math-review.md",
    "layer": 1,
-   "owns": "理论概念类判档、讲授侧重（类比/反驳式呈现/案例）、类比库、题型阶梯、误区库、术语纪律、复习侧重、答案形态、备考侧重",
+   "owns": "数学与统计群：复习形态与间隔侧重、错因分流与纠错脚本、冲刺侧重",
    "depends_on": [
     "subjects-common"
    ]
   },
   {
-   "id": "subjects-memory",
-   "path": "references/subjects/memory.md",
+   "id": "subjects-science-plan",
+   "path": "references/subjects/science-plan.md",
    "layer": 1,
-   "owns": "记忆密集类判档、讲授侧重（框架先行/双编码/配对教法分界）、类比库、题型阶梯、误区库、复习侧重、答案形态、备考侧重",
+   "owns": "实验科学群：群边界与借用、内容结构与前置链、目标深度锚点、排期侧重",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "subjects-science-teach",
+   "path": "references/subjects/science-teach.md",
+   "layer": 1,
+   "owns": "实验科学群：六拍内群差异、学科思维实践、表征体系、类比库、记号与术语纪律、标准流程示范",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "subjects-science-practice",
+   "path": "references/subjects/science-practice.md",
+   "layer": 1,
+   "owns": "实验科学群：题型阶梯、群级共享误区库、判定题构造、答案形态与最小单元、视觉任务、给分点结构",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "subjects-science-review",
+   "path": "references/subjects/science-review.md",
+   "layer": 1,
+   "owns": "实验科学群：复习形态与间隔侧重、错因分流与纠错脚本、冲刺侧重",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "subjects-language-plan",
+   "path": "references/subjects/language-plan.md",
+   "layer": 1,
+   "owns": "语言群：群边界与借用、内容结构与前置链、目标深度锚点、排期侧重",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "subjects-language-teach",
+   "path": "references/subjects/language-teach.md",
+   "layer": 1,
+   "owns": "语言群：六拍内群差异、学科思维实践、表征体系、类比库、记号与术语纪律、标准流程示范",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "subjects-language-practice",
+   "path": "references/subjects/language-practice.md",
+   "layer": 1,
+   "owns": "语言群：题型阶梯、群级共享误区库、判定题构造、答案形态与最小单元、视觉任务、给分点结构",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "subjects-language-review",
+   "path": "references/subjects/language-review.md",
+   "layer": 1,
+   "owns": "语言群：复习形态与间隔侧重、错因分流与纠错脚本、冲刺侧重",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "subjects-computing-plan",
+   "path": "references/subjects/computing-plan.md",
+   "layer": 1,
+   "owns": "计算与技术群：群边界与借用、内容结构与前置链、目标深度锚点、排期侧重",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "subjects-computing-teach",
+   "path": "references/subjects/computing-teach.md",
+   "layer": 1,
+   "owns": "计算与技术群：六拍内群差异、学科思维实践、表征体系、类比库、记号与术语纪律、标准流程示范",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "subjects-computing-practice",
+   "path": "references/subjects/computing-practice.md",
+   "layer": 1,
+   "owns": "计算与技术群：题型阶梯、群级共享误区库、判定题构造、答案形态与最小单元、视觉任务、给分点结构",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "subjects-computing-review",
+   "path": "references/subjects/computing-review.md",
+   "layer": 1,
+   "owns": "计算与技术群：复习形态与间隔侧重、错因分流与纠错脚本、冲刺侧重",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "subjects-humanities-plan",
+   "path": "references/subjects/humanities-plan.md",
+   "layer": 1,
+   "owns": "人文社科群：群边界与借用、内容结构与前置链、目标深度锚点、排期侧重",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "subjects-humanities-teach",
+   "path": "references/subjects/humanities-teach.md",
+   "layer": 1,
+   "owns": "人文社科群：六拍内群差异、学科思维实践、表征体系、类比库、记号与术语纪律、标准流程示范",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "subjects-humanities-practice",
+   "path": "references/subjects/humanities-practice.md",
+   "layer": 1,
+   "owns": "人文社科群：题型阶梯、群级共享误区库、判定题构造、答案形态与最小单元、视觉任务、给分点结构",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "subjects-humanities-review",
+   "path": "references/subjects/humanities-review.md",
+   "layer": 1,
+   "owns": "人文社科群：复习形态与间隔侧重、错因分流与纠错脚本、冲刺侧重",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "subjects-medicine-plan",
+   "path": "references/subjects/medicine-plan.md",
+   "layer": 1,
+   "owns": "医学与健康群：群边界与借用、内容结构与前置链、目标深度锚点、排期侧重",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "subjects-medicine-teach",
+   "path": "references/subjects/medicine-teach.md",
+   "layer": 1,
+   "owns": "医学与健康群：六拍内群差异、学科思维实践、表征体系、类比库、记号与术语纪律、标准流程示范",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "subjects-medicine-practice",
+   "path": "references/subjects/medicine-practice.md",
+   "layer": 1,
+   "owns": "医学与健康群：题型阶梯、群级共享误区库、判定题构造、答案形态与最小单元、视觉任务、给分点结构",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "subjects-medicine-review",
+   "path": "references/subjects/medicine-review.md",
+   "layer": 1,
+   "owns": "医学与健康群：复习形态与间隔侧重、错因分流与纠错脚本、冲刺侧重",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "subjects-skill-plan",
+   "path": "references/subjects/skill-plan.md",
+   "layer": 1,
+   "owns": "艺术与技能群：群边界与借用、内容结构与前置链、目标深度锚点、排期侧重",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "subjects-skill-teach",
+   "path": "references/subjects/skill-teach.md",
+   "layer": 1,
+   "owns": "艺术与技能群：六拍内群差异、学科思维实践、表征体系、类比库、记号与术语纪律、标准流程示范",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "subjects-skill-practice",
+   "path": "references/subjects/skill-practice.md",
+   "layer": 1,
+   "owns": "艺术与技能群：题型阶梯、群级共享误区库、判定题构造、答案形态与最小单元、视觉任务、给分点结构",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "subjects-skill-review",
+   "path": "references/subjects/skill-review.md",
+   "layer": 1,
+   "owns": "艺术与技能群：复习形态与间隔侧重、错因分流与纠错脚本、冲刺侧重",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "discipline-calculus",
+   "path": "references/disciplines/calculus.md",
+   "layer": 1,
+   "owns": "高等数学内容结构、导数两条路、APOS 阶段、级数判据、微积分误区库",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "discipline-physics",
+   "path": "references/disciplines/physics.md",
+   "layer": 1,
+   "owns": "物理内容结构、多重表征、量纲追踪、FCI 类力学与电学误区库",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "discipline-chemistry",
+   "path": "references/disciplines/chemistry.md",
+   "layer": 1,
+   "owns": "化学三重表征、概念题与算法题分界、方程式规范、化学误区库",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "discipline-biology",
+   "path": "references/disciplines/biology.md",
+   "layer": 1,
+   "owns": "生物大概念骨架、尺度切换、进化误区专项、生物误区库",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "discipline-geography",
+   "path": "references/disciplines/geography.md",
+   "layer": 1,
+   "owns": "地理空间表征、等值线判读、季节成因误区、反馈环与深时",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "discipline-chinese",
+   "path": "references/disciplines/chinese.md",
+   "layer": 1,
+   "owns": "母语文阅读分层、SRSD 写作、文言实词句式、中文分级声明",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "discipline-english",
+   "path": "references/disciplines/english.md",
+   "layer": 1,
+   "owns": "英语四维定档、词汇覆盖率档位、语法三阶梯、英语误区库",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "discipline-computing-theory",
+   "path": "references/disciplines/computing-theory.md",
+   "layer": 1,
+   "owns": "计算机理论与算法机制讲法、手推优先、权衡表达、理论误区库",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "discipline-history",
+   "path": "references/disciplines/history.md",
+   "layer": 1,
+   "owns": "史料三启发式、三层因果、历史思维误区库",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "discipline-law",
+   "path": "references/disciplines/law.md",
+   "layer": 1,
+   "owns": "请求权基础检索、要件对照、法学误区库",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "discipline-medicine",
+   "path": "references/disciplines/medicine.md",
+   "layer": 1,
+   "owns": "疾病脚本模板、认知偏误清单与去偏边界、七段病例结构",
+   "depends_on": [
+    "subjects-common"
+   ]
+  },
+  {
+   "id": "discipline-economics-psychology",
+   "path": "references/disciplines/economics-psychology.md",
+   "layer": 1,
+   "owns": "直觉陷阱教学、边际思维、大众心理学谬误库",
    "depends_on": [
     "subjects-common"
    ]
@@ -296,6 +611,15 @@
    "path": "references/teaching/explain-quality.md",
    "layer": 1,
    "owns": "元方法教学（T12/R44）、预判误区清单（R42）、智能变式一次一维（R43）、每步检查理解（R45）、依据句模板、示例设计红线",
+   "depends_on": [
+    "lesson-flow"
+   ]
+  },
+  {
+   "id": "content-types",
+   "path": "references/teaching/content-types.md",
+   "layer": 1,
+   "owns": "记忆/概念/程序/设计四类内容类型处方、撤架判据、动作技能能力边界",
    "depends_on": [
     "lesson-flow"
    ]
@@ -900,7 +1224,12 @@
   "failure.md": "references/ops/failure.md",
   "evidence.md": "references/ops/evidence.md",
   "formulas.md": "references/ops/formulas.md",
-  "composition.md": "references/ops/composition.md"
+  "composition.md": "references/ops/composition.md",
+  "math.md": "references/subjects/math-practice.md",
+  "programming.md": "references/subjects/computing-practice.md",
+  "language.md": "references/subjects/language-practice.md",
+  "theory.md": "references/subjects/humanities-practice.md",
+  "memory.md": "references/subjects/science-practice.md"
  },
  "constants": {
   "phases": [
@@ -919,11 +1248,13 @@
    "材料型"
   ],
   "subject_families": [
-   "数学类",
-   "编程类",
-   "语言类",
-   "理论概念类",
-   "记忆密集类"
+   "数学与统计",
+   "实验科学",
+   "语言",
+   "计算与技术",
+   "人文社科",
+   "医学与健康",
+   "艺术与技能"
   ],
   "review_origin_phases": [
    "逐节学习",
@@ -1292,7 +1623,30 @@
   "scenes_budget": {
    "files_max": 7,
    "chars_max": 34000
-  }
+  },
+  "group_slugs": {
+   "数学与统计": "math",
+   "实验科学": "science",
+   "语言": "language",
+   "计算与技术": "computing",
+   "人文社科": "humanities",
+   "医学与健康": "medicine",
+   "艺术与技能": "skill"
+  },
+  "discipline_slugs": [
+   "calculus",
+   "physics",
+   "chemistry",
+   "biology",
+   "geography",
+   "chinese",
+   "english",
+   "computing-theory",
+   "history",
+   "law",
+   "medicine",
+   "economics-psychology"
+  ]
  },
  "scenes": {
   "entry": {
@@ -1322,7 +1676,7 @@
     "references/data/layout.md",
     "references/data/curriculum.md",
     "references/subjects/common.md",
-    "references/subjects/{family}.md"
+    "references/subjects/{group}-plan.md"
    ]
   },
   "s3-teach": {
@@ -1332,20 +1686,22 @@
     "references/teaching/lesson-flow.md",
     "references/teaching/interaction.md",
     "references/teaching/explain-quality.md",
+    "references/teaching/content-types.md",
     "references/assessment/scoring.md",
-    "references/subjects/{family}.md"
+    "references/subjects/{group}-teach.md"
    ]
   },
   "s3-handout": {
    "label": "S3 讲义生成",
-   "chars_max": 64000,
+   "chars_max": 66000,
    "files": [
     "references/workflow/s3-block.md",
     "references/teaching/explain-quality.md",
     "references/handout/pipeline.md",
     "references/handout/templates.md",
     "references/handout/quality.md",
-    "references/ops/scripts.md"
+    "references/ops/scripts.md",
+    "references/subjects/{group}-practice.md"
    ]
   },
   "s3-exercise": {
@@ -1354,8 +1710,9 @@
     "references/workflow/s3-block.md",
     "references/assessment/generation.md",
     "references/assessment/scoring.md",
+    "references/teaching/content-types.md",
     "references/subjects/common.md",
-    "references/subjects/{family}.md",
+    "references/subjects/{group}-practice.md",
     "references/ops/scripts.md"
    ]
   },
@@ -1374,7 +1731,8 @@
     "references/assessment/generation.md",
     "references/teaching/interaction.md",
     "references/data/progress-schema.md",
-    "references/subjects/{family}.md"
+    "references/subjects/common.md",
+    "references/subjects/{group}-review.md"
    ]
   },
   "s5-close": {
@@ -1385,7 +1743,8 @@
     "references/assessment/scoring.md",
     "references/assessment/generation.md",
     "references/handout/quality.md",
-    "references/data/compatibility.md"
+    "references/data/compatibility.md",
+    "references/subjects/common.md"
    ]
   },
   "persist": {
@@ -1420,6 +1779,13 @@
    "label": "跨机制组合",
    "files": [
     "references/ops/composition.md"
+   ]
+  },
+  "discipline": {
+   "label": "学科内容包（按学科叠加）",
+   "chars_max": 6000,
+   "files": [
+    "references/disciplines/{discipline}.md"
    ]
   }
  }

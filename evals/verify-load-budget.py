@@ -13,36 +13,56 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 from rule_contract import (  # noqa: E402
-    FAMILY_TOKEN, load, skill_root, _subject_family_files, _expand_files)
+    TOKEN_KEYS, _token_names, load, skill_root)
+
+
+def _size(p: Path) -> int:
+    return len(p.read_text(encoding="utf-8", errors="replace")) if p.exists() else 0
 
 
 def scene_stats(root: Path, data: dict) -> list:
-    family_files = _subject_family_files(data["files"])
-    family_sizes = {}
-    for f in family_files:
-        p = root / f
-        family_sizes[f] = len(p.read_text(encoding="utf-8", errors="replace")) if p.exists() else 0
-
+    token_names = _token_names(data)
     budget = data["constants"]["scenes_budget"]
     rows = []
     for sid, sc in data["scenes"].items():
-        # 运行时口径：{family} 只载当前任务的一个族文件 → 文件数记 1、字符取族文件最大值
-        static = [f for f in sc["files"] if FAMILY_TOKEN not in f]
-        has_family = len(static) != len(sc["files"])
-        n_files = len(static) + (1 if has_family else 0)
-        chars = 0
-        missing = []
+        static, tpls = [], []
+        for f in sc["files"]:
+            toks = [t for t in TOKEN_KEYS if t in f]
+            if toks:
+                tpls.append((f, toks))
+            else:
+                static.append(f)
+
+        n_files = len(static)
+        chars, missing, issues = 0, [], []
         for f in static:
             p = root / f
             if p.exists():
-                chars += len(p.read_text(encoding="utf-8", errors="replace"))
+                chars += _size(p)
             else:
                 missing.append(f)
-        if has_family:
-            if family_sizes and max(family_sizes.values()) > 0:
-                chars += max(family_sizes.values())
-            else:
-                missing.extend(family_files)
+
+        toks_used = {t for _, ts in tpls for t in ts}
+        if len(toks_used) > 1:
+            issues.append("E-LOAD-BUDGET: 场景 %s 同时使用多个令牌 %s"
+                          % (sid, sorted(toks_used)))
+        elif toks_used:
+            tok = next(iter(toks_used))
+            n_files += len(tpls)
+            # 同一场景里同令牌的多条模板：按「同一实例求和、跨实例取最大」计
+            per_name = []
+            for name in token_names[tok]:
+                total = 0
+                for tpl, _ in tpls:
+                    path = tpl.replace(tok, name)
+                    p = root / path
+                    if p.exists():
+                        total += _size(p)
+                    else:
+                        missing.append(path)
+                per_name.append(total)
+            chars += max(per_name) if per_name else 0
+
         files_max = budget.get("files_max")
         chars_max = sc.get("chars_max", budget.get("chars_max"))
         over_files = files_max is not None and n_files > files_max
@@ -55,6 +75,7 @@ def scene_stats(root: Path, data: dict) -> list:
             "over_files": over_files,
             "over_chars": over_chars,
             "missing": missing,
+            "issues": issues,
         })
     return rows
 
@@ -73,6 +94,7 @@ def main(argv=None) -> int:
     rows = scene_stats(root, data)
     issues = []
     for r in rows:
+        issues.extend(r["issues"])
         if r["missing"]:
             issues.append("E-LOAD-BUDGET: 场景 %s 文件缺失 %s" % (r["scene"], r["missing"]))
         if r["over_files"]:

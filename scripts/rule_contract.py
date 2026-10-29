@@ -22,7 +22,7 @@ from pathlib import Path
 SCHEMA = "ltw-rules/1"
 REQUIRED_TOP = ("schema", "version", "files", "rules", "path_aliases", "constants", "scenes")
 REQUIRED_CONST = (
-    "phases", "types", "subject_families",
+    "phases", "types", "subject_families", "group_slugs", "discipline_slugs",
     "review_origin_phases", "grading", "kp", "gates", "restatement",
     "budget", "schemas", "headings", "scheduler", "errors",
 )
@@ -38,8 +38,8 @@ SCAN_GLOBS = (
     "contracts/scripts-contract.json",
     "SKILL.md",
 )
-FAMILY_TOKEN = "{family}"
-SUBJECT_DIR = "references/subjects/"
+# 场景文件表里的展开令牌 → 契约常量键。每个令牌展开为「同名文件的一组实例」。
+TOKEN_KEYS = {"{group}": "group_slugs", "{discipline}": "discipline_slugs"}
 
 
 class ContractError(ValueError):
@@ -139,6 +139,22 @@ def validate(data: dict) -> dict:
     for key in ("phases", "types", "subject_families", "review_origin_phases"):
         _require(isinstance(c[key], list) and c[key], "E-CONTRACT-INVALID", "%s 必须是非空数组" % key)
         _require(not _dup(c[key]), "E-CONTRACT-INVALID", "%s 有重复值：%s" % (key, _dup(c[key])))
+
+    gs = c["group_slugs"]
+    _require(isinstance(gs, dict) and gs, "E-CONTRACT-INVALID", "group_slugs 必须是非空对象")
+    for gk, gv in gs.items():
+        _require(isinstance(gv, str) and gv, "E-CONTRACT-INVALID",
+                 "group_slugs.%s 必须是非空字符串" % gk)
+    _require(not _dup(list(gs.values())), "E-CONTRACT-INVALID", "group_slugs 值有重复")
+    _require(set(gs) == set(c["subject_families"]), "E-CONTRACT-INVALID",
+             "group_slugs 键集必须与 subject_families 一致")
+
+    ds = c["discipline_slugs"]
+    _require(isinstance(ds, list) and ds, "E-CONTRACT-INVALID", "discipline_slugs 必须是非空数组")
+    for dv in ds:
+        _require(isinstance(dv, str) and dv, "E-CONTRACT-INVALID",
+                 "discipline_slugs 条目必须是非空字符串")
+    _require(not _dup(ds), "E-CONTRACT-INVALID", "discipline_slugs 有重复值：%s" % _dup(ds))
 
     g = c["grading"]
     _require(isinstance(g.get("values"), list) and len(g["values"]) == 4,
@@ -336,37 +352,45 @@ def check_number_refs(rule_ids: set, texts: list) -> list:
     return issues
 
 
-def _subject_family_files(files: list) -> list:
-    """从 files[] 取学科族文件（subjects/ 下除 common 外），供 {family} 令牌展开。"""
-    fams = []
-    for f in files:
-        p = f["path"]
-        if p.startswith(SUBJECT_DIR) and p != SUBJECT_DIR + "common.md":
-            fams.append(p)
-    return sorted(fams)
+def _token_names(data: dict) -> dict:
+    """令牌 → 名字列表。{group} 取 group_slugs 的值，{discipline} 取 discipline_slugs。"""
+    c = data["constants"]
+    slugs = c["group_slugs"]
+    return {
+        "{group}": list(slugs.values()) if isinstance(slugs, dict) else list(slugs),
+        "{discipline}": list(c["discipline_slugs"]),
+    }
 
 
-def _expand_files(files_list: list, family_files: list) -> list:
+def _expand_files(files_list: list, token_names: dict) -> list:
+    """把场景文件表里的令牌展开成具体路径；同一路径出现两个令牌属设计错误，此处跳过。"""
     out = []
     for f in files_list:
-        if FAMILY_TOKEN in f:
-            if not family_files:
-                continue
-            out.extend(f.replace(FAMILY_TOKEN, Path(p).stem) for p in family_files)
-        else:
+        toks = [t for t in TOKEN_KEYS if t in f]
+        if not toks:
             out.append(f)
+            continue
+        if len(toks) > 1:
+            continue
+        out.extend(f.replace(toks[0], n) for n in token_names[toks[0]])
     return out
 
 
 def check_scenes(data: dict, root: Path) -> tuple[list, dict]:
     """E-TOPOLOGY-SCENES：场景注册表、规则覆盖与文件覆盖的一致性。"""
     issues = []
-    family_files = _subject_family_files(data["files"])
-    if not family_files:
-        issues.append("E-TOPOLOGY-SCENES: files[] 未登记任何学科族文件")
+    token_names = _token_names(data)
+    for tok, names in token_names.items():
+        if not names:
+            issues.append("E-TOPOLOGY-SCENES: 令牌 %s 展开为空" % tok)
     expanded = {}
     for sid, sc in data["scenes"].items():
-        files = _expand_files(sc["files"], family_files)
+        toks = {t for f in sc["files"] for t in TOKEN_KEYS if t in f}
+        if len(toks) > 1:
+            issues.append("E-TOPOLOGY-SCENES: 场景 %s 同时使用多个令牌 %s"
+                          % (sid, sorted(toks)))
+            continue
+        files = _expand_files(sc["files"], token_names)
         for f in files:
             if not (root / f).exists():
                 issues.append("E-TOPOLOGY-SCENES: 场景 %s 文件不存在 %s" % (sid, f))
@@ -392,7 +416,7 @@ def check_scenes(data: dict, root: Path) -> tuple[list, dict]:
 def check_load_table(root: Path, data: dict, expanded: dict) -> list:
     """SKILL.md 加载场景表与契约 scenes 一致（E-TOPOLOGY-SCENES）。"""
     issues = []
-    family_files = _subject_family_files(data["files"])
+    token_names = _token_names(data)
     text = (root / "SKILL.md").read_text(encoding="utf-8", errors="replace")
     rows = {}
     for ln in text.splitlines():
@@ -400,7 +424,7 @@ def check_load_table(root: Path, data: dict, expanded: dict) -> list:
         if not m:
             continue
         rows[m.group(1)] = set(_expand_files(
-            re.findall(r"`(references/[^`]+)`", ln), family_files))
+            re.findall(r"`(references/[^`]+)`", ln), token_names))
     for sid in data["scenes"]:
         if sid not in rows:
             issues.append("E-TOPOLOGY-SCENES: SKILL.md 场景表缺行 %s" % sid)
@@ -451,10 +475,18 @@ def topology(path: Path | None = None) -> dict:
         # 2. 职责头
         if "<!-- owns:" not in text or "must-not-define:" not in text:
             issues.append("E-TOPOLOGY-HEADER: %s 缺 owns/must-not-define" % f["path"])
-        # 3. 旧文件名只允许出现在 alias 表（路径成分豁免：ops/failure.md 不算含 failure.md）
+        # 3. 旧文件名只允许出现在 alias 表。连字符复合词豁免（computing-theory.md 不算
+        #    含 theory.md）；带路径的写法只要不指向现行文件，就算陈旧指针。
+        registered = {x["path"] for x in data["files"]}
         for old in data["path_aliases"]:
-            if re.search(r"(?<![\w/])" + re.escape(old), text):
-                issues.append("E-TOPOLOGY-OLDNAME: %s 含旧文件名 %s" % (f["path"], old))
+            pat = re.compile(r"(?<![\w-])(?:[\w.-]+/)*" + re.escape(old))
+            for m in pat.finditer(text):
+                hit = m.group(0)
+                if hit in registered or ("references/" + hit) in registered:
+                    continue
+                issues.append("E-TOPOLOGY-OLDNAME: %s 含旧文件名 %s（%s）"
+                              % (f["path"], old, hit))
+                break
 
     # 4. 规则 owner 可解析
     for r in data["rules"]:
@@ -711,6 +743,53 @@ def _selftest() -> int:
         assert any("R1" in i for i in issues), issues
 
     chk("coverage missing scene detected", cov_missing_scene)
+
+    def group_slugs_mismatch():
+        d = json.loads(default_path().read_text(encoding="utf-8"))
+        d["constants"]["group_slugs"].pop(next(iter(d["constants"]["group_slugs"])))
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as f:
+            json.dump(d, f, ensure_ascii=False)
+            p = Path(f.name)
+        try:
+            load(p)
+        except ContractError as e:
+            assert e.code == "E-CONTRACT-INVALID" and "group_slugs" in e.message, e.message
+            return
+        finally:
+            p.unlink(missing_ok=True)
+        raise AssertionError("group_slugs key drift not caught")
+
+    chk("group_slugs key drift detected", group_slugs_mismatch)
+
+    def discipline_slugs_dup():
+        d = json.loads(default_path().read_text(encoding="utf-8"))
+        d["constants"]["discipline_slugs"].append(d["constants"]["discipline_slugs"][0])
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as f:
+            json.dump(d, f, ensure_ascii=False)
+            p = Path(f.name)
+        try:
+            load(p)
+        except ContractError as e:
+            assert e.code == "E-CONTRACT-INVALID" and "discipline_slugs" in e.message, e.message
+            return
+        finally:
+            p.unlink(missing_ok=True)
+        raise AssertionError("discipline_slugs duplicate not caught")
+
+    chk("discipline_slugs duplicate detected", discipline_slugs_dup)
+
+    def token_expand():
+        d = load()
+        names = _token_names(d)
+        got = _expand_files(["a/{group}-teach.md"], names)
+        assert len(got) == len(d["constants"]["subject_families"]), got
+        assert "a/math-teach.md" in got, got
+        got2 = _expand_files(["b/{discipline}.md"], names)
+        assert len(got2) == len(d["constants"]["discipline_slugs"]), got2
+        assert "b/calculus.md" in got2, got2
+        assert _expand_files(["c/common.md"], names) == ["c/common.md"]
+
+    chk("token expansion", token_expand)
 
     def loadtable_drift():
         root = skill_root()

@@ -1,7 +1,7 @@
 ---
 name: learn-task-workflow
-description: 私人家教工作流：把系统学习需求跑成带硬闸口、进度落盘、跨会话可续学的任务流，含间隔重复与掌握后保持复习、判分四态与作废申诉、KP 分型验收与课程体系契约（章/节/目三级规划）、条件化出题四步流水线与讲义生成、错因归因纠偏、按学科族分流教学（单节课六拍：先教后练，永不先测未讲内容），新手先看完整示例再做题、新记号当场讲透；支持独立生成学习用讲义/题组/试卷。以「系统学习」意图触发：「我要学X」「教我X」「带我学X」「带我读X」「精读X」「帮我啃X」「从零开始学X」「零基础学X」「备考X」「我要考研/考证」「家教模式」「开始上课」「继续学习」「接着上次继续学」「调整学习计划」「我的学习进度」「学到哪了」「学习简报」「学习周报」「考考我」「给X写讲义」「给X出题」「组一套卷」。不触发：普通知识问答、单题解题求助（如「这道题怎么做」）、代写作业/文章/报告、单纯总结材料（归 summarize）、主题调研写文档（归 research）、课程仓库脚手架（归 scaffold-exercises）、只要学习建议或只要计划文档；「教我X」「帮我复习X」「考考我」等高频词必须指向系统学习意图或已有学习任务，否则先澄清。宿主另有独立教学工作区或正式文档排版能力时，用户显式调用则让位，二者勿同时启动。
-version: 9.4.0
+description: 私人家教工作流：把系统学习需求跑成带硬闸口、进度落盘、跨会话可续学的任务流，含间隔重复与掌握后保持复习、判分四态与作废申诉、KP 分型验收与课程体系契约（章/节/目三级规划）、条件化出题四步流水线与讲义生成、错因归因纠偏、按内容类型与学科群分流教学（单节课六拍：先教后练，永不先测未讲内容），新手先看完整示例再做题、新记号当场讲透；支持独立生成学习用讲义/题组/试卷。以「系统学习」意图触发：「我要学X」「教我X」「带我学X」「带我读X」「精读X」「帮我啃X」「从零开始学X」「零基础学X」「备考X」「我要考研/考证」「家教模式」「开始上课」「继续学习」「接着上次继续学」「调整学习计划」「我的学习进度」「学到哪了」「学习简报」「学习周报」「考考我」「给X写讲义」「给X出题」「组一套卷」。不触发：普通知识问答、单题解题求助（如「这道题怎么做」）、代写作业/文章/报告、单纯总结材料（归 summarize）、主题调研写文档（归 research）、课程仓库脚手架（归 scaffold-exercises）、只要学习建议或只要计划文档；「教我X」「帮我复习X」「考考我」等高频词必须指向系统学习意图或已有学习任务，否则先澄清。宿主另有独立教学工作区或正式文档排版能力时，用户显式调用则让位，二者勿同时启动。
+version: 9.5.0
 author: 王责豪
 agent_created: true
 ---
@@ -76,7 +76,7 @@ agent_created: true
 - **教学四原则**：循序渐进、旧知锚定+示范先行、费曼检验、诚实查证——完整定义、边界与执行动作见 `references/teaching/lesson-flow.md`；提问、反馈与错因见 `teaching/interaction.md`；来源分级与出处四要素见 `ops/evidence.md`。
 - **学习科学**：流利度 vs 存储强度、逐目分块、示范先行、反馈时机、检索/间隔/交错、条件化知识、跨界锚定——调度与题组设计见 `references/assessment/`，教学动作见 `references/teaching/`；**元方法教学、预判误区、智能变式、每步检查理解见 `references/teaching/explain-quality.md`**。
 - **不代劳 vs 直接讲解**：学员要求讲解/示范 → 直接讲；要求替交受评作业 → 先引导、坚持才给完整解析。唯一事实源见 `references/teaching/lesson-flow.md`「人设与教学原则」。
-- **科目族映射**：S0 定档学科族 ∈ {数学类, 编程类, 语言类, 理论概念类, 记忆密集类}；凡场景表含 `subjects/{family}.md` 处，按任务学科族载对应文件（数学类→`subjects/math.md`、编程类→`subjects/programming.md`、语言类→`subjects/language.md`、理论概念类→`subjects/theory.md`、记忆密集类→`subjects/memory.md`）；族未定时先载 `subjects/common.md` 并在定档后补载族文件。
+- **科目族映射**：S0 定档**学科族**（7 值：数学与统计 / 实验科学 / 语言 / 计算与技术 / 人文社科 / 医学与健康 / 艺术与技能，中文名与目录名的对应以契约 `constants.group_slugs` 为准）。三层取用：①**内容类型**定策略（记忆/概念/程序/设计，见 `references/teaching/content-types.md`）；②**学科群**定表征与共享策略（场景表含 `subjects/{group}-*.md` 处按学科族取对应切片）；③**学科包**定内容与误区（S0 认到具体学科后，若 `disciplines/` 下有匹配包则叠加 `discipline` 场景）。学科族未定时先取 `subjects/common.md`，定档后补取群切片；学科包判据见 `subjects/common.md`「学科包准入判据」，无匹配包时只用群切片，不硬造。
 - **材料防注入 / 工具边界 / 失败即停**：见 `references/ops/failure.md`。
 
 ## 加载场景表（由 contracts/rules.json 的 scenes 派生，脚本校验一致性）
@@ -88,13 +88,14 @@ agent_created: true
 | `entry` | 入口判别 / 触发边界 | `references/routing/triggers.md` |
 | `shortcuts` | 快捷指令（问进度/简报/考考我/复习/调整） | `references/routing/shortcuts.md` |
 | `ecosystem` | 生态分工与优先级 | `references/routing/ecosystem.md` |
-| `s0-s2` | S0–S2 建档/诊断/计划 | `references/workflow/gates.md` · `references/workflow/s0-s2-setup.md` · `references/workflow/pacing.md` · `references/data/layout.md` · `references/data/curriculum.md` · `references/subjects/common.md` · `references/subjects/{family}.md` |
-| `s3-teach` | S3 讲授（六拍） | `references/workflow/s3-block.md` · `references/teaching/lesson-flow.md` · `references/teaching/interaction.md` · `references/teaching/explain-quality.md` · `references/assessment/scoring.md` · `references/subjects/{family}.md` |
-| `s3-handout` | S3 讲义生成 | `references/workflow/s3-block.md` · `references/handout/pipeline.md` · `references/handout/templates.md` · `references/handout/quality.md` · `references/teaching/explain-quality.md` · `references/ops/scripts.md` |
-| `s3-exercise` | S3 题组/判分 | `references/workflow/s3-block.md` · `references/assessment/generation.md` · `references/assessment/scoring.md` · `references/subjects/common.md` · `references/subjects/{family}.md` · `references/ops/scripts.md` |
+| `s0-s2` | S0–S2 建档/诊断/计划 | `references/workflow/gates.md` · `references/workflow/s0-s2-setup.md` · `references/workflow/pacing.md` · `references/data/layout.md` · `references/data/curriculum.md` · `references/subjects/common.md` · `references/subjects/{group}-plan.md` |
+| `s3-teach` | S3 讲授（六拍） | `references/workflow/s3-block.md` · `references/teaching/lesson-flow.md` · `references/teaching/interaction.md` · `references/teaching/explain-quality.md` · `references/teaching/content-types.md` · `references/assessment/scoring.md` · `references/subjects/{group}-teach.md` |
+| `s3-handout` | S3 讲义生成 | `references/workflow/s3-block.md` · `references/teaching/explain-quality.md` · `references/handout/pipeline.md` · `references/handout/templates.md` · `references/handout/quality.md` · `references/ops/scripts.md` · `references/subjects/{group}-practice.md` |
+| `s3-exercise` | S3 题组/判分 | `references/workflow/s3-block.md` · `references/assessment/generation.md` · `references/assessment/scoring.md` · `references/teaching/content-types.md` · `references/subjects/common.md` · `references/subjects/{group}-practice.md` · `references/ops/scripts.md` |
 | `s3-deep` | 深讲概念 / 换风格重讲 / 呈现定版 | `references/teaching/presentation.md` · `references/handout/templates.md` |
-| `s4-review` | S4 复习与清债 | `references/workflow/s4-review.md` · `references/assessment/scheduling.md` · `references/assessment/generation.md` · `references/teaching/interaction.md` · `references/data/progress-schema.md` · `references/subjects/{family}.md` |
-| `s5-close` | S5 结课 | `references/workflow/s5-close.md` · `references/assessment/scoring.md` · `references/assessment/generation.md` · `references/handout/quality.md` · `references/data/compatibility.md` |
+| `s4-review` | S4 复习与清债 | `references/workflow/s4-review.md` · `references/assessment/scheduling.md` · `references/assessment/generation.md` · `references/teaching/interaction.md` · `references/data/progress-schema.md` · `references/subjects/common.md` · `references/subjects/{group}-review.md` |
+| `s5-close` | S5 结课 | `references/workflow/s5-close.md` · `references/assessment/scoring.md` · `references/assessment/generation.md` · `references/handout/quality.md` · `references/data/compatibility.md` · `references/subjects/common.md` |
+| `discipline` | 学科内容包（按学科叠加） | `references/disciplines/{discipline}.md` |
 | `persist` | 任何落盘 / 续学 | `references/data/layout.md` · `references/data/progress-schema.md` · `references/data/curriculum.md` · `references/ops/scripts.md` |
 | `failure` | 任何失败 / 环境阻断 | `references/ops/failure.md` |
 | `formulas` | 公式/符号输出 | `references/ops/formulas.md` |
@@ -103,7 +104,7 @@ agent_created: true
 
 **references 之间不写加载指令**；只有本表决定加载顺序。加载后按各文件的 `owns / must-not-define` 头执行。
 
-**加载成本**：分册按当前节读取，不整册通读。S3 讲授常见加载集 = 本文件 + `s3-block` + `lesson-flow` + `interaction` + `explain-quality` + `scoring` + 族文件；出题/判分走 `s3-exercise`（含 `subjects/common` 与族文件的题型阶梯与误区库）；复习走 `s4-review`（含族文件的复习侧重）；写/改讲义走 `s3-handout`；跨会话落盘走 `persist`；出现学习者可见公式才加 `formulas.md`；溯源核验才加 `evidence.md`。
+**加载成本**：分册按当前节读取，不整册通读。三层各取一份：内容类型处方（`content-types`）+ 学科群切片（按场景取一片）+ 学科包（命中时叠加）。S3 讲授常见加载集 = 本文件 + `s3-block` + `lesson-flow` + `interaction` + `explain-quality` + `content-types` + `scoring` + 群 `-teach` 切片，命中学科时再加 `discipline`；出题/判分走 `s3-exercise`（含 `common`、`content-types` 与群 `-practice` 切片的题型阶梯与误区库）；复习走 `s4-review`（含 `common` 与群 `-review` 切片的复习侧重）；写/改讲义走 `s3-handout`（含群 `-practice` 切片的答案形态）；跨会话落盘走 `persist`；出现学习者可见公式才加 `formulas.md`；溯源核验才加 `evidence.md`。
 
 ## 参考文件（按需加载）
 
@@ -130,8 +131,10 @@ agent_created: true
 - `references/data/progress-schema.md` —— progress.md（状态簿）字段唯一事实源、复习调度字段、下次续学与目游标。
 - `references/data/curriculum.md` —— 三簿分工、课程体系文件（章/节/目 + 目行账本）、记忆文件、学习者画像。
 - `references/data/compatibility.md` —— 稳定引用（lesson_id/evt）、按对象 ID 对账、提交顺序、Trace。
-- `references/subjects/common.md` —— 学科族总则、学科族判档表（S0 定档对照）、跨族处理、类比优先级、误区库消费纪律、视觉任务来源、对照源族联动、应试技巧包。
-- `references/subjects/math.md` / `programming.md` / `language.md` / `theory.md` / `memory.md` —— 五个学科族教学细则：判档与借用、讲授侧重（六拍内的族差异）、类比库、题型阶梯、误区库（喂 R42）、复习与调度侧重、答案形态、备考侧重。
+- `references/subjects/common.md` —— 三轴分层与取用顺序、学科→学科群判定表、学科包准入判据、跨群裁决、掌握深度标尺（SOLO/DOK/Bloom）、误区库消费纪律、类比优先级、视觉任务来源、应试技巧包。
+- `references/subjects/{group}-{plan,teach,practice,review}.md` —— 七个学科群（数学与统计 / 实验科学 / 语言 / 计算与技术 / 人文社科 / 医学与健康 / 艺术与技能）的四类切片：规划（群边界与借用、内容结构与前置链、深度锚点、排期）、讲授（六拍内群差异、学科思维实践、表征、类比、记号纪律、标准流程）、出题（题型阶梯、群级共享误区库、判定题构造、答案形态、视觉任务、给分点）、复习（复习形态、错因分流、冲刺侧重）。
+- `references/disciplines/*.md` —— 十二个学科内容包：高等数学、物理、化学、生物、地理、语文、英语、计算机理论、历史、法学、医学、经济与心理；每个含学科身份、内容结构与前置链、学科专属教学法、实证误区库、表征与标准流程、验收形态、与群切片的接口。**不含考试分值、题型结构与合格线**——这些每次开课按官方大纲现查并落盘到该任务。
+- `references/teaching/content-types.md` —— 内容类型处方：记忆/概念/程序/设计四类的讲授序列、表征默认、练习阶梯、纠错风格、复习侧重、验收天花板；撤架判据与动作技能能力边界。
 - `references/ops/failure.md` —— 红线、失败即停、环境就绪、异常恢复、停即报告模板。
 - `references/ops/scripts.md` —— 脚本 CLI、退出码、错误码入口、selftest、路径约定、打包验证。
 - `references/ops/evidence.md` —— 来源分级、出处四要素、文献依据与边界。

@@ -1403,7 +1403,7 @@ GOOD = """# 学习任务：示例
 - 数据根：<root>
 - 当前阶段：逐节学习
 - 类型：技能型
-- 学科族：编程类
+- 学科族：计算与技术
 - 目标：入门
 - 起点：零基础
 - 复习来源阶段：无
@@ -1415,7 +1415,7 @@ GOOD = """# 学习任务：示例
 BAD = """# 学习任务：示例
 - 当前阶段：复习巩固
 - 类型：知识型
-- 学科族：数学类
+- 学科族：数学与统计
 - 目标：x
 - 起点：入门
 
@@ -1426,14 +1426,14 @@ S0 = """# 学习任务：示例
 - 数据根：<root>
 - 当前阶段：接料建档
 - 类型：技能型
-- 学科族：编程类
+- 学科族：计算与技术
 - 目标：入门
 """
 UPPER = """# 学习任务：示例
 - 数据根：<root>
 - 当前阶段：逐节学习
 - 类型：技能型
-- 学科族：编程类
+- 学科族：计算与技术
 - 目标：入门
 - 起点：零基础
 
@@ -1445,7 +1445,7 @@ DONE_OK = """# 学习任务：示例
 - 数据根：<root>
 - 当前阶段：结课
 - 类型：备考型
-- 学科族：语言类
+- 学科族：语言
 - 目标：通过考试
 - 起点：入门
 
@@ -1469,7 +1469,7 @@ HOLD_BAD = """# 学习任务：示例
 - 数据根：<root>
 - 当前阶段：逐节学习
 - 类型：材料型
-- 学科族：数学类
+- 学科族：数学与统计
 - 目标：啃完教材
 - 起点：入门
 
@@ -1502,7 +1502,7 @@ KP_PROG_OK = """# 学习任务：示例
 - 数据根：<root>
 - 当前阶段：逐节学习
 - 类型：知识型
-- 学科族：编程类
+- 学科族：计算与技术
 - 目标：入门
 - 起点：零基础
 - 课程体系：课程体系.md ｜ 版本 1 ｜ 总 4
@@ -1535,7 +1535,7 @@ KP_PROG_TYPED = """# 学习任务：分型示例
 - 数据根：<root>
 - 当前阶段：逐节学习
 - 类型：知识型
-- 学科族：编程类
+- 学科族：计算与技术
 - 目标：入门
 - 起点：零基础
 - 课程体系：课程体系.md ｜ 版本 1 ｜ 总 3
@@ -1555,7 +1555,7 @@ KP_PROG_NOHOLD = """# 学习任务：示例
 - 数据根：<root>
 - 当前阶段：逐节学习
 - 类型：知识型
-- 学科族：编程类
+- 学科族：计算与技术
 - 目标：入门
 - 起点：零基础
 - 课程体系：课程体系.md ｜ 版本 1 ｜ 总 4
@@ -1568,7 +1568,7 @@ KP_PROG_NA = """# 学习任务：示例
 - 数据根：<root>
 - 当前阶段：逐节学习
 - 类型：知识型
-- 学科族：编程类
+- 学科族：计算与技术
 - 目标：入门
 - 起点：零基础
 - 课程体系：课程体系.md ｜ 版本 1 ｜ 总 2
@@ -2018,14 +2018,14 @@ def selftest():
         d31.mkdir()
         (d31 / "progress.md").write_text(
             "# 学习任务：诊断中\n- 数据根：<root>\n- 当前阶段：诊断摸底\n"
-            "- 类型：知识型\n- 学科族：数学类\n- 目标：自测\n", encoding="utf-8")
+            "- 类型：知识型\n- 学科族：数学与统计\n- 目标：自测\n", encoding="utf-8")
         r31 = check(d31)
         ok = ok and r31["ok"] and not any(e["code"] == "E-MISSING-FIELD" for e in r31["errors"])
         d31b = Path(td) / "s2-noqidian"
         d31b.mkdir()
         (d31b / "progress.md").write_text(
             "# 学习任务：计划中\n- 数据根：<root>\n- 当前阶段：计划确认中\n"
-            "- 类型：知识型\n- 学科族：数学类\n- 目标：自测\n", encoding="utf-8")
+            "- 类型：知识型\n- 学科族：数学与统计\n- 目标：自测\n", encoding="utf-8")
         r31b = check(d31b)
         ok = ok and (not r31b["ok"]) and any(e["code"] == "E-MISSING-FIELD" for e in r31b["errors"])
 
@@ -2034,14 +2034,14 @@ def selftest():
         d32.mkdir()
         (d32 / "progress.md").write_text(
             "# 学习任务：复习\n- 数据根：<root>\n- 当前阶段：复习巩固\n- 复习来源阶段：已完成\n"
-            "- 类型：知识型\n- 学科族：数学类\n- 目标：自测\n- 起点：入门\n", encoding="utf-8")
+            "- 类型：知识型\n- 学科族：数学与统计\n- 目标：自测\n- 起点：入门\n", encoding="utf-8")
         r32 = check(d32)
         ok = ok and r32["ok"]
         d32b = Path(td) / "rev-bad"
         d32b.mkdir()
         (d32b / "progress.md").write_text(
             "# 学习任务：复习\n- 数据根：<root>\n- 当前阶段：复习巩固\n- 复习来源阶段：随便写\n"
-            "- 类型：知识型\n- 学科族：数学类\n- 目标：自测\n- 起点：入门\n", encoding="utf-8")
+            "- 类型：知识型\n- 学科族：数学与统计\n- 目标：自测\n- 起点：入门\n", encoding="utf-8")
         r32b = check(d32b)
         ok = ok and (not r32b["ok"]) and any(e["code"] == "E-REVIEW-ORIGIN" for e in r32b["errors"])
 
@@ -2076,7 +2076,7 @@ def selftest():
         (d34 / "exercises").mkdir(parents=True)
         prog34, curr34 = _split_progress(
             "# 学习任务：结课未完成\n- 数据根：<root>\n- 当前阶段：结课\n"
-            "- 类型：知识型\n- 学科族：数学类\n- 目标：自测\n- 起点：入门\n\n"
+            "- 类型：知识型\n- 学科族：数学与统计\n- 目标：自测\n- 起点：入门\n\n"
             "## 学习路线\n- [x] 1. 甲\n- [ ] 2. 乙\n")
         (d34 / "progress.md").write_text(prog34, encoding="utf-8")
         (d34 / "课程体系.md").write_text(curr34, encoding="utf-8")
@@ -2090,7 +2090,7 @@ def selftest():
         (d35 / "exercises").mkdir(parents=True)
         prog35, curr35 = _split_progress(
             "# 学习任务：可选新字段\n- 数据根：<root>\n- 当前阶段：逐节学习\n"
-            "- 类型：技能型\n- 学科族：编程类\n- 目标：入门\n- 起点：零基础\n\n"
+            "- 类型：技能型\n- 学科族：计算与技术\n- 目标：入门\n- 起点：零基础\n\n"
             "## 学习路线\n- [x] 1. 极限\n\n"
             "## 薄弱点\n- 某点：表现（S=3.0，D=3，last=2026-10-09，due=2026-10-10，信心=4，cw，evt=E1）\n\n"
             "## 下次续学\n- 动作游标：批改 ｜ 待回应：01-极限 题1 ｜ 最后提交：E1\n")
@@ -2116,7 +2116,7 @@ def selftest():
             return d
 
         PROG_S3 = ("# 学习任务：严格闸口\n- 数据根：<root>\n- 当前阶段：逐节学习\n"
-                   "- 类型：技能型\n- 学科族：编程类\n- 目标：独立编程\n- 起点：零基础\n\n"
+                   "- 类型：技能型\n- 学科族：计算与技术\n- 目标：独立编程\n- 起点：零基础\n\n"
                    "## 学习路线\n- [x] 1. 变量\n")
         EV_OK = ("## 作答与判分\n- 题1：作答「3」｜正确性=对｜独立性=独立｜调度档=Good\n"
                  "## 复述检查清单\n- [x] 关键点1：变量\n- [x] 关键点2：变量赋值\n- [x] 无事实性错误\n")
@@ -2179,7 +2179,7 @@ def selftest():
             e["code"] == "E-ROUTE-NUMBER" for e in r38_zero["errors"])
         # ㊴ 结课/已完成：空路线 → E-NO-ROUTE-STRICT；不可解析路线 → E-NO-ROUTE-STRICT
         DONE_HEAD = ("# 学习任务：结课\n- 数据根：<root>\n- 当前阶段：已完成\n"
-                     "- 类型：技能型\n- 学科族：编程类\n- 目标：x\n- 起点：零基础\n\n")
+                     "- 类型：技能型\n- 学科族：计算与技术\n- 目标：x\n- 起点：零基础\n\n")
         r39a, c39a = _codes("r01-done-noroute", DONE_HEAD + "## 学习路线\n", None, release=True)
         ok = ok and "E-NO-ROUTE-STRICT" in c39a and "E-NO-FINAL-EXAM" in c39a
         r39b, c39b = _codes("r01-done-unparsed", DONE_HEAD + "## 学习路线\n- [x] 变量\n",
@@ -2263,7 +2263,7 @@ def selftest():
         ok = ok and any(e["code"] == "E-ROUTE-UNDONE" for e in r42_prop["errors"])
         # ㊸ S2 闸口：缺 00 摸底证据 → E-NO-DIAGNOSTIC；起点非法 → E-ENUM-START
         S2_HEAD = ("# 学习任务：计划\n- 数据根：<root>\n- 当前阶段：计划确认中\n"
-                   "- 类型：知识型\n- 学科族：数学类\n- 目标：自测\n")
+                   "- 类型：知识型\n- 学科族：数学与统计\n- 目标：自测\n")
         r43a, c43a = _codes("r01-s2-nodiag", S2_HEAD + "- 起点：入门\n\n## 学习路线\n- [ ] 1. 甲\n",
                             None, release=True)
         ok = ok and "E-NO-DIAGNOSTIC" in c43a
