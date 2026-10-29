@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/1",
- "version": "9.5.0",
+ "version": "9.6.0",
  "files": [
   {
    "id": "triggers",
@@ -196,8 +196,8 @@
    ]
   },
   {
-   "id": "compatibility",
-   "path": "references/data/compatibility.md",
+   "id": "reconciliation",
+   "path": "references/data/reconciliation.md",
    "layer": 1,
    "owns": "稳定引用对账、提交顺序、Trace",
    "depends_on": [
@@ -1029,7 +1029,7 @@
   },
   {
    "id": "F09",
-   "owner": "references/data/compatibility.md#稳定引用 · 对账 · 提交顺序（F09 / F10 / F12）",
+   "owner": "references/data/reconciliation.md#稳定引用 · 对账 · 提交顺序（F09 / F10 / F12）",
    "type": "definition",
    "scenes": [
     "s5-close"
@@ -1037,7 +1037,7 @@
   },
   {
    "id": "F10",
-   "owner": "references/data/compatibility.md#稳定引用 · 对账 · 提交顺序（F09 / F10 / F12）",
+   "owner": "references/data/reconciliation.md#稳定引用 · 对账 · 提交顺序（F09 / F10 / F12）",
    "type": "definition",
    "scenes": [
     "s5-close"
@@ -1055,7 +1055,7 @@
   },
   {
    "id": "F12",
-   "owner": "references/data/compatibility.md#稳定引用 · 对账 · 提交顺序（F09 / F10 / F12）",
+   "owner": "references/data/reconciliation.md#稳定引用 · 对账 · 提交顺序（F09 / F10 / F12）",
    "type": "definition",
    "scenes": [
     "s5-close"
@@ -1201,36 +1201,6 @@
    ]
   }
  ],
- "path_aliases": {
-  "entry-routing.md": "references/routing/triggers.md",
-  "phases-and-gates.md": "references/workflow/gates.md",
-  "teaching-loop.md": "references/teaching/lesson-flow.md",
-  "lecture-styles.md": "references/teaching/presentation.md",
-  "handout-design.md": "references/handout/pipeline.md",
-  "data-and-recovery.md": "references/data/layout.md",
-  "redlines.md": "references/ops/failure.md",
-  "setup-guide.md": "references/ops/failure.md",
-  "subject-playbooks.md": "references/subjects/common.md",
-  "formula-typesetting.md": "references/ops/formulas.md",
-  "methodology.md": "references/ops/evidence.md",
-  "routing.md": "references/routing/triggers.md",
-  "workflow.md": "references/workflow/gates.md",
-  "teaching.md": "references/teaching/lesson-flow.md",
-  "handout.md": "references/handout/pipeline.md",
-  "data.md": "references/data/layout.md",
-  "assessment.md": "references/assessment/scoring.md",
-  "subjects.md": "references/subjects/common.md",
-  "operations.md": "references/ops/scripts.md",
-  "failure.md": "references/ops/failure.md",
-  "evidence.md": "references/ops/evidence.md",
-  "formulas.md": "references/ops/formulas.md",
-  "composition.md": "references/ops/composition.md",
-  "math.md": "references/subjects/math-practice.md",
-  "programming.md": "references/subjects/computing-practice.md",
-  "language.md": "references/subjects/language-practice.md",
-  "theory.md": "references/subjects/humanities-practice.md",
-  "memory.md": "references/subjects/science-practice.md"
- },
  "constants": {
   "phases": [
    "接料建档",
@@ -1272,40 +1242,7 @@
     "部分",
     "错",
     "未判"
-   ],
-   "aliases": {
-    "对": [
-     "对",
-     "正确",
-     "✓",
-     "√",
-     "correct",
-     "Correct"
-    ],
-    "部分": [
-     "部分",
-     "部分正确",
-     "partial",
-     "Partial"
-    ],
-    "错": [
-     "错",
-     "错误",
-     "✗",
-     "×",
-     "不对",
-     "不正确",
-     "否",
-     "incorrect",
-     "Incorrect"
-    ],
-    "未判": [
-     "未判",
-     "待判",
-     "ungraded",
-     "Ungraded"
-    ]
-   }
+   ]
   },
   "kp": {
    "states": [
@@ -1325,19 +1262,7 @@
     "关系",
     "图表",
     "比较"
-   ],
-   "type_aliases": {
-    "memory": "记忆",
-    "concept": "概念",
-    "procedure": "程序",
-    "design": "设计"
-   },
-   "visual_aliases": {
-    "identification": "识别",
-    "relationship": "关系",
-    "chart": "图表",
-    "comparison": "比较"
-   }
+   ]
   },
   "gates": {
    "min_ratio": [
@@ -1362,7 +1287,7 @@
    "l3_review_max": 5
   },
   "schemas": {
-   "index": "learn-task-index/6",
+   "index": "learn-task-index/7",
    "due_queue": "ltw-due-queue/3",
    "calibration": "ltw-calibration/3",
    "manifest": "2"
@@ -1507,11 +1432,10 @@
     "E-CURSOR-DANGLING",
     "E-EMPTY-EVIDENCE",
     "E-ENUM-FAMILY",
+    "E-ENUM-GRADE",
     "E-ENUM-PHASE",
     "E-ENUM-START",
-    "E-ENUM-STRATEGY",
     "E-ENUM-TYPE",
-    "E-EVIDENCE-ID-MISMATCH",
     "E-EVIDENCE-REF-MISSING",
     "E-FINAL-ATTEMPT-CONFLICT",
     "E-FINAL-BELOW-TARGET",
@@ -1528,8 +1452,8 @@
     "E-KP-TYPED-GATE",
     "E-LEDGER-RESIDUE",
     "E-LESSON-ID-DUP",
+    "E-LESSON-ID-MISSING",
     "E-LOAD-BUDGET",
-    "E-MARKER-LEGACY",
     "E-MISSING-FIELD",
     "E-NO-DIAGNOSTIC",
     "E-NO-EVIDENCE",
@@ -1555,7 +1479,6 @@
     "E-TOPOLOGY-LEADWORDS",
     "E-TOPOLOGY-LOAD",
     "E-TOPOLOGY-MIRROR",
-    "E-TOPOLOGY-OLDNAME",
     "E-TOPOLOGY-OWNER",
     "E-TOPOLOGY-SCENES",
     "E-TOPOLOGY-VERSION",
@@ -1586,6 +1509,7 @@
     "W-MULTI-EVIDENCE",
     "W-NO-COVERAGE",
     "W-NO-COVERAGE-AUDIT",
+    "W-NO-EVT",
     "W-NO-PROPOSED-STATE",
     "W-NO-ROUTE",
     "W-NO-TIER",
@@ -1743,7 +1667,7 @@
     "references/assessment/scoring.md",
     "references/assessment/generation.md",
     "references/handout/quality.md",
-    "references/data/compatibility.md",
+    "references/data/reconciliation.md",
     "references/subjects/common.md"
    ]
   },

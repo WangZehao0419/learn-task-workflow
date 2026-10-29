@@ -41,8 +41,8 @@ SKILL.md「判断归模型、数据归脚本」）。
         且无冲突）→ 才统计。分母只数合法观察中**显式**写有「信心=」的条目；
         分子 cw 只数「反馈前信心 ≥4 且 cw」的合法观察（cw 必须是同口径高信心
         错误观察的子集）。孤立 cw / 低信心 cw / 同 evt 冲突 → 单独告警并令
-        rate_valid=false、不输出比率（不谎报）。dedup_mode 区分 by_evt /
-        legacy_double_count / mixed（混排披露 evt_tagged_count、legacy_count）。
+        rate_valid=false、不输出比率（不谎报）。无 evt 条目各成单条观察并报
+        W-NO-EVT（提示补 evt，同次作答的投影才能去重）。
         快照口径不做时间窗，不需 --today。脚本只算不判，教学化呈现归模型。
 
 公式契约（不得在调用侧自行更改；grade_base / init_s / d_drift / s_max / r_min /
@@ -732,27 +732,17 @@ def calibration_from_progress_texts(entries):
             "overconfidence_rate": None,
             "rate_valid": False,
             "invalid_reason": None,
-            "dedup_mode": "legacy_double_count",
-            "evt_tagged_count": 0,
-            "legacy_count": 0,
             "confidence_dist": {str(i): 0 for i in range(1, 6)},
             "cw_items": [],
             "migrated_count": 0,
             "unparsed_count": 0,
             "default_filled": 0,
         }
-        tagged = sum(1 for r in raws if r["meta"]["evt"] is not None)
-        legacy = len(raws) - tagged
-        stat["evt_tagged_count"] = tagged
-        stat["legacy_count"] = legacy
-        if tagged and legacy:
-            stat["dedup_mode"] = "mixed"
-        elif tagged:
-            stat["dedup_mode"] = "by_evt"
-        else:
-            stat["dedup_mode"] = "legacy_double_count"
-
         for o in obs:
+            if o["evt"] is None:
+                warnings.append("W-NO-EVT: " + slug + " / " + o["item"]
+                                + "（条目无 evt= 作答事件 ID，按单条观察计入校准；"
+                                  "同次作答的薄弱点/错题投影补同一 evt 可去重）")
             if o["invalid_tokens"]:
                 warnings.append("W-META-INVALID: " + slug + " / " + o["item"]
                                 + "（坏 token 已按缺省链处理："
@@ -1169,7 +1159,7 @@ def selftest():
     r = next_interval("easy", stability=300.0, difficulty=1, elapsed=300)
     ok = ok and r["stability_new"] == 365
 
-    # 断言 7：due-queue（cw 排前 / 旧格式 migrated / 无日期告警且 exit 0）
+    # 断言 7：due-queue（cw 排前 / 缺省链兜底 migrated / 无日期告警且 exit 0）
     # 纯函数核心直接喂夹具文本——selftest 全程零写盘。
     entries = [("slug-a", FIX_A), ("slug-b", FIX_B)]
     today = date.fromisoformat("2026-10-10")
@@ -1184,7 +1174,7 @@ def selftest():
     ok = ok and len(ordered) >= 1 and ordered[0]["cw"] is True  # cw 排前
     by_item = {e["item"].split("：")[0]: e for e in ordered}
     ok = ok and by_item["更逾期点"]["overdue_days"] == 6  # 最逾期次优先
-    ok = ok and by_item["默认链点"]["migrated"] is True  # v2 旧格式默认链
+    ok = ok and by_item["默认链点"]["migrated"] is True  # 缺 S/D/due，靠「最近更新」兜底推日期
     ok = ok and by_item["默认链点"]["S"] == 3 and by_item["默认链点"]["D"] == 3
     ok = ok and by_item["默认链点"]["due"] == "2026-10-08"  # 最近更新+round(3)
     ok = ok and by_item["顽固点"]["teach"] is True  # 顽固 -> teach
@@ -1308,7 +1298,7 @@ def selftest():
     ok = ok and pa["migrated_count"] == 2  # 默认链点 + 无日期点（均靠「最近更新」补日期）
     ok = ok and pa["default_filled"] == 6  # 全部 6 条均缺 错因/级
     ok = ok and len(pa["cw_items"]) == 1 and pa["cw_items"][0].startswith("自信但错点")
-    ok = ok and pa["dedup_mode"] == "legacy_double_count"  # 无 evt → 沿用声明式双计
+    ok = ok and any(w.startswith("W-NO-EVT") and "slug-a" in w for w in cal_warn)  # 无 evt → 提示补标
     ok = ok and pa["rate_valid"] is True
 
     # 断言 10：FIX_B（完全无日期）→ rate=null（不谎报 0）+ W-UNPARSED-ITEM 告警
@@ -1412,11 +1402,10 @@ def selftest():
                "- B点：投影乙（S=3.0，D=3，last=2026-10-09，due=2026-10-10，cw，evt=E1）\n"
                "- C点：无信心（S=3.0，D=3，last=2026-10-09，due=2026-10-10，cw）\n"
                "- D点：无信心（S=3.0，D=3，last=2026-10-09，due=2026-10-10，cw）\n")
-    t04_per, _tw = calibration_from_progress_texts([("slug-t04", fix_t04)])
+    t04_per, t04_warn = calibration_from_progress_texts([("slug-t04", fix_t04)])
     t04 = t04_per[0]
-    ok = ok and t04["dedup_mode"] == "mixed"   # 含 evt 与无 evt 混排 → 单独标口径
-    ok = ok and t04["evt_tagged_count"] == 2 and t04["legacy_count"] == 2
-    ok = ok and t04["total_items"] == 3        # B 与 A 同 evt → 只计一次（不同次投影才各计）
+    ok = ok and t04["total_items"] == 3        # B 与 A 同 evt → 只计一次（无 evt 的 C/D 各成单条）
+    ok = ok and sum(1 for w in t04_warn if w.startswith("W-NO-EVT")) == 2  # C/D 无 evt → 提示补标
     ok = ok and t04["with_confidence"] == 1
     ok = ok and t04["cw_count"] == 1           # cw 必须是高信心(≥4)观察的子集
     ok = ok and t04["orphan_cw_count"] == 2    # C/D 有 cw 无信心 → 孤立，不入分子
@@ -1521,7 +1510,7 @@ def selftest():
     evt24 = calibration_from_progress_texts(
         [('s', '- 最近更新：2026-10-15\n## 薄弱点\n- A（evt=E1）\n'
               '## 错题本\n- [2026-10-15] B ｜ 元数据：信心=5，cw，evt=E1\n')])[0][0]
-    ok = ok and evt24["total_items"] == 1 and evt24["dedup_mode"] == "by_evt" and evt24["cw_count"] == 1
+    ok = ok and evt24["total_items"] == 1 and evt24["cw_count"] == 1
     # 断言 25：长中断（10 年）不再因人为上界被拒（R 已夹 [0.25,2]）
     try:
         main(["next-interval", "--grade", "good", "--stability", "3", "--difficulty", "3",

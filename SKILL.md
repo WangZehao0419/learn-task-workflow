@@ -1,7 +1,7 @@
 ---
 name: learn-task-workflow
 description: 私人家教工作流：把系统学习需求跑成带硬闸口、进度落盘、跨会话可续学的任务流，含间隔重复与掌握后保持复习、判分四态与作废申诉、KP 分型验收与课程体系契约（章/节/目三级规划）、条件化出题四步流水线与讲义生成、错因归因纠偏、按内容类型与学科群分流教学（单节课六拍：先教后练，永不先测未讲内容），新手先看完整示例再做题、新记号当场讲透；支持独立生成学习用讲义/题组/试卷。以「系统学习」意图触发：「我要学X」「教我X」「带我学X」「带我读X」「精读X」「帮我啃X」「从零开始学X」「零基础学X」「备考X」「我要考研/考证」「家教模式」「开始上课」「继续学习」「接着上次继续学」「调整学习计划」「我的学习进度」「学到哪了」「学习简报」「学习周报」「考考我」「给X写讲义」「给X出题」「组一套卷」。不触发：普通知识问答、单题解题求助（如「这道题怎么做」）、代写作业/文章/报告、单纯总结材料（归 summarize）、主题调研写文档（归 research）、课程仓库脚手架（归 scaffold-exercises）、只要学习建议或只要计划文档；「教我X」「帮我复习X」「考考我」等高频词必须指向系统学习意图或已有学习任务，否则先澄清。宿主另有独立教学工作区或正式文档排版能力时，用户显式调用则让位，二者勿同时启动。
-version: 9.5.0
+version: 9.6.0
 author: 王责豪
 agent_created: true
 ---
@@ -66,7 +66,7 @@ agent_created: true
 - **叙事簿 `<slug>/记忆.md`**：学习日志（事件时间线，含审计记录与纠错留痕）、学习记录（任务级洞察）、讲授证据。
 - **画像 `<数据根>/profile.md`**：跨任务学习者画像（①偏好/②稳定模式/③暂存），可选全局文件。
 
-目录布局、续学匹配与 slug 见 `data/layout.md`；稳定引用对账与提交顺序见 `data/compatibility.md`；脚本调用与退出码见 `ops/scripts.md`；判分与调度语义见 `assessment/`。
+目录布局、续学匹配与 slug 见 `data/layout.md`；稳定引用对账与提交顺序见 `data/reconciliation.md`；脚本调用与退出码见 `ops/scripts.md`；判分与调度语义见 `assessment/`。
 
 **确定性环节交给脚本**（判断归模型，数据归脚本；用户脚本 + 契约模块均 stdlib-only、幂等可重跑，基础 Python 版本以 `skill-dependencies.json` 的 `min_version` 为准）。脚本清单、用法、退出码、selftest 与路径约定统一见 `references/ops/scripts.md`；**不在本文件复制参数**。
 
@@ -94,7 +94,7 @@ agent_created: true
 | `s3-exercise` | S3 题组/判分 | `references/workflow/s3-block.md` · `references/assessment/generation.md` · `references/assessment/scoring.md` · `references/teaching/content-types.md` · `references/subjects/common.md` · `references/subjects/{group}-practice.md` · `references/ops/scripts.md` |
 | `s3-deep` | 深讲概念 / 换风格重讲 / 呈现定版 | `references/teaching/presentation.md` · `references/handout/templates.md` |
 | `s4-review` | S4 复习与清债 | `references/workflow/s4-review.md` · `references/assessment/scheduling.md` · `references/assessment/generation.md` · `references/teaching/interaction.md` · `references/data/progress-schema.md` · `references/subjects/common.md` · `references/subjects/{group}-review.md` |
-| `s5-close` | S5 结课 | `references/workflow/s5-close.md` · `references/assessment/scoring.md` · `references/assessment/generation.md` · `references/handout/quality.md` · `references/data/compatibility.md` · `references/subjects/common.md` |
+| `s5-close` | S5 结课 | `references/workflow/s5-close.md` · `references/assessment/scoring.md` · `references/assessment/generation.md` · `references/handout/quality.md` · `references/data/reconciliation.md` · `references/subjects/common.md` |
 | `discipline` | 学科内容包（按学科叠加） | `references/disciplines/{discipline}.md` |
 | `persist` | 任何落盘 / 续学 | `references/data/layout.md` · `references/data/progress-schema.md` · `references/data/curriculum.md` · `references/ops/scripts.md` |
 | `failure` | 任何失败 / 环境阻断 | `references/ops/failure.md` |
@@ -130,7 +130,7 @@ agent_created: true
 - `references/data/layout.md` —— 数据根、续学匹配、目录布局、slug、版本号体系。
 - `references/data/progress-schema.md` —— progress.md（状态簿）字段唯一事实源、复习调度字段、下次续学与目游标。
 - `references/data/curriculum.md` —— 三簿分工、课程体系文件（章/节/目 + 目行账本）、记忆文件、学习者画像。
-- `references/data/compatibility.md` —— 稳定引用（lesson_id/evt）、按对象 ID 对账、提交顺序、Trace。
+- `references/data/reconciliation.md` —— 稳定引用（lesson_id/evt）、按对象 ID 对账、提交顺序、Trace。
 - `references/subjects/common.md` —— 三轴分层与取用顺序、学科→学科群判定表、学科包准入判据、跨群裁决、掌握深度标尺（SOLO/DOK/Bloom）、误区库消费纪律、类比优先级、视觉任务来源、应试技巧包。
 - `references/subjects/{group}-{plan,teach,practice,review}.md` —— 七个学科群（数学与统计 / 实验科学 / 语言 / 计算与技术 / 人文社科 / 医学与健康 / 艺术与技能）的四类切片：规划（群边界与借用、内容结构与前置链、深度锚点、排期）、讲授（六拍内群差异、学科思维实践、表征、类比、记号纪律、标准流程）、出题（题型阶梯、群级共享误区库、判定题构造、答案形态、视觉任务、给分点）、复习（复习形态、错因分流、冲刺侧重）。
 - `references/disciplines/*.md` —— 十二个学科内容包：高等数学、物理、化学、生物、地理、语文、英语、计算机理论、历史、法学、医学、经济与心理；每个含学科身份、内容结构与前置链、学科专属教学法、实证误区库、表征与标准流程、验收形态、与群切片的接口。**不含考试分值、题型结构与合格线**——这些每次开课按官方大纲现查并落盘到该任务。

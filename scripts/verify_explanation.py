@@ -53,8 +53,6 @@
    「完整示例」),①题目、④易错、⑤小结仍须具备;单元内引用块无交付标识起笔即通过。
    若同时存在「③ 答案」标记报 E-THIRD-CONFLICT;若仍有交付标识起笔
    (解:/答:/代码:/Answer: 等)报 E-THIRD-EXEMPT-MISUSE(豁免不得用于含可复现解答的单元)。
-   单元内出现旧编号(①目标 / ⑤标准答案 / ⑤卷面)时只报一条 E-MARKER-LEGACY
-   (附迁移对照),该单元不再叠加缺项与框体例错误。
 
 7. 扩展(选读)区:行首 `## 扩展` 起至文末(扩展区须为文件最后一个区);区内概念单元与
    答案框豁免五要素(E-REQ-MISSING)、分层标注(W-NO-TIER)与框体例(E-BOX-*),正文 Unicode 照查。
@@ -101,7 +99,6 @@
 | W-MARKER-CONTENT | W  | `③ 答案` 标记行带了答案内容(应与框内答案并存时易不一致;标记行应留空) |
 | W-NO-TIER        | W  | 概念单元(含规划区对应行)无「最小必需/选学/后期必用/参照」任一分层标注 |
 | W-STYLE-POINTER  | W  | 头部出现「…体例(/…排版(/…约定(/…格式(」整段规则块(疑似重复,应为指针行);头部含「体例约定(」指针行即合规 |
-| E-MARKER-LEGACY  | E  | 单元内出现旧编号(①目标 / ⑤标准答案 / ⑤卷面);每单元只报一条,不再叠加缺项与框体例 |
 | E-THIRD-CONFLICT | E  | 概念单元同时标注「③ 不适用(纯概念)」与「③ 答案」(自相矛盾)       |
 | E-THIRD-EXEMPT-MISUSE | E | 标注了「③ 不适用」但单元引用块内仍有「解:/答:」解答起笔(豁免被滥用) |
 | E-HEADER-BRIEF   | E  | 定稿文件头部缺「本节目标」「前置」「预计」任一(草稿不查)             |
@@ -187,9 +184,7 @@ FIFTH_RE = marker_re("⑤", "小结")              # 小结标记行(必检;只�
 MARKER_CONTENT_RE = re.compile(
     r"^\s*" + _ITEM + r"?(?:\*\*)?\s*③\s*答案\s*"
     r"(?:[（(][^)）]*[)）])?\s*[：:]\s*(.*)$")
-# 旧编号残留:①目标 / ⑤标准答案 / ⑤卷面 —— 整单元只报一条,不叠加缺项与框体例
-LEGACY_MARK_RE = re.compile(
-    r"^\s*" + _ITEM + r"?(?:\*\*)?\s*(?:①\s*目标|⑤\s*(?:标准答案|卷面))", re.M)
+# 旧编号写法(①目标/⑤标准答案/⑤卷面)不特判——按普通缺项与框体例错误照报
 EXT_HEAD_RE = re.compile(r"^##\s*扩展")
 THIRD_EXEMPT_RE = re.compile(
     r"^\s*" + _ITEM + r"?(?:\*\*)?\s*③\s*不适用|纯概念[·・]?\s*无\s*③", re.M)
@@ -206,7 +201,7 @@ REQ_RES = (
 # ②③同属「完整示例」,纯概念豁免时一并跳过;①题目、④易错、⑤小结仍须具备
 EXAMPLE_ITEMS = ("② 解析", "③ 答案")
 TIER_WORDS = ("最小必需", "选学", "后期必用", "参照")
-# 概念单元正文必须用【…】标签承载分层;规划区行保留纯文本兼容(表格列/列表行)
+# 概念单元正文必须用【…】标签承载分层;规划区行按纯文本宽容解析(表格列/列表行)
 TIER_TAG_RE = re.compile(r"【[^】]*(?:最小必需|选学|后期必用|参照)[^】]*】")
 PLAN_ROW_RE = re.compile(r"^\s*(\d+)\s*\.\s")
 PLAN_TABLE_RE = re.compile(r"^\|\s*概念\s*(\d+)\s*\|")
@@ -530,7 +525,7 @@ def _svg_reader_problems(path):
 
 
 def reader_checks(lines, doc, vis, fence, base_dir, box_rows, add):
-    """读者版 P1 可读性检查(W 级,只在 --reader 时执行,不阻断旧讲义)。
+    """读者版 P1 可读性检查(W 级,只在 --reader 显式启用时执行,不拦截)。
 
     这里只查可静态判定的结构项:标题层级、表格、图片 alt/SVG、速览/回看索引、
     概念首行一句话结论、段落强调、超长正文行、列表嵌套。语义上的“是否更易读”仍归人工读者验证。
@@ -748,19 +743,10 @@ def check_text(text, rel, base_dir=None, reader=False):
                     "学员会读草稿;移交证据后删除本行")
 
     # ── 规则 2:概念单元五要素(单元级,不得全文件计数代替)──
-    legacy_units = []
     for u in doc["units"]:
         if in_ext(u["start"]):
             continue
         body = "\n".join(lines[u["start"]:u["end"]])
-        if LEGACY_MARK_RE.search(body):
-            legacy_units.append(u)
-            add("E", "E-MARKER-LEGACY", u["start"],
-                "概念 " + str(u["num"]) + " 仍是旧编号(①目标/②分步/③答案/④易错/⑤标准答案)——"
-                "新体例:①题目 → ②解析 → ③答案(框) → ④易错 → ⑤小结;迁移:②分步与旧③答案"
-                "并入②解析、旧③答案行删掉、⑤标准答案改③答案并删题面段、小结补⑤编号。"
-                "本单元只报这一条,缺项与框体例暂不叠加")
-            continue
         has_third = bool(THIRD_RE.search(body))
         exempt = bool(THIRD_EXEMPT_RE.search(body))
         if has_third and exempt:
@@ -833,12 +819,8 @@ def check_text(text, rel, base_dir=None, reader=False):
                 "答案区为空——学员做完无处核对;至少给一行可核对的短答案或指向讲义 ③")
 
     # ── 规则 4:答案框体例(学科中立)──
-    def in_legacy(idx):
-        """落在旧编号单元内(该单元只报 E-MARKER-LEGACY,不再叠加框体例错误)。"""
-        return any(u["start"] <= idx < u["end"] for u in legacy_units)
-
     for b in boxes:
-        if in_ext(b["marker_line"]) or in_legacy(b["marker_line"]):
+        if in_ext(b["marker_line"]):
             continue
         if not b["exists"]:
             add("E", "E-BOX-INCOMPLETE", b["marker_line"],
@@ -1009,7 +991,7 @@ def check_text(text, rel, base_dir=None, reader=False):
                         "图引用死链:" + ref + " 不存在——图须先落盘后引用(相对讲义所在目录解析),"
                         "先写 SVG 再引用,或删掉该行改文字描述")
 
-    # ── 规则 11:读者版 P1 可读性(W;仅 --reader 显式启用,不回溯旧讲义)──
+    # ── 规则 11:读者版 P1 可读性(W;仅 --reader 显式启用)──
     # 只对像讲义的文本生效(有概念单元或读者版导航块),避免把冷读记录/台账当讲义报噪声
     if reader and (doc["units"] or "## 本节速览" in lines or "## 回看索引" in lines):
         reader_checks(lines, doc, vis, fence, base_dir, box_rows, add)
@@ -1046,7 +1028,7 @@ def main(argv=None):
     ap.add_argument("--selftest", action="store_true",
                     help="运行内嵌样例自检(临时目录,不写盘被校验目录)")
     ap.add_argument("--reader", action="store_true",
-                    help="读者版 P1 可读性检查(W 级、不阻断;仅显式启用,旧讲义不回溯)")
+                    help="读者版 P1 可读性检查(W 级、不阻断;仅显式启用)")
     args = ap.parse_args(argv)
     if args.selftest:
         return selftest()
@@ -1417,7 +1399,7 @@ FIX_BOX_BROKENMATH = _BOX_SEG + """> 解:先算 $x=
 - ⑤ 小结:三步法。
 """
 
-# 旧编号残留:①目标 / ⑤标准答案 → 只报 1 条 E-MARKER-LEGACY,不叠加缺项与框体例
+# 旧编号写法(①目标/⑤标准答案)不特判——按普通缺项与框体例错误照报
 FIX_LEGACY = _HEAD + """- ① 目标:一。
 - ② 分步:二。
 - ③ 答案:三。
@@ -1882,13 +1864,11 @@ def selftest():
     chk("段内拆断公式报 E-BOX-WRAP",
         len(codes(check_text(FIX_BOX_BROKENMATH, "brokenmath.md"), "E-BOX-WRAP")) == 1)
 
-    # ⑳ 旧编号:只报 1 条,不叠加
+    # ⑳ 旧编号:不再特判,按普通缺项与框体例错误照报
     r = check_text(FIX_LEGACY, "legacy.md")
-    chk("旧编号只报 1 条 E-MARKER-LEGACY、不叠加缺项",
-        len(codes(r, "E-MARKER-LEGACY")) == 1
-        and len(codes(r, "E-REQ-MISSING")) == 0
-        and len(codes(r, "E-BOX-INCOMPLETE")) == 0
-        and len(r) == 1)
+    chk("旧编号按普通体例错误照报(缺项+框体例各 1 条)",
+        len(codes(r, "E-REQ-MISSING")) == 1
+        and len(codes(r, "E-BOX-INCOMPLETE")) == 1)
 
     # ㉑ 量表
     chk("给分点量表合计正确零违规", check_text(FIX_RUBRIC_OK, "rubric.md") == [])

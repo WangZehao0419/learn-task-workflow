@@ -11,9 +11,9 @@
   machine_ref 证据。不写任何仓库文件、不访问网络，可重复运行（幂等）。
 
 检查项（5 组，共 19 项）：
-  1. E-MARKER-LEGACY（旧编号单因单报）：
-     完整旧格式恰报 1 条且不叠加缺项/框体例错误、部分迁移仍 1 条、
-     旧标签「⑤ 卷面」同样命中、旧单元之外的新单元缺项独立照报；
+  1. 旧编号写法不特判：
+     完整旧格式、部分旧写法、「⑤ 卷面」均按普通缺项/框体例错误照报（E-REQ-MISSING 在列），
+     混合讲义中新旧单元同一套判；
   2. W-MARKER-CONTENT（③ 标记行留空）：
      标记行带内容恰报 1 条 W 且不阻断（退出码 0）、加粗空标记不报、
      「③ 不适用（纯概念）：」后带说明不报；
@@ -260,24 +260,22 @@ class Runner:
 
 
 def group1_legacy(rv: Runner, c: Checker) -> None:
-    """组 1：旧编号单因单报。"""
+    """组 1：旧编号写法不特判，按普通体例错误照报。"""
     r = rv.run("legacy_full.md", FIX_LEGACY_FULL)
-    c.check("1.1 完整旧格式恰报 1 条 E-MARKER-LEGACY 且退出码 1",
-            r["codes"].count("E-MARKER-LEGACY") == 1 and r["exit"] == 1,
+    c.check("1.1 旧编号单元按普通缺项错误照报、退出码 1",
+            r["exit"] == 1 and any(code == "E-REQ-MISSING" for code in r["codes"]),
             f"codes={r['codes']} exit={r['exit']}")
-    c.check("1.2 旧格式不叠加 E-REQ-MISSING / E-BOX-*（单因单报）",
-            not any(code.startswith(("E-REQ-", "E-BOX-")) for code in r["codes"]),
-            f"codes={r['codes']}")
     r = rv.run("legacy_partial.md", FIX_LEGACY_PARTIAL)
-    c.check("1.3 部分迁移（⑤ 仍标准答案）仍恰报 1 条 legacy",
-            r["codes"] == ["E-MARKER-LEGACY"], f"codes={r['codes']}")
+    c.check("1.3 部分旧写法（⑤ 仍标准答案）同样按普通错误照报",
+            any(code == "E-REQ-MISSING" for code in r["codes"]),
+            f"codes={r['codes']}")
     r = rv.run("legacy_juanmian.md", FIX_LEGACY_JUANMIAN)
-    c.check("1.4 旧标签「⑤ 卷面」同样恰报 1 条 legacy",
-            r["codes"] == ["E-MARKER-LEGACY"], f"codes={r['codes']}")
+    c.check("1.4 旧标签「⑤ 卷面」同样不特判",
+            any(code == "E-REQ-MISSING" for code in r["codes"]),
+            f"codes={r['codes']}")
     r = rv.run("mixed.md", FIX_MIXED)
-    c.check("1.5 混合讲义：旧单元 1 条 legacy，新单元缺项独立照报",
-            r["codes"].count("E-MARKER-LEGACY") == 1
-            and any(code == "E-REQ-MISSING" for code in r["codes"]),
+    c.check("1.5 混合讲义：新旧单元都按同一套体例错误判",
+            any(code == "E-REQ-MISSING" for code in r["codes"]),
             f"codes={r['codes']}")
 
 

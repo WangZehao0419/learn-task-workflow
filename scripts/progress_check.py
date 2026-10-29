@@ -5,12 +5,12 @@
 用途：技能在跨阶段推进前调用，做四件事：
   1) 校验 progress.md 的必填字段与枚举合法性；
   2) 验证「已掌握（[x]/[X]）」节是否都有对应的 exercises/ 判分记录（落盘证据）；
-  3) 覆盖完整性只读告警（v2.3，warning 非 error，不阻断旧任务）：
+  3) 覆盖完整性只读告警（warning 非 error，不拦截流程，仅提示待补项）：
      W-NO-COVERAGE-AUDIT（结课/已完成缺「暂缓与范围外」区块或缺审计记录）、
      W-UNPARSED-HOLD（暂缓条目畸形计 0）、
      W-EMPTY-EVIDENCE（判分记录文件存在但内容无「判分/作答」结构——空文件或模板），
      并在 coverage 字段回显 hold_count / excluded_count / hold_unparsed / route_undone / audit_record_found。
-  4) KP 清单只读告警（v2.4，全部 warning 非 error，不阻断旧任务；仅 progress.md
+  4) KP 清单只读告警（全部 warning 非 error，不拦截流程；仅 progress.md
      或 progress.md 记有「课程体系」指针时触发）：
      W-KP-STATE-MISMATCH（小节已掌握 × 清单该节存在无摸底括注的「未讲」KP；
      带「已会」括注行豁免）、
@@ -22,13 +22,13 @@
      「滚雪球候选」等设计性范围外条目与排除条目均不计入暂缓比对基数）。
 
 用法：
-    python progress_check.py <任务目录>              # 历史/日常校验（warning 不阻断旧任务）
+    python progress_check.py <任务目录>              # 日常校验（warning 仅提示，不拦截）
     python progress_check.py <任务目录> --release    # 放行校验：本次新增掌握/结课/跨阶段前的严格检查
     python progress_check.py <任务目录> --release --proposed-phase 已完成
     python progress_check.py <任务目录> --release --staged <候选progress快照> [--changed-lessons 2,3]
     python progress_check.py --selftest
 
---release 模式（本次放行校验，与历史检查分离）：
+--release 模式（本次放行校验，与日常检查分离）：
     · **结构化作答闸口**：判分记录须**同题三要素配对**——真实学员作答（非占位）
       + 可判定结果（正确性/调度档，**精确枚举**） + 独立性枚举（独立 / 提示后·提示②–④ / 未测）；
       结果四态为 correct / partial / incorrect / ungraded：partial 计入分母、不计入分子；
@@ -38,11 +38,11 @@
       放行模式对作废/未判行另出 W-VOIDED-ATTEMPT / W-UNGRADED-ATTEMPT。
     · **逐关键能力独立通过**：声明「关键能力」区块时每项须至少一次独立正确 →
       否则 E-KEY-ABILITY-UNMET（关键项错不被简单题抵消）。
-    · **复述 / 目标型证据**：复述清单按**勾选项**计数（≥2，兼容同行多勾选）；
+    · **复述 / 目标型证据**：复述清单按**勾选项**计数（≥2；同行多个勾选各计一项）；
       「操作作品验收」类区块含 ≥2 个已勾选核验项可**等价替代**；二者皆无 → E-NO-RESTATEMENT。
     · **分型验收**：课程体系目行声明类型/视觉任务时，记忆/程序要 `KP=<id>` 的独立正确
       attempt，概念/设计要复述勾选行含该 KP，视觉任务要 `KP=<id>｜视觉=<任务>` 的独立正确
-      attempt；否则 E-KP-TYPED-GATE。未声明类型的旧任务不触发。
+      attempt；否则 E-KP-TYPED-GATE。目行未声明类型/视觉任务时不触发分型门。
     · **章规划契约**：章规划/材料覆盖结构提示（W-MODULE-*，读 课程体系.md）；两区缺失合法。
     · 空文件/仅含模板字样的判分记录 → E-EMPTY-EVIDENCE。
     · **阶段证据按内容而非文件名**：S2 须有**可用**的 00 摸底（E-NO-DIAGNOSTIC）；
@@ -56,7 +56,8 @@
     · **确定性证据选取**：候选可写 `- 本次证据：<文件名>` 显式指定；否则按
       「文件名日期最新 → 字典序最大」确定性选定（多份 real 时给 W-MULTI-EVIDENCE），
       结果不随目录枚举顺序变化；输出回显 `evidence_used`。
-    · **稳定 ID 与游标**：路线 lesson_id 须唯一（E-LESSON-ID-DUP）；暂缓/排除对账按
+    · **稳定 ID 与游标**：节路线行 lesson_id **必填**（缺 → E-LESSON-ID-MISSING）且唯一
+      （E-LESSON-ID-DUP）；判分证据只按 lesson_id 匹配（无序号回退）；暂缓/排除对账按
       **归一化后的对象 ID 集合**比较（`KP-90-1` ≡ `KP-90-01`）；游标「待回应」须同时命中
       **存在的文件与题号**、「最后提交」须指向**真实作答事件**（否则 E-CURSOR-DANGLING）。
     · 「起点」合法枚举 {零基础, 入门, 进阶}，非法 → E-ENUM-START；
@@ -66,10 +67,10 @@
     · 严格闸口校验的是**拟提交目标状态**：`--proposed-phase` 覆盖目标阶段、`--staged` 传
       候选 progress 快照；两者皆缺时只校验当前落盘状态，输出 proposed_state_supplied:false
       + W-NO-PROPOSED-STATE，明示「目标变更未被校验」。
-    · `--changed-lessons` 为显式增量机制：只校验本次新增掌握的节，旧资料不阻断无关新节；
+    · `--changed-lessons` 为显式增量机制：只校验本次新增掌握的节，无关节不在校验范围；
       输出 checked_lessons 回显本次严格校验覆盖的节号。
 
-历史模式保留 warning 级、不阻断旧任务（旧数据只有真实性告警时仍可继续教学）。
+日常模式保留 warning 级：warning 仅提示、不拦截推进。
 
 退出码：0 通过 / 1 校验不通过 / 2 用法错误
 """
@@ -83,7 +84,7 @@ from pathlib import Path
 
 import rule_contract
 from ltw_parse import (ENUM_KP_TYPE, ENUM_KP_VISUAL, FIELD_RE, HOLD_KEYS,
-                       KP_ID_ANY_RE, KP_ID_RE, KP_TYPE_ALIASES, KP_VISUAL_ALIASES,
+                       KP_ID_ANY_RE, KP_ID_RE,
                        ROUTE_RE, hold_disposition_excluded, hold_entry_malformed,
                        kp_status_base, normalize_kp_id, parse_kp_optional, parse_kp_row)
 
@@ -109,10 +110,10 @@ DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 # ── 判分证据结构判定（区分真实作答证据与空文件/模板）──
 EVIDENCE_HEAD_RE = re.compile(r"(判分|作答)")
-# 结果标记：档位词 / 对错 / 正确率 / 得分 / 勾叉 / 分数比值
+# 结果标记：档位词 / 对错 / 正确率 / 得分 / 分数比值
 GRADE_ROW_RE = re.compile(
-    r"(Good|Easy|Hard|Again|对|错|正确|错误|得分|满分|正确率|✓|✗|√|×|\d+\s*/\s*\d+"
-    r"|(?:正确性|调度档|结果|档位|档)\s*[=＝]\s*(?:部分|部分正确|partial|Partial|未判|待判|ungraded|Ungraded|correct|Correct|incorrect|Incorrect|作废))")
+    r"(Good|Easy|Hard|Again|对|错|得分|满分|正确率|\d+\s*/\s*\d+"
+    r"|(?:正确性|调度档|结果|档位|档)\s*[=＝]\s*(?:对|部分|错|未判|作废))")
 # 占位符：模板里的 <…>、待填、占位、示例标记——落在占位行上的结果不计为真实证据
 PLACEHOLDER_RE = re.compile(r"<[^>]*>|待填|占位|模板|示例")
 
@@ -134,8 +135,8 @@ def evidence_strength(text):
 
 
 # ── 放行模式结构化作答与闸口判定（关键词出现 ≠ 真实且达标的作答）──
-# 旧实现只查「全文含作答/判分 + 任一非占位评分词」，导致无学员答案、全部答错、
-# 只有标题、无复述清单等均被放行。以下把判分记录解析为**结构化作答行**再判闸口。
+# 只查「全文含作答/判分 + 任一非占位评分词」会放行无学员答案、全部答错、
+# 只有标题、无复述清单的记录。以下把判分记录解析为**结构化作答行**再判闸口。
 ENUM_START = _C["starts"]
 DIAG_PREFIXES = ("00-", "0-")   # S1 摸底证据专号（exercises/00-摸底-<日期>.md）
 FINAL_PREFIXES = ("99-",)       # S5 结课综合测验专号（exercises/99-结课综合测验-<日期>.md）
@@ -167,42 +168,36 @@ QNUM_RE = re.compile(r"题\s*(\d+)")
 DATE_IN_NAME_RE = re.compile(r"(\d{4}-\d{2}-\d{2})")
 EVIDENCE_REF_RE = re.compile(r"本次证据[：:]\s*(\S+)")
 # 正确性/独立性均按**精确枚举**解析：`正确性=不对` 不得被子串 `对` 误判为正确；
-# 正确性四态为 对/部分/错/未判（兼容英文），独立性缺失或 `未测` 均**不得推为独立**。
-# 判分四态别名唯一来源 = 契约 grading.aliases（调度档位词 Good/Easy/Hard/Again 不属四态，保持本地常量）
-_GRADING_ALIASES = _C["grading"]["aliases"]
-CORRECT_TRUE_EXACT = tuple(_GRADING_ALIASES["对"])
-CORRECT_FALSE_EXACT = tuple(_GRADING_ALIASES["错"])
+# 正确性四态唯一来源 = 契约 grading.values（对/部分/错/未判），无别名——其他写法
+# 一律非法（放行模式报 E-ENUM-GRADE）。独立性缺失或 `未测` 均**不得推为独立**。
+# 调度档位词 Good/Easy/Hard/Again 不属四态，保持本地常量。
+CORRECT_TRUE_EXACT = ("对",)
+CORRECT_FALSE_EXACT = ("错",)
 GRADE_TRUE_EXACT = ("Good", "Easy", "Hard")
 GRADE_FALSE_EXACT = ("Again",)
 # 判分四态：partial 入分母不入分子；ungraded 不入分母；作废行仅审计、不进闸口
-RESULT_PARTIAL_EXACT = tuple(_GRADING_ALIASES["部分"])
-RESULT_UNGRADED_EXACT = tuple(_GRADING_ALIASES["未判"])
+RESULT_PARTIAL_EXACT = ("部分",)
+RESULT_UNGRADED_EXACT = ("未判",)
 # 作废标记须是独立段，避免把「未作废」误判为作废
 VOID_RE = re.compile(r"(?:^|[｜|，,；;\s])作废(?:$|[｜|，,；;\s（(])")
 
 
 def evidence_section(text):
-    """取「作答与判分」段文本（到下一个二级标题为止）；无该段则回退全文。
+    """取「作答与判分」段文本（到下一个二级标题为止）。
 
     注意：**文档标题本身**若含「判分/作答」字样（如「S1 摸底判分」）不得被当作证据段起点，
-    否则会截在错误位置。只认标题正文**以「作答」或「判分」开头**的标题；无此类标题时才
-    退化为「任一含该词的标题」（兼容旧式 `# 判分记录`）。
+    否则会截在错误位置。只认标题正文**以「作答」或「判分」开头**的标题；
+    无匹配标题时返回全文（无结构的纯记录文件按整文解析，由结构化闸门把关）。
     """
     lines = text.splitlines()
-    start, fallback = None, None
+    start = None
     for i, ln in enumerate(lines):
         if not ln.lstrip().startswith("#"):
             continue
         h = ln.lstrip("#").strip()
-        if not EVIDENCE_HEAD_RE.search(h):
-            continue
-        if h.startswith("作答") or h.startswith("判分"):
+        if EVIDENCE_HEAD_RE.search(h) and (h.startswith("作答") or h.startswith("判分")):
             start = i + 1
             break
-        if fallback is None:
-            fallback = i + 1
-    if start is None:
-        start = fallback
     if start is None:
         return text
     out = []
@@ -231,7 +226,7 @@ def _section_bodies(text, head_re):
 
 
 def _checked_count(bodies):
-    """区块内勾选**项**总数（同行多个 [x] 各计一项——兼容官方模板「一行多勾选」）。"""
+    """区块内勾选**项**总数（同行多个 [x] 各计一项——官方模板允许「一行多勾选」）。"""
     return sum(len(CHECKED_RE.findall(b)) for b in bodies)
 
 
@@ -264,8 +259,8 @@ def material_key(line):
 def _restate_state(text):
     """复述证据状态：passed / failed / absent（缺复述记录同样不得支撑掌握）。
 
-    新模板：关键点勾选 ≥ 契约 restatement.keypoints **且**「无事实性错误」已勾。
-    旧模板无「无事实性错误」段时回退总勾选计数（零迁移）。
+    复述清单须同时满足：关键点勾选 ≥ 契约 restatement.keypoints **且**
+    「无事实性错误」自检行已勾——缺该自检行即 failed（单一模板，无回退路径）。
     """
     for ln in text.splitlines():
         if RESTATE_RE.search(ln) and any(t in ln for t in RESTATE_FAIL_TOKENS):
@@ -286,10 +281,8 @@ def _restate_state(text):
                             error_checked = True
         need = int(_C["restatement"]["keypoints"])
         if has_error_box:
-            # 兼容旧写法：同一行多个关键点且未用竖线分段时，按总勾选数减「无硬错」项回退
-            effective = keypoints if keypoints else max(0, _checked_count(bodies) - 1)
-            return "passed" if (effective >= need and error_checked) else "failed"
-        return "passed" if _checked_count(bodies) >= need else "failed"
+            return "passed" if (keypoints >= need and error_checked) else "failed"
+        return "failed"
     for ln in text.splitlines():
         if RESTATE_RE.search(ln) and any(t in ln for t in RESTATE_PASS_TOKENS):
             return "passed"
@@ -309,9 +302,9 @@ def _artifact_state(text):
 
 
 def _parse_result(tok):
-    """把正确性/调度档 token 归一为四态；未知返回 None。
+    """把正确性/调度档 token 归一为四态；未知返回 None（调用方报 E-ENUM-GRADE）。
 
-    `不对`/`不正确` 是错，不得被子串 `对` 误判为正确。
+    `不对`/`不正确` 不是合法枚举——四态只认 对/部分/错/未判，其他写法非法。
     容忍 token 后的括号注（如 `Again（得分点缺 X）`），只取主枚举。
     """
     t = re.split(r"[（(]", (tok or "").strip(), 1)[0].strip()
@@ -348,6 +341,7 @@ def parse_attempts(text):
     不同记录的字段**不得**被拼成总体合格。
     """
     attempts, incomplete = [], 0
+    invalid_result = []   # 写了 正确性=/档位= 但取值非法的行（放行模式报 E-ENUM-GRADE）
     for ln in evidence_section(text).splitlines():
         s = ln.strip()
         if not s.startswith("- "):
@@ -361,13 +355,18 @@ def parse_attempts(text):
         has_answer = bool(raw_answer) and not PLACEHOLDER_RE.search(raw_answer)
         voided = bool(VOID_RE.search(body))
         result = None
+        declared = None
         m = CORRECT_RE.search(body)
         if m:
-            result = _parse_result(m.group(1))
+            declared = m.group(1)
+            result = _parse_result(declared)
         if result is None:
             m = GRADE_RE.search(body)
             if m:
-                result = _parse_result(m.group(1))
+                declared = m.group(1)
+                result = _parse_result(declared)
+        if declared is not None and result is None and not voided:
+            invalid_result.append(declared.strip())
         m = INDEP_RE.search(body)
         indep = _parse_indep(m.group(1)) if m else None
         aid = ATTEMPT_ID_ROW_RE.search(body)
@@ -393,7 +392,7 @@ def parse_attempts(text):
             "has_answer": has_answer, "result": result, "correct": correct,
             "indep": indep, "graded": graded, "voided": voided,
         })
-    return {"attempts": attempts, "incomplete": incomplete}
+    return {"attempts": attempts, "incomplete": incomplete, "invalid_result": invalid_result}
 
 
 def parse_key_abilities(text):
@@ -442,6 +441,10 @@ def gate_evidence(ev_text, require_restatement=True, require_independence=True,
     """
     parsed = parse_attempts(ev_text)
     errs = []
+    if parsed["invalid_result"]:
+        errs.append(("E-ENUM-GRADE",
+                     "判分结果取值非法（四态只认 对/部分/错/未判，无别名）："
+                     + "、".join(sorted(set(parsed["invalid_result"])))))
     pool = [a for a in parsed["attempts"] if a["has_answer"]
             and a["result"] in ("correct", "partial", "incorrect") and not a["voided"]]
     if not pool:
@@ -525,8 +528,7 @@ def restated_kp_ids(text):
 
 
 def _visual_base(token):
-    t = (token or "").strip()
-    return t if t in ENUM_KP_VISUAL else KP_VISUAL_ALIASES.get(t.lower(), t)
+    return (token or "").strip()
 
 
 def typed_gate_errors(ev_text, kp_rows):
@@ -664,7 +666,7 @@ def collect_submission_ids(text, ex_dir, ex_names):
 
 # ── 课程体系目行解析（行级原语唯一实现 = ltw_parse；枚举与别名唯一来源 = 契约）──
 KP_ID_IN_TEXT_RE = re.compile(r"KP-\d+-\d+")
-# 稳定引用：路线行与判分记录可声明 lesson_id=…；消费方优先按 ID 匹配，旧资料回退序号
+# 稳定引用：节路线行必写 lesson_id=…，判分记录头声明同值；证据只按 ID 匹配（无序号回退）
 LESSON_ID_RE = re.compile(r"lesson_id\s*=\s*([A-Za-z0-9_\-]+)")
 # 覆盖范围行合法值：全量 或 已细化至第 N 节（宽容匹配，行缺失视同全量）
 KP_COVER_RE = re.compile(r"^已细化至第\s*\d+\s*节")
@@ -809,7 +811,7 @@ def check(task_dir, release=False, proposed=None):
       text            —— 拟提交的 progress.md 候选快照文本（校验该对象而非磁盘现状）
       phase           —— 拟提交的目标阶段（覆盖候选文本中的「当前阶段」）
       changed_lessons —— 本次新增掌握的节编号列表；给定时严格证据校验只覆盖这些节
-                         （显式增量机制，旧资料不阻断无关新节）
+                         （显式增量机制，无关节不在校验范围）
     未提供 proposed 时只校验当前落盘状态：目标变更（拟转阶段/拟新增掌握）未被校验，
     输出 `proposed_state_supplied:false` + W-NO-PROPOSED-STATE 明示（不得据此声称已校验）。
     """
@@ -975,7 +977,7 @@ def check(task_dir, release=False, proposed=None):
     ex_names = []
     if ex_dir.is_dir():
         ex_names = [p.name for p in ex_dir.iterdir() if p.is_file()]
-    # 路线内 lesson_id 必须唯一（同一证据不得被两节共用、无法判定归属）
+    # 路线内 lesson_id 必填且必须唯一（同一证据不得被两节共用、无法判定归属）
     route_id_list = [LESSON_ID_RE.search(lbl).group(1) for _n, _d, lbl in lessons
                      if LESSON_ID_RE.search(lbl)]
     dup_ids = sorted({i for i in route_id_list if route_id_list.count(i) > 1})
@@ -983,6 +985,12 @@ def check(task_dir, release=False, proposed=None):
         errors.append({"code": "E-LESSON-ID-DUP",
                        "message": "节路线存在重复 lesson_id（同一证据会被两节共用、无法判定归属）："
                                   + "、".join(dup_ids)})
+    missing_ids = sorted({str(num) for num, _d, lbl in lessons
+                          if num >= 1 and not LESSON_ID_RE.search(lbl)})
+    if missing_ids:
+        errors.append({"code": "E-LESSON-ID-MISSING",
+                       "message": "节路线行缺 lesson_id=（稳定标识必填，重排/改名后仍按 ID 对证据）：节 "
+                                  + "、".join(missing_ids)})
     # 候选状态可为本次提交**显式引用**判分证据（`- 本次证据：<文件名>`）
     ev_ref_m = EVIDENCE_REF_RE.search(text)
     ev_ref = ev_ref_m.group(1) if ev_ref_m else None
@@ -995,38 +1003,25 @@ def check(task_dir, release=False, proposed=None):
         if num < 1 or not done:
             continue
         if changed_lessons is not None and num not in changed_lessons:
-            continue   # 增量：只校验本次新增掌握的节，旧资料不阻断无关新节
+            continue   # 增量：只校验本次新增掌握的节，无关节不在校验范围
         checked_lessons.append(num)
-        # 编号宽容匹配：同时接受两位补零 "01-" 与单位数 "1-"
-        prefixes = ("{:02d}-".format(num), "{}-".format(num))
-        # 稳定引用：路线行声明 lesson_id 时**优先按 ID 匹配**（重排/改名后仍正确）；
-        # 未声明或旧资料无 ID 时才回退序号前缀匹配（零迁移）。
+        # 稳定引用：路线行 lesson_id 必填（缺行已在上面报 E-LESSON-ID-MISSING）；
+        # 证据只按 lesson_id 匹配——重排/改名后仍对应正确对象，不靠序号猜。
         route_id_m = LESSON_ID_RE.search(label)
-        route_id = route_id_m.group(1) if route_id_m else None
+        if route_id_m is None:
+            errors.append({"code": "E-NO-EVIDENCE",
+                           "message": "节 " + str(num) + " 路线行缺 lesson_id=，无法按稳定 ID 匹配判分证据"})
+            continue
+        route_id = route_id_m.group(1)
         hit = []
-        if route_id:
-            for n in ex_names:
-                m = LESSON_ID_RE.search(_read_evidence(ex_dir, n))
-                if m and m.group(1) == route_id:
-                    hit.append(n)
-        if not hit:
-            hit = [n for n in ex_names if n.startswith(prefixes[0]) or n.startswith(prefixes[1])]
-        if route_id and hit:
-            # 回退命中的文件声明了另一个 lesson_id → 证据错配（重排后串用他节证据）
-            mism = []
-            for n in hit:
-                m = LESSON_ID_RE.search(_read_evidence(ex_dir, n))
-                if m and m.group(1) != route_id:
-                    mism.append(n + "（lesson_id=" + m.group(1) + "）")
-            if mism:
-                errors.append({"code": "E-EVIDENCE-ID-MISMATCH",
-                               "message": "节 " + str(num) + "（lesson_id=" + route_id +
-                                          "）的判分证据声明了另一稳定 ID：" + "、".join(mism) +
-                                          "——按序号回退串到了他节证据，拒绝放行"})
+        for n in ex_names:
+            m = LESSON_ID_RE.search(_read_evidence(ex_dir, n))
+            if m and m.group(1) == route_id:
+                hit.append(n)
         if not hit:
             errors.append({"code": "E-NO-EVIDENCE",
-                           "message": "节 " + str(num) + " 标已掌握，但 exercises/ 无判分记录（" +
-                                      prefixes[0] + "* 或 " + prefixes[1] + "*）"})
+                           "message": "节 " + str(num) + "（lesson_id=" + route_id +
+                                      "）标已掌握，但 exercises/ 无声明该 lesson_id= 的判分记录"})
             continue
         # 确定性选证据（显式引用优先；否则「日期最新 → 字典序最大」），不看枚举顺序
         chosen, multi = pick_evidence(hit, ex_dir, ev_ref)
@@ -1083,7 +1078,7 @@ def check(task_dir, release=False, proposed=None):
         warnings.append({"code": "W-UNPARSED-ROUTE",
                          "message": "课程体系学习路线存在未解析的勾选行（应为 \"- [x] N. 节名\"）：" + line})
 
-    # ── 覆盖完整性（v2.3，只读告警：warning 非 error，不阻断旧任务） ──
+    # ── 覆盖完整性（只读告警：warning 非 error，不拦截流程） ──
     hold_section_present = "暂缓与范围外" in sections
     malformed_holds = [b for b in hold_entries if hold_entry_malformed(b)]
     base_holds = [b for b in hold_entries if not hold_entry_malformed(b)]  # 合规条目（畸形条目计 0，不静默）
@@ -1114,8 +1109,8 @@ def check(task_dir, release=False, proposed=None):
                                       " 个未勾选节——不得凭未完成路线声称结课/已完成"})
         if not hold_section_present:
             warnings.append({"code": "W-NO-COVERAGE-AUDIT",
-                             "message": "结课/已完成任务缺「暂缓与范围外」区块（旧任务属合法「未审计」形态，"
-                                        "不阻断；建议下次正常文件写入/编辑时顺带补区块并补跑覆盖审计）"})
+                             "message": "结课/已完成任务缺「暂缓与范围外」区块（覆盖审计未完成；"
+                                        "建议下次文件写入/编辑时顺带补区块并补跑覆盖审计）"})
         if not audit_record_found:
             warnings.append({"code": "W-NO-COVERAGE-AUDIT",
                              "message": "记忆.md 学习日志未发现覆盖审计记录（需同时含「审计」关键词与 YYYY-MM-DD 日期），"
@@ -1304,7 +1299,7 @@ def check(task_dir, release=False, proposed=None):
                              "（判分记录或薄弱点/错题元数据的 attempt_id=/evt=）：" +
                              cursor["最后提交"] + "（无法核对重复事件，须先修正游标）")
 
-    # ── 放行模式严格闸口（只在 release 生效；历史模式不阻断旧任务）──
+    # ── 放行模式严格闸口（只在 release 生效；日常校验不含严格闸口）──
     if release:
         if not proposed_state_supplied:
             warnings.append({"code": "W-NO-PROPOSED-STATE",
@@ -1669,6 +1664,44 @@ KP_PROG_MULTIKP = KP_PROG_OK.replace(
 
 CURR_TMPL = ("# 课程体系：夹具\n- 版本：1\n- 覆盖范围：全量\n\n## 学习路线\n### 章1 ｜ 基础\n")
 
+_FX_ROUTE_RE = re.compile(r"^(-\s*\[[xX ]\]\s*(\d+)\.\s*[^（(]*?)\s*$")
+_FX_EXNUM_RE = re.compile(r"^(\d{1,2})-")
+
+
+def _fixture_route_ids(route_lines):
+    """夹具助手：给缺 lesson_id 的路线行补「（lesson_id=L-<节号>）」（仅夹具用，非生产逻辑）。
+
+    v9.6.0 起 lesson_id 必填、判分证据只按 ID 匹配；夹具统一在此补 ID，
+    已带显式 lesson_id 的行（ID 匹配专项夹具）保持原样。
+    """
+    out = []
+    for ln in route_lines:
+        m = _FX_ROUTE_RE.match(ln)
+        if m and "lesson_id" not in ln:
+            ln = m.group(1) + "（lesson_id=L-%02d）" % int(m.group(2))
+        out.append(ln)
+    return out
+
+
+def _fixture_text_ids(text):
+    """夹具助手：对整段文本逐行补路线行 lesson_id（仅夹具用，非生产逻辑）。"""
+    return "\n".join(_fixture_route_ids(text.splitlines())) + "\n"
+
+
+def _fixture_evidence_text(rel_name, txt):
+    """夹具助手：按文件名补 lesson_id（仅夹具用，非生产逻辑）。
+
+    课程体系.md → 给路线行补 ID；exercises 证据 → 按文件名节号补 ID 头
+    （00-/0-/99- 专号与已声明 lesson_id 的内容不补）。
+    """
+    name = rel_name.replace("\\", "/").rsplit("/", 1)[-1]
+    if name.startswith("课程体系"):
+        return _fixture_text_ids(txt)
+    m = _FX_EXNUM_RE.match(name)
+    if not m or m.group(1) in ("0", "00", "99") or "lesson_id" in txt:
+        return txt
+    return "lesson_id=L-%02d\n" % int(m.group(1)) + txt
+
 
 def _split_progress(text):
     """夹具助手：把 progress 文本中的「## 学习路线」块迁到课程体系（仅夹具用，非生产逻辑）。"""
@@ -1688,18 +1721,18 @@ def _split_progress(text):
     while route and not route[-1].strip():
         route.pop()
     if route:
-        return prog, CURR_TMPL + "\n".join(route) + "\n"
+        return prog, CURR_TMPL + "\n".join(_fixture_route_ids(route)) + "\n"
     return prog, None
 
 
 def selftest():
     ok = True
-    # 复述门：关键点 ≥2 且「无事实性错误」已勾；旧模板回退总计数
+    # 复述门：关键点 ≥2 且「无事实性错误」已勾；缺自检行即 failed（单一模板，无回退）
     _restate_cases = [
         ("## 复述检查清单\n- [x] 关键点1：A\n- [x] 无事实性错误\n", "failed"),
         ("## 复述检查清单\n- [x] 关键点1：A\n- [x] 关键点2：B\n- [ ] 无事实性错误\n", "failed"),
         ("## 复述检查清单\n- [x] 关键点1：A\n- [x] 关键点2：B\n- [x] 无事实性错误\n", "passed"),
-        ("## 复述检查清单\n- [x] A\n- [x] B\n", "passed"),
+        ("## 复述检查清单\n- [x] A\n- [x] B\n", "failed"),
     ]
     for _txt, _exp in _restate_cases:
         ok = ok and _restate_state(_txt) == _exp
@@ -1721,7 +1754,8 @@ def selftest():
         prog_g, curr_g = _split_progress(GOOD)
         (d / "progress.md").write_text(prog_g, encoding="utf-8")
         (d / "课程体系.md").write_text(curr_g, encoding="utf-8")
-        (d / "exercises" / "01-变量-2026-01-01.md").write_text("## 作答与判分\n- 题1：Good", encoding="utf-8")
+        (d / "exercises" / "01-变量-2026-01-01.md").write_text(
+            _fixture_evidence_text("01-变量-2026-01-01.md", "## 作答与判分\n- 题1：Good"), encoding="utf-8")
         r = check(d)
         ok = ok and r["ok"]
 
@@ -1730,7 +1764,7 @@ def selftest():
         d2.mkdir()
         prog_b, curr_b = _split_progress(BAD)
         (d2 / "progress.md").write_text(prog_b, encoding="utf-8")
-        (d2 / "课程体系.md").write_text(curr_b, encoding="utf-8")
+        (d2 / "课程体系.md").write_text(_fixture_text_ids(curr_b), encoding="utf-8")
         r2 = check(d2)
         codes = [e["code"] for e in r2["errors"]]
         ok = ok and (not r2["ok"]) and ("E-NO-EVIDENCE" in codes) and ("E-REVIEW-ORIGIN" in codes)
@@ -1747,8 +1781,9 @@ def selftest():
         (d4 / "exercises").mkdir(parents=True)
         prog_u, curr_u = _split_progress(UPPER)
         (d4 / "progress.md").write_text(prog_u, encoding="utf-8")
-        (d4 / "课程体系.md").write_text(curr_u, encoding="utf-8")
-        (d4 / "exercises" / "01-极限-2026-01-01.md").write_text("## 作答与判分\n- 题1：Good", encoding="utf-8")
+        (d4 / "课程体系.md").write_text(_fixture_text_ids(curr_u), encoding="utf-8")
+        (d4 / "exercises" / "01-极限-2026-01-01.md").write_text(
+            _fixture_evidence_text("01-极限-2026-01-01.md", "## 作答与判分\n- 题1：Good"), encoding="utf-8")
         r4 = check(d4)
         ok = ok and r4["ok"] and not any(w["code"] == "W-NO-ROUTE" for w in r4["warnings"])
 
@@ -1756,7 +1791,7 @@ def selftest():
         d5 = Path(td) / "upper-noex"
         d5.mkdir()
         (d5 / "progress.md").write_text(prog_u, encoding="utf-8")
-        (d5 / "课程体系.md").write_text(curr_u, encoding="utf-8")
+        (d5 / "课程体系.md").write_text(_fixture_text_ids(curr_u), encoding="utf-8")
         r5 = check(d5)
         ok = ok and (not r5["ok"]) and any(e["code"] == "E-NO-EVIDENCE" for e in r5["errors"])
 
@@ -1764,8 +1799,9 @@ def selftest():
         d6 = Path(td) / "single"
         (d6 / "exercises").mkdir(parents=True)
         (d6 / "progress.md").write_text(prog_u, encoding="utf-8")
-        (d6 / "课程体系.md").write_text(curr_u, encoding="utf-8")
-        (d6 / "exercises" / "1-极限-2026-01-01.md").write_text("## 作答与判分\n- 题1：Good", encoding="utf-8")
+        (d6 / "课程体系.md").write_text(_fixture_text_ids(curr_u), encoding="utf-8")
+        (d6 / "exercises" / "1-极限-2026-01-01.md").write_text(
+            _fixture_evidence_text("1-极限-2026-01-01.md", "## 作答与判分\n- 题1：Good"), encoding="utf-8")
         r6 = check(d6)
         ok = ok and r6["ok"]
 
@@ -1774,10 +1810,12 @@ def selftest():
         (d7 / "exercises").mkdir(parents=True)
         (d7 / "progress.md").write_text(DONE_OK, encoding="utf-8")
         (d7 / "课程体系.md").write_text(
-            "# 课程体系：示例\n- 版本：1\n\n## 学习路线\n### 章1 ｜ 语言\n- [x] 1. 词法\n- [x] 2. 句法\n", encoding="utf-8")
+            "# 课程体系：示例\n- 版本：1\n\n## 学习路线\n### 章1 ｜ 语言\n- [x] 1. 词法（lesson_id=L-01）\n- [x] 2. 句法（lesson_id=L-02）\n", encoding="utf-8")
         (d7 / "记忆.md").write_text(MEM_AUDIT, encoding="utf-8")
-        (d7 / "exercises" / "01-词法-2026-01-01.md").write_text("## 作答与判分\n- 题1：Good", encoding="utf-8")
-        (d7 / "exercises" / "02-句法-2026-01-02.md").write_text("## 作答与判分\n- 题1：Good", encoding="utf-8")
+        (d7 / "exercises" / "01-词法-2026-01-01.md").write_text(
+            _fixture_evidence_text("01-词法-2026-01-01.md", "## 作答与判分\n- 题1：Good"), encoding="utf-8")
+        (d7 / "exercises" / "02-句法-2026-01-02.md").write_text(
+            _fixture_evidence_text("02-句法-2026-01-02.md", "## 作答与判分\n- 题1：Good"), encoding="utf-8")
         r7 = check(d7)
         c7 = r7["coverage"]
         ok = ok and r7["ok"]
@@ -1786,17 +1824,19 @@ def selftest():
         ok = ok and c7["hold_unparsed"] == 0 and c7["route_undone"] == 0
         ok = ok and c7["audit_record_found"] is True
 
-        # ⑧ 结课缺区块 + 缺审计记录 → 仅 W-NO-COVERAGE-AUDIT（warning 非 error，不阻断旧任务）
+        # ⑧ 结课缺区块 + 缺审计记录 → 仅 W-NO-COVERAGE-AUDIT（warning 非 error，不拦截）
         d8 = Path(td) / "done-noaudit"
         d8.mkdir()
         (d8 / "progress.md").write_text(
             DONE_OK.split("## 暂缓与范围外")[0], encoding="utf-8")
         (d8 / "课程体系.md").write_text(
-            "# 课程体系：示例\n- 版本：1\n\n## 学习路线\n### 章1 ｜ 语言\n- [x] 1. 词法\n- [x] 2. 句法\n", encoding="utf-8")
+            "# 课程体系：示例\n- 版本：1\n\n## 学习路线\n### 章1 ｜ 语言\n- [x] 1. 词法（lesson_id=L-01）\n- [x] 2. 句法（lesson_id=L-02）\n", encoding="utf-8")
         (d8 / "记忆.md").write_text(MEM_PLAIN, encoding="utf-8")
         (d8 / "exercises").mkdir()
-        (d8 / "exercises" / "01-词法-2026-01-01.md").write_text("## 作答与判分\n- 题1：Good", encoding="utf-8")
-        (d8 / "exercises" / "02-句法-2026-01-02.md").write_text("## 作答与判分\n- 题1：Good", encoding="utf-8")
+        (d8 / "exercises" / "01-词法-2026-01-01.md").write_text(
+            _fixture_evidence_text("01-词法-2026-01-01.md", "## 作答与判分\n- 题1：Good"), encoding="utf-8")
+        (d8 / "exercises" / "02-句法-2026-01-02.md").write_text(
+            _fixture_evidence_text("02-句法-2026-01-02.md", "## 作答与判分\n- 题1：Good"), encoding="utf-8")
         r8 = check(d8)
         ok = ok and r8["ok"]  # warning 不影响 ok
         ok = ok and sum(1 for w in r8["warnings"] if w["code"] == "W-NO-COVERAGE-AUDIT") == 2
@@ -1806,14 +1846,14 @@ def selftest():
         d9.mkdir()
         prog_h, curr_h = _split_progress(HOLD_BAD)
         (d9 / "progress.md").write_text(prog_h, encoding="utf-8")
-        (d9 / "课程体系.md").write_text(curr_h, encoding="utf-8")
+        (d9 / "课程体系.md").write_text(_fixture_text_ids(curr_h), encoding="utf-8")
         r9 = check(d9)
         c9 = r9["coverage"]
         ok = ok and r9["ok"]  # 畸形条目是告警不是错误
         ok = ok and any(w["code"] == "W-UNPARSED-HOLD" for w in r9["warnings"])
         ok = ok and c9["hold_unparsed"] == 1 and c9["hold_count"] == 0
 
-        # ⑩ 旧任务（S3 进行中、无暂缓区块）→ 不产生覆盖告警（零迁移）
+        # ⑩ 无暂缓区块（覆盖审计未做）→ 不产生覆盖告警
         r4c = r4["coverage"]
         ok = ok and not r4c["hold_section_present"]
         ok = ok and not any(w["code"].startswith("W-NO-COVERAGE") or w["code"] == "W-UNPARSED-HOLD"
@@ -1824,8 +1864,9 @@ def selftest():
         d11.mkdir()
         (d11 / "progress.md").write_text(KP_PROG_OK, encoding="utf-8")
         (d11 / "exercises").mkdir()
-        (d11 / "exercises" / "01-变量-2026-01-01.md").write_text("## 作答与判分\n- 题1：Good", encoding="utf-8")
-        (d11 / "课程体系.md").write_text(KPLIST_OK, encoding="utf-8")
+        (d11 / "exercises" / "01-变量-2026-01-01.md").write_text(
+            _fixture_evidence_text("01-变量-2026-01-01.md", "## 作答与判分\n- 题1：Good"), encoding="utf-8")
+        (d11 / "课程体系.md").write_text(_fixture_text_ids(KPLIST_OK), encoding="utf-8")
         r11 = check(d11)
         ok = ok and r11["ok"]
         ok = ok and not any(w["code"].startswith("W-KP") or w["code"] == "W-UNPARSED-KP"
@@ -1837,11 +1878,12 @@ def selftest():
         d12.mkdir()
         prog_k, curr_k = _split_progress(KP_PROG_OK)
         (d12 / "progress.md").write_text(prog_k, encoding="utf-8")
-        (d12 / "课程体系.md").write_text(curr_k, encoding="utf-8")
+        (d12 / "课程体系.md").write_text(_fixture_text_ids(curr_k), encoding="utf-8")
         (d12 / "exercises").mkdir()
-        (d12 / "exercises" / "01-变量-2026-01-01.md").write_text("## 作答与判分\n- 题1：Good", encoding="utf-8")
+        (d12 / "exercises" / "01-变量-2026-01-01.md").write_text(
+            _fixture_evidence_text("01-变量-2026-01-01.md", "## 作答与判分\n- 题1：Good"), encoding="utf-8")
         (d12 / "课程体系.md").write_text(
-            KPLIST_OK.replace("状态：已讲", "状态：未讲").replace("未讲 2 ｜ 已讲 1", "未讲 3 ｜ 已讲 0"),
+            _fixture_text_ids(KPLIST_OK.replace("状态：已讲", "状态：未讲").replace("未讲 2 ｜ 已讲 1", "未讲 3 ｜ 已讲 0")),
             encoding="utf-8")
         r12 = check(d12)
         ok = ok and r12["ok"]
@@ -1854,7 +1896,8 @@ def selftest():
         d13.mkdir()
         (d13 / "progress.md").write_text(prog_k, encoding="utf-8")  # 有指针、无课程体系文件
         (d13 / "exercises").mkdir()
-        (d13 / "exercises" / "01-变量-2026-01-01.md").write_text("## 作答与判分\n- 题1：Good", encoding="utf-8")
+        (d13 / "exercises" / "01-变量-2026-01-01.md").write_text(
+            _fixture_evidence_text("01-变量-2026-01-01.md", "## 作答与判分\n- 题1：Good"), encoding="utf-8")
         r13 = check(d13)
         ok = ok and r13["ok"]
         ok = ok and sum(1 for w in r13["warnings"] if w["code"] == "W-KP-LIST-MISSING") == 1
@@ -1866,7 +1909,7 @@ def selftest():
         d14 = Path(td) / "kp-bad"
         d14.mkdir()
         (d14 / "progress.md").write_text(KP_PROG_NA, encoding="utf-8")
-        (d14 / "课程体系.md").write_text(KPLIST_BAD, encoding="utf-8")
+        (d14 / "课程体系.md").write_text(_fixture_text_ids(KPLIST_BAD), encoding="utf-8")
         r14 = check(d14)
         ok = ok and r14["ok"]
         ok = ok and sum(1 for w in r14["warnings"] if w["code"] == "W-UNPARSED-KP") == 4
@@ -1876,11 +1919,13 @@ def selftest():
         d15 = Path(td) / "kp-sum"
         d15.mkdir()
         (d15 / "progress.md").write_text(prog_k, encoding="utf-8")
-        (d15 / "课程体系.md").write_text(curr_k, encoding="utf-8")
+        (d15 / "课程体系.md").write_text(_fixture_text_ids(curr_k), encoding="utf-8")
         (d15 / "exercises").mkdir()
-        (d15 / "exercises" / "01-变量-2026-01-01.md").write_text("## 作答与判分\n- 题1：Good", encoding="utf-8")
+        (d15 / "exercises" / "01-变量-2026-01-01.md").write_text(
+            _fixture_evidence_text("01-变量-2026-01-01.md", "## 作答与判分\n- 题1：Good"), encoding="utf-8")
         (d15 / "课程体系.md").write_text(
-            KPLIST_OK.replace("总 4 ｜ 未讲 2 ｜ 已讲 1", "总 4 ｜ 未讲 1 ｜ 已讲 2"), encoding="utf-8")
+            _fixture_text_ids(KPLIST_OK.replace("总 4 ｜ 未讲 2 ｜ 已讲 1", "总 4 ｜ 未讲 1 ｜ 已讲 2")),
+            encoding="utf-8")
         r15 = check(d15)
         ok = ok and r15["ok"]
         ok = ok and sum(1 for w in r15["warnings"] if w["code"] == "W-KP-SUMMARY-MISMATCH") == 1
@@ -1892,15 +1937,16 @@ def selftest():
         d16.mkdir()
         (d16 / "progress.md").write_text(KP_PROG_NOHOLD, encoding="utf-8")
         (d16 / "exercises").mkdir()
-        (d16 / "exercises" / "01-变量-2026-01-01.md").write_text("## 作答与判分\n- 题1：Good", encoding="utf-8")
-        (d16 / "课程体系.md").write_text(KPLIST_OK, encoding="utf-8")
+        (d16 / "exercises" / "01-变量-2026-01-01.md").write_text(
+            _fixture_evidence_text("01-变量-2026-01-01.md", "## 作答与判分\n- 题1：Good"), encoding="utf-8")
+        (d16 / "课程体系.md").write_text(_fixture_text_ids(KPLIST_OK), encoding="utf-8")
         r16 = check(d16)
         ok = ok and r16["ok"]
         ok = ok and sum(1 for w in r16["warnings"] if w["code"] == "W-KP-HOLD-CROSS") == 1
         ok = ok and sum(1 for w in r16["warnings"]
                         if w["code"].startswith("W-KP") or w["code"] == "W-UNPARSED-KP") == 1
 
-        # ⑰ v2.4 零迁移：无指针旧任务不触发任何 KP 告警（B7 零新增误报锚点）
+        # ⑰ 无「课程体系」指针 → 不触发任何 KP 告警（B7 零新增误报锚点）
         for rr in (r4, r6, r9):
             ok = ok and not any(w["code"].startswith("W-KP") or w["code"] == "W-UNPARSED-KP"
                                 for w in rr["warnings"])
@@ -1919,9 +1965,11 @@ def selftest():
                 (d / "课程体系.md").write_text(curr, encoding="utf-8")
             if with_ex:
                 (d / "exercises").mkdir()
-                (d / "exercises" / "01-变量-2026-01-01.md").write_text("## 作答与判分\n- 题1：Good", encoding="utf-8")
+                (d / "exercises" / "01-变量-2026-01-01.md").write_text(
+                    _fixture_evidence_text("01-变量-2026-01-01.md", "## 作答与判分\n- 题1：Good"),
+                    encoding="utf-8")
             if make_list:
-                (d / list_name).write_text(list_text, encoding="utf-8")
+                (d / list_name).write_text(_fixture_text_ids(list_text), encoding="utf-8")
             return d
 
         # ⑱ 半角括号「未讲(已会：…)」→ 不报畸形、按未讲基值计数、零 KP 告警
@@ -1983,8 +2031,9 @@ def selftest():
         d26 = Path(td) / "empty-ev"
         (d26 / "exercises").mkdir(parents=True)
         (d26 / "progress.md").write_text(prog_g, encoding="utf-8")
-        (d26 / "课程体系.md").write_text(curr_g, encoding="utf-8")
-        (d26 / "exercises" / "01-变量-2026-01-01.md").write_text("# 空文件", encoding="utf-8")
+        (d26 / "课程体系.md").write_text(_fixture_text_ids(curr_g), encoding="utf-8")
+        (d26 / "exercises" / "01-变量-2026-01-01.md").write_text(
+            _fixture_evidence_text("01-变量-2026-01-01.md", "# 空文件"), encoding="utf-8")
         r26 = check(d26)
         ok = ok and r26["ok"]  # warning 不影响 ok
         ok = ok and any(w["code"] == "W-EMPTY-EVIDENCE" for w in r26["warnings"])
@@ -2050,9 +2099,10 @@ def selftest():
         d33 = Path(td) / "rel-template"
         (d33 / "exercises").mkdir(parents=True)
         (d33 / "progress.md").write_text(prog_u, encoding="utf-8")
-        (d33 / "课程体系.md").write_text(curr_u, encoding="utf-8")
+        (d33 / "课程体系.md").write_text(_fixture_text_ids(curr_u), encoding="utf-8")
         (d33 / "exercises" / "01-极限-2026-01-01.md").write_text(
-            "## 作答与判分（模板）\n- 题 1：作答「<学员答案>」｜信心=<1-5>｜<Good|Hard|Again>\n",
+            _fixture_evidence_text("01-极限-2026-01-01.md",
+                                   "## 作答与判分（模板）\n- 题 1：作答「<学员答案>」｜信心=<1-5>｜<Good|Hard|Again>\n"),
             encoding="utf-8")
         r33_hist = check(d33)
         r33_rel = check(d33, release=True)
@@ -2064,10 +2114,11 @@ def selftest():
         d33c = Path(td) / "rel-real"
         (d33c / "exercises").mkdir(parents=True)
         (d33c / "progress.md").write_text(prog_u, encoding="utf-8")
-        (d33c / "课程体系.md").write_text(curr_u, encoding="utf-8")
+        (d33c / "课程体系.md").write_text(_fixture_text_ids(curr_u), encoding="utf-8")
         (d33c / "exercises" / "01-极限-2026-01-01.md").write_text(
-            "## 作答与判分\n- 题 1：作答「-3」｜正确性=对｜独立性=独立｜调度档=Good\n"
-            "## 复述检查清单\n- [x] 关键点1：极限定义\n- [x] 关键点2：极限唯一性\n- [x] 无事实性错误\n",
+            _fixture_evidence_text("01-极限-2026-01-01.md",
+                                   "## 作答与判分\n- 题 1：作答「-3」｜正确性=对｜独立性=独立｜调度档=Good\n"
+                                   "## 复述检查清单\n- [x] 关键点1：极限定义\n- [x] 关键点2：极限唯一性\n- [x] 无事实性错误\n"),
             encoding="utf-8")
         ok = ok and check(d33c, release=True)["ok"]
 
@@ -2079,13 +2130,14 @@ def selftest():
             "- 类型：知识型\n- 学科族：数学与统计\n- 目标：自测\n- 起点：入门\n\n"
             "## 学习路线\n- [x] 1. 甲\n- [ ] 2. 乙\n")
         (d34 / "progress.md").write_text(prog34, encoding="utf-8")
-        (d34 / "课程体系.md").write_text(curr34, encoding="utf-8")
-        (d34 / "exercises" / "01-甲-2026-01-01.md").write_text("## 作答与判分\n- 题1：Good", encoding="utf-8")
+        (d34 / "课程体系.md").write_text(_fixture_text_ids(curr34), encoding="utf-8")
+        (d34 / "exercises" / "01-甲-2026-01-01.md").write_text(
+            _fixture_evidence_text("01-甲-2026-01-01.md", "## 作答与判分\n- 题1：Good"), encoding="utf-8")
         r34 = check(d34, release=True)
         ok = ok and (not r34["ok"]) and any(e["code"] == "E-ROUTE-UNDONE" for e in r34["errors"])
 
-        # ㉟ 零迁移：progress.md 含可选新键（evt=）与「动作游标」行 →
-        # 合法通过、无告警（脚本对未知可选字段零感知，旧任务加键不需迁移）
+        # ㉟ progress.md 含可选键（evt=）与「动作游标」行 →
+        # 合法通过、无告警（脚本对未知可选字段零感知）
         d35 = Path(td) / "cursor"
         (d35 / "exercises").mkdir(parents=True)
         prog35, curr35 = _split_progress(
@@ -2095,9 +2147,10 @@ def selftest():
             "## 薄弱点\n- 某点：表现（S=3.0，D=3，last=2026-10-09，due=2026-10-10，信心=4，cw，evt=E1）\n\n"
             "## 下次续学\n- 动作游标：批改 ｜ 待回应：01-极限 题1 ｜ 最后提交：E1\n")
         (d35 / "progress.md").write_text(prog35, encoding="utf-8")
-        (d35 / "课程体系.md").write_text(curr35, encoding="utf-8")
+        (d35 / "课程体系.md").write_text(_fixture_text_ids(curr35), encoding="utf-8")
         (d35 / "exercises" / "01-极限-2026-01-01.md").write_text(
-            "## 作答与判分\n- 题 1：作答「x」｜信心=5｜Good\n", encoding="utf-8")
+            _fixture_evidence_text("01-极限-2026-01-01.md",
+                                   "## 作答与判分\n- 题 1：作答「x」｜信心=5｜Good\n"), encoding="utf-8")
         r35 = check(d35)
         ok = ok and r35["ok"] and not r35["warnings"]
 
@@ -2112,7 +2165,7 @@ def selftest():
             for rel, txt in (files or {}).items():
                 fp = d / rel
                 fp.parent.mkdir(parents=True, exist_ok=True)
-                fp.write_text(txt, encoding="utf-8")
+                fp.write_text(_fixture_evidence_text(rel, txt), encoding="utf-8")
             return d
 
         PROG_S3 = ("# 学习任务：严格闸口\n- 数据根：<root>\n- 当前阶段：逐节学习\n"
@@ -2248,7 +2301,7 @@ def selftest():
         (d41 / "progress.md").write_text(
             prog41.replace("- 起点：零基础\n", "- 起点：零基础\n- 课程体系：课程体系.md\n"),
             encoding="utf-8")
-        (d41 / "课程体系.md").write_text(KPLIST_CORE, encoding="utf-8")
+        (d41 / "课程体系.md").write_text(_fixture_text_ids(KPLIST_CORE), encoding="utf-8")
         (d41 / "exercises" / "99-结课综合测验-2026-01-01.md").write_text(EV_OK, encoding="utf-8")
         r41 = check(d41, release=True)
         ok = ok and (not r41["ok"]) and any(e["code"] == "E-CORE-UNLEARNED" for e in r41["errors"])
@@ -2289,14 +2342,14 @@ def selftest():
         ok = ok and main([str(d44), "--release", "--changed-lessons", "x"]) == 2
 
         # ═══ 回归：稳定 ID 匹配 + 按对象 ID 对账 + 游标悬空 ═══
-        # ㊻ 路线 lesson_id 与判分证据声明的 lesson_id 不一致（重排后串用他节）→ E-EVIDENCE-ID-MISMATCH
+        # ㊻ 证据声明的 lesson_id 与路线行不一致 → 不命中（无序号回退）→ E-NO-EVIDENCE
         d46 = _mk2("r09-idmismatch",
                    PROG_S3.replace("- [x] 1. 变量\n",
                                    "- [x] 1. 循环（lesson_id=L-B）\n- [ ] 2. 变量（lesson_id=L-A）\n"),
                    {"exercises/01-变量-2026-01-01.md":
                     "# 变量，lesson_id=L-A\n## 作答与判分\n- attempt_id=A-1，题1：作答「3」｜Good"})
         r46 = check(d46, release=True)
-        ok = ok and any(e["code"] == "E-EVIDENCE-ID-MISMATCH" for e in r46["errors"])
+        ok = ok and any(e["code"] == "E-NO-EVIDENCE" for e in r46["errors"])
         # ㊼ 按 ID 正匹配容忍重排：序号与文件名不符但 lesson_id 一致 → 正常匹配、不误报
         d47 = _mk2("r09-idmatch",
                    PROG_S3.replace("- [x] 1. 变量\n", "- [x] 1. 循环（lesson_id=L-A）\n"),
@@ -2304,8 +2357,7 @@ def selftest():
                     "# 变量，lesson_id=L-A\n## 作答与判分\n- attempt_id=A-1，题1：作答「3」｜正确性=对"
                     "｜独立性=独立｜调度档=Good\n## 复述检查清单\n- [x] 关键点1\n- [x] 关键点2\n- [x] 无事实性错误\n"})
         r47 = check(d47, release=True)
-        ok = ok and r47["ok"] and not any(e["code"] == "E-EVIDENCE-ID-MISMATCH"
-                                          for e in r47["errors"])
+        ok = ok and r47["ok"]
         # ㊽ 数量相同但对象不同 → W-KP-HOLD-CROSS（旧口径只比数量、直接放行）
         d48 = _mk2("r09-kpids", KP_PROG_OK, {"课程体系.md":
                    "# 课程体系：示例\n- 版本：1\n- 对照源：自拟总纲\n- 排序规则：拓扑序\n"
@@ -2400,13 +2452,15 @@ def selftest():
             "## 作答与判分\n"
             "- 题1：作答「3」｜正确性=correct｜独立性=独立\n"
             "- 题2：作答「4」｜正确性=partial｜独立性=独立\n" + RESTATE)
-        ev_en = parse_attempts(EV_ENGLISH)["attempts"]
-        ok = ok and [a["result"] for a in ev_en] == ["correct", "partial"]
+        # 英文别名不再是合法枚举：结果解析为 None，且记入 invalid_result（放行模式报 E-ENUM-GRADE）
+        ev_en = parse_attempts(EV_ENGLISH)
+        ok = ok and [a["result"] for a in ev_en["attempts"]] == [None, None]
+        ok = ok and ev_en["invalid_result"] == ["correct", "partial"]
 
         EV_VOID_CORRECTED = (
             "## 作答与判分\n"
-            "- attempt_id=A1，题1：作答「3」｜正确性=incorrect｜独立性=独立｜调度档=Again｜作废（答案键错误）\n"
-            "- attempt_id=A1，题1：作答「3」｜正确性=correct｜独立性=独立｜调度档=Good\n"
+            "- attempt_id=A1，题1：作答「3」｜正确性=错｜独立性=独立｜调度档=Again｜作废（答案键错误）\n"
+            "- attempt_id=A1，题1：作答「3」｜正确性=对｜独立性=独立｜调度档=Good\n"
             + RESTATE)
         r57 = _codes("v60-void-corrected", PROG_S3, EV_VOID_CORRECTED, release=True)[0]
         ok = ok and r57["ok"]
@@ -2558,7 +2612,7 @@ def main(argv=None):
                     help="拟提交的 progress.md 候选快照文件（校验拟提交对象而非磁盘现状）")
     ap.add_argument("--changed-lessons", default=None,
                     help="本次新增掌握的小节编号（逗号/顿号分隔），限定严格证据校验范围"
-                         "（旧资料不阻断无关新节；不给则校验全部已掌握小节）")
+                         "（不给则校验全部已掌握小节）")
     ap.add_argument("--selftest", action="store_true")
     args = ap.parse_args(argv)
     if args.selftest:

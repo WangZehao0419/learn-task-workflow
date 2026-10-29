@@ -50,9 +50,6 @@ ENUM_PHASE = _C["phases"]
 ENUM_TYPE = _C["types"]
 ENUM_FAMILY = _C["subject_families"]
 
-# 数据根第一层的**合法全局文件**：不得判为「旧版单任务文件」（画像由文档声明为可选全局文件、脚本零感知）
-LEGACY_EXCLUDE = {"profile.md"}
-
 
 def default_root():
     """默认数据根 = <cwd>/.learning（仅当 cwd = 工作区根时正确）。"""
@@ -171,34 +168,32 @@ def _list_dir(path):
 
 
 def scan(root):
-    """枚举 root 下的任务目录与旧版单文件。
+    """枚举 root 下的任务目录（只认含 progress.md 的子目录；散文件不是任务）。
 
-    返回 (tasks, legacy, root_exists, unreadable, scan_status, scan_error)：
+    返回 (tasks, root_exists, unreadable, scan_status, scan_error)：
       tasks      —— 解析成功的任务列表
-      legacy     —— 数据根第一层的旧版单文件（扩展名大小写不敏感）
       root_exists—— root 是否存在
       unreadable —— 存在但读取失败的任务（{"slug":..,"error":"unreadable"}），
                     单条坏文件不阻断整次枚举（降级并继续）。
       scan_status—— ok（完整枚举、无不可读条目）/ partial（完整枚举但有不可读条目）/
                     failed（无法枚举：root 非目录，或列目录抛 OSError）。
-                    failed 时 tasks/legacy 不可信，调用方不得当「无任务」处理。
+                    failed 时 tasks 不可信，调用方不得当「无任务」处理。
       scan_error —— failed 时的结构化原因字符串；否则 None。
     """
     root = Path(root)
     tasks = []
-    legacy = []
     unreadable = []
     if not root.exists():
-        return tasks, legacy, False, unreadable, "ok", None
+        return tasks, False, unreadable, "ok", None
     if not root.is_dir():
         # root 存在但非目录：无法枚举 → failed；由 main() 决定退出码与提示，不在此崩溃。
-        return tasks, legacy, True, unreadable, "failed", "root_not_a_directory"
+        return tasks, True, unreadable, "failed", "root_not_a_directory"
     try:
         entries = _list_dir(root)
     except OSError as exc:
         print("[learn-task-workflow] 无法读取数据根：" + str(root) + "（" + str(exc) + "）",
               file=sys.stderr)
-        return tasks, legacy, True, unreadable, "failed", "root_unreadable: " + str(exc)
+        return tasks, True, unreadable, "failed", "root_unreadable: " + str(exc)
     for p in entries:
         try:
             if p.is_dir():
@@ -225,19 +220,15 @@ def scan(root):
                     info["has_materials"] = (p / "materials").is_dir()
                     info["has_exercises"] = (p / "exercises").is_dir()
                     tasks.append(info)
-            elif p.is_file() and p.suffix.lower() == ".md":
-                # 扩展名大小写不敏感；排除数据根第一层的合法全局文件（如画像 profile.md），不得判为旧版单任务文件
-                if p.name.lower() not in LEGACY_EXCLUDE:
-                    legacy.append(p.name)
         except OSError:
             # 单条条目异常：降级跳过，不阻断整次枚举。
             unreadable.append({"slug": p.name, "error": "unreadable"})
             continue
     scan_status = "partial" if unreadable else "ok"
-    return tasks, legacy, True, unreadable, scan_status, None
+    return tasks, True, unreadable, scan_status, None
 
 
-def build_index(root, tasks, legacy, root_exists, unreadable=None,
+def build_index(root, tasks, root_exists, unreadable=None,
                 scan_status="ok", scan_error=None):
     # 派生缓存：字段排序稳定、不含易变时间戳，保证幂等。
     return {
@@ -249,7 +240,6 @@ def build_index(root, tasks, legacy, root_exists, unreadable=None,
         # failed 时 tasks 不可信 → task_count 置 null（未知），绝不谎报 0（=「无任务」）
         "task_count": None if scan_status == "failed" else len(tasks),
         "tasks": sorted(tasks, key=lambda t: t["slug"]),
-        "legacy_single_files": sorted(legacy),
         "unreadable": sorted(unreadable or [], key=lambda x: x["slug"]),
     }
 
@@ -387,10 +377,10 @@ def selftest():
     hold_info = classify(parse_progress(HOLD_SAMPLE))
     ok = ok and hold_info["hold_count"] == 3 and hold_info["hold_unparsed"] == 1
     ok = ok and hold_info["excluded_count"] == 1
-    # 旧档案（无暂缓区块）→ hold_count 0 不炸
-    legacy_info = classify(parse_progress(SAMPLE.split("## 暂缓与范围外")[0]))
-    ok = ok and legacy_info["hold_count"] == 0 and legacy_info["hold_unparsed"] == 0
-    ok = ok and legacy_info["excluded_count"] == 0
+    # 无暂缓区块（覆盖审计未做）→ hold_count 0 不炸
+    plain_info = classify(parse_progress(SAMPLE.split("## 暂缓与范围外")[0]))
+    ok = ok and plain_info["hold_count"] == 0 and plain_info["hold_unparsed"] == 0
+    ok = ok and plain_info["excluded_count"] == 0
     # 目游标：有「已讲到第 k/N 目」→ 解析；无 → None
     block_info = classify(parse_progress(BLOCK_SAMPLE))
     ok = ok and block_info["current_item"] == 2 and block_info["item_total"] == 5
@@ -406,20 +396,19 @@ def selftest():
         (d / "exercises").mkdir(parents=True)
         (d / "progress.md").write_text(SAMPLE, encoding="utf-8")
         (d / "课程体系.md").write_text(CURRICULUM_SAMPLE, encoding="utf-8")
-        # 旧版单文件：大写扩展名应被识别；合法全局画像 profile.md 不得被判为旧版文件
-        (root / "旧版笔记.MD").write_text("旧内容", encoding="utf-8")
+        # 数据根第一层散文件不是任务：不入 tasks、不单独标记
+        (root / "随手笔记.MD").write_text("旧内容", encoding="utf-8")
         (root / "profile.md").write_text("# 学习者画像\n- 类比领域：做饭\n", encoding="utf-8")
-        tasks, legacy, exists, unreadable, scan_status, scan_error = scan(root)
-        idx = build_index(root, tasks, legacy, exists, unreadable,
+        tasks, exists, unreadable, scan_status, scan_error = scan(root)
+        idx = build_index(root, tasks, exists, unreadable,
                           scan_status, scan_error)
         w1 = write_index_if_changed(root, idx)
         w2 = write_index_if_changed(root, idx)
         ok = ok and exists and len(tasks) == 1 and tasks[0]["slug"] == "python"
-        ok = ok and legacy == ["旧版笔记.MD"]
-        ok = ok and "profile.md" not in legacy  # 全局画像不得被判为旧版单任务文件
+        ok = ok and "legacy_single_files" not in idx  # 散文件不再单独标记
         ok = ok and unreadable == []
         ok = ok and scan_status == "ok" and scan_error is None
-        ok = ok and idx["schema"] == "learn-task-index/6"
+        ok = ok and idx["schema"] == "learn-task-index/7"
         ok = ok and tasks[0]["route_total"] == 2 and tasks[0]["route_done"] == 1
         ok = ok and tasks[0]["curriculum_missing"] is False
         ok = ok and w1 == "written" and w2 == "unchanged"  # 幂等：第二次不重写
@@ -552,8 +541,8 @@ def main(argv=None):
         return selftest()
 
     root = Path(args.root) if args.root else default_root()
-    tasks, legacy, exists, unreadable, scan_status, scan_error = scan(root)
-    index = build_index(root, tasks, legacy, exists, unreadable,
+    tasks, exists, unreadable, scan_status, scan_error = scan(root)
+    index = build_index(root, tasks, exists, unreadable,
                         scan_status, scan_error)
 
     warn_about_root(root, exists)

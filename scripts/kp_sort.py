@@ -198,7 +198,7 @@ def sort_from_text(text):
                  "malformed_count": len(parsed["malformed"])}, 1)
     rows = parsed["rows"]
     ids = [r["id"] for r in rows]
-    # 别名归一：仅用于查重与前置匹配；输出 order 保留原书写形态（向后兼容）
+    # 别名归一：仅用于查重与前置匹配；输出 order 保留原书写形态（输出保真）
     norm = [normalize_kp_id(i) for i in ids]
     norm_to_raw = {}
     for r, n in zip(rows, norm):
@@ -251,7 +251,7 @@ def sort_from_text(text):
                            for b in blockers)
         return ({"error": "纳入项存在被暂缓/排除的硬先修，讲授序不完整：" + detail, "blockers": blockers}, 1)
 
-    # 依赖边以「原 id」为键（输出向后兼容），前置目标经别名归一回映射到原 id
+    # 依赖边以「原 id」为键（输出保真），前置目标经别名归一回映射到原 id
     deps = {r["id"]: {norm_to_raw[normalize_kp_id(p)] for p in r["prereqs"]} for r in rows}
     # 检环（契约口径：捕获环形依赖异常 → exit ≠ 0 + 环路径，不静默）；
     # 标准库实名 graphlib.CycleError；

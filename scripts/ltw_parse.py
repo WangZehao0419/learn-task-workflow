@@ -30,15 +30,13 @@ KP_ID_ANY_RE = re.compile(r"KP-(\d+)-(\d+)")
 ENUM_KP_STATUS = tuple(_C["kp"]["states"])
 ENUM_KP_TYPE = tuple(_C["kp"]["types"])
 ENUM_KP_VISUAL = tuple(_C["kp"]["visual_tasks"])
-KP_TYPE_ALIASES = dict(_C["kp"]["type_aliases"])
-KP_VISUAL_ALIASES = dict(_C["kp"]["visual_aliases"])
 
 
 def normalize_kp_id(kid):
     """KP 编号归一化：单位数与补零别名归一到两位规范形（KP-1-1 ≡ KP-01-01）。
 
     仅用于**重复检测与集合/前置匹配**（等价类比较，两侧同走本函数）；
-    排序输出与落盘仍保留原书写形态（向后兼容）。
+    排序输出与落盘仍保留原书写形态。
     """
     m = KP_ID_ANY_RE.fullmatch(kid or "")
     if not m:
@@ -101,10 +99,9 @@ def parse_kp_optional(segs):
             if kp_type is not None:
                 return None
             raw = re.split(r"[：:]", seg, maxsplit=1)[1].strip()
-            value = raw if raw in ENUM_KP_TYPE else KP_TYPE_ALIASES.get(raw.lower())
-            if value is None:
+            if raw not in ENUM_KP_TYPE:
                 return None
-            kp_type = value
+            kp_type = raw
         elif seg.startswith("视觉任务：") or seg.startswith("视觉任务:"):
             if visual_tasks:
                 return None
@@ -114,10 +111,9 @@ def parse_kp_optional(segs):
             for tok in re.split(r"[,，、/\s]+", raw):
                 if not tok:
                     continue
-                value = tok if tok in ENUM_KP_VISUAL else KP_VISUAL_ALIASES.get(tok.lower())
-                if value is None or value in visual_tasks:
+                if tok not in ENUM_KP_VISUAL or tok in visual_tasks:
                     return None
-                visual_tasks.append(value)
+                visual_tasks.append(tok)
             if not visual_tasks:
                 return None
         else:
@@ -128,7 +124,7 @@ def parse_kp_optional(segs):
 def parse_kp_row(segs):
     """课程体系目行六段（KP编号｜目名｜所属节｜前置｜来源｜状态）+ 可选类型/视觉任务 → dict。
 
-    可选字段缺失返回 type=None、visual_tasks=[]（旧任务统一闸口）；畸形返回 None。
+    可选字段缺失返回 type=None、visual_tasks=[]（目行未声明时统一闸口）；畸形返回 None。
     附带 sec_decl（显式「节 N」序号，供与编号契约「编号节序 = 所属节」比对）
     与 bottom_note（摸底「已会」括注探测，带括注行豁免 W-KP-STATE-MISMATCH）。
     """

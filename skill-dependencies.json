@@ -42,7 +42,7 @@
     "verify": "python --version 显示 ≥ 3.10；python -B scripts/check_environment.py 输出 status=ready；七个用户脚本逐一以 --selftest 运行并退出 0；rule_contract.py --selftest / --topology 均退出 0；读者版检查：python -B scripts/verify_explanation.py --reader <材料目录或单文件>。",
     "security": "无需登录与凭据；不安装、不修改系统配置；检查器只读，不发起网络请求与子进程。",
     "verified_at": "2026-10-29",
-    "applies_to_version": "9.5.0"
+    "applies_to_version": "9.6.0"
    }
   }
  ]

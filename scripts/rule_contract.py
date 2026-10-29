@@ -5,7 +5,7 @@
 契约固定为 <技能根>/contracts/rules.json。缺失/畸形时所有调用方必须 fail closed。
 
 --topology 检查：references 无加载指令、owns/must-not-define 职责头、
-R/T/F 规则 owner 锚点可解析、依赖无环、旧文件名只在 alias 表、
+R/T/F 规则 owner 锚点可解析、依赖无环、
 版本四方一致（SKILL.md / rules.json / skill-dependencies.json / evals.json）、
 全仓 E-/W- 错误码 ⊆ 契约 errors、operations.md 速查表与 errors 双向覆盖、
 handout.md canonical 集合与 headings.lead_words 双写一致。
@@ -20,7 +20,7 @@ import tempfile
 from pathlib import Path
 
 SCHEMA = "ltw-rules/1"
-REQUIRED_TOP = ("schema", "version", "files", "rules", "path_aliases", "constants", "scenes")
+REQUIRED_TOP = ("schema", "version", "files", "rules", "constants", "scenes")
 REQUIRED_CONST = (
     "phases", "types", "subject_families", "group_slugs", "discipline_slugs",
     "review_origin_phases", "grading", "kp", "gates", "restatement",
@@ -125,12 +125,6 @@ def validate(data: dict) -> dict:
             for sid in r["scenes"]:
                 _require(sid in scenes, "E-CONTRACT-INVALID",
                          "rule %s 引用未定义场景 %s" % (r["id"], sid))
-
-    aliases = data["path_aliases"]
-    _require(isinstance(aliases, dict), "E-CONTRACT-INVALID", "path_aliases 必须是对象")
-    for old, new in aliases.items():
-        _require(isinstance(new, str) and new in paths,
-                 "E-CONTRACT-INVALID", "path_aliases 指向未知文件：%s → %s" % (old, new))
 
     c = data["constants"]
     _require(isinstance(c, dict), "E-CONTRACT-INVALID", "constants 必须是对象")
@@ -475,20 +469,8 @@ def topology(path: Path | None = None) -> dict:
         # 2. 职责头
         if "<!-- owns:" not in text or "must-not-define:" not in text:
             issues.append("E-TOPOLOGY-HEADER: %s 缺 owns/must-not-define" % f["path"])
-        # 3. 旧文件名只允许出现在 alias 表。连字符复合词豁免（computing-theory.md 不算
-        #    含 theory.md）；带路径的写法只要不指向现行文件，就算陈旧指针。
-        registered = {x["path"] for x in data["files"]}
-        for old in data["path_aliases"]:
-            pat = re.compile(r"(?<![\w-])(?:[\w.-]+/)*" + re.escape(old))
-            for m in pat.finditer(text):
-                hit = m.group(0)
-                if hit in registered or ("references/" + hit) in registered:
-                    continue
-                issues.append("E-TOPOLOGY-OLDNAME: %s 含旧文件名 %s（%s）"
-                              % (f["path"], old, hit))
-                break
 
-    # 4. 规则 owner 可解析
+    # 3. 规则 owner 可解析
     for r in data["rules"]:
         owner = r["owner"]
         if "#" not in owner:
