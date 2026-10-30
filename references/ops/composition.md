@@ -7,7 +7,7 @@
 | 机制 A | 机制 B | 关系与组合规则 |
 |---|---|---|
 | 教学八动作 | 难度伺服三档 | **正交**：八动作是教学动作维度，伺服三档是难度维度。可组合（如「降档 + 换角度重讲」），每次判分后选定动作并随判分记录落盘（动作 + 一句依据）。定义见 `teaching/interaction.md` 与 `assessment/scoring.md` |
-| 单轮一小步 | 节末五件套 | **等待轮**：五件套②（学员输出任务）占一轮等待用户写完；③落盘、④复习日期、⑤进度对账同轮连做，不新增等待轮（紧凑节奏下按 `workflow/s3-block.md`「轮次预算与合并弹性」合并，等待轮相应减少）。五件定义见 `workflow/s3-block.md`「节末收尾五件套」 |
+| 单轮一小步 | 节末五件套 | **等待轮**：五件套②（学员输出任务）占一轮等待用户写完；③落盘、④复习日期、⑤进度对账同轮连做，不新增等待轮（紧凑节奏下按 `workflow/s3-block.md`「轮次预算与合并弹性」合并，等待轮相应减少）。五件定义见 `workflow/s3-close.md`「节末收尾五件套」 |
 | cw 条目 | 校准画像 | **两层语义**：cw 是逐条重测信号（该条先练，进 due-queue 排序优先）；校准画像 = **当前问题记录中的高信心错误占比**（聚合元认知素材）。cw 是画像的输入行，画像是 cw 的列总和；**画像只描述问题记录投影，不评价整体人格/整体校准水平**。定义见 `assessment/scheduling.md` |
 | 课程体系目行状态 | progress.md「暂缓与范围外」 | **双写账本**：课程体系目行记状态（分母账本），progress.md 暂缓区块记处置明细（处置账本）；交叉核对走 `W-KP-HOLD-CROSS`。字段格式见 `data/curriculum.md` 与 `data/progress-schema.md` |
 | 错因 / 级 | S / D 调度字段 | **互不替代**：错因与级是内容属性（错什么，定补救动作与整理深度），S/D 是调度属性（何时再练）；级不参与 due-queue 排序。定义见 `teaching/interaction.md` 与 `data/progress-schema.md` |
@@ -34,6 +34,6 @@
 | 未教术语不进题面 / 判据 | `assessment/generation.md`「出题前术语对账（R46）」 | 同上 + `scripts/prereq_check.py` | SKILL.md 常驻#9、`ops/failure.md` SR-10、`subjects/language-teach.md` 记号与术语纪律、`data/curriculum.md` 引入字段 |
 | 零基础确证（不假设已会） | `teaching/lesson-flow.md`「课首与旧知锚定·确证铁律」 | 同上 | `teaching/presentation.md` 类比纪律、`teaching/interaction.md` 卡壳协议豁免、`handout/templates.md` 学习者状态层 |
 | 前置依赖检查 | `workflow/s3-block.md`「前置依赖检查」（运行时）+ `workflow/s0-s2-setup.md` 步骤 5（构建时排序） | `scripts/kp_sort.py` | `teaching/lesson-flow.md` 备课短表「必需先修」 |
-| 示例与检验不同题 / 不泄底 | `handout/quality.md`「讲解出厂自检」第 9 项 | `scripts/verify_explanation.py` | `teaching/explain-quality.md` 示例设计红线（教学动作层重申） |
+| 示例与检验不同题 / 不泄底 | `handout/self-check.md`「讲解出厂自检」第 9 项 | `scripts/verify_explanation.py` | `teaching/explain-quality.md` 示例设计红线（教学动作层重申） |
 | 变式真变 | `assessment/generation.md`「零提示与条件化判定题·变式真变」 | 同上 | `ops/composition.md` 检索变式行、`workflow/s4-review.md`；结构判据（一次一维）在 `teaching/explain-quality.md`「智能变式一次一维（R43）」 |
 | 先教后练 | `teaching/lesson-flow.md`「核心教学序列（硬规则）」 | 同上 | SKILL.md 常驻#2、六拍、`handout/pipeline.md` 四段支架 |

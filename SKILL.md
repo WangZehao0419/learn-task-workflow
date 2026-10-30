@@ -107,7 +107,7 @@ agent_created: true
 
 **references 之间不写加载指令**；只有本表决定加载顺序。加载后按各文件的 `owns / must-not-define` 头执行。
 
-**加载成本**：分册按当前节读取，不整册通读。三层各取一份：内容类型处方（`content-types`）+ 学科群切片（按场景取一片）+ 学科包（命中时叠加）。S3 讲授常见加载集 = 本文件 + `s3-block` + `lesson-flow` + `interaction` + `presentation` + `explain-quality` + `content-types` + `scoring` + `ops/typography` + 群 `-teach` 切片，命中学科时再加 `discipline`；出题/判分走 `s3-exercise`（含 `common`、`content-types`、`ops/typography` 与群 `-practice` 切片的题型阶梯与误区库）；复习走 `s4-review`（含 `common`、`ops/typography` 与群 `-review` 切片的复习侧重）；写/改讲义走 `s3-handout`（含 `handout/typography`、`ops/typography` 与群 `-practice` 切片的答案形态）；跨会话落盘走 `persist`；出现学习者可见公式才加 `formulas.md`；溯源核验才加 `evidence.md`。
+**加载成本**：分册按当前节读取，不整册通读。三层各取一份：内容类型处方（`content-types`）+ 学科群切片（按场景取一片）+ 学科包（命中时叠加）。S3 讲授常见加载集 = 本文件 + `s3-block` + `s3-cycle` + `s3-close` + `lesson-flow` + `lesson-prep` + `interaction` + `interaction-diagnosis` + `presentation` + `tone` + `explain-quality` + `explanation-depth` + `explanation-density` + `explanation-craft` + `content-types` + `scoring` + `ops/typography` + 群 `-teach` 切片，命中学科时再加 `discipline`；出题/判分走 `s3-exercise`（含 `common`、`content-types`、`ops/typography` 与群 `-practice` 切片的题型阶梯与误区库）；复习走 `s4-review`（含 `interaction-diagnosis`、`common`、`ops/typography` 与群 `-review` 切片的复习侧重）；写/改讲义走 `s3-handout`（含 `support-levels`、`styles`、`unit-schema`、`figures`、`self-check`、`handout/typography`、`ops/typography` 与群 `-practice` 切片的答案形态）；跨会话落盘走 `persist`（含 `memory`）；出现学习者可见公式才加 `formulas`；溯源核验才加 `evidence`；失败才加 `failure`；机制冲突才加 `composition`；打印/读者版才加 `handout-export`；P1/P2 才加 `handout-enhance`；文献审计才加 `literature`。
 
 ## 参考文件（按需加载）
 

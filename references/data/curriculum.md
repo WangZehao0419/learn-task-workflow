@@ -1,4 +1,4 @@
-# 课程体系、记忆与学习者画像
+# 课程体系（规划簿）
 
 <!-- owns: 课程体系（规划簿）：章/节/目、覆盖、排期、质量保障、协作协议；must-not-define: 三簿分工（data/layout）、记忆簿（memory）、画像（profile）、状态簿（progress-schema） -->
 

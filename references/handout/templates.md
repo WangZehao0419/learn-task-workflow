@@ -1,19 +1,14 @@
-# 讲义类型与风格
+# 讲义类型矩阵
 
 <!-- owns: 类型判定与四类矩阵（①–⑤ 输出面）；must-not-define: 支持级/状态层（support-levels）、六套风格（styles）、单元 schema（unit-schema）、版式（typography）、来源（quality） -->
 
 ## 目录
 
 - ## 4. 类型模板（阶段 2）
-- ## 6. L1/L2/L3 支持级（阶段 2）
-- ## 7. 学习者状态层（阶段 2）
-- ## 标准讲义（默认）
-- ## 费曼卡
-- ## 考试冲刺卡
-- ## 对比辨析卡
-- ## 操作手册式
-- ## 精读笔记式（论证文材料默认）
-- ## 讲义概念单元 schema（所有风格共用）
+- ### 4.1 类型判定
+- ### 4.2 四类矩阵
+
+> 已迁出：支持级/状态层→`handout/support-levels.md`；六套风格→`handout/styles.md`；单元 schema→`handout/unit-schema.md`。
 
 ## 4. 类型模板（阶段 2）
 
