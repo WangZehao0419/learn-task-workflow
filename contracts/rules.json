@@ -1821,7 +1821,9 @@
   },
   "scenes_budget": {
    "files_max": 17,
-   "chars_max": 34000
+   "chars_max": 34000,
+   "supplement_files_max": 4,
+   "supplement_chars_max": 20000
   },
   "group_slugs": {
    "数学与统计": "math",
@@ -1852,12 +1854,24 @@
    "label": "入口判别 / 触发边界",
    "files": [
     "references/routing/triggers.md"
+   ],
+   "stack": [
+    {
+     "scene": "failure",
+     "when": "按能力触发"
+    }
    ]
   },
   "shortcuts": {
    "label": "快捷指令",
    "files": [
     "references/routing/shortcuts.md"
+   ],
+   "stack": [
+    {
+     "scene": "failure",
+     "when": "按能力触发"
+    }
    ]
   },
   "ecosystem": {
@@ -1878,6 +1892,28 @@
     "references/subjects/{group}-plan.md",
     "references/workflow/s0-s1.md",
     "references/data/profile.md"
+   ],
+   "stack": [
+    {
+     "scene": "evidence",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "failure",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "discipline",
+     "when": "按能力触发"
+    }
+   ],
+   "supplements": [
+    {
+     "file": "references/ops/evidence.md",
+     "section": "来源分级与出处四要素",
+     "when": "S2 来源核验时",
+     "intent": "I-SOURCE-GRADING@global"
+    }
    ]
   },
   "s3-teach": {
@@ -1901,7 +1937,37 @@
     "references/teaching/interaction-diagnosis.md",
     "references/teaching/tone.md"
    ],
-   "chars_max": 48500
+   "chars_max": 49000,
+   "stack": [
+    {
+     "scene": "formulas",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "evidence",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "failure",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "composition",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "discipline",
+     "when": "按能力触发"
+    }
+   ],
+   "supplements": [
+    {
+     "file": "references/assessment/generation.md",
+     "section": "出题范围与未讲授过滤（R35）",
+     "when": "讲授热身/确认题需要出题域时",
+     "intent": "I-UNTAUGHT-FILTER@global"
+    }
+   ]
   },
   "s3-handout": {
    "label": "S3 讲义生成",
@@ -1923,6 +1989,60 @@
     "references/handout/unit-schema.md",
     "references/handout/figures.md",
     "references/handout/self-check.md"
+   ],
+   "stack": [
+    {
+     "scene": "formulas",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "evidence",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "failure",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "composition",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "discipline",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "handout-export",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "handout-enhance",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "literature",
+     "when": "按能力触发"
+    }
+   ],
+   "supplements": [
+    {
+     "file": "references/teaching/explanation-depth.md",
+     "section": "深度分层",
+     "when": "写深度分配或深讲单元时",
+     "intent": "I-DEPTH@global"
+    },
+    {
+     "file": "references/assessment/generation.md",
+     "section": "出题范围与未讲授过滤（R35）",
+     "when": "讲义自测需要核对出题域时",
+     "intent": "I-UNTAUGHT-FILTER@global"
+    },
+    {
+     "file": "references/assessment/generation.md",
+     "section": "题量预算与自测≠题组",
+     "when": "写自测/题组题量预算时",
+     "intent": "I-SELF-TEST-VS-GROUP@handout"
+    }
    ]
   },
   "s3-exercise": {
@@ -1937,7 +2057,37 @@
     "references/subjects/{group}-practice.md",
     "references/ops/scripts.md"
    ],
-   "chars_max": 36000
+   "chars_max": 39000,
+   "stack": [
+    {
+     "scene": "formulas",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "evidence",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "failure",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "composition",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "discipline",
+     "when": "按能力触发"
+    }
+   ],
+   "supplements": [
+    {
+     "file": "references/teaching/interaction.md",
+     "section": "反馈策略（T09）",
+     "when": "判分后给反馈时",
+     "intent": "I-FEEDBACK@global"
+    }
+   ]
   },
   "s3-deep": {
    "label": "深讲概念 / 换风格重讲 / 呈现定版",
@@ -1948,9 +2098,52 @@
     "references/ops/typography.md",
     "references/handout/styles.md",
     "references/handout/unit-schema.md",
-    "references/teaching/explanation-depth.md"
+    "references/teaching/explanation-depth.md",
+    "references/teaching/explanation-density.md"
    ],
-   "chars_max": 42500
+   "chars_max": 42500,
+   "stack": [
+    {
+     "scene": "formulas",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "evidence",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "failure",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "composition",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "discipline",
+     "when": "按能力触发"
+    }
+   ],
+   "supplements": [
+    {
+     "file": "references/assessment/generation.md",
+     "section": "题量预算与自测≠题组",
+     "when": "定稿前核对自测题量时",
+     "intent": "I-SELF-TEST-VS-GROUP@handout"
+    },
+    {
+     "file": "references/handout/support-levels.md",
+     "section": "6. L1/L2/L3 支持级",
+     "when": "换风格重讲需要定支持级时",
+     "intent": "I-SUPPORT-LEVELS@handout"
+    },
+    {
+     "file": "references/handout/reader-path.md",
+     "section": "8. 读者路径与导航（P1）",
+     "when": "读者版重排时",
+     "intent": "I-READER-PATH@handout"
+    }
+   ]
   },
   "s4-review": {
    "label": "S4 复习与清债",
@@ -1965,7 +2158,37 @@
     "references/subjects/{group}-review.md",
     "references/teaching/interaction-diagnosis.md"
    ],
-   "chars_max": 29000
+   "chars_max": 33000,
+   "stack": [
+    {
+     "scene": "formulas",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "evidence",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "failure",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "composition",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "discipline",
+     "when": "按能力触发"
+    }
+   ],
+   "supplements": [
+    {
+     "file": "references/assessment/scoring.md",
+     "section": "判分口径",
+     "when": "复习判分/复述/定级时",
+     "intent": "I-GRADING-STATES@global"
+    }
+   ]
   },
   "s5-close": {
    "label": "S5 结课",
@@ -1980,6 +2203,32 @@
     "references/subjects/common.md",
     "references/workflow/coverage-audit.md",
     "references/handout/self-check.md"
+   ],
+   "stack": [
+    {
+     "scene": "formulas",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "evidence",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "failure",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "discipline",
+     "when": "按能力触发"
+    }
+   ],
+   "supplements": [
+    {
+     "file": "references/handout/unit-schema.md",
+     "section": "讲义概念单元 schema",
+     "when": "结课验收需要核对单元槽位时",
+     "intent": "I-ANSWER-BOX-CONTENT@content"
+    }
    ]
   },
   "persist": {
@@ -1991,7 +2240,13 @@
     "references/ops/scripts.md",
     "references/data/memory.md"
    ],
-   "chars_max": 30100
+   "chars_max": 30100,
+   "stack": [
+    {
+     "scene": "failure",
+     "when": "按能力触发"
+    }
+   ]
   },
   "failure": {
    "label": "任何失败 / 环境阻断",
@@ -2011,6 +2266,12 @@
    "label": "溯源核验",
    "files": [
     "references/ops/evidence.md"
+   ],
+   "stack": [
+    {
+     "scene": "literature",
+     "when": "按能力触发"
+    }
    ]
   },
   "composition": {
@@ -2039,7 +2300,15 @@
    "files": [
     "references/handout/enhancements.md"
    ],
-   "chars_max": 10000
+   "chars_max": 10000,
+   "supplements": [
+    {
+     "file": "references/handout/support-levels.md",
+     "section": "6. L1/L2/L3 支持级",
+     "when": "P1 质量回路需要升降支持级时",
+     "intent": "I-SUPPORT-LEVELS@handout"
+    }
+   ]
   },
   "literature": {
    "label": "文献依据审计",
@@ -2048,5 +2317,296 @@
    ],
    "chars_max": 10000
   }
- }
+ },
+ "intents": [
+  {
+   "id": "I-BOLD-QUOTA",
+   "scope": "global",
+   "owner": "references/ops/typography.md#字体语义",
+   "marker": "intent:I-BOLD-QUOTA@global",
+   "consumers": [
+    "references/teaching/presentation.md",
+    "references/handout/typography.md",
+    "references/handout/pipeline.md"
+   ],
+   "scenes": [
+    "s3-teach",
+    "s3-handout",
+    "s3-deep"
+   ]
+  },
+  {
+   "id": "I-PARAGRAPH-UNITY",
+   "scope": "global",
+   "owner": "references/ops/typography.md#断行与句子",
+   "marker": "intent:I-PARAGRAPH-UNITY@global",
+   "consumers": [
+    "references/teaching/presentation.md",
+    "references/handout/typography.md"
+   ],
+   "scenes": [
+    "s3-teach",
+    "s3-handout",
+    "s3-deep"
+   ]
+  },
+  {
+   "id": "I-DENSITY",
+   "scope": "global",
+   "owner": "references/teaching/explanation-density.md#讲解文本密度原则",
+   "marker": "intent:I-DENSITY@global",
+   "consumers": [
+    "references/teaching/presentation.md",
+    "references/handout/pipeline.md",
+    "references/handout/self-check.md",
+    "references/handout/unit-schema.md",
+    "references/workflow/s3-block.md"
+   ],
+   "scenes": [
+    "s3-teach",
+    "s3-handout",
+    "s3-deep"
+   ]
+  },
+  {
+   "id": "I-DEPTH",
+   "scope": "global",
+   "owner": "references/teaching/explanation-depth.md#深度分层",
+   "marker": "intent:I-DEPTH@global",
+   "consumers": [
+    "references/handout/pipeline.md",
+    "references/handout/quality.md",
+    "references/workflow/s3-block.md",
+    "references/handout/unit-schema.md"
+   ],
+   "scenes": [
+    "s3-teach",
+    "s3-handout",
+    "s3-deep"
+   ]
+  },
+  {
+   "id": "I-NEW-NOTATION",
+   "scope": "global",
+   "owner": "references/teaching/explanation-craft.md#新记号/新操作讲透",
+   "marker": "intent:I-NEW-NOTATION@global",
+   "consumers": [
+    "references/teaching/lesson-flow.md"
+   ],
+   "scenes": [
+    "s3-teach"
+   ]
+  },
+  {
+   "id": "I-CONFIRMED-PRIOR",
+   "scope": "global",
+   "owner": "references/teaching/lesson-prep.md#课首与旧知锚定",
+   "marker": "intent:I-CONFIRMED-PRIOR@global",
+   "consumers": [
+    "references/workflow/s3-block.md"
+   ],
+   "scenes": [
+    "s3-teach"
+   ]
+  },
+  {
+   "id": "I-SOURCE-GRADING",
+   "scope": "global",
+   "owner": "references/ops/evidence.md#来源分级与出处四要素",
+   "marker": "intent:I-SOURCE-GRADING@global",
+   "consumers": [
+    "references/handout/quality.md",
+    "references/teaching/lesson-flow.md",
+    "references/workflow/s0-s2-setup.md"
+   ],
+   "scenes": [
+    "s0-s2",
+    "s3-teach",
+    "s3-handout",
+    "s5-close"
+   ]
+  },
+  {
+   "id": "I-ANSWER-BOX-CONTENT",
+   "scope": "content",
+   "owner": "references/handout/unit-schema.md#讲义概念单元 schema",
+   "marker": "intent:I-ANSWER-BOX-CONTENT@content",
+   "consumers": [
+    "references/handout/typography.md",
+    "references/handout/self-check.md"
+   ],
+   "scenes": [
+    "s3-handout",
+    "s3-deep",
+    "s5-close"
+   ]
+  },
+  {
+   "id": "I-ANSWER-BOX-VISUAL",
+   "scope": "visual",
+   "owner": "references/handout/typography.md#4.5 答案框",
+   "marker": "intent:I-ANSWER-BOX-VISUAL@visual",
+   "consumers": [
+    "references/handout/unit-schema.md"
+   ],
+   "scenes": [
+    "s3-handout",
+    "s3-deep"
+   ]
+  },
+  {
+   "id": "I-SUPPORT-LEVELS",
+   "scope": "handout",
+   "owner": "references/handout/support-levels.md#6. L1/L2/L3 支持级",
+   "marker": "intent:I-SUPPORT-LEVELS@handout",
+   "consumers": [
+    "references/handout/pipeline.md",
+    "references/handout/styles.md",
+    "references/handout/unit-schema.md",
+    "references/handout/enhancements.md"
+   ],
+   "scenes": [
+    "s3-handout",
+    "s3-deep",
+    "handout-enhance"
+   ]
+  },
+  {
+   "id": "I-STYLE-DEFINITION",
+   "scope": "handout",
+   "owner": "references/handout/styles.md#标准讲义（默认）",
+   "marker": "intent:I-STYLE-DEFINITION@handout",
+   "consumers": [
+    "references/handout/pipeline.md",
+    "references/handout/templates.md"
+   ],
+   "scenes": [
+    "s3-handout",
+    "s3-deep"
+   ]
+  },
+  {
+   "id": "I-STYLE-RETEACH",
+   "scope": "chat",
+   "owner": "references/handout/styles.md#风格切换映射",
+   "marker": "intent:I-STYLE-RETEACH@chat",
+   "consumers": [
+    "references/teaching/interaction.md"
+   ],
+   "scenes": [
+    "s3-deep"
+   ]
+  },
+  {
+   "id": "I-R41-BLOCK",
+   "scope": "handout",
+   "owner": "references/workflow/s3-block.md#分块呈现（R41）",
+   "marker": "intent:I-R41-BLOCK@handout",
+   "consumers": [
+    "references/handout/quality.md"
+   ],
+   "scenes": [
+    "s3-handout"
+   ]
+  },
+  {
+   "id": "I-FIGURE-GEN",
+   "scope": "handout",
+   "owner": "references/handout/figures.md#图像可视化双轨",
+   "marker": "intent:I-FIGURE-GEN@handout",
+   "consumers": [
+    "references/handout/quality.md",
+    "references/handout/self-check.md"
+   ],
+   "scenes": [
+    "s3-handout"
+   ]
+  },
+  {
+   "id": "I-READER-PATH",
+   "scope": "handout",
+   "owner": "references/handout/reader-path.md#8. 读者路径与导航（P1）",
+   "marker": "intent:I-READER-PATH@handout",
+   "consumers": [
+    "references/handout/unit-schema.md",
+    "references/handout/quality.md"
+   ],
+   "scenes": [
+    "s3-handout",
+    "s3-deep"
+   ]
+  },
+  {
+   "id": "I-SELF-TEST-VS-GROUP",
+   "scope": "handout",
+   "owner": "references/assessment/generation.md#题量预算与自测≠题组",
+   "marker": "intent:I-SELF-TEST-VS-GROUP@handout",
+   "consumers": [
+    "references/handout/unit-schema.md",
+    "references/handout/pipeline.md"
+   ],
+   "scenes": [
+    "s3-handout",
+    "s3-deep"
+   ]
+  },
+  {
+   "id": "I-UNTAUGHT-FILTER",
+   "scope": "global",
+   "owner": "references/assessment/generation.md#出题范围与未讲授过滤（R35）",
+   "marker": "intent:I-UNTAUGHT-FILTER@global",
+   "consumers": [
+    "references/teaching/lesson-flow.md",
+    "references/workflow/s3-block.md",
+    "references/workflow/s4-review.md",
+    "references/assessment/scheduling.md"
+   ],
+   "scenes": [
+    "s3-teach",
+    "s3-handout",
+    "s3-exercise",
+    "s4-review"
+   ]
+  },
+  {
+   "id": "I-RESTATEMENT",
+   "scope": "global",
+   "owner": "references/assessment/scoring.md#复述证据",
+   "marker": "intent:I-RESTATEMENT@global",
+   "consumers": [
+    "references/teaching/interaction.md",
+    "references/workflow/s3-block.md"
+   ],
+   "scenes": [
+    "s3-teach",
+    "s4-review"
+   ]
+  },
+  {
+   "id": "I-GRADING-STATES",
+   "scope": "global",
+   "owner": "references/assessment/scoring.md#判分口径",
+   "marker": "intent:I-GRADING-STATES@global",
+   "consumers": [
+    "references/teaching/interaction.md",
+    "references/workflow/s3-block.md"
+   ],
+   "scenes": [
+    "s3-teach",
+    "s4-review"
+   ]
+  },
+  {
+   "id": "I-FEEDBACK",
+   "scope": "global",
+   "owner": "references/teaching/interaction.md#反馈策略（T09）",
+   "marker": "intent:I-FEEDBACK@global",
+   "consumers": [],
+   "scenes": [
+    "s3-teach",
+    "s3-exercise",
+    "s4-review"
+   ]
+  }
+ ]
 }

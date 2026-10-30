@@ -1,5 +1,7 @@
 # 讲义概念单元 schema
 
+<!-- intent:I-ANSWER-BOX-CONTENT@content -->
+
 <!-- owns: ①–⑤ schema、③ 豁免、答案框体例、分层、头部、自测、概念地图、L3、扩展区; must-not-define: 类型矩阵、支持级、六套风格、版式 -->
 
 ## 讲义概念单元 schema（所有风格共用）

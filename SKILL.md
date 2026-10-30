@@ -81,7 +81,7 @@ agent_created: true
 
 ## 加载场景表（由 contracts/rules.json 的 scenes 派生，脚本校验一致性）
 
-**未载场景对应分册不得执行对应动作，也不得凭本文件记忆代替 owner。** 每个场景 = SKILL.md（常驻）+ 下表文件。
+**未载场景对应分册不得执行对应动作，也不得凭本文件记忆代替 owner。** 每个场景 = SKILL.md（常驻）+ 下表核心文件 +（按能力）叠加场景 +（按动作）补读。核心文件见下表；叠加与补读见「场景叠加与补读」。
 
 | 场景 | 动作 | 加载 |
 |---|---|---|
@@ -92,7 +92,7 @@ agent_created: true
 | `s3-teach` | S3 讲授（六拍） | `references/workflow/s3-block.md` · `references/workflow/s3-cycle.md` · `references/workflow/s3-close.md` · `references/teaching/lesson-flow.md` · `references/teaching/lesson-prep.md` · `references/teaching/interaction.md` · `references/teaching/interaction-diagnosis.md` · `references/teaching/presentation.md` · `references/teaching/tone.md` · `references/teaching/explain-quality.md` · `references/teaching/explanation-depth.md` · `references/teaching/explanation-density.md` · `references/teaching/explanation-craft.md` · `references/teaching/content-types.md` · `references/assessment/scoring.md` · `references/ops/typography.md` · `references/subjects/{group}-teach.md` |
 | `s3-handout` | S3 讲义生成 | `references/workflow/s3-block.md` · `references/teaching/explain-quality.md` · `references/teaching/explanation-density.md` · `references/teaching/explanation-craft.md` · `references/handout/pipeline.md` · `references/handout/templates.md` · `references/handout/support-levels.md` · `references/handout/styles.md` · `references/handout/unit-schema.md` · `references/handout/quality.md` · `references/handout/typography.md` · `references/handout/figures.md` · `references/handout/self-check.md` · `references/ops/typography.md` · `references/ops/scripts.md` · `references/subjects/{group}-practice.md` |
 | `s3-exercise` | S3 题组/判分 | `references/workflow/s3-block.md` · `references/assessment/generation.md` · `references/assessment/scoring.md` · `references/teaching/content-types.md` · `references/ops/typography.md` · `references/subjects/common.md` · `references/subjects/{group}-practice.md` · `references/ops/scripts.md` |
-| `s3-deep` | 深讲概念 / 换风格重讲 / 呈现定版 | `references/teaching/presentation.md` · `references/handout/templates.md` · `references/handout/styles.md` · `references/handout/unit-schema.md` · `references/handout/typography.md` · `references/teaching/explanation-depth.md` · `references/ops/typography.md` |
+| `s3-deep` | 深讲概念 / 换风格重讲 / 呈现定版 | `references/teaching/presentation.md` · `references/handout/templates.md` · `references/handout/styles.md` · `references/handout/unit-schema.md` · `references/handout/typography.md` · `references/teaching/explanation-depth.md` · `references/teaching/explanation-density.md` · `references/ops/typography.md` |
 | `s4-review` | S4 复习与清债 | `references/workflow/s4-review.md` · `references/assessment/scheduling.md` · `references/assessment/generation.md` · `references/teaching/interaction.md` · `references/teaching/interaction-diagnosis.md` · `references/ops/typography.md` · `references/data/progress-schema.md` · `references/subjects/common.md` · `references/subjects/{group}-review.md` |
 | `s5-close` | S5 结课 | `references/workflow/coverage-audit.md` · `references/workflow/s5-close.md` · `references/assessment/scoring.md` · `references/assessment/generation.md` · `references/handout/quality.md` · `references/handout/self-check.md` · `references/ops/typography.md` · `references/data/reconciliation.md` · `references/subjects/common.md` |
 | `discipline` | 学科内容包（按学科叠加） | `references/disciplines/{discipline}.md` |
@@ -105,7 +105,53 @@ agent_created: true
 | `handout-enhance` | P1/P2 可选增强 | `references/handout/enhancements.md` |
 | `literature` | 文献依据审计 | `references/ops/literature.md` |
 
-**references 之间不写加载指令**；只有本表决定加载顺序。加载后按各文件的 `owns / must-not-define` 头执行。
+**references 之间不写加载指令**；只有本节决定加载顺序。加载后按各文件的 `owns / must-not-define` 头执行。
+
+## 场景叠加与补读
+
+**核心 vs 可选场景 vs 补读**：
+
+- **核心**：上表列出的文件，进入场景即读，计核心预算。
+- **可选场景**：按「场景叠加表」命中的能力叠加；叠加场景按自己的预算计。
+- **补读**：核心文件里的 `references/...md` 指针，若目标不在核心或叠加场景、但该文件在「补读表」里，则执行该条前读对应小节。补读只读指定小节，不复制进当前场景。
+- **指针**：核心文件里的 `references/...md` 只做导航；是否加载由本节的叠加表/补读表决定。references 仍不写加载指令。
+- **运行时**：动作 → 核心；命中叠加 → 读叠加场景；命中补读 → 读对应小节；指针目标不在 core/stack/supplement → 停止并报告，不凭记忆执行。
+- **机器登记**：`contracts/rules.json.intents` 记录每个跨文件意图的正本、consumer 与允许场景；`rule_contract.py --coverage` 检查 owner 唯一、consumer 指针、marker 唯一、指针闭合。
+
+**场景叠加表**（按能力触发；叠加场景的 core 全读）：
+
+| 基础场景 | 可叠加场景 | 触发 |
+|---|---|---|
+| `s3-teach` | `formulas` · `evidence` · `failure` · `composition` · `discipline` | 公式 / 溯源 / 失败 / 机制冲突 / 学科包 |
+| `s3-handout` | `formulas` · `evidence` · `failure` · `composition` · `discipline` · `handout-export` · `handout-enhance` · `literature` | 同上 + 导出/读者版 / P1P2 / 文献审计 |
+| `s3-exercise` | `formulas` · `evidence` · `failure` · `composition` · `discipline` | 同上 |
+| `s3-deep` | `formulas` · `evidence` · `failure` · `composition` · `discipline` | 同上 |
+| `s4-review` | `formulas` · `evidence` · `failure` · `composition` · `discipline` | 同上 |
+| `s5-close` | `formulas` · `evidence` · `failure` · `discipline` | 同上 |
+| `s0-s2` | `evidence` · `failure` · `discipline` | 来源核验 / 失败 / 学科包 |
+| `persist` | `failure` | 落盘失败 / 环境阻断 |
+| `entry` | `failure` | 入口判定失败 / 环境阻断 |
+| `shortcuts` | `failure` | 快捷指令执行失败 |
+| `evidence` | `literature` | 文献审计 |
+
+**补读表**（按动作触发；每场景 ≤2 条规则补读，只读指定小节）：
+
+| 场景 | 补读 | 触发 | 正本 intent |
+|---|---|---|---|
+| `s3-teach` | `assessment/generation.md`「出题范围与未讲授过滤（R35）」 | 讲授热身/确认题需要出题域 | `I-UNTAUGHT-FILTER@global` |
+| `s3-handout` | `teaching/explanation-depth.md`「深度分层」 | 写深度分配或深讲单元 | `I-DEPTH@global` |
+| `s3-handout` | `assessment/generation.md`「出题范围与未讲授过滤（R35）」 | 讲义自测核对出题域 | `I-UNTAUGHT-FILTER@global` |
+| `s3-handout` | `assessment/generation.md`「题量预算与自测≠题组」 | 写自测/题组题量预算 | `I-SELF-TEST-VS-GROUP@handout` |
+| `s3-exercise` | `teaching/interaction.md`「反馈策略（T09）」 | 判分后给反馈 | `I-FEEDBACK@global` |
+| `s3-deep` | `assessment/generation.md`「题量预算与自测≠题组」 | 定稿前核对自测题量 | `I-SELF-TEST-VS-GROUP@handout` |
+| `s3-deep` | `handout/support-levels.md`「6. L1/L2/L3 支持级」 | 换风格重讲定支持级 | `I-SUPPORT-LEVELS@handout` |
+| `s3-deep` | `handout/reader-path.md`「8. 读者路径与导航（P1）」 | 读者版重排 | `I-READER-PATH@handout` |
+| `s4-review` | `assessment/scoring.md`「判分口径」 | 复习判分/复述/定级 | `I-GRADING-STATES@global` |
+| `s5-close` | `handout/unit-schema.md`「讲义概念单元 schema」 | 结课验收核对单元槽位 | `I-ANSWER-BOX-CONTENT@content` |
+| `s0-s2` | `ops/evidence.md`「来源分级与出处四要素」 | S2 来源核验 | `I-SOURCE-GRADING@global` |
+| `handout-enhance` | `handout/support-levels.md`「6. L1/L2/L3 支持级」 | P1 质量回路升降支持级 | `I-SUPPORT-LEVELS@handout` |
+
+**补读失败**：目标缺失、不可读、anchor 不存在 → 停止当前运行，说明停止点/缺失条件/恢复条件；不用「我记得规则」继续，也不用低标准替代。
 
 **加载成本**：分册按当前节读取，不整册通读。三层各取一份：内容类型处方（`content-types`）+ 学科群切片（按场景取一片）+ 学科包（命中时叠加）。S3 讲授常见加载集 = 本文件 + `s3-block` + `s3-cycle` + `s3-close` + `lesson-flow` + `lesson-prep` + `interaction` + `interaction-diagnosis` + `presentation` + `tone` + `explain-quality` + `explanation-depth` + `explanation-density` + `explanation-craft` + `content-types` + `scoring` + `ops/typography` + 群 `-teach` 切片，命中学科时再加 `discipline`；出题/判分走 `s3-exercise`（含 `common`、`content-types`、`ops/typography` 与群 `-practice` 切片的题型阶梯与误区库）；复习走 `s4-review`（含 `interaction-diagnosis`、`common`、`ops/typography` 与群 `-review` 切片的复习侧重）；写/改讲义走 `s3-handout`（含 `support-levels`、`styles`、`unit-schema`、`figures`、`self-check`、`handout/typography`、`ops/typography` 与群 `-practice` 切片的答案形态）；跨会话落盘走 `persist`（含 `memory`）；出现学习者可见公式才加 `formulas`；溯源核验才加 `evidence`；失败才加 `failure`；机制冲突才加 `composition`；打印/读者版才加 `handout-export`；P1/P2 才加 `handout-enhance`；文献审计才加 `literature`。
 
