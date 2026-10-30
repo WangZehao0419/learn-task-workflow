@@ -129,6 +129,26 @@ def main(argv=None) -> int:
         p = d / Path(SAMPLE_REL).name
         p.write_bytes(b"\xff\xfe\xfa")
 
+    def mut_heading_no_body(d):
+        p = d / Path(SAMPLE_REL).name
+        p.write_text(read(p).replace(
+            "- 一句话结论：机会成本是放弃的可行选项中次优选择的价值。",
+            "- 甲\n- 乙", 1), encoding="utf-8")
+
+    def mut_missing_caption(d):
+        p = d / Path(SAMPLE_REL).name
+        p.write_text(read(p).replace(
+            "- 图注：机会成本只看可行选项中的次优价值；不可行项和沉没成本先排除（流程示意）。\n",
+            ""), encoding="utf-8")
+
+    def mut_generic_link(d):
+        p = d / Path(SAMPLE_REL).name
+        p.write_text(read(p) + "[点击这里](https://example.com)\n", encoding="utf-8")
+
+    def mut_table_align(d):
+        p = d / Path(SAMPLE_REL).name
+        p.write_text(read(p) + "| 项 | 数值 |\n|---|---|\n| a | 1 |\n| b | 2 |\n", encoding="utf-8")
+
     mutations = (
         ("本节速览被删", mut_remove_overview, "W-READER-OVERVIEW"),
         ("一句话结论被删", mut_remove_conclusion, "W-READER-CONCLUSION"),
@@ -138,6 +158,10 @@ def main(argv=None) -> int:
         ("SVG 缺 viewBox", mut_svg_viewbox, "W-READER-SVG"),
         ("超长正文行", mut_long_line, "W-READER-LONGLINE"),
         ("列表嵌套 4 层", mut_deep_nest, "W-READER-DEEPNEST"),
+        ("标题后无正文", mut_heading_no_body, "W-READER-HEADING-BODY"),
+        ("图缺图注", mut_missing_caption, "W-READER-CAPTION"),
+        ("泛称链接文字", mut_generic_link, "W-READER-LINKTEXT"),
+        ("数值列未右对齐", mut_table_align, "W-READER-TABLE-ALIGN"),
     )
     for name, fn, code in mutations:
         rc, out = run_mutation(root, fn)

@@ -81,7 +81,7 @@
    Markdown 图片语法 `![](<相对路径>)` 须指向真实文件,缺失报 E-IMG-DEADLINK;
    http(s)/data: 等外部地址与锚点不查。
 
-【规则表(13 类检查 / 32 个规则码;末组 W-READER-* 仅 --reader 启用)】
+【规则表(13 类检查 / 36 个规则码;末组 W-READER-* 仅 --reader 启用)】
 | 规则码           | 级 | 触发条件                                                            |
 |------------------|----|---------------------------------------------------------------------|
 | E-LEDGER-RESIDUE | E  | 定稿文件正文含判分记账状态行(「状态(…):已通过/关闭/讲授中」等) |
@@ -115,6 +115,10 @@
 | W-READER-EMPHASIS | W | 读者版连续两段普通段落都出现 ≥2 处加粗;仅 `--reader`              |
 | W-READER-LONGLINE | W | 读者版单条可见正文行超 200 字(公式/代码剥除后计长;标题/表格/引用/答案框/答案区豁免);仅 `--reader` |
 | W-READER-DEEPNEST | W | 读者版列表嵌套超过 3 层;仅 `--reader` |
+| W-READER-HEADING-BODY | W | 读者版标题后直接跟列表/表格/图片/子标题(结构区与概念单元「一句话结论」豁免);仅 `--reader` |
+| W-READER-CAPTION | W | 读者版图片后缺图注(图注:… 或 图 N:…;表格内图片豁免);仅 `--reader` |
+| W-READER-LINKTEXT | W | 读者版链接文字为空或泛称(点击这里/这里/链接等);仅 `--reader` |
+| W-READER-TABLE-ALIGN | W | 读者版数值列(≥2 个纯数值单元格)未右对齐;仅 `--reader` |
 
 denylist 口径:任务点名字符(→ ✓ √ ≤ ≥ ∪ ⇔)及其同族验算/箭头标记(✔ ✅ ⇒);
 乘号「×」、全角「＝」等修辞/排版字符未纳入,避免误伤中文修辞用法。
@@ -138,6 +142,7 @@ import tempfile
 from pathlib import Path
 
 import rule_contract
+import ltw_typography
 
 # ── denylist:已被 LaTeX 约定取代的 Unicode 写法(顺序即输出消息中的展示顺序)──
 _C = rule_contract.load_or_exit()["constants"]
@@ -243,8 +248,6 @@ def answer_covers(q_line, a_line):
 # 图引用:框内「图:assets/x.svg(示意)」与 Markdown 图片语法;外部地址不查
 IMG_LABEL_RE = re.compile(r"图\s*[：:]\s*([^\s（()）]+)")
 IMG_MD_RE = re.compile(r"!\[[^\]]*\]\(([^)\s]+)")
-MD_IMAGE_ALT_RE = re.compile(r"!\[([^\]]*)\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
-GENERIC_ALT = {"图", "图片", "示意图", "图像", "figure", "image", "diagram"}
 BOX_ANNOT_RE = re.compile(r"^\s*>\s*[（(]?\s*(?:注意?|验证|说明|批注)\s*[:：]")
 # 占位答案:结构上像答案、实际不可复现;限 20 字内,避免误伤含「略」的正常表述
 PLACEHOLDER_RE = re.compile(
@@ -469,230 +472,6 @@ def collect_boxes(lines, units):
             boxes.append({"marker_line": i, "rows": rows, "exists": started,
                           "paras": split_paragraphs(lines, rows) if started else []})
     return boxes
-
-
-def _table_cells(row):
-    """拆 Markdown 表格行;返回去首尾空格的单元格。"""
-    return [c.strip() for c in row.strip().strip("|").split("|")]
-
-
-def _is_table_sep(row):
-    """表格分隔行:每个单元格形如 --- / :--- / ---: / :---:。"""
-    cells = _table_cells(row)
-    return bool(cells) and all(re.fullmatch(r":?-{2,}:?", c or "") for c in cells)
-
-
-def _table_blocks(lines, fence):
-    """收集连续表格行(围栏代码块内不算),返回每块的行号列表。"""
-    blocks, cur = [], []
-    for i, ln in enumerate(lines):
-        if not fence[i] and ln.strip().startswith("|"):
-            cur.append(i)
-        elif cur:
-            blocks.append(cur)
-            cur = []
-    if cur:
-        blocks.append(cur)
-    return blocks
-
-
-def _svg_reader_problems(path):
-    """读者版 SVG 技术项:根元素 viewBox/role、title/desc、字号/线宽、无脚本/外链。"""
-    try:
-        text = Path(path).read_text(encoding="utf-8")
-    except (OSError, UnicodeError):
-        return ["SVG 读取失败"]
-    problems = []
-    root = re.search(r"<svg\b[^>]*>", text, re.I)
-    if not root or "viewBox=" not in root.group(0):
-        problems.append("根元素缺 viewBox")
-    if not root or not re.search(r"role\s*=\s*[\"']img[\"']", root.group(0)):
-        problems.append("根元素缺 role=\"img\"")
-    for tag, label in (("<title", "title"), ("<desc", "desc")):
-        if tag not in text:
-            problems.append("缺 <{}>".format(label))
-    if "<script" in text.lower():
-        problems.append("含 script")
-    if re.search(r"(?:href|xlink:href)\s*=\s*[\"']https?://", text, re.I):
-        problems.append("含外部引用")
-    for raw in re.findall(r"font-size\s*=\s*[\"']([0-9.]+)", text):
-        if float(raw) < READER["svg_font_min"]:
-            problems.append("字号 {} < {}".format(raw, READER["svg_font_min"]))
-    for raw in re.findall(r"stroke-width\s*=\s*[\"']([0-9.]+)", text):
-        if float(raw) < READER["svg_line_min"]:
-            problems.append("线宽 {} < {}".format(raw, READER["svg_line_min"]))
-    return problems
-
-
-def reader_checks(lines, doc, vis, fence, base_dir, box_rows, add):
-    """读者版 P1 可读性检查(W 级,只在 --reader 显式启用时执行,不拦截)。
-
-    这里只查可静态判定的结构项:标题层级、表格、图片 alt/SVG、速览/回看索引、
-    概念首行一句话结论、段落强调、超长正文行、列表嵌套。语义上的“是否更易读”仍归人工读者验证。
-    """
-    # 1. 标题层级不跳级
-    prev = 0
-    for i, ln in enumerate(lines):
-        if fence[i]:
-            continue
-        m = re.match(r"^(#{1,6})\s+", ln)
-        if not m:
-            continue
-        level = len(m.group(1))
-        if prev and level > prev + 1:
-            add("W", "W-READER-HEADING", i,
-                "标题层级跳级 H{}→H{}——用 H2 分单元、H3 分小节,不跳级".format(prev, level))
-        prev = level
-
-    # 2. 表格:表头 + 2–4 列(手机可读)
-    for block in _table_blocks(lines, fence):
-        if len(block) < 2 or not _is_table_sep(lines[block[1]]):
-            add("W", "W-READER-TABLE", block[0],
-                "表格缺表头分隔行——补齐「| 列名 | … |」与「|---|---|」")
-            continue
-        header = _table_cells(lines[block[0]])
-        if len(header) < READER["table_cols_min"] or len(header) > READER["table_cols_max"]:
-            add("W", "W-READER-TABLE", block[0],
-                "表格列数 {}——手机端保持 {}–{} 列,宽表拆成列表或两张表".format(
-                    len(header), READER["table_cols_min"], READER["table_cols_max"]))
-        if any(not c for c in header):
-            add("W", "W-READER-TABLE", block[0],
-                "表头存在空列名——每列写清名称,单位放表头")
-
-    # 3. 图片 alt 与 SVG 技术项
-    for i, ln in enumerate(lines):
-        if fence[i]:
-            continue
-        for m in MD_IMAGE_ALT_RE.finditer(vis[i]):
-            alt, target = m.group(1).strip(), m.group(2).strip()
-            if not alt or alt.lower() in GENERIC_ALT:
-                add("W", "W-READER-ALT", i,
-                    "图片 alt 为空或过于笼统——写「图型:一句话结论」,不写「示意图/图片」")
-            if base_dir is None or re.match(r"(?:https?:|data:|mailto:)", target, re.I):
-                continue
-            path = Path(target) if Path(target).is_absolute() else Path(base_dir) / target
-            if path.suffix.lower() == ".svg" and path.exists():
-                probs = _svg_reader_problems(path)
-                if "SVG 读取失败" in probs:
-                    add("E", "E-IMG-READ", i, "SVG 读取失败或编码不是 UTF-8")
-                elif probs:
-                    add("W", "W-READER-SVG", i,
-                        "SVG 读者版技术项不合格:" + "、".join(probs) +
-                        "——补 viewBox/role/title/desc,字号 ≥14、线宽 ≥1.5,去脚本/外链")
-
-    # 4. 本节速览:位置 + 3 列、1–3 行数据
-    if "## 本节速览" in lines:
-        start = lines.index("## 本节速览")
-        first_unit = doc["units"][0]["start"] if doc["units"] else len(lines)
-        if start > first_unit:
-            add("W", "W-READER-OVERVIEW", start,
-                "本节速览应在第一个 ## 概念 之前——读者先看路线,再看单元")
-        block = []
-        for j in range(start + 1, len(lines)):
-            if H2_RE.match(lines[j]):
-                break
-            if fence[j]:
-                continue
-            if lines[j].strip().startswith("|"):
-                block.append(j)
-            elif block:
-                break
-        if len(block) < 2:
-            add("W", "W-READER-OVERVIEW", start,
-                "本节速览表缺失或不完整——用 {} 列「要解决的问题 | 一句话结论 | 用在哪」".format(
-                    READER["overview_cols"]))
-        else:
-            cols = len(_table_cells(lines[block[0]]))
-            if cols != READER["overview_cols"]:
-                add("W", "W-READER-OVERVIEW", block[0],
-                    "本节速览应为 {} 列,实际 {}".format(READER["overview_cols"], cols))
-            data_rows = len(block) - 2
-            if not READER["overview_rows_min"] <= data_rows <= READER["overview_rows_max"]:
-                add("W", "W-READER-OVERVIEW", block[0],
-                    "本节速览数据行 {}——只留 {}–{} 行,对应关键能力项".format(
-                        data_rows, READER["overview_rows_min"], READER["overview_rows_max"]))
-    else:
-        add("W", "W-READER-OVERVIEW", 0,
-            "读者版缺 ## 本节速览——用 {} 列「要解决的问题 | 一句话结论 | 用在哪」".format(
-                READER["overview_cols"]))
-
-    # 5. 回看索引三行 + 位置(答案区之后,停车位/扩展区之前)
-    if "## 回看索引" in lines:
-        start = lines.index("## 回看索引")
-        end = next((j for j in range(start + 1, len(lines)) if H2_RE.match(lines[j])),
-                   len(lines))
-        tail = "\n".join(lines[start:end])
-        for key in ("核心一句话", "最容易错", "下一步"):
-            if key not in tail:
-                add("W", "W-READER-INDEX", start,
-                    "回看索引缺「{}」——用「核心一句话/最容易错/下一步」三行".format(key))
-        last_ans = max((i for i, ln in enumerate(lines) if SELFTEST_HEAD_RE.match(ln)),
-                       default=-1)
-        if start <= last_ans:
-            add("W", "W-READER-INDEX", start,
-                "回看索引应在自测答案区之后——先做题对答案,再回看索引")
-        for later in ("## 待解决问题", "## 扩展（选读）"):
-            if later in lines and lines.index(later) < start:
-                add("W", "W-READER-INDEX", start,
-                    "回看索引应在{}之前——保持文末收束顺序".format(later))
-
-    # 6. 概念单元首行一句话结论(只在启用 P1 速览时查;豁免单元跳过)
-    if "## 本节速览" in lines:
-        for u in doc["units"]:
-            unit_text = "\n".join(lines[u["start"]:u["end"]])
-            if THIRD_EXEMPT_RE.search(unit_text) or re.search(r"【[^】]*参照[^】]*】", unit_text):
-                continue
-            body = [ln.strip() for ln in lines[u["start"] + 1:u["end"]] if ln.strip()]
-            if body and not re.match(r"^(?:[-*+]\s+|\d+[.、)]\s*)?一句话结论\s*[：:]", body[0]):
-                add("W", "W-READER-CONCLUSION", u["start"],
-                    "概念 " + str(u["num"]) + " 首行缺「一句话结论:……」——"
-                    "长节/读者版先给结论再展开;纯概念/参照级/L3 可标豁免")
-
-    # 7. 段落加粗密度:连续两段都在抢重点时提示(术语密集段可例外)
-    prev_emphasis = False
-    for i, ln in enumerate(lines):
-        if fence[i] or i in box_rows:
-            prev_emphasis = False
-            continue
-        s = ln.lstrip()
-        if not s or s.startswith(("#", "|", ">", "```")):
-            prev_emphasis = False
-            continue
-        count = len(re.findall(r"\*\*[^*]+\*\*", vis[i]))
-        if count >= 2 and prev_emphasis:
-            add("W", "W-READER-EMPHASIS", i,
-                "连续两段都用了加粗——只给术语首现/关键判断/易错点;术语密集段可例外,其余改普通文字")
-        prev_emphasis = count >= 2
-
-    # 8. 超长正文行:一行塞多个逻辑层(vis 已剥公式与代码,长度即可读长度)
-    limit = READER["prose_line_max_chars"]
-    answer_ranges = doc["selftest"]
-    for i, ln in enumerate(lines):
-        if fence[i] or i in box_rows:
-            continue
-        if any(s <= i < e for s, e in answer_ranges):
-            continue
-        s = vis[i].strip()
-        if not s or s.startswith(("#", "|", ">")):
-            continue
-        if len(s) > limit:
-            add("W", "W-READER-LONGLINE", i,
-                "单行可见正文 {} 字——一行塞了多个逻辑层;按「一段一义」拆句拆段,"
-                "推导每步一行,台账/重复内容移出正文".format(len(s)))
-
-    # 9. 列表嵌套深度:>3 层扫读困难
-    depth_max = READER["list_depth_max"]
-    for i, ln in enumerate(lines):
-        if fence[i]:
-            continue
-        m = re.match(r"^(\s*)(?:[-*+]|\d+[.、)])\s", ln)
-        if not m:
-            continue
-        depth = len(m.group(1).expandtabs(4)) // 2 + 1
-        if depth > depth_max:
-            add("W", "W-READER-DEEPNEST", i,
-                "列表嵌套 {} 层——超过 {} 层扫读困难;提升层级或拆成小节".format(
-                    depth, depth_max))
 
 
 def check_text(text, rel, base_dir=None, reader=False):
@@ -994,7 +773,7 @@ def check_text(text, rel, base_dir=None, reader=False):
     # ── 规则 11:读者版 P1 可读性(W;仅 --reader 显式启用)──
     # 只对像讲义的文本生效(有概念单元或读者版导航块),避免把冷读记录/台账当讲义报噪声
     if reader and (doc["units"] or "## 本节速览" in lines or "## 回看索引" in lines):
-        reader_checks(lines, doc, vis, fence, base_dir, box_rows, add)
+        ltw_typography.run_checks(lines, doc, vis, fence, base_dir, box_rows, add, READER)
 
     findings.sort(key=lambda f: (f[2], f[3], f[1], f[4]))
     return findings
@@ -1953,6 +1732,23 @@ def selftest():
                         "deepnest.md", reader=True)
     chk("reader 列表嵌套 4 层报 W-READER-DEEPNEST",
         len(codes(r_nest, "W-READER-DEEPNEST")) == 1)
+    r_hb = check_text(_HEAD + "- 甲\n- 乙\n", "heading-body.md", reader=True)
+    chk("reader 标题后直接跟列表报 W-READER-HEADING-BODY",
+        len(codes(r_hb, "W-READER-HEADING-BODY")) == 1)
+    r_cap = check_text(_HEAD + _unit("> 解:一步。\n") + "![](assets/x.svg)\n",
+                       "caption.md", reader=True)
+    chk("reader 图片后缺图注报 W-READER-CAPTION",
+        len(codes(r_cap, "W-READER-CAPTION")) == 1)
+    r_link = check_text(_HEAD + _unit("> 解:一步。\n")
+                        + "[点击这里](https://example.com)\n",
+                        "linktext.md", reader=True)
+    chk("reader 泛称链接文字报 W-READER-LINKTEXT",
+        len(codes(r_link, "W-READER-LINKTEXT")) == 1)
+    r_align = check_text(_HEAD + _unit("> 解:一步。\n")
+                         + "| 项 | 数值 |\n|---|---|\n| a | 1 |\n| b | 2 |\n",
+                         "tablealign.md", reader=True)
+    chk("reader 数值列未右对齐报 W-READER-TABLE-ALIGN",
+        len(codes(r_align, "W-READER-TABLE-ALIGN")) == 1)
 
     # ㉔ 退出码:0=无 E / 1=有 E / 2=用法或路径错误
     with tempfile.TemporaryDirectory() as td:

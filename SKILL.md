@@ -1,7 +1,7 @@
 ---
 name: learn-task-workflow
 description: 私人家教工作流：把系统学习需求跑成带硬闸口、进度落盘、跨会话可续学的任务流，含间隔重复与掌握后保持复习、判分四态与作废申诉、KP 分型验收与课程体系契约（章/节/目三级规划）、条件化出题四步流水线与讲义生成、错因归因纠偏、按内容类型与学科群分流教学（单节课六拍：先教后练，永不先测未讲内容），新手先看完整示例再做题、新记号当场讲透；支持独立生成学习用讲义/题组/试卷。以「系统学习」意图触发：「我要学X」「教我X」「带我学X」「带我读X」「精读X」「帮我啃X」「从零开始学X」「零基础学X」「备考X」「我要考研/考证」「家教模式」「开始上课」「继续学习」「接着上次继续学」「调整学习计划」「我的学习进度」「学到哪了」「学习简报」「学习周报」「考考我」「给X写讲义」「给X出题」「组一套卷」。不触发：普通知识问答、单题解题求助（如「这道题怎么做」）、代写作业/文章/报告、单纯总结材料（归 summarize）、主题调研写文档（归 research）、课程仓库脚手架（归 scaffold-exercises）、只要学习建议或只要计划文档；「教我X」「帮我复习X」「考考我」等高频词必须指向系统学习意图或已有学习任务，否则先澄清。宿主另有独立教学工作区或正式文档排版能力时，用户显式调用则让位，二者勿同时启动。
-version: 9.6.1
+version: 9.7.0
 author: 王责豪
 agent_created: true
 ---
@@ -89,12 +89,12 @@ agent_created: true
 | `shortcuts` | 快捷指令（问进度/简报/考考我/复习/调整） | `references/routing/shortcuts.md` |
 | `ecosystem` | 生态分工与优先级 | `references/routing/ecosystem.md` |
 | `s0-s2` | S0–S2 建档/诊断/计划 | `references/workflow/gates.md` · `references/workflow/s0-s2-setup.md` · `references/workflow/pacing.md` · `references/data/layout.md` · `references/data/curriculum.md` · `references/subjects/common.md` · `references/subjects/{group}-plan.md` |
-| `s3-teach` | S3 讲授（六拍） | `references/workflow/s3-block.md` · `references/teaching/lesson-flow.md` · `references/teaching/interaction.md` · `references/teaching/explain-quality.md` · `references/teaching/content-types.md` · `references/assessment/scoring.md` · `references/subjects/{group}-teach.md` |
-| `s3-handout` | S3 讲义生成 | `references/workflow/s3-block.md` · `references/teaching/explain-quality.md` · `references/handout/pipeline.md` · `references/handout/templates.md` · `references/handout/quality.md` · `references/ops/scripts.md` · `references/subjects/{group}-practice.md` |
-| `s3-exercise` | S3 题组/判分 | `references/workflow/s3-block.md` · `references/assessment/generation.md` · `references/assessment/scoring.md` · `references/teaching/content-types.md` · `references/subjects/common.md` · `references/subjects/{group}-practice.md` · `references/ops/scripts.md` |
-| `s3-deep` | 深讲概念 / 换风格重讲 / 呈现定版 | `references/teaching/presentation.md` · `references/handout/templates.md` |
-| `s4-review` | S4 复习与清债 | `references/workflow/s4-review.md` · `references/assessment/scheduling.md` · `references/assessment/generation.md` · `references/teaching/interaction.md` · `references/data/progress-schema.md` · `references/subjects/common.md` · `references/subjects/{group}-review.md` |
-| `s5-close` | S5 结课 | `references/workflow/s5-close.md` · `references/assessment/scoring.md` · `references/assessment/generation.md` · `references/handout/quality.md` · `references/data/reconciliation.md` · `references/subjects/common.md` |
+| `s3-teach` | S3 讲授（六拍） | `references/workflow/s3-block.md` · `references/teaching/lesson-flow.md` · `references/teaching/interaction.md` · `references/teaching/presentation.md` · `references/teaching/explain-quality.md` · `references/teaching/content-types.md` · `references/assessment/scoring.md` · `references/ops/typography.md` · `references/subjects/{group}-teach.md` |
+| `s3-handout` | S3 讲义生成 | `references/workflow/s3-block.md` · `references/teaching/explain-quality.md` · `references/handout/pipeline.md` · `references/handout/templates.md` · `references/handout/quality.md` · `references/handout/typography.md` · `references/ops/typography.md` · `references/ops/scripts.md` · `references/subjects/{group}-practice.md` |
+| `s3-exercise` | S3 题组/判分 | `references/workflow/s3-block.md` · `references/assessment/generation.md` · `references/assessment/scoring.md` · `references/teaching/content-types.md` · `references/ops/typography.md` · `references/subjects/common.md` · `references/subjects/{group}-practice.md` · `references/ops/scripts.md` |
+| `s3-deep` | 深讲概念 / 换风格重讲 / 呈现定版 | `references/teaching/presentation.md` · `references/handout/templates.md` · `references/handout/typography.md` · `references/ops/typography.md` |
+| `s4-review` | S4 复习与清债 | `references/workflow/s4-review.md` · `references/assessment/scheduling.md` · `references/assessment/generation.md` · `references/teaching/interaction.md` · `references/ops/typography.md` · `references/data/progress-schema.md` · `references/subjects/common.md` · `references/subjects/{group}-review.md` |
+| `s5-close` | S5 结课 | `references/workflow/s5-close.md` · `references/assessment/scoring.md` · `references/assessment/generation.md` · `references/handout/quality.md` · `references/ops/typography.md` · `references/data/reconciliation.md` · `references/subjects/common.md` |
 | `discipline` | 学科内容包（按学科叠加） | `references/disciplines/{discipline}.md` |
 | `persist` | 任何落盘 / 续学 | `references/data/layout.md` · `references/data/progress-schema.md` · `references/data/curriculum.md` · `references/ops/scripts.md` |
 | `failure` | 任何失败 / 环境阻断 | `references/ops/failure.md` |
@@ -104,7 +104,7 @@ agent_created: true
 
 **references 之间不写加载指令**；只有本表决定加载顺序。加载后按各文件的 `owns / must-not-define` 头执行。
 
-**加载成本**：分册按当前节读取，不整册通读。三层各取一份：内容类型处方（`content-types`）+ 学科群切片（按场景取一片）+ 学科包（命中时叠加）。S3 讲授常见加载集 = 本文件 + `s3-block` + `lesson-flow` + `interaction` + `explain-quality` + `content-types` + `scoring` + 群 `-teach` 切片，命中学科时再加 `discipline`；出题/判分走 `s3-exercise`（含 `common`、`content-types` 与群 `-practice` 切片的题型阶梯与误区库）；复习走 `s4-review`（含 `common` 与群 `-review` 切片的复习侧重）；写/改讲义走 `s3-handout`（含群 `-practice` 切片的答案形态）；跨会话落盘走 `persist`；出现学习者可见公式才加 `formulas.md`；溯源核验才加 `evidence.md`。
+**加载成本**：分册按当前节读取，不整册通读。三层各取一份：内容类型处方（`content-types`）+ 学科群切片（按场景取一片）+ 学科包（命中时叠加）。S3 讲授常见加载集 = 本文件 + `s3-block` + `lesson-flow` + `interaction` + `presentation` + `explain-quality` + `content-types` + `scoring` + `ops/typography` + 群 `-teach` 切片，命中学科时再加 `discipline`；出题/判分走 `s3-exercise`（含 `common`、`content-types`、`ops/typography` 与群 `-practice` 切片的题型阶梯与误区库）；复习走 `s4-review`（含 `common`、`ops/typography` 与群 `-review` 切片的复习侧重）；写/改讲义走 `s3-handout`（含 `handout/typography`、`ops/typography` 与群 `-practice` 切片的答案形态）；跨会话落盘走 `persist`；出现学习者可见公式才加 `formulas.md`；溯源核验才加 `evidence.md`。
 
 ## 参考文件（按需加载）
 
@@ -120,10 +120,12 @@ agent_created: true
 - `references/teaching/lesson-flow.md` —— 单节课六拍、核心教学序列、备课短表、旧知锚定、姿态三档、工作样例、新记号讲透。
 - `references/teaching/explain-quality.md` —— 元方法教学（T12）、预判误区清单（R42）、智能变式一次一维（R43）、每步检查理解（R45）、依据句模板、示例设计红线。
 - `references/teaching/interaction.md` —— 提问与提示阶梯、反馈策略、教学八动作、错因分类与补救、修复动作。
-- `references/teaching/presentation.md` —— 对话讲授契约、呈现标记、语气、密度、深度契约与审计、类比纪律、风格切换映射。
+- `references/teaching/presentation.md` —— 对话呈现系统（轮型/版式/结构预算）、对话讲授契约、语气、密度、深度契约与审计、类比纪律、风格切换映射。
+- `references/handout/typography.md` —— 讲义版式：页面架构、字体系统、元素系统（表格/图/代码/答案框）、打印/PDF 契约、无障碍、读者路径、元素预算、读者版可读性契约。
+- `references/ops/typography.md` —— 文字排印：中文标点、中英文空格、数字、单位、范围、引号、破折号/省略号、字体语义、手写断行禁令、文本级强调。
 - `references/handout/pipeline.md` —— 讲义一页合同、一致性裁决、理解核心、四步流水线、决策日志。
 - `references/handout/templates.md` —— 类型模板、支持级、学习者状态层、六套风格、概念单元 schema。
-- `references/handout/quality.md` —— 来源与评估真实性、P1/P2、可读性、图像双轨、出厂自检、分块呈现。
+- `references/handout/quality.md` —— 来源与评估真实性、P1/P2 内容增强、图像可视化双轨、讲解出厂自检、分块呈现；版式与读者契约见 `handout/typography.md`。
 - `references/assessment/scoring.md` —— 判分四态、难度伺服、闸口比例、复述证据、视觉任务证据、批改与申诉。
 - `references/assessment/generation.md` —— 题量预算、出题四步、零提示与条件化判定、出题范围与未讲授过滤。
 - `references/assessment/scheduling.md` —— 间隔调度、due-queue 与复习预算、校准画像。

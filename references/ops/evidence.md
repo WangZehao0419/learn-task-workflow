@@ -64,6 +64,12 @@
 | 屏幕 vs 纸面（`handout/quality.md` 打印自检） | Delgado et al. 2018 元分析（54 研究、约 17 万参与者）：纸面理解优于屏幕，说明文/限时/长文更明显 | **方向支持**：效应不大且非所有阅读；讲义应纸面友好，不假设只在屏幕读；不推出「必须打印」 |
 | 自我解释 / 闭卷自检（`handout/pipeline.md` 闭卷自检） | Bisra et al. 2018 元分析：自我解释 g=0.55（69 效应）；Rittle-Johnson et al. 2017 数学自我解释 g=0.27 | **方向支持**：提示形式与任务类型调节；不把 g=0.55 当固定收益 |
 | 讲授轮分轮呈现 / 路线先行 / 一步一停（`teaching/presentation.md`「对话轮呈现标记」） | Kestin et al. 2025（Scientific Reports，AI 家教 RCT：系统提示约束「简短、一次只给一步」，学习增益 0.73–1.3 SD 且用时更短）；OpenAI Study Mode（信息组织成易跟随的小节 + 小节间 quick check）；NN/g GenAI 写作研究（用户只读约 20% 文字，TLDR 先行）；AutoTutor EMT 五步帧（先抽学员答案再补讲） | **方向支持/设计决策**：单轮 250 字锚点无一手实证，属工程约定；Stanford SCALE A/B：按学员状态切换教学策略省约 3 轮且不损质量——切换，不站队 |
+| 排版可读性：行长/行距/对齐/强调/标题（`handout/typography.md` 版式基线；`ops/typography.md` 字体语义；`teaching/presentation.md` 结构预算） | Butterick《Practical Typography》key rules（45–90 字符/行、行距 120–145%、少强调、不下划线）；WCAG 2.2 1.4.8（80 字符/CJK 40、非两端对齐、行距 ≥1.5、200% 缩放）；W3C clreq（中文 17–40 字、最长 48）；Hartley & Trueman 1983 / Waller 1982（标题作为 access structure，帮助搜索/定位）；Lorch & Lorch 1996（标题不总提升自由回忆） | **方向支持/设计决策**：网页/印刷可读性研究不能直接推出学习成绩；中文行长证据冲突，取 25–40、上限 48；版式基线是参考值，不是闸口 |
+| 中文标点/数字/单位（`ops/typography.md`） | GB/T 15834-2011 标点符号用法；GB/T 15835-2011 出版物上数字用法；GB 3100-3102 量和单位；W3C clreq | **标准依据**：用于正文一致性；不把出版规范当教学效果证据；Markdown 渲染器差异处按内容级规则执行 |
+| 小步/示范/检查/步骤块（`teaching/presentation.md` 轮型与结构预算） | Rosenshine 2012 十条（small steps, models, check understanding, independent practice）；Sweller & Cooper 1985（worked example）；Kestin et al. 2025（AI 家教 RCT） | **方向支持**：小步与检查有课堂研究支持；聊天步骤块与单轮预算是工程约定，不是固定字数 |
+| 流利度/难读字体边界（`handout/typography.md` 版式基线；`teaching/presentation.md` 语气） | Bjork & Bjork 2011（desirable difficulties；流利度≠存储强度）；Meyer et al. 2015（disfluent fonts don't help math）；Rummer et al. 2016 复制失败；Xie et al. 2018 元分析争议（Kühl 2020 指出编码错误） | **明确不采用**：不用难读字体/低对比/Sans Forgetica 制造「努力感」；排版目标是降低无关负荷，不是制造难度 |
+| 反 AI 腔（`teaching/presentation.md` 语气契约） | Wikipedia《Signs of AI writing》；HN/Reddit 对 AI 腔的批评；Butterick 少强调原则 | **社区/设计决策**：列 6 条可判定模式；不声称「检测 AI」；不牺牲必要推导与完整示例 |
+| 产品参考：轮型/提示/反馈（`teaching/presentation.md` 对话呈现系统） | Khanmigo（不直接给答案/逐步提示）；Math Academy（小步/掌握/间隔复习）；OpenAI Study Mode（分节+quick check）；Duolingo（bite-size） | **产品设计参考**：不当作实验证据；不引入游戏化/学习风格 |
 | 排除：bionic reading（首字母加粗提速） | Snell 2024（Acta Psychologica）：无收益；Zhao et al. 2025 RCT：不优于无修改文本 | **明确不采用**；中文场景更无依据 |
 | 排除：「注意力只有 8 秒」类流行数字 | 出处为营销文章，学界不认可 | **明确不采用**：不作为任何时长/密度规则的依据 |
 | 排除：渐进式总结分层加粗体系（Forte） | 个人知识管理经验（Forte Labs 博客），无教学实验 | **明确不采用**：与信号稀缺原则冲突（连续加粗降低扫读效率）；只取「结论先行」，已并入既有规则 |
@@ -83,5 +89,6 @@
 - **S5 达标线**（证据：设计决策）：契约默认目标线有掌握学习惯例支撑；**备考型按真实分值与目标线**（T05），非「一律 100%」。
 - **新增机制**（深度契约/姿态/提示泄漏/过度泛化/续学回忆）：均为**方向支持或设计决策**，不是「已验证」；引用时按本表边界标注，不得写成普适定律。
 - **读者版可读性 / 图解语法**（证据：方向支持/设计决策）：**不能推出「越短越好」「每节必画图」「76 字/行是通用标准」**；中文行长证据冲突，取保守区间；多媒体效应量受先验知识、材料复杂度、媒介与时长调节，不能把某一 d/g 值当固定收益。
+- **排版可读性 / 中文排印**（证据：方向支持/设计决策）：**不能推出「排版提升学习成绩」**；标题帮助搜索/定位，不保证自由回忆；版式基线是参考值，不是闸口；不用难读字体/低对比制造「努力感」；反 AI 腔是社区/设计决策，不是「检测 AI」。
 - **讲授轮分轮呈现**（证据：方向支持/设计决策）：单轮 250 字锚点为工程约定；「一步一停」有 RCT 背书，但不能推出「永远短轮次」——学员要完整版就一次给全（对进阶学员碎步提问反而是负担，专长反转）。
 - **完整估效应量与逐篇核验**：本轮**未逐篇核对全部论文与精确效应量**；涉及具体数字的条目在正式引用前应回归原文核验，**不得把本册当作「所有论文均已验证」**。
