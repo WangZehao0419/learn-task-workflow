@@ -80,6 +80,49 @@ def scene_stats(root: Path, data: dict) -> list:
     return rows
 
 
+def _chars(root: Path, files: list, data: dict) -> int:
+    """核心文件字符数；模板按同令牌取最大实例。"""
+    static = [f for f in files if "{" not in f]
+    tpls = [f for f in files if "{" in f]
+    chars = sum(_size(root / f) for f in static)
+    token_names = _token_names(data)
+    for tok, names in token_names.items():
+        group = [f for f in tpls if tok in f]
+        if not group:
+            continue
+        per = [sum(_size(root / f.replace(tok, name)) for f in group) for name in names]
+        chars += max(per) if per else 0
+    return chars
+
+
+def pointer_stats(root: Path, data: dict) -> list:
+    """补读/叠加报告：core + supplements + stack_max；补读超软上限只 warning。"""
+    budget = data["constants"]["scenes_budget"]
+    supp_files_max = budget.get("supplement_files_max", 4)
+    supp_chars_max = budget.get("supplement_chars_max", 20000)
+    rows = []
+    for sid, sc in data["scenes"].items():
+        supp_files = sorted({x.get("file") for x in sc.get("supplements", []) if x.get("file")})
+        supp_chars = sum(_size(root / f) for f in supp_files)
+        stack = [x.get("scene") for x in sc.get("stack", []) if x.get("scene") in data["scenes"]]
+        stack_chars = max((_chars(root, data["scenes"][s]["files"], data) for s in stack), default=0)
+        warnings = []
+        if len(supp_files) > supp_files_max:
+            warnings.append("supplement_files=%d > %d" % (len(supp_files), supp_files_max))
+        if supp_chars > supp_chars_max:
+            warnings.append("supplement_chars=%d > %d" % (supp_chars, supp_chars_max))
+        rows.append({
+            "scene": sid,
+            "core_chars": _chars(root, sc["files"], data),
+            "supplement_files": len(supp_files),
+            "supplement_chars": supp_chars,
+            "stack_scenes": len(stack),
+            "stack_chars_max": stack_chars,
+            "warnings": warnings,
+        })
+    return rows
+
+
 def main(argv=None) -> int:
     if sys.stdout and hasattr(sys.stdout, "reconfigure"):
         try:
@@ -88,6 +131,8 @@ def main(argv=None) -> int:
             pass
     parser = argparse.ArgumentParser(description="加载场景预算验收（只读）")
     parser.add_argument("--skill-root", default=None)
+    parser.add_argument("--pointers", action="store_true",
+                        help="额外报告每场景补读文件数与叠加场景最坏字符")
     args = parser.parse_args(argv)
     root = Path(args.skill_root).resolve() if args.skill_root else skill_root()
     data = load()
@@ -102,15 +147,24 @@ def main(argv=None) -> int:
         if r["over_chars"]:
             issues.append("E-LOAD-BUDGET: 场景 %s 字符 %d > %s"
                           % (r["scene"], r["chars"], r["chars_max"]))
+    pointer_rows = pointer_stats(root, data) if args.pointers else []
+    pointer_warnings = [w for r in pointer_rows for w in r["warnings"]]
     print(json.dumps({
         "ok": not issues,
         "scenes": len(rows),
         "worst": max(rows, key=lambda r: r["chars"])["scene"] if rows else None,
         "issues": issues,
+        "pointers": pointer_rows,
+        "pointer_warnings": pointer_warnings,
     }, ensure_ascii=False))
     for r in rows:
         flag = "OVER" if (r["over_chars"] or r["over_files"] or r["missing"]) else "ok"
         print("  [%s] %-12s files=%d chars=%d (max %s)" % (flag, r["scene"], r["files"], r["chars"], r["chars_max"]))
+    for r in pointer_rows:
+        print("  [ptr] %-12s core=%d supp=%d/%d stack_max=%d/%d%s"
+              % (r["scene"], r["core_chars"], r["supplement_files"], r["supplement_chars"],
+                 r["stack_scenes"], r["stack_chars_max"],
+                 (" WARN " + "; ".join(r["warnings"])) if r["warnings"] else ""))
     return 1 if issues else 0
 
 

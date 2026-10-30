@@ -20,6 +20,8 @@ CHAPTERS = (
     "## 7. 代码边界",
     "## 8. 目标宿主验证记录模板",
 )
+CHAPTERS_CORE = CHAPTERS[:3] + CHAPTERS[6:]
+CHAPTERS_SUBJECT = CHAPTERS[3:6]
 FORMULA_IDS = tuple(f"FORMULA-{i:02d}" for i in range(1, 11))
 CASE_REQUIRED_KEYS = (
     "id", "scenario", "kind", "prompt", "fixture", "pass_condition",
@@ -68,21 +70,30 @@ def group_skill(skill_md, c):
     c.check("1.2 SKILL.md 不再引用旧文件名", ("formula-" + "typesetting.md") not in body)
 
 
-def group_formulas(formulas, c):
+def group_formulas(formulas, subjects, c):
     body = formulas or ""
-    c.check("2.1 references/formulas.md 存在且可读", formulas is not None)
+    subject_body = subjects or ""
+    c.check("2.1 references/ops/formulas.md 存在且可读", formulas is not None)
     c.check("2.2 含「唯一事实源」（定位声明）", "唯一事实源" in body)
     c.check("2.3 含「不触发」（排除边界）", "不触发" in body)
-    pos = -1
+    core_pos = -1
+    subject_pos = -1
     ordered = True
     for i, chapter in enumerate(CHAPTERS):
-        idx = body.find(chapter)
-        c.check(f"2.{4 + i} 含章节「{chapter}」", idx != -1)
-        if idx == -1 or idx < pos:
-            ordered = False
+        if chapter in CHAPTERS_SUBJECT:
+            idx = subject_body.find(chapter)
+            if idx == -1 or idx < subject_pos:
+                ordered = False
+            else:
+                subject_pos = idx
         else:
-            pos = idx
-    c.check("2.12 八个章节标题按序出现", ordered)
+            idx = body.find(chapter)
+            if idx == -1 or idx < core_pos:
+                ordered = False
+            else:
+                core_pos = idx
+        c.check(f"2.{4 + i} 含章节「{chapter}」", idx != -1)
+    c.check("2.12 八个章节分组且按序出现", ordered)
     c.check("2.13 含「formula_checks」", "formula_checks" in body)
     c.check("2.14 含「selected_inline」", "selected_inline" in body)
     c.check("2.15 含「selected_block」", "selected_block" in body)
@@ -149,6 +160,7 @@ def main(argv=None) -> int:
 
     skill_md = read_text(root / "SKILL.md")
     formulas = read_text(root / "references" / "ops" / "formulas.md")
+    formula_subjects = read_text(root / "references" / "ops" / "formula-subjects.md")
 
     def read_dir(rel):
         d = root / rel
@@ -170,7 +182,7 @@ def main(argv=None) -> int:
 
     c = Checker()
     group_skill(skill_md, c)
-    group_formulas(formulas, c)
+    group_formulas(formulas, formula_subjects, c)
     group_crossrefs(teaching, handout, c)
     group_evals(parse_json(evals_raw), c)
     group_residue(scope, c)

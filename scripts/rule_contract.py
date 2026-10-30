@@ -126,6 +126,40 @@ def validate(data: dict) -> dict:
                 _require(sid in scenes, "E-CONTRACT-INVALID",
                          "rule %s 引用未定义场景 %s" % (r["id"], sid))
 
+    intents = data.get("intents", [])
+    _require(isinstance(intents, list), "E-CONTRACT-INVALID", "intents 必须是数组")
+    seen_intents = set()
+    for it in intents:
+        _require(isinstance(it, dict), "E-CONTRACT-INVALID", "intents 条目必须是对象")
+        for k in ("id", "scope", "owner", "marker", "consumers", "scenes"):
+            _require(k in it, "E-CONTRACT-INVALID", "intent 缺少 %s" % k)
+        _require(isinstance(it["consumers"], list), "E-CONTRACT-INVALID",
+                 "intent %s.consumers 必须是数组" % it["id"])
+        _require(isinstance(it["scenes"], list) and it["scenes"], "E-CONTRACT-INVALID",
+                 "intent %s.scenes 必须是非空数组" % it["id"])
+        key = (it["id"], it["scope"])
+        _require(key not in seen_intents, "E-CONTRACT-INVALID",
+                 "intent 重复：%s@%s" % key)
+        seen_intents.add(key)
+        for sid in it["scenes"]:
+            _require(sid in scenes, "E-CONTRACT-INVALID",
+                     "intent %s 引用未定义场景 %s" % (it["id"], sid))
+
+    for sid, sc in scenes.items():
+        for key in ("stack", "supplements"):
+            if key in sc:
+                _require(isinstance(sc[key], list), "E-CONTRACT-INVALID",
+                         "scenes.%s.%s 必须是数组" % (sid, key))
+        for item in sc.get("stack", []):
+            _require(isinstance(item, dict) and "scene" in item and "when" in item,
+                     "E-CONTRACT-INVALID", "scenes.%s.stack 条目缺 scene/when" % sid)
+        for item in sc.get("supplements", []):
+            _require(isinstance(item, dict), "E-CONTRACT-INVALID",
+                     "scenes.%s.supplements 条目必须是对象" % sid)
+            for k in ("file", "section", "when", "intent"):
+                _require(k in item, "E-CONTRACT-INVALID",
+                         "scenes.%s.supplements 条目缺少 %s" % (sid, k))
+
     c = data["constants"]
     _require(isinstance(c, dict), "E-CONTRACT-INVALID", "constants 必须是对象")
     for k in REQUIRED_CONST:
@@ -404,7 +438,115 @@ def check_scenes(data: dict, root: Path) -> tuple[list, dict]:
         if not any(owner_file in expanded.get(sid, set()) for sid in scs):
             issues.append("E-TOPOLOGY-SCENES: 规则 %s owner %s 不在其场景内"
                           % (r["id"], owner_file))
+
+    intent_keys = {"%s@%s" % (it["id"], it["scope"]) for it in data.get("intents", [])}
+    for sid, sc in data["scenes"].items():
+        for item in sc.get("stack", []):
+            target = item.get("scene")
+            if target not in data["scenes"]:
+                issues.append("E-TOPOLOGY-SCENES: 场景 %s stack 指向未定义场景 %s" % (sid, target))
+            elif target == sid:
+                issues.append("E-TOPOLOGY-SCENES: 场景 %s stack 不能指向自身" % sid)
+        for item in sc.get("supplements", []):
+            target = item.get("file")
+            if not target or not (root / target).exists():
+                issues.append("E-TOPOLOGY-SCENES: 场景 %s supplement 文件不存在 %s" % (sid, target))
+            if item.get("intent") not in intent_keys:
+                issues.append("E-TOPOLOGY-SCENES: 场景 %s supplement intent 未定义 %s"
+                              % (sid, item.get("intent")))
+
+    def _stack_cycle(start):
+        pending = [(start, [start])]
+        while pending:
+            node, path = pending.pop()
+            for item in data["scenes"].get(node, {}).get("stack", []):
+                nxt = item["scene"]
+                if nxt in path:
+                    return True
+                pending.append((nxt, path + [nxt]))
+        return False
+
+    for sid in data["scenes"]:
+        if _stack_cycle(sid):
+            issues.append("E-TOPOLOGY-SCENES: 场景 %s stack 成环" % sid)
     return issues, expanded
+
+
+def _allowed_files(data: dict, expanded: dict, sid: str) -> set:
+    """场景可加载集：core + stack 闭包 + supplements + 全局文件。"""
+    allowed = set(expanded.get(sid, set()))
+    pending = [sid]
+    seen = set()
+    while pending:
+        cur = pending.pop()
+        if cur in seen:
+            continue
+        seen.add(cur)
+        sc = data["scenes"].get(cur, {})
+        for item in sc.get("stack", []):
+            target = item["scene"]
+            allowed |= expanded.get(target, set())
+            pending.append(target)
+        for item in sc.get("supplements", []):
+            allowed.add(item["file"])
+    allowed |= {"SKILL.md", "contracts/rules.json"}
+    return allowed
+
+
+def check_intents(data: dict, root: Path, expanded: dict) -> list:
+    """intent 正本唯一、marker 唯一、consumer 有指针、owner 可加载。"""
+    issues = []
+    files_paths = {f["path"] for f in data["files"]}
+    for it in data.get("intents", []):
+        owner = it.get("owner", "")
+        if "#" not in owner:
+            issues.append("E-TOPOLOGY-OWNER: intent %s owner 缺 #anchor" % it.get("id"))
+            continue
+        rel, anchor = owner.split("#", 1)
+        if rel != "SKILL.md" and rel not in files_paths:
+            issues.append("E-TOPOLOGY-OWNER: intent %s owner 不在 files：%s" % (it.get("id"), rel))
+        if not (root / rel).exists():
+            issues.append("E-TOPOLOGY-OWNER: intent %s owner 文件不存在：%s" % (it.get("id"), rel))
+            continue
+        if not _heading_exists(root, rel, anchor):
+            issues.append("E-TOPOLOGY-OWNER: intent %s owner 小节不存在：%s" % (it.get("id"), owner))
+            continue
+        text = (root / rel).read_text(encoding="utf-8", errors="replace")
+        marker = "<!-- %s -->" % it.get("marker", "")
+        if text.count(marker) != 1:
+            issues.append("E-TOPOLOGY-OWNER: intent %s marker 必须恰好一次（当前 %d）"
+                          % (it.get("id"), text.count(marker)))
+        short = rel.split("references/", 1)[-1]
+        for consumer in it.get("consumers", []):
+            cp = root / consumer
+            if not cp.exists():
+                issues.append("E-TOPOLOGY-DEADREF: intent %s consumer 不存在：%s"
+                              % (it.get("id"), consumer))
+                continue
+            ct = cp.read_text(encoding="utf-8", errors="replace")
+            if rel not in ct and short not in ct:
+                issues.append("E-TOPOLOGY-DEADREF: intent %s consumer %s 缺指向 owner 的指针"
+                              % (it.get("id"), consumer))
+        if not any(rel in _allowed_files(data, expanded, sid) for sid in it.get("scenes", [])):
+            issues.append("E-TOPOLOGY-OWNER: intent %s owner %s 不在任何声明场景的 core/stack/supplements"
+                          % (it.get("id"), rel))
+    return issues
+
+
+def check_intent_pointers(data: dict, root: Path, expanded: dict) -> list:
+    """已登记 consumer 在场景内引用 owner 时，owner 必须在该场景可加载。"""
+    issues = []
+    for it in data.get("intents", []):
+        rel = it.get("owner", "").split("#", 1)[0]
+        for consumer in it.get("consumers", []):
+            for sid in it.get("scenes", []):
+                if consumer not in expanded.get(sid, set()):
+                    continue
+                if rel not in _allowed_files(data, expanded, sid):
+                    issues.append(
+                        "E-TOPOLOGY-DEADREF: intent %s 在场景 %s：%s 引用 %s 不在 core/stack/supplements"
+                        % (it.get("id"), sid, consumer, rel))
+    return issues
 
 
 def check_load_table(root: Path, data: dict, expanded: dict) -> list:
@@ -412,6 +554,10 @@ def check_load_table(root: Path, data: dict, expanded: dict) -> list:
     issues = []
     token_names = _token_names(data)
     text = (root / "SKILL.md").read_text(encoding="utf-8", errors="replace")
+    start = text.find("## 加载场景表")
+    end = text.find("## 场景叠加与补读")
+    if start != -1 and end > start:
+        text = text[start:end]
     rows = {}
     for ln in text.splitlines():
         m = re.match(r"^\|\s*`([a-z0-9-]+)`\s*\|", ln)
@@ -431,8 +577,8 @@ def check_load_table(root: Path, data: dict, expanded: dict) -> list:
     return issues
 
 
-def coverage(path: Path | None = None) -> dict:
-    """拓扑检查 + 场景覆盖检查 + SKILL.md 加载表一致性。"""
+def coverage(path: Path | None = None, strict: bool = True) -> dict:
+    """拓扑检查 + 场景覆盖 + 加载表 + intent 登记/指针闭合。"""
     root = skill_root()
     data = load(path)
     base = topology(path)
@@ -440,11 +586,16 @@ def coverage(path: Path | None = None) -> dict:
     scene_issues, expanded = check_scenes(data, root)
     issues += scene_issues
     issues += check_load_table(root, data, expanded)
+    issues += check_intents(data, root, expanded)
+    if strict:
+        issues += check_intent_pointers(data, root, expanded)
     return {
         "ok": not issues,
         "files": base["files"],
         "rules": base["rules"],
         "scenes": len(data["scenes"]),
+        "intents": len(data.get("intents", [])),
+        "strict_pointers": strict,
         "error_codes": base["error_codes"],
         "version": base["version"],
         "issues": issues,
@@ -790,6 +941,52 @@ def _selftest() -> int:
 
     chk("load table drift detected", loadtable_drift)
 
+    def intent_dup():
+        d = json.loads(default_path().read_text(encoding="utf-8"))
+        d["intents"] = list(d.get("intents", []))
+        d["intents"].append(dict(d["intents"][0]))
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as f:
+            json.dump(d, f, ensure_ascii=False)
+            p = Path(f.name)
+        try:
+            load(p)
+        except ContractError as e:
+            assert e.code == "E-CONTRACT-INVALID" and "intent" in e.message, e.message
+            return
+        finally:
+            p.unlink(missing_ok=True)
+        raise AssertionError("duplicate intent scope not caught")
+
+    chk("duplicate intent scope detected", intent_dup)
+
+    def intent_clean():
+        d = load()
+        root = skill_root()
+        _, expanded = check_scenes(d, root)
+        owner_issues = check_intents(d, root, expanded)
+        pointer_issues = check_intent_pointers(d, root, expanded)
+        assert not owner_issues, owner_issues[:3]
+        assert not pointer_issues, pointer_issues[:3]
+
+    chk("intents and pointers clean", intent_clean)
+
+    def pointer_unloadable():
+        d = load()
+        root = skill_root()
+        _, expanded = check_scenes(d, root)
+        d2 = json.loads(json.dumps(d))
+        d2["intents"].append({
+            "id": "I-TEST", "scope": "x",
+            "owner": "references/handout/figures.md#图像可视化双轨",
+            "marker": "intent:I-TEST@x",
+            "consumers": ["references/handout/quality.md"],
+            "scenes": ["s5-close"],
+        })
+        issues = check_intent_pointers(d2, root, expanded)
+        assert any("I-TEST" in i for i in issues), issues
+
+    chk("unloadable intent pointer detected", pointer_unloadable)
+
     if failures:
         print("SELFTEST FAILED:", ", ".join(failures))
         return 1
@@ -804,6 +1001,10 @@ def main(argv=None) -> int:
     g.add_argument("--topology", action="store_true")
     g.add_argument("--coverage", action="store_true")
     g.add_argument("--get", metavar="DOTTED")
+    ap.add_argument("--strict-pointers", action="store_true",
+                    help="显式开启指针闭合检查（当前默认开启）")
+    ap.add_argument("--no-strict-pointers", action="store_true",
+                    help="关闭指针闭合检查，仅报告 intent 正本/consumer 问题")
     args = ap.parse_args(argv)
     try:
         if args.selftest:
@@ -813,7 +1014,7 @@ def main(argv=None) -> int:
             print(json.dumps(r, ensure_ascii=False, indent=1))
             return 0 if r["ok"] else 1
         if args.coverage:
-            r = coverage()
+            r = coverage(strict=not args.no_strict_pointers)
             print(json.dumps(r, ensure_ascii=False, indent=1))
             return 0 if r["ok"] else 1
         print(json.dumps(get(args.get), ensure_ascii=False, indent=1))
