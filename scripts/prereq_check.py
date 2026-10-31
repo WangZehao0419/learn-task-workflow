@@ -55,7 +55,7 @@ def parse_list(path: Path) -> tuple[dict[str, list[str]], dict[str, list[str]], 
     taught: dict[str, list[str]] = {}
     untaught: dict[str, list[str]] = {}
     usable = 0
-    for raw in path.read_text(encoding="utf-8").splitlines():
+    for raw in path.read_text(encoding="utf-8", errors="replace").splitlines():
         line = raw.strip()
         if not line.startswith("- ") or "｜" not in line:
             continue
@@ -179,6 +179,16 @@ def _selftest() -> int:
         v3 = check_files(build_taught_set(taught2), untaught, [("q_bad.md", lines2)])
         chk("extra-terms 豁免定语", len(v3) == 0)
 
+        # v9.11.6（F14）：非 UTF-8 文件不裸崩（errors="replace"，对齐全仓口径；
+        # GBK 字节按 UTF-8 读出为替换符，行不解析为合法目行——要点是结构化降级而非崩溃）
+        gbk_list = Path(td) / "gbk课程体系.md"
+        gbk_list.write_bytes(list_md.encode("gbk"))
+        try:
+            _t, _u, usable_g = parse_list(gbk_list)
+            chk("非 UTF-8 清单不裸崩（replace，行不解析）", usable_g == 0)
+        except UnicodeDecodeError:
+            chk("非 UTF-8 清单不裸崩（replace，行不解析）", False)
+
     print("SELFTEST OK" if ok else "SELFTEST FAILED")
     return 0 if ok else 1
 
@@ -213,7 +223,7 @@ def main(argv=None) -> int:
     if args.extra_file:
         ef = Path(args.extra_file)
         if ef.is_file():
-            for t in ef.read_text(encoding="utf-8").splitlines():
+            for t in ef.read_text(encoding="utf-8", errors="replace").splitlines():
                 t = t.strip()
                 if len(t) >= 2:
                     taught[f"__extra__{t}"] = [t]
@@ -224,7 +234,7 @@ def main(argv=None) -> int:
         if not p.is_file():
             print(json.dumps({"ok": False, "code": "E-SCAN-MISSING", "message": str(p)}), file=sys.stderr)
             return 2
-        files.append((sp, question_lines(p.read_text(encoding="utf-8"), scan_all=args.scan_all)))
+        files.append((sp, question_lines(p.read_text(encoding="utf-8", errors="replace"), scan_all=args.scan_all)))
 
     violations = check_files(build_taught_set(taught), untaught, files)
     result = {

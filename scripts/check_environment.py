@@ -39,15 +39,18 @@ def load_json(path: Path) -> dict[str, Any]:
 def parse_version(value: str) -> tuple[int, int, int] | None:
     """严格解析版本声明：仅接受纯数字点分字符串并整体匹配（fullmatch）。
 
-    返回补零到三段的元组（与 sys.version_info[:3] 可比）；任何非字符串或
+    一至三段补零为三元组（与 sys.version_info[:3] 可比）；超过三段返回
+    None（v9.11.6：判「声明无效」，不再静默截断丢精度）；任何非字符串或
     含前后缀垃圾的输入返回 None（调用方据此判定「未声明/声明无效」）。
     """
     if not isinstance(value, str) or not VERSION_RE.fullmatch(value):
         return None
     parts = [int(item) for item in value.split(".")]
+    if len(parts) > 3:
+        return None
     while len(parts) < 3:
         parts.append(0)
-    return tuple(parts[:3])
+    return tuple(parts)
 
 
 def filtered_setup(setup: Any) -> dict[str, Any]:
@@ -290,6 +293,7 @@ def selftest() -> int:
                             "min_version": "3.8"})["status"] == "ready"
     ok = ok and parse_version("3.8") == (3, 8, 0)
     ok = ok and parse_version("3.8.10") == (3, 8, 10)
+    ok = ok and parse_version("3.8.10.1") is None   # v9.11.6：四段不再静默截断，判「声明无效」
     ok = ok and parse_version("3.8.9999999garbage") is None
     ok = ok and parse_version("garbage3.8") is None
     ok = ok and parse_version(3) is None and parse_version(False) is None

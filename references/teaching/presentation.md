@@ -1,6 +1,6 @@
 # 课内呈现：轮型、内容契约与版式
 
-<!-- owns: 对话轮型、讲授轮版式、结构预算、五段内容契约、压缩出口、反馈/提示/路线/状态轮版式、讲授与反馈语气；must-not-define: 深度分层（explanation-depth）、密度（explanation-density）、类比/新记号（explanation-craft）、六拍（lesson-flow）、提问与反馈内容（interaction）、讲义版面（handout） -->
+<!-- owns: 对话轮型、讲授轮版式、结构预算、五段内容契约、压缩出口、反馈/提示/路线轮版式、讲授与反馈语气；must-not-define: 深度分层（explanation-depth）、密度（explanation-density）、类比/新记号（explanation-craft）、六拍（lesson-flow）、提问与反馈内容（interaction）、讲义版面（handout） -->
 
 ## 目录
 

@@ -93,6 +93,16 @@
    "notes": "R46 出题前术语对账的机器护栏：已引入集合 = 已讲目行引入列 ∪ 已讲 KP 名称 ∪ --extra-terms/--extra-file 追加；默认只扫题面区标题（## 题组/自测/检验/练习）之后到下一 ## 之前，--scan-all 扫全文；违规逐条输出 W-TERM-UNTAUGHT 到 stderr，JSON 汇总到 stdout；课程体系零可用目行 exit 2（E-LIST-EMPTY），不猜不补造"
   }
  ],
+ "internal_modules": [
+  {
+   "script": "ltw_parse.py",
+   "note": "共享解析原语（清单行/目行/attempt 行），无 CLI；selftest 经 task_index/progress_check/kp_sort/prereq_check 间接覆盖"
+  },
+  {
+   "script": "ltw_typography.py",
+   "note": "排印检查库，无 CLI；经 verify_explanation --reader 间接覆盖"
+  }
+ ],
  "verification": {
   "selftest": [
    "python -B scripts/task_index.py --selftest",

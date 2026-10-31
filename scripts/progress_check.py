@@ -341,7 +341,7 @@ def parse_attempts(text):
     独立性枚举；三者齐备才算一条有效已判分记录（`graded`）。缺一不计入，
     不同记录的字段**不得**被拼成总体合格。
     """
-    attempts, incomplete = [], 0
+    attempts = []
     invalid_result = []   # 写了 正确性=/档位= 但取值非法的行（放行模式报 E-ENUM-GRADE）
     # v9.11.4：剔除 ``` 围栏内行——代码块中的示例/文档化判分行不是真实证据
     #（口径对齐 verify_explanation.compute_visible 的围栏感知）。
@@ -390,8 +390,6 @@ def parse_attempts(text):
             False if result in ("partial", "incorrect") else None)
         graded = bool(has_answer and result in ("correct", "partial", "incorrect")
                       and indep is not None and not voided)
-        if not graded and not voided and result != "ungraded":
-            incomplete += 1
         attempts.append({
             "qid": qm.group(1) if qm else "",
             "attempt_id": aid.group(1) if aid else "",
@@ -401,7 +399,7 @@ def parse_attempts(text):
             "has_answer": has_answer, "result": result, "correct": correct,
             "indep": indep, "graded": graded, "voided": voided,
         })
-    return {"attempts": attempts, "incomplete": incomplete, "invalid_result": invalid_result}
+    return {"attempts": attempts, "invalid_result": invalid_result}
 
 
 def parse_key_abilities(text):
@@ -611,6 +609,8 @@ def pick_evidence(cands, ex_dir, ref=None):
     """确定性选取本节的判分证据（多项 real）。
 
     · 候选状态显式引用（`本次证据：<文件名>`）→ 只认该文件；引用不到 → 返回 ("MISSING", False)。
+      该引用为全文单值（首次出现者生效、作用于每一节）：多节增量提交时须写各节共同候选的
+      文件名，不支持逐节指定。
     · 否则在**结构真实**（real）的候选中按「文件名日期最新 → 字典序最大」确定性选定，
       并回报是否存在多份 real 候选（供 W-MULTI-EVIDENCE 提示显式引用）。
     绝不按目录枚举顺序先到先得、也不挑「任意历史最好成绩」。
@@ -1065,7 +1065,9 @@ def check(task_dir, release=False, proposed=None):
         chosen, multi = pick_evidence(hit, ex_dir, ev_ref)
         if chosen == "MISSING":
             errors.append({"code": "E-EVIDENCE-REF-MISSING",
-                           "message": "候选状态引用的本次证据不存在：" + str(ev_ref)})
+                           "message": "候选状态引用的本次证据不存在：" + str(ev_ref)
+                                      + "（「本次证据：」为全文单值、须为本节候选之一；"
+                                        "多节共用一份证据时写该文件名，不支持逐节指定）"})
             continue
         if multi:
             warnings.append({"code": "W-MULTI-EVIDENCE",
@@ -1110,6 +1112,26 @@ def check(task_dir, release=False, proposed=None):
                                             + " 条未判记录（不计入闸口分母，需补判或作废）"})
             for code, msg in gate_evidence(best_text, min_ratio=gate_ratio, ratio_label=gate_label):
                 errors.append({"code": code, "message": "节 " + str(num) + "：" + msg})
+
+    # v9.11.6（F17）：release 跨节对账 attempt_id——同一作答事件被复制进多节判分记录
+    # 且判定/独立性/KP 投影不一致时拦停（单文件内的同码冲突由 gate_evidence 负责）。
+    if release and len(lesson_evidence) > 1:
+        seen_aid = {}
+        for num in sorted(lesson_evidence):
+            for a in parse_attempts(lesson_evidence[num])["attempts"]:
+                aid = a["attempt_id"]
+                if not aid:
+                    continue
+                proj = (a["result"], a["indep"], normalize_kp_id(a["kp"]))
+                if aid in seen_aid:
+                    if seen_aid[aid][0] != proj:
+                        errors.append({"code": "E-ATTEMPT-CONFLICT",
+                                       "message": "attempt_id=" + aid + " 在节 "
+                                                  + str(seen_aid[aid][1]) + " 与节 " + str(num)
+                                                  + " 的判定/独立性/KP 归属不一致——同一作答事件跨节冲突，"
+                                                    "须核对真实作答后修正，不得复制抬分"})
+                else:
+                    seen_aid[aid] = (proj, num)
 
     # 未解析勾选行：出现勾选语法却未被识别（不得静默）
     for line in unparsed_routes:
@@ -1170,7 +1192,7 @@ def check(task_dir, release=False, proposed=None):
     if not list_path.exists() and kp_pointer:
         warnings.append({"code": "W-KP-LIST-MISSING",
                          "message": "progress.md 记有课程体系指针但文件不存在：" + list_name})
-    if list_path.exists() or (kp_pointer and list_path.exists()):
+    if list_path.exists():
         kp = parse_kp_list(list_path)
         if kp["unreadable"]:
             # 指向目录/不可读文件：降级为 W 级告警 + 正常 JSON 输出，杜绝 traceback 裸崩
@@ -2510,6 +2532,24 @@ def selftest():
         ev_fence = parse_attempts(EV_FENCED)
         ok = ok and len(ev_fence["attempts"]) == 1
         ok = ok and ev_fence["attempts"][0]["result"] == "correct"
+
+        # v9.11.6（F17）：release 跨节对账——同 attempt_id 异投影复制进两节 → E-ATTEMPT-CONFLICT
+        d_x = _mk2("v9116-cross-attempt",
+                   "# 学习任务：跨节\n- 数据根：<root>\n- 当前阶段：逐节学习\n- 类型：知识型\n"
+                   "- 学科族：计算与技术\n- 目标：入门\n- 起点：零基础\n"
+                   "- 课程体系：课程体系.md ｜ 版本 1 ｜ 总 2\n"
+                   "\n## 学习路线\n- [x] 1. 变量（lesson_id=L-01）\n- [x] 2. 循环（lesson_id=L-02）\n",
+                   {"exercises/01-变量-2026-01-01.md":
+                        "lesson_id=L-01\n## 作答与判分\n"
+                        "- attempt_id=A1，题1：作答「3」｜正确性=对｜独立性=独立｜调度档=Good\n"
+                        "## 复述检查清单\n- [x] 关键点1：A\n- [x] 无事实性错误\n",
+                    "exercises/02-循环-2026-01-02.md":
+                        "lesson_id=L-02\n## 作答与判分\n"
+                        "- attempt_id=A1，题1：作答「3」｜正确性=错｜独立性=独立｜调度档=Again\n"
+                        "## 复述检查清单\n- [x] 关键点1：A\n- [x] 无事实性错误\n"})
+        r_x = check(d_x, release=True)
+        ok = ok and any(e["code"] == "E-ATTEMPT-CONFLICT" and "跨节" in e["message"]
+                        for e in r_x["errors"])
 
         EV_VOID_CORRECTED = (
             "## 作答与判分\n"
