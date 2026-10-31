@@ -353,15 +353,15 @@ def check_mirror(declared: set, ops_text: str) -> list:
     return issues
 
 
-def check_lead_words(contract_words: list, handout_text: str) -> list:
-    """handout.md canonical 集合与契约 headings.lead_words 双写一致。"""
-    m = re.search(r"\*\*canonical 集合\*\*[^：]*：(.+)", handout_text)
+def check_lead_words(contract_words: list, text: str) -> list:
+    """ops/typography.md canonical 集合与契约 headings.lead_words 双写一致。"""
+    m = re.search(r"\*\*canonical 集合\*\*[^：]*：(.+)", text)
     if not m:
-        return ["E-TOPOLOGY-LEADWORDS: handout.md 缺 canonical 集合行"]
+        return ["E-TOPOLOGY-LEADWORDS: ops/typography.md 缺 canonical 集合行"]
     doc_words = set(re.findall(r"`([^`]+)`", m.group(1)))
     cw = set(contract_words)
     issues = ["E-TOPOLOGY-LEADWORDS: 契约缺 lead_word %s" % w for w in sorted(doc_words - cw)]
-    issues += ["E-TOPOLOGY-LEADWORDS: handout.md 缺 lead_word %s" % w for w in sorted(cw - doc_words)]
+    issues += ["E-TOPOLOGY-LEADWORDS: ops/typography.md 缺 lead_word %s" % w for w in sorted(cw - doc_words)]
     return issues
 
 
@@ -577,6 +577,45 @@ def check_load_table(root: Path, data: dict, expanded: dict) -> list:
     return issues
 
 
+def check_skill_supplement_table(skill_text: str, root: Path) -> list:
+    """SKILL.md 补读表中的 file + 「section」必须能在目标文件中找到标题。"""
+    issues = []
+    start = skill_text.find("**补读表**")
+    end = skill_text.find("**补读失败**", start if start != -1 else 0)
+    if start == -1:
+        return issues
+    block = skill_text[start:end if end != -1 else len(skill_text)]
+    for ln in block.splitlines():
+        if not ln.lstrip().startswith("|"):
+            continue
+        files = re.findall(r"`([^`]+\.md)`", ln)
+        sections = re.findall(r"「([^」]+)」", ln)
+        for rel in files:
+            if not rel.startswith("references/"):
+                rel = "references/" + rel
+            for section in sections:
+                if not _heading_exists(root, rel, section):
+                    issues.append("E-TOPOLOGY-DEADREF: SKILL.md 补读表小节不存在 %s#%s"
+                                  % (rel, section))
+    return issues
+
+
+def check_section_refs(data: dict, root: Path) -> list:
+    """窄版小节引用检查：supplements[].section + SKILL 补读表；不扫散文 §。"""
+    issues = []
+    for sid, sc in data.get("scenes", {}).items():
+        for item in sc.get("supplements", []):
+            rel, section = item.get("file"), item.get("section")
+            if rel and section and not _heading_exists(root, rel, section):
+                issues.append("E-TOPOLOGY-DEADREF: 场景 %s supplement 小节不存在 %s#%s"
+                              % (sid, rel, section))
+    skill_path = root / "SKILL.md"
+    if skill_path.exists():
+        issues += check_skill_supplement_table(
+            skill_path.read_text(encoding="utf-8", errors="replace"), root)
+    return issues
+
+
 def coverage(path: Path | None = None, strict: bool = True) -> dict:
     """拓扑检查 + 场景覆盖 + 加载表 + intent 登记/指针闭合。"""
     root = skill_root()
@@ -658,12 +697,15 @@ def topology(path: Path | None = None) -> dict:
         issues.append("E-TOPOLOGY-MIRROR: ops/scripts.md 不存在")
 
     # 9. lead_words 双写一致
-    handout_path = root / "references" / "handout" / "pipeline.md"
+    handout_path = root / "references" / "ops" / "typography.md"
     if handout_path.exists():
         issues += check_lead_words(data["constants"]["headings"]["lead_words"],
                                    handout_path.read_text(encoding="utf-8", errors="replace"))
     else:
-        issues.append("E-TOPOLOGY-LEADWORDS: handout.md 不存在")
+        issues.append("E-TOPOLOGY-LEADWORDS: ops/typography.md 不存在")
+
+    # 9.5 补读/supplement 小节必须存在（窄版；不扫散文 §）
+    issues += check_section_refs(data, root)
 
     # 10. T/F/R 编号引用必有定义
     rule_ids = {r["id"] for r in data["rules"]}
@@ -840,7 +882,7 @@ def _selftest() -> int:
         issues = check_lead_words(["解", "证明"], t)
         assert any("证明" in i for i in issues) and any("答" in i for i in issues), issues
         assert check_lead_words(["解"], "无标记文本") == \
-            ["E-TOPOLOGY-LEADWORDS: handout.md 缺 canonical 集合行"]
+            ["E-TOPOLOGY-LEADWORDS: ops/typography.md 缺 canonical 集合行"]
 
     chk("leadwords bidirectional", leadwords_both_ways)
 
@@ -930,13 +972,12 @@ def _selftest() -> int:
         _, expanded = check_scenes(d, root)
         text = (root / "SKILL.md").read_text(encoding="utf-8", errors="replace")
         bad = text.replace("references/ops/formulas.md", "references/ops/formulasX.md", 1)
-        tmp = root / "SKILL.md"
-        orig = tmp.read_text(encoding="utf-8")
-        try:
-            tmp.write_text(bad, encoding="utf-8")
-            issues = check_load_table(root, d, expanded)
-        finally:
-            tmp.write_text(orig, encoding="utf-8")
+        before = (root / "SKILL.md").read_bytes()
+        with tempfile.TemporaryDirectory() as td:
+            (Path(td) / "SKILL.md").write_text(bad, encoding="utf-8")
+            issues = check_load_table(Path(td), d, expanded)
+        after = (root / "SKILL.md").read_bytes()
+        assert before == after, "selftest must not modify real SKILL.md"
         assert issues and all(i.startswith("E-TOPOLOGY-SCENES") for i in issues), issues
 
     chk("load table drift detected", loadtable_drift)
@@ -986,6 +1027,80 @@ def _selftest() -> int:
         assert any("I-TEST" in i for i in issues), issues
 
     chk("unloadable intent pointer detected", pointer_unloadable)
+
+    def section_refs_clean():
+        issues = check_section_refs(load(), skill_root())
+        assert not issues, issues[:3]
+
+    chk("section refs clean", section_refs_clean)
+
+    def missing_scene_file():
+        d = json.loads(default_path().read_text(encoding="utf-8"))
+        d["scenes"]["entry"]["files"].append("references/__missing__.md")
+        issues, _ = check_scenes(d, skill_root())
+        assert any("文件不存在" in i for i in issues), issues
+
+    chk("missing rule file detected", missing_scene_file)
+
+    def empty_section_file():
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "references").mkdir()
+            (root / "references" / "empty.md").write_text("", encoding="utf-8")
+            d = {"scenes": {"s": {"supplements": [{
+                "file": "references/empty.md",
+                "section": "不存在",
+                "when": "selftest",
+                "intent": "I-TEST@x",
+            }]}}}
+            issues = check_section_refs(d, root)
+            assert any("supplement 小节不存在" in i for i in issues), issues
+
+    chk("empty rule file section detected", empty_section_file)
+
+    def supplement_section_missing():
+        d = json.loads(default_path().read_text(encoding="utf-8"))
+        d["scenes"]["s3-teach"]["supplements"].append({
+            "file": "references/assessment/generation.md",
+            "section": "不存在的小节",
+            "when": "selftest",
+            "intent": "I-SELF-TEST-VS-GROUP@handout",
+        })
+        issues = check_section_refs(d, skill_root())
+        assert any("supplement 小节不存在" in i for i in issues), issues
+
+    chk("supplement section missing detected", supplement_section_missing)
+
+    def skill_supplement_drift():
+        root = skill_root()
+        text = (root / "SKILL.md").read_text(encoding="utf-8", errors="replace")
+        bad = text.replace("「题量预算与自测≠题组」", "「不存在的小节」", 1)
+        issues = check_skill_supplement_table(bad, root)
+        assert any("SKILL.md 补读表小节不存在" in i for i in issues), issues
+
+    chk("SKILL supplement section drift detected", skill_supplement_drift)
+
+    def owner_anchor_missing():
+        d = load()
+        root = skill_root()
+        _, expanded = check_scenes(d, root)
+        d2 = json.loads(json.dumps(d))
+        d2["intents"][0]["owner"] = "references/routing/triggers.md#不存在的小节"
+        issues = check_intents(d2, root, expanded)
+        assert any("owner 小节不存在" in i for i in issues), issues
+
+    chk("owner anchor missing detected", owner_anchor_missing)
+
+    def consumer_pointer_missing():
+        d = load()
+        root = skill_root()
+        _, expanded = check_scenes(d, root)
+        d2 = json.loads(json.dumps(d))
+        d2["intents"][0]["consumers"] = ["references/ops/composition.md"]
+        issues = check_intents(d2, root, expanded)
+        assert any("缺指向 owner 的指针" in i for i in issues), issues
+
+    chk("consumer pointer missing detected", consumer_pointer_missing)
 
     if failures:
         print("SELFTEST FAILED:", ", ".join(failures))

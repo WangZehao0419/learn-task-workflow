@@ -1,7 +1,7 @@
 ---
 name: learn-task-workflow
 description: 私人家教工作流：把系统学习需求跑成带硬闸口、进度落盘、跨会话可续学的任务流，含间隔重复与掌握后保持复习、判分四态与作废申诉、KP 分型验收与课程体系契约（章/节/目三级规划）、条件化出题四步流水线与讲义生成、错因归因纠偏、按内容类型与学科群分流教学（单节课六拍：先教后练，永不先测未讲内容），新手先看完整示例再做题、新记号当场讲透；支持独立生成学习用讲义/题组/试卷。以「系统学习」意图触发：「我要学X」「教我X」「带我学X」「带我读X」「精读X」「帮我啃X」「从零开始学X」「零基础学X」「备考X」「我要考研/考证」「家教模式」「开始上课」「继续学习」「接着上次继续学」「调整学习计划」「我的学习进度」「学到哪了」「学习简报」「学习周报」「考考我」「给X写讲义」「给X出题」「组一套卷」。不触发：普通知识问答、单题解题求助（如「这道题怎么做」）、代写作业/文章/报告、单纯总结材料（归 summarize）、主题调研写文档（归 research）、课程仓库脚手架（归 scaffold-exercises）、只要学习建议或只要计划文档；「教我X」「帮我复习X」「考考我」等高频词必须指向系统学习意图或已有学习任务，否则先澄清。宿主另有独立教学工作区或正式文档排版能力时，用户显式调用则让位，二者勿同时启动。
-version: 9.9.0
+version: 9.10.0
 author: 王责豪
 agent_created: true
 ---
@@ -139,6 +139,7 @@ agent_created: true
 | 场景 | 补读 | 触发 | 正本 intent |
 |---|---|---|---|
 | `s3-teach` | `assessment/generation.md`「出题范围与未讲授过滤（R35）」 | 讲授热身/确认题需要出题域 | `I-UNTAUGHT-FILTER@global` |
+| `s3-teach` | `assessment/generation.md`「题量预算与自测≠题组」 | 讲授热身/确认题需要题量预算 | `I-SELF-TEST-VS-GROUP@handout` |
 | `s3-handout` | `teaching/explanation-depth.md`「深度分层」 | 写深度分配或深讲单元 | `I-DEPTH@global` |
 | `s3-handout` | `assessment/generation.md`「出题范围与未讲授过滤（R35）」 | 讲义自测核对出题域 | `I-UNTAUGHT-FILTER@global` |
 | `s3-handout` | `assessment/generation.md`「题量预算与自测≠题组」 | 写自测/题组题量预算 | `I-SELF-TEST-VS-GROUP@handout` |
@@ -181,11 +182,11 @@ agent_created: true
 - `references/teaching/explanation-density.md` —— 信息量四问、密度子规则、超长自查、删除测试。
 - `references/teaching/explanation-craft.md` —— 新记号三件套、现象→符号引入序、类比纪律。
 - `references/teaching/content-types.md` —— 内容类型处方：记忆/概念/程序/设计四类的讲授序列、表征默认、练习阶梯、纠错风格、复习侧重、验收天花板；撤架判据与动作技能能力边界。
-- `references/handout/pipeline.md` —— 讲义一页合同、一致性裁决、理解核心、四步流水线、决策日志。
+- `references/handout/pipeline.md` —— 讲义一页合同、状态与定稿、理解核心、四步流水线、决策日志。
 - `references/handout/templates.md` —— 类型判定与四类矩阵（①–⑤ 输出面）。
-- `references/handout/support-levels.md` —— L1/L2/L3 支持级、动态升降、学习者状态层。
+- `references/handout/support-levels.md` —— L1/L2/L3 支持级、动态升降、学习者状态层、L3 产物形态。
 - `references/handout/styles.md` —— 六套风格骨架、风格切换映射。
-- `references/handout/unit-schema.md` —— 讲义概念单元 schema、③ 豁免、答案框体例、分层、头部、自测、概念地图、L3、扩展区。
+- `references/handout/unit-schema.md` —— 讲义概念单元 schema、交付标识分类、③ 豁免 canonical 标签、答案框体例、分层、头部、自测、概念地图阈值、L3 产物指针、扩展区。
 - `references/handout/typography.md` —— 讲义版面：页面架构、字体系统、元素版面、教学例版面、元素预算。
 - `references/handout/print-a11y.md` —— 打印/PDF 契约、中文印刷侧、无障碍。
 - `references/handout/reader-path.md` —— 读者路径 P1、速览/回看、章节层。
@@ -193,9 +194,9 @@ agent_created: true
 - `references/handout/figures.md` —— 图像双轨、落盘与死链、绘图前后核对、渲染阻断、视觉任务分界。
 - `references/handout/self-check.md` —— 出厂自检、读者验证、元素预算检查（派生）。
 - `references/handout/enhancements.md` —— P1 可选增强：文本结构、主张—证据表、设计量表、效用提示、质量回路、要点卡、MVP、停车位。
-- `references/ops/typography.md` —— 文字排印：中文标点、中英文空格、数字、单位、范围、引号、破折号/省略号、字体语义、手写断行禁令、文本级强调。
+- `references/ops/typography.md` —— 文字排印：中文标点、中英文空格、数字、单位、范围、引号、破折号/省略号、字体语义、交付起笔/答案标识 canonical 集合、手写断行禁令、文本级强调。
 - `references/assessment/scoring.md` —— 判分四态、难度伺服、闸口比例、复述证据、视觉任务证据、批改与申诉。
-- `references/assessment/generation.md` —— 题量预算、出题四步、零提示与条件化判定、出题范围与未讲授过滤。
+- `references/assessment/generation.md` —— 题量预算（含 L3 题量/同题例外）、出题四步、零提示与条件化判定、出题范围与未讲授过滤。
 - `references/assessment/scheduling.md` —— 间隔调度、due-queue 与复习预算、校准画像。
 - `references/data/layout.md` —— 数据根、三簿分工、续学匹配、目录布局、slug、版本号体系。
 - `references/data/progress-schema.md` —— progress.md（状态簿）字段唯一事实源、复习调度字段、下次续学与目游标。

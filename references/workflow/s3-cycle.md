@@ -15,6 +15,6 @@
 | ① | **收作业** | 上次有作业先收先批：练习在题组文件内标记对/错，输出任务的漏洞记入薄弱点；错题入错题本 |
 | ② | **热身** | 优先取 due-queue 的到期项，不足再从薄弱点/错题本补，合计抽 1–3 个旧问题做热身（≤5 分钟、**不打分**）；**只抽已讲授内容**，未讲授条目不入热身（见 `assessment/generation.md`「出题范围与未讲授过滤」） |
 | ③ | **讲授** | 按 `teaching/lesson-flow.md`「单节课六拍」执行：**先教后练**（完整示范 → 补步 → 独立），单条讲解轮只含 1 个概念/1 个步骤、正文 ≤6 句（推导/完整示例除外）；呈现与密度见 `teaching/presentation.md`；讲义生成按 `handout/pipeline.md` |
-| ④ | **练习** | 按 `assessment/generation.md` 的出题流水线与题量预算；自测≠题组；L3 例外见 `handout/pipeline.md` §2.4 |
+| ④ | **练习** | 按 `assessment/generation.md` 的出题流水线与题量预算；自测≠题组；L3 例外见 `assessment/generation.md`「题量预算与自测≠题组」 |
 | ⑤ | **批改** | 按 `assessment/scoring.md` 判分四态/反馈时序/信心与 cw；按 `teaching/interaction.md` 组织反馈三问与八动作；判错同轮归因定级 |
 

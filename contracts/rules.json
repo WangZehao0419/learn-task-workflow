@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/1",
- "version": "9.9.0",
+ "version": "9.10.0",
  "files": [
   {
    "id": "triggers",
@@ -117,7 +117,7 @@
    "id": "handout-pipeline",
    "path": "references/handout/pipeline.md",
    "layer": 3,
-   "owns": "讲义合同、一致性裁决、理解核心、四步流水线",
+   "owns": "讲义一页合同、状态与定稿、理解核心、四步流水线、决策日志",
    "depends_on": [
     "s3-block",
     "scoring",
@@ -167,7 +167,7 @@
    "id": "generation",
    "path": "references/assessment/generation.md",
    "layer": 2,
-   "owns": "题量预算、出题四步、零提示条件化、未讲授过滤",
+   "owns": "题量预算（含 L3 题量/同题例外）、出题四步、零提示条件化、未讲授过滤",
    "depends_on": [
     "scoring"
    ]
@@ -614,7 +614,7 @@
    "id": "ops-typography",
    "path": "references/ops/typography.md",
    "layer": 1,
-   "owns": "文字排印：标点、数字、单位、空格、字体语义",
+   "owns": "文字排印：标点、数字、单位、空格、字体语义、交付起笔/答案标识 canonical 集合",
    "depends_on": []
   },
   {
@@ -695,7 +695,7 @@
    "id": "handout-support-levels",
    "path": "references/handout/support-levels.md",
    "layer": 3,
-   "owns": "L1/L2/L3 支持级、动态升降、学习者状态层",
+   "owns": "L1/L2/L3 支持级、动态升降、学习者状态层、L3 产物形态",
    "depends_on": [
     "handout-templates"
    ]
@@ -714,7 +714,7 @@
    "id": "handout-unit-schema",
    "path": "references/handout/unit-schema.md",
    "layer": 3,
-   "owns": "①–⑤ schema、③ 豁免、答案框体例、分层、头部、自测、概念地图、L3、扩展区",
+   "owns": "①–⑤ schema、交付标识分类、③ 豁免 canonical 标签、答案框体例、分层、头部、自测、概念地图阈值、L3 产物指针、扩展区",
    "depends_on": [
     "handout-templates",
     "handout-pipeline"
@@ -2003,6 +2003,12 @@
      "section": "出题范围与未讲授过滤（R35）",
      "when": "讲授热身/确认题需要出题域时",
      "intent": "I-UNTAUGHT-FILTER@global"
+    },
+    {
+     "file": "references/assessment/generation.md",
+     "section": "题量预算与自测≠题组",
+     "when": "讲授热身/确认题需要题量预算时",
+     "intent": "I-SELF-TEST-VS-GROUP@handout"
     }
    ]
   },
@@ -2580,9 +2586,12 @@
    "marker": "intent:I-SELF-TEST-VS-GROUP@handout",
    "consumers": [
     "references/handout/unit-schema.md",
-    "references/handout/pipeline.md"
+    "references/handout/pipeline.md",
+    "references/workflow/s3-block.md",
+    "references/workflow/s3-cycle.md"
    ],
    "scenes": [
+    "s3-teach",
     "s3-handout",
     "s3-deep"
    ]

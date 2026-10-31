@@ -123,6 +123,58 @@ def pointer_stats(root: Path, data: dict) -> list:
     return rows
 
 
+def _selftest() -> int:
+    import tempfile
+    failures = []
+
+    def chk(name, fn):
+        try:
+            fn()
+            print("PASS", name)
+        except Exception as e:
+            failures.append(name)
+            print("FAIL", name, "::", e)
+
+    def over_budget():
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "a.md").write_text("x" * 100, encoding="utf-8")
+            data = {
+                "constants": {
+                    "scenes_budget": {"files_max": 17, "chars_max": 100},
+                    "group_slugs": {},
+                    "discipline_slugs": [],
+                },
+                "scenes": {"s": {"files": ["a.md"], "chars_max": 10}},
+            }
+            rows = scene_stats(root, data)
+            assert rows[0]["over_chars"] and not rows[0]["missing"], rows
+
+    chk("over budget detected", over_budget)
+
+    def missing_file():
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            data = {
+                "constants": {
+                    "scenes_budget": {"files_max": 17, "chars_max": 100},
+                    "group_slugs": {},
+                    "discipline_slugs": [],
+                },
+                "scenes": {"s": {"files": ["missing.md"], "chars_max": 100}},
+            }
+            rows = scene_stats(root, data)
+            assert rows[0]["missing"], rows
+
+    chk("missing file detected", missing_file)
+
+    if failures:
+        print("SELFTEST FAILED:", ", ".join(failures))
+        return 1
+    print("SELFTEST OK")
+    return 0
+
+
 def main(argv=None) -> int:
     if sys.stdout and hasattr(sys.stdout, "reconfigure"):
         try:
@@ -133,7 +185,10 @@ def main(argv=None) -> int:
     parser.add_argument("--skill-root", default=None)
     parser.add_argument("--pointers", action="store_true",
                         help="额外报告每场景补读文件数与叠加场景最坏字符")
+    parser.add_argument("--selftest", action="store_true", help="运行只读负例自检")
     args = parser.parse_args(argv)
+    if args.selftest:
+        return _selftest()
     root = Path(args.skill_root).resolve() if args.skill_root else skill_root()
     data = load()
     rows = scene_stats(root, data)
