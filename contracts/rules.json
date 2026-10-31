@@ -1,13 +1,14 @@
 {
- "schema": "ltw-rules/1",
- "version": "9.10.0",
+ "schema": "ltw-rules/2",
+ "version": "9.11.0",
  "files": [
   {
    "id": "triggers",
    "path": "references/routing/triggers.md",
    "layer": 1,
    "owns": "触发判定、a–f 决策树、语义桥、数据访问条件",
-   "depends_on": []
+   "depends_on": [],
+   "kind": "router"
   },
   {
    "id": "shortcuts",
@@ -16,7 +17,8 @@
    "owns": "快捷指令明细",
    "depends_on": [
     "triggers"
-   ]
+   ],
+   "kind": "router"
   },
   {
    "id": "ecosystem",
@@ -25,14 +27,16 @@
    "owns": "生态分工与触发优先级",
    "depends_on": [
     "triggers"
-   ]
+   ],
+   "kind": "router"
   },
   {
    "id": "gates",
    "path": "references/workflow/gates.md",
    "layer": 1,
    "owns": "入场自检、通用闸口协议",
-   "depends_on": []
+   "depends_on": [],
+   "kind": "router"
   },
   {
    "id": "s0-s2-setup",
@@ -42,7 +46,8 @@
    "depends_on": [
     "gates",
     "evidence"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "s3-block",
@@ -51,7 +56,8 @@
    "owns": "逐目推进（最细知识点）、S3 闸口、分块呈现（R41）",
    "depends_on": [
     "gates"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "s4-review",
@@ -61,7 +67,8 @@
    "depends_on": [
     "gates",
     "scheduling"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "s5-close",
@@ -71,7 +78,8 @@
    "depends_on": [
     "gates",
     "s3-block"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "pacing",
@@ -80,7 +88,8 @@
    "owns": "产能基准、休息节律、缓冲日、最小可行日",
    "depends_on": [
     "gates"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "lesson-flow",
@@ -90,7 +99,8 @@
    "depends_on": [
     "s3-block",
     "scoring"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "interaction",
@@ -100,7 +110,8 @@
    "depends_on": [
     "lesson-flow",
     "scoring"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "presentation",
@@ -111,7 +122,8 @@
     "lesson-flow",
     "interaction",
     "ops-typography"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "handout-pipeline",
@@ -122,7 +134,8 @@
     "s3-block",
     "scoring",
     "lesson-flow"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "handout-templates",
@@ -131,7 +144,8 @@
    "owns": "类型判定与四类矩阵（①–⑤ 输出面）",
    "depends_on": [
     "handout-pipeline"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "handout-quality",
@@ -142,7 +156,8 @@
     "handout-pipeline",
     "handout-templates",
     "presentation"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "handout-typography",
@@ -152,7 +167,8 @@
    "depends_on": [
     "handout-templates",
     "ops-typography"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "scoring",
@@ -161,7 +177,8 @@
    "owns": "判分四态、难度伺服、闸口比例、复述证据、视觉任务、批改申诉",
    "depends_on": [
     "s3-block"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "generation",
@@ -170,7 +187,8 @@
    "owns": "题量预算（含 L3 题量/同题例外）、出题四步、零提示条件化、未讲授过滤",
    "depends_on": [
     "scoring"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "scheduling",
@@ -179,14 +197,16 @@
    "owns": "间隔调度、due-queue 与复习预算、校准画像",
    "depends_on": [
     "scoring"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "data-layout",
    "path": "references/data/layout.md",
    "layer": 1,
    "owns": "数据根、续学匹配、目录布局、slug、版本号体系",
-   "depends_on": []
+   "depends_on": [],
+   "kind": "rule"
   },
   {
    "id": "progress-schema",
@@ -195,7 +215,8 @@
    "owns": "progress 状态簿字段唯一事实源、复习调度字段、下次续学与目游标",
    "depends_on": [
     "data-layout"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "curriculum",
@@ -204,7 +225,8 @@
    "owns": "课程体系（规划簿）：章/节/目、覆盖、排期、质量保障、协作协议",
    "depends_on": [
     "data-layout"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "reconciliation",
@@ -213,14 +235,16 @@
    "owns": "稳定引用对账、提交顺序、Trace",
    "depends_on": [
     "progress-schema"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "subjects-common",
    "path": "references/subjects/common.md",
    "layer": 1,
    "owns": "三轴分层与取用顺序、学科→学科群判定表、学科包准入判据、跨群裁决、掌握深度标尺（SOLO/DOK/Bloom）、误区库消费纪律、类比优先级、视觉任务来源、应试技巧包",
-   "depends_on": []
+   "depends_on": [],
+   "kind": "rule"
   },
   {
    "id": "subjects-math-plan",
@@ -229,7 +253,8 @@
    "owns": "数学与统计群：群边界与借用、内容结构与前置链、目标深度锚点、排期侧重",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "subjects-math-teach",
@@ -238,7 +263,8 @@
    "owns": "数学与统计群：六拍内群差异、学科思维实践、表征体系、类比库、记号与术语纪律、标准流程示范",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "subjects-math-practice",
@@ -247,7 +273,8 @@
    "owns": "数学与统计群：题型阶梯、群级共享误区库、判定题构造、答案形态与最小单元、视觉任务、给分点结构",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "subjects-math-review",
@@ -256,7 +283,8 @@
    "owns": "数学与统计群：复习形态与间隔侧重、错因分流与纠错脚本、冲刺侧重",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "subjects-science-plan",
@@ -265,7 +293,8 @@
    "owns": "实验科学群：群边界与借用、内容结构与前置链、目标深度锚点、排期侧重",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "subjects-science-teach",
@@ -274,7 +303,8 @@
    "owns": "实验科学群：六拍内群差异、学科思维实践、表征体系、类比库、记号与术语纪律、标准流程示范",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "subjects-science-practice",
@@ -283,7 +313,8 @@
    "owns": "实验科学群：题型阶梯、群级共享误区库、判定题构造、答案形态与最小单元、视觉任务、给分点结构",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "subjects-science-review",
@@ -292,7 +323,8 @@
    "owns": "实验科学群：复习形态与间隔侧重、错因分流与纠错脚本、冲刺侧重",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "subjects-language-plan",
@@ -301,7 +333,8 @@
    "owns": "语言群：群边界与借用、内容结构与前置链、目标深度锚点、排期侧重",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "subjects-language-teach",
@@ -310,7 +343,8 @@
    "owns": "语言群：六拍内群差异、学科思维实践、表征体系、类比库、记号与术语纪律、标准流程示范",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "subjects-language-practice",
@@ -319,7 +353,8 @@
    "owns": "语言群：题型阶梯、群级共享误区库、判定题构造、答案形态与最小单元、视觉任务、给分点结构",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "subjects-language-review",
@@ -328,7 +363,8 @@
    "owns": "语言群：复习形态与间隔侧重、错因分流与纠错脚本、冲刺侧重",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "subjects-computing-plan",
@@ -337,7 +373,8 @@
    "owns": "计算与技术群：群边界与借用、内容结构与前置链、目标深度锚点、排期侧重",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "subjects-computing-teach",
@@ -346,7 +383,8 @@
    "owns": "计算与技术群：六拍内群差异、学科思维实践、表征体系、类比库、记号与术语纪律、标准流程示范",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "subjects-computing-practice",
@@ -355,7 +393,8 @@
    "owns": "计算与技术群：题型阶梯、群级共享误区库、判定题构造、答案形态与最小单元、视觉任务、给分点结构",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "subjects-computing-review",
@@ -364,7 +403,8 @@
    "owns": "计算与技术群：复习形态与间隔侧重、错因分流与纠错脚本、冲刺侧重",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "subjects-humanities-plan",
@@ -373,7 +413,8 @@
    "owns": "人文社科群：群边界与借用、内容结构与前置链、目标深度锚点、排期侧重",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "subjects-humanities-teach",
@@ -382,7 +423,8 @@
    "owns": "人文社科群：六拍内群差异、学科思维实践、表征体系、类比库、记号与术语纪律、标准流程示范",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "subjects-humanities-practice",
@@ -391,7 +433,8 @@
    "owns": "人文社科群：题型阶梯、群级共享误区库、判定题构造、答案形态与最小单元、视觉任务、给分点结构",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "subjects-humanities-review",
@@ -400,7 +443,8 @@
    "owns": "人文社科群：复习形态与间隔侧重、错因分流与纠错脚本、冲刺侧重",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "subjects-medicine-plan",
@@ -409,7 +453,8 @@
    "owns": "医学与健康群：群边界与借用、内容结构与前置链、目标深度锚点、排期侧重",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "subjects-medicine-teach",
@@ -418,7 +463,8 @@
    "owns": "医学与健康群：六拍内群差异、学科思维实践、表征体系、类比库、记号与术语纪律、标准流程示范",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "subjects-medicine-practice",
@@ -427,7 +473,8 @@
    "owns": "医学与健康群：题型阶梯、群级共享误区库、判定题构造、答案形态与最小单元、视觉任务、给分点结构",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "subjects-medicine-review",
@@ -436,7 +483,8 @@
    "owns": "医学与健康群：复习形态与间隔侧重、错因分流与纠错脚本、冲刺侧重",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "subjects-skill-plan",
@@ -445,7 +493,8 @@
    "owns": "艺术与技能群：群边界与借用、内容结构与前置链、目标深度锚点、排期侧重",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "subjects-skill-teach",
@@ -454,7 +503,8 @@
    "owns": "艺术与技能群：六拍内群差异、学科思维实践、表征体系、类比库、记号与术语纪律、标准流程示范",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "subjects-skill-practice",
@@ -463,7 +513,8 @@
    "owns": "艺术与技能群：题型阶梯、群级共享误区库、判定题构造、答案形态与最小单元、视觉任务、给分点结构",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "subjects-skill-review",
@@ -472,7 +523,8 @@
    "owns": "艺术与技能群：复习形态与间隔侧重、错因分流与纠错脚本、冲刺侧重",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "discipline-calculus",
@@ -481,7 +533,8 @@
    "owns": "高等数学内容结构、导数两条路、APOS 阶段、级数判据、微积分误区库",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "discipline-physics",
@@ -490,7 +543,8 @@
    "owns": "物理内容结构、多重表征、量纲追踪、FCI 类力学与电学误区库",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "discipline-chemistry",
@@ -499,7 +553,8 @@
    "owns": "化学三重表征、概念题与算法题分界、方程式规范、化学误区库",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "discipline-biology",
@@ -508,7 +563,8 @@
    "owns": "生物大概念骨架、尺度切换、进化误区专项、生物误区库",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "discipline-geography",
@@ -517,7 +573,8 @@
    "owns": "地理空间表征、等值线判读、季节成因误区、反馈环与深时",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "discipline-chinese",
@@ -526,7 +583,8 @@
    "owns": "母语文阅读分层、SRSD 写作、文言实词句式、中文分级声明",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "discipline-english",
@@ -535,7 +593,8 @@
    "owns": "英语四维定档、词汇覆盖率档位、语法三阶梯、英语误区库",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "discipline-computing-theory",
@@ -544,7 +603,8 @@
    "owns": "计算机理论与算法机制讲法、手推优先、权衡表达、理论误区库",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "discipline-history",
@@ -553,7 +613,8 @@
    "owns": "史料三启发式、三层因果、历史思维误区库",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "discipline-law",
@@ -562,7 +623,8 @@
    "owns": "请求权基础检索、要件对照、法学误区库",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "discipline-medicine",
@@ -571,7 +633,8 @@
    "owns": "疾病脚本模板、认知偏误清单与去偏边界、七段病例结构",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "discipline-economics-psychology",
@@ -580,49 +643,56 @@
    "owns": "直觉陷阱教学、边际思维、大众心理学谬误库",
    "depends_on": [
     "subjects-common"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "failure",
    "path": "references/ops/failure.md",
    "layer": 1,
    "owns": "红线目录与处置、停即报告、异常分支与恢复、幂等/不可逆",
-   "depends_on": []
+   "depends_on": [],
+   "kind": "rule"
   },
   {
    "id": "operations",
    "path": "references/ops/scripts.md",
    "layer": 1,
    "owns": "脚本 CLI/退出码/错误码入口/selftest/路径",
-   "depends_on": []
+   "depends_on": [],
+   "kind": "router"
   },
   {
    "id": "composition",
    "path": "references/ops/composition.md",
    "layer": 1,
    "owns": "跨机制组合与优先级",
-   "depends_on": []
+   "depends_on": [],
+   "kind": "router"
   },
   {
    "id": "formulas",
    "path": "references/ops/formulas.md",
    "layer": 1,
    "owns": "公式通用呈现：行内/块级、结构、多步推导、代码边界、复制、窄屏、宿主验证",
-   "depends_on": []
+   "depends_on": [],
+   "kind": "rule"
   },
   {
    "id": "ops-typography",
    "path": "references/ops/typography.md",
    "layer": 1,
    "owns": "文字排印：标点、数字、单位、空格、字体语义、交付起笔/答案标识 canonical 集合",
-   "depends_on": []
+   "depends_on": [],
+   "kind": "rule"
   },
   {
    "id": "evidence",
    "path": "references/ops/evidence.md",
    "layer": 1,
    "owns": "来源分级、出处四要素、核验状态与不能推出什么",
-   "depends_on": []
+   "depends_on": [],
+   "kind": "rule"
   },
   {
    "id": "explain-quality",
@@ -631,7 +701,8 @@
    "owns": "元方法教学（T12/R44）、预判误区清单（R42）、智能变式一次一维（R43）、每步检查理解（R45）、依据句模板、示例设计红线",
    "depends_on": [
     "lesson-flow"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "content-types",
@@ -640,21 +711,24 @@
    "owns": "记忆/概念/程序/设计四类内容类型处方、撤架判据、动作技能能力边界",
    "depends_on": [
     "lesson-flow"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "teaching-explanation-depth",
    "path": "references/teaching/explanation-depth.md",
    "layer": 2,
    "owns": "深度分层、机制豁免、三层追问、D1–D6、反浅薄清单、学员侧深度验收、冲刺压缩",
-   "depends_on": []
+   "depends_on": [],
+   "kind": "rule"
   },
   {
    "id": "teaching-explanation-density",
    "path": "references/teaching/explanation-density.md",
    "layer": 2,
    "owns": "信息量四问、密度子规则、超长自查、删除测试",
-   "depends_on": []
+   "depends_on": [],
+   "kind": "rule"
   },
   {
    "id": "teaching-explanation-craft",
@@ -663,7 +737,8 @@
    "owns": "新记号三件套、现象→符号引入序、类比纪律",
    "depends_on": [
     "lesson-flow"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "teaching-lesson-prep",
@@ -672,7 +747,8 @@
    "owns": "备课短表 T01、课首定位、来源包、讲授证据、确证旧知、姿态三档",
    "depends_on": [
     "lesson-flow"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "teaching-interaction-diagnosis",
@@ -682,14 +758,8 @@
    "depends_on": [
     "interaction",
     "scoring"
-   ]
-  },
-  {
-   "id": "teaching-tone",
-   "path": "references/teaching/tone.md",
-   "layer": 2,
-   "owns": "专业严谨/高效务实/直言不讳、温度位置、语言难度、反 AI 腔",
-   "depends_on": []
+   ],
+   "kind": "rule"
   },
   {
    "id": "handout-support-levels",
@@ -698,7 +768,8 @@
    "owns": "L1/L2/L3 支持级、动态升降、学习者状态层、L3 产物形态",
    "depends_on": [
     "handout-templates"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "handout-styles",
@@ -708,7 +779,8 @@
    "depends_on": [
     "handout-templates",
     "handout-pipeline"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "handout-unit-schema",
@@ -718,7 +790,8 @@
    "depends_on": [
     "handout-templates",
     "handout-pipeline"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "handout-print-a11y",
@@ -728,7 +801,8 @@
    "depends_on": [
     "handout-typography",
     "ops-typography"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "handout-reader-path",
@@ -738,7 +812,8 @@
    "depends_on": [
     "handout-typography",
     "handout-pipeline"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "handout-figures",
@@ -748,7 +823,8 @@
    "depends_on": [
     "handout-quality",
     "handout-typography"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "handout-self-check",
@@ -758,7 +834,8 @@
    "depends_on": [
     "handout-quality",
     "handout-typography"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "handout-enhancements",
@@ -768,7 +845,8 @@
    "depends_on": [
     "handout-quality",
     "handout-typography"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "workflow-s3-cycle",
@@ -777,7 +855,8 @@
    "owns": "S3 循环体、每轮五步、轮次预算与合并弹性",
    "depends_on": [
     "s3-block"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "workflow-s3-close",
@@ -786,7 +865,8 @@
    "owns": "节末五件套、节末交接、未达标处理",
    "depends_on": [
     "s3-block"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "workflow-coverage-audit",
@@ -796,7 +876,8 @@
    "depends_on": [
     "s5-close",
     "s3-block"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "workflow-s0-s1",
@@ -805,7 +886,8 @@
    "owns": "S0 接料建档、S1 诊断摸底",
    "depends_on": [
     "gates"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "ops-literature",
@@ -814,7 +896,8 @@
    "owns": "机制→文献→边界映射（只读，不进闸口）",
    "depends_on": [
     "evidence"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "ops-environment",
@@ -823,7 +906,8 @@
    "owns": "依赖总览、检查与阻断、运行中的阻断点、安全与权限",
    "depends_on": [
     "failure"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "ops-formula-subjects",
@@ -832,7 +916,8 @@
    "owns": "物理量/单位/向量、化学式/配平、统计符号",
    "depends_on": [
     "formulas"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "data-memory",
@@ -841,7 +926,8 @@
    "owns": "记忆簿：学习日志、学习记录、讲授证据",
    "depends_on": [
     "curriculum"
-   ]
+   ],
+   "kind": "rule"
   },
   {
    "id": "data-profile",
@@ -850,7 +936,8 @@
    "owns": "学习者画像：①偏好/②稳定模式/③暂存",
    "depends_on": [
     "curriculum"
-   ]
+   ],
+   "kind": "rule"
   }
  ],
  "rules": [
@@ -862,7 +949,8 @@
     "s3-teach",
     "s3-handout",
     "s3-exercise"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R2",
@@ -872,7 +960,8 @@
     "s3-teach",
     "s3-handout",
     "s3-exercise"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R3",
@@ -883,7 +972,8 @@
     "s3-exercise",
     "s4-review",
     "s5-close"
-   ]
+   ],
+   "intent": "I-GRADING-STATES"
   },
   {
    "id": "R4",
@@ -892,7 +982,8 @@
    "scenes": [
     "s3-teach",
     "s3-exercise"
-   ]
+   ],
+   "intent": "I-KP-TYPED-GATE"
   },
   {
    "id": "R5",
@@ -900,7 +991,8 @@
    "type": "definition",
    "scenes": [
     "s5-close"
-   ]
+   ],
+   "intent": "I-CLOSE-RESUME"
   },
   {
    "id": "R6",
@@ -910,7 +1002,8 @@
     "s3-exercise",
     "s4-review",
     "s5-close"
-   ]
+   ],
+   "intent": "I-SELF-TEST-VS-GROUP"
   },
   {
    "id": "R7",
@@ -921,7 +1014,8 @@
     "s3-exercise",
     "s4-review",
     "s5-close"
-   ]
+   ],
+   "intent": "I-RESTATEMENT"
   },
   {
    "id": "R8",
@@ -931,7 +1025,8 @@
     "s3-exercise",
     "s4-review",
     "s5-close"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R9",
@@ -941,7 +1036,8 @@
     "failure",
     "persist",
     "entry"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R10",
@@ -950,7 +1046,8 @@
    "scenes": [
     "persist",
     "s4-review"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R11",
@@ -958,7 +1055,8 @@
    "type": "protocol",
    "scenes": [
     "failure"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R12",
@@ -966,7 +1064,8 @@
    "type": "definition",
    "scenes": [
     "s3-handout"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R13",
@@ -975,7 +1074,8 @@
    "scenes": [
     "formulas",
     "s3-handout"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R14",
@@ -983,7 +1083,8 @@
    "type": "protocol",
    "scenes": [
     "entry"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R15",
@@ -993,7 +1094,8 @@
     "failure",
     "persist",
     "entry"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R16",
@@ -1002,7 +1104,8 @@
    "scenes": [
     "s3-teach",
     "s3-deep"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R17",
@@ -1012,7 +1115,8 @@
     "persist",
     "s3-handout",
     "s3-exercise"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R18",
@@ -1020,7 +1124,8 @@
    "type": "definition",
    "scenes": [
     "composition"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R19",
@@ -1028,7 +1133,8 @@
    "type": "definition",
    "scenes": [
     "evidence"
-   ]
+   ],
+   "intent": "I-SOURCE-GRADING"
   },
   {
    "id": "R20",
@@ -1037,7 +1143,8 @@
    "scenes": [
     "s3-teach",
     "s3-exercise"
-   ]
+   ],
+   "intent": "I-VISUAL-EVIDENCE"
   },
   {
    "id": "R21",
@@ -1047,7 +1154,8 @@
     "s3-teach",
     "s3-exercise",
     "s4-review"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R22",
@@ -1056,7 +1164,8 @@
    "scenes": [
     "s3-exercise",
     "s4-review"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R23",
@@ -1065,7 +1174,8 @@
    "scenes": [
     "s3-teach",
     "s4-review"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R24",
@@ -1073,7 +1183,8 @@
    "type": "definition",
    "scenes": [
     "s3-deep"
-   ]
+   ],
+   "intent": "I-STYLE-RETEACH"
   },
   {
    "id": "R25",
@@ -1082,7 +1193,8 @@
    "scenes": [
     "s3-teach",
     "s4-review"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R26",
@@ -1091,7 +1203,8 @@
    "scenes": [
     "s3-exercise",
     "s4-review"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R27",
@@ -1099,7 +1212,8 @@
    "type": "definition",
    "scenes": [
     "s3-exercise"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R28",
@@ -1109,7 +1223,8 @@
     "entry",
     "persist",
     "s0-s2"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R29",
@@ -1119,7 +1234,8 @@
     "persist",
     "s3-handout",
     "s3-exercise"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R30",
@@ -1127,7 +1243,8 @@
    "type": "definition",
    "scenes": [
     "s3-handout"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R31",
@@ -1135,7 +1252,8 @@
    "type": "definition",
    "scenes": [
     "s3-handout"
-   ]
+   ],
+   "intent": "I-STYLE-DEFINITION"
   },
   {
    "id": "R32",
@@ -1143,7 +1261,8 @@
    "type": "protocol",
    "scenes": [
     "s0-s2"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R33",
@@ -1152,7 +1271,8 @@
    "scenes": [
     "s3-teach",
     "s4-review"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "T01",
@@ -1160,7 +1280,8 @@
    "type": "definition",
    "scenes": [
     "s3-teach"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "T03",
@@ -1168,7 +1289,8 @@
    "type": "definition",
    "scenes": [
     "evidence"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "T04",
@@ -1177,7 +1299,8 @@
    "scenes": [
     "persist",
     "s4-review"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "T05",
@@ -1185,7 +1308,8 @@
    "type": "definition",
    "scenes": [
     "evidence"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "T06",
@@ -1194,7 +1318,8 @@
    "scenes": [
     "s3-teach",
     "s4-review"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "T08",
@@ -1202,7 +1327,8 @@
    "type": "definition",
    "scenes": [
     "s3-teach"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "T09",
@@ -1211,7 +1337,8 @@
    "scenes": [
     "s3-teach",
     "s4-review"
-   ]
+   ],
+   "intent": "I-FEEDBACK"
   },
   {
    "id": "T10",
@@ -1220,7 +1347,8 @@
    "scenes": [
     "s3-teach",
     "s4-review"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "T11",
@@ -1229,7 +1357,8 @@
    "scenes": [
     "s3-exercise",
     "s4-review"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "F05",
@@ -1237,7 +1366,8 @@
    "type": "definition",
    "scenes": [
     "entry"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "F06",
@@ -1245,7 +1375,8 @@
    "type": "definition",
    "scenes": [
     "s0-s2"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "F08",
@@ -1254,7 +1385,8 @@
    "scenes": [
     "persist",
     "s4-review"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "F09",
@@ -1262,7 +1394,8 @@
    "type": "definition",
    "scenes": [
     "s5-close"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "F10",
@@ -1270,7 +1403,8 @@
    "type": "definition",
    "scenes": [
     "s5-close"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "F11",
@@ -1280,7 +1414,8 @@
     "entry",
     "persist",
     "s0-s2"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "F12",
@@ -1288,7 +1423,8 @@
    "type": "definition",
    "scenes": [
     "s5-close"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "F13",
@@ -1297,7 +1433,8 @@
    "scenes": [
     "s0-s2",
     "persist"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "F14",
@@ -1305,7 +1442,8 @@
    "type": "definition",
    "scenes": [
     "failure"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R34",
@@ -1313,7 +1451,8 @@
    "type": "definition",
    "scenes": [
     "s3-teach"
-   ]
+   ],
+   "intent": "I-SIX-BEAT"
   },
   {
    "id": "R35",
@@ -1323,7 +1462,8 @@
     "s3-exercise",
     "s4-review",
     "s5-close"
-   ]
+   ],
+   "intent": "I-UNTAUGHT-FILTER"
   },
   {
    "id": "R36",
@@ -1331,7 +1471,8 @@
    "type": "protocol",
    "scenes": [
     "s4-review"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R37",
@@ -1339,7 +1480,8 @@
    "type": "definition",
    "scenes": [
     "s0-s2"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R38",
@@ -1347,7 +1489,8 @@
    "type": "protocol",
    "scenes": [
     "s0-s2"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R39",
@@ -1355,7 +1498,8 @@
    "type": "definition",
    "scenes": [
     "s0-s2"
-   ]
+   ],
+   "intent": "I-RHYTHM"
   },
   {
    "id": "R40",
@@ -1364,7 +1508,8 @@
    "scenes": [
     "s3-teach",
     "s4-review"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R41",
@@ -1372,7 +1517,8 @@
    "type": "definition",
    "scenes": [
     "s3-handout"
-   ]
+   ],
+   "intent": "I-R41-BLOCK"
   },
   {
    "id": "R42",
@@ -1381,7 +1527,8 @@
    "scenes": [
     "s3-teach",
     "s3-handout"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R43",
@@ -1391,7 +1538,8 @@
     "s3-exercise",
     "s4-review",
     "s3-handout"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R44",
@@ -1400,7 +1548,8 @@
    "scenes": [
     "s3-teach",
     "s3-handout"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R45",
@@ -1408,7 +1557,8 @@
    "type": "definition",
    "scenes": [
     "s3-teach"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R46",
@@ -1419,7 +1569,8 @@
     "s3-exercise",
     "s4-review",
     "s5-close"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "T12",
@@ -1427,7 +1578,8 @@
    "type": "definition",
    "scenes": [
     "s3-teach"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R47",
@@ -1437,7 +1589,8 @@
     "s3-exercise",
     "s4-review",
     "s5-close"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R48",
@@ -1447,7 +1600,8 @@
     "s3-exercise",
     "s4-review",
     "s5-close"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R49",
@@ -1455,7 +1609,8 @@
    "type": "definition",
    "scenes": [
     "s0-s2"
-   ]
+   ],
+   "intent": "local"
   },
   {
    "id": "R50",
@@ -1464,7 +1619,8 @@
    "scenes": [
     "s0-s2",
     "persist"
-   ]
+   ],
+   "intent": "local"
   }
  ],
  "constants": {
@@ -1761,6 +1917,8 @@
     "E-LEDGER-RESIDUE",
     "E-LESSON-ID-DUP",
     "E-LESSON-ID-MISSING",
+    "E-LIST-EMPTY",
+    "E-LIST-MISSING",
     "E-LOAD-BUDGET",
     "E-MISSING-FIELD",
     "E-NO-DIAGNOSTIC",
@@ -1771,12 +1929,17 @@
     "E-NO-PROGRESS",
     "E-NO-RESTATEMENT",
     "E-NO-ROUTE-STRICT",
+    "E-POINTER-ANCHOR",
+    "E-POINTER-FILE",
+    "E-POINTER-LOAD",
     "E-READ-FILE",
     "E-REQ-MISSING",
     "E-REVIEW-ORIGIN",
     "E-ROUTE-NUMBER",
     "E-ROUTE-UNDONE",
     "E-RUBRIC-SUM",
+    "E-SCAN-MISSING",
+    "E-TERM-UNTAUGHT",
     "E-THIRD-CONFLICT",
     "E-THIRD-EXEMPT-MISUSE",
     "E-TOPOLOGY-DAG",
@@ -1784,18 +1947,20 @@
     "E-TOPOLOGY-ERRORCODE",
     "E-TOPOLOGY-FILE",
     "E-TOPOLOGY-HEADER",
+    "E-TOPOLOGY-INTENT",
     "E-TOPOLOGY-LEADWORDS",
     "E-TOPOLOGY-LOAD",
     "E-TOPOLOGY-MIRROR",
+    "E-TOPOLOGY-ORPHAN",
     "E-TOPOLOGY-OWNER",
+    "E-TOPOLOGY-OWNER-DUP",
     "E-TOPOLOGY-SCENES",
+    "E-TOPOLOGY-SCHEMA",
+    "E-TOPOLOGY-SECTIONNUM",
+    "E-TOPOLOGY-SUPPLEMENT",
     "E-TOPOLOGY-VERSION",
     "E-UNDECLARED-CHANGES",
-    "E-UNREADABLE-PROGRESS",
-    "E-LIST-MISSING",
-    "E-LIST-EMPTY",
-    "E-SCAN-MISSING",
-    "E-TERM-UNTAUGHT"
+    "E-UNREADABLE-PROGRESS"
    ],
    "W": [
     "W-CONFIDENCE-AMBIGUOUS",
@@ -1845,6 +2010,8 @@
     "W-STALE-REVIEW-ORIGIN",
     "W-STYLE-POINTER",
     "W-TERM-UNTAUGHT",
+    "W-TOPOLOGY-HEADING-DUP",
+    "W-TOPOLOGY-MARKER-SCOPE",
     "W-UNGRADED-ATTEMPT",
     "W-UNICODE-CHAR",
     "W-UNPARSED-HOLD",
@@ -1860,7 +2027,8 @@
    "files_max": 17,
    "chars_max": 34000,
    "supplement_files_max": 4,
-   "supplement_chars_max": 20000
+   "supplement_chars_max": 20000,
+   "supplements_per_scene_max": 4
   },
   "group_slugs": {
    "数学与统计": "math",
@@ -1909,6 +2077,20 @@
      "scene": "failure",
      "when": "按能力触发"
     }
+   ],
+   "supplements": [
+    {
+     "file": "references/workflow/s4-review.md",
+     "section": "S4 复习巩固",
+     "when": "帮我复习/已完成→复习",
+     "intent": "I-REVIEW-RETURN@global"
+    },
+    {
+     "file": "references/workflow/s5-close.md",
+     "section": "S5 结课",
+     "when": "已完成后再学/再学选路",
+     "intent": "I-CLOSE-RESUME@global"
+    }
    ]
   },
   "ecosystem": {
@@ -1950,6 +2132,18 @@
      "section": "来源分级与出处四要素",
      "when": "S2 来源核验时",
      "intent": "I-SOURCE-GRADING@global"
+    },
+    {
+     "file": "references/workflow/s3-block.md",
+     "section": "S3 闸口（可检验）",
+     "when": "排计划时为目声明类型/验收口径",
+     "intent": "I-KP-TYPED-GATE@global"
+    },
+    {
+     "file": "references/teaching/lesson-prep.md",
+     "section": "教学姿态三档（S2 选定，默认混合）",
+     "when": "S2 选择教学姿态",
+     "intent": "I-POSTURE@global"
     }
    ]
   },
@@ -1971,8 +2165,7 @@
     "references/teaching/explanation-density.md",
     "references/teaching/explanation-craft.md",
     "references/teaching/lesson-prep.md",
-    "references/teaching/interaction-diagnosis.md",
-    "references/teaching/tone.md"
+    "references/teaching/interaction-diagnosis.md"
    ],
    "chars_max": 49000,
    "stack": [
@@ -2009,6 +2202,18 @@
      "section": "题量预算与自测≠题组",
      "when": "讲授热身/确认题需要题量预算时",
      "intent": "I-SELF-TEST-VS-GROUP@handout"
+    },
+    {
+     "file": "references/data/layout.md",
+     "section": "题组与判分文件（exercises/）",
+     "when": "写正式确认 attempt 字段",
+     "intent": "I-EXERCISE-SCHEMA@global"
+    },
+    {
+     "file": "references/workflow/pacing.md",
+     "section": "休息与节律（R39）",
+     "when": "讲授轮需要学习段节律/断新时",
+     "intent": "I-RHYTHM@global"
     }
    ]
   },
@@ -2129,6 +2334,12 @@
      "section": "反馈策略（T09）",
      "when": "判分后给反馈时",
      "intent": "I-FEEDBACK@global"
+    },
+    {
+     "file": "references/data/layout.md",
+     "section": "题组与判分文件（exercises/）",
+     "when": "写题组/判分文件",
+     "intent": "I-EXERCISE-SCHEMA@global"
     }
    ]
   },
@@ -2271,6 +2482,12 @@
      "section": "讲义概念单元 schema",
      "when": "结课验收需要核对单元槽位时",
      "intent": "I-ANSWER-BOX-CONTENT@content"
+    },
+    {
+     "file": "references/data/layout.md",
+     "section": "结课综合测验目标线（99-）",
+     "when": "写结课综合测验目标线",
+     "intent": "I-FINAL-TARGET@global"
     }
    ]
   },
@@ -2368,15 +2585,29 @@
    "owner": "references/ops/typography.md#字体语义",
    "marker": "intent:I-BOLD-QUOTA@global",
    "consumers": [
-    "references/teaching/presentation.md",
-    "references/handout/typography.md",
-    "references/handout/pipeline.md"
+    {
+     "path": "references/teaching/presentation.md",
+     "anchor": "对话呈现系统（软默认，所有风格共用）",
+     "role": "application"
+    },
+    {
+     "path": "references/handout/typography.md",
+     "anchor": "3. 字体系统：标题、段落、列表",
+     "role": "application"
+    },
+    {
+     "path": "references/handout/pipeline.md",
+     "anchor": "1. 一页合同（目标态，11 条）",
+     "role": "application"
+    }
    ],
    "scenes": [
     "s3-teach",
     "s3-handout",
     "s3-deep"
-   ]
+   ],
+   "cluster": null,
+   "rule_ids": []
   },
   {
    "id": "I-PARAGRAPH-UNITY",
@@ -2384,14 +2615,24 @@
    "owner": "references/ops/typography.md#断行与句子",
    "marker": "intent:I-PARAGRAPH-UNITY@global",
    "consumers": [
-    "references/teaching/presentation.md",
-    "references/handout/typography.md"
+    {
+     "path": "references/teaching/presentation.md",
+     "anchor": "对话呈现系统（软默认，所有风格共用）",
+     "role": "application"
+    },
+    {
+     "path": "references/handout/typography.md",
+     "anchor": "3. 字体系统：标题、段落、列表",
+     "role": "application"
+    }
    ],
    "scenes": [
     "s3-teach",
     "s3-handout",
     "s3-deep"
-   ]
+   ],
+   "cluster": null,
+   "rule_ids": []
   },
   {
    "id": "I-DENSITY",
@@ -2399,17 +2640,39 @@
    "owner": "references/teaching/explanation-density.md#讲解文本密度原则",
    "marker": "intent:I-DENSITY@global",
    "consumers": [
-    "references/teaching/presentation.md",
-    "references/handout/pipeline.md",
-    "references/handout/self-check.md",
-    "references/handout/unit-schema.md",
-    "references/workflow/s3-block.md"
+    {
+     "path": "references/teaching/presentation.md",
+     "anchor": "对话呈现系统（软默认，所有风格共用）",
+     "role": "application"
+    },
+    {
+     "path": "references/handout/pipeline.md",
+     "anchor": "1. 一页合同（目标态，11 条）",
+     "role": "application"
+    },
+    {
+     "path": "references/handout/self-check.md",
+     "anchor": "11. 自检与证据",
+     "role": "application"
+    },
+    {
+     "path": "references/handout/unit-schema.md",
+     "anchor": "讲义概念单元 schema（所有风格共用）",
+     "role": "application"
+    },
+    {
+     "path": "references/workflow/s3-block.md",
+     "anchor": "分块呈现（R41）",
+     "role": "application"
+    }
    ],
    "scenes": [
     "s3-teach",
     "s3-handout",
     "s3-deep"
-   ]
+   ],
+   "cluster": null,
+   "rule_ids": []
   },
   {
    "id": "I-DEPTH",
@@ -2417,16 +2680,39 @@
    "owner": "references/teaching/explanation-depth.md#深度分层",
    "marker": "intent:I-DEPTH@global",
    "consumers": [
-    "references/handout/pipeline.md",
-    "references/handout/quality.md",
-    "references/workflow/s3-block.md",
-    "references/handout/unit-schema.md"
+    {
+     "path": "references/handout/pipeline.md",
+     "anchor": "2.7 深讲与关键能力",
+     "role": "application"
+    },
+    {
+     "path": "references/handout/quality.md",
+     "anchor": "9.3 深度分配",
+     "role": "application"
+    },
+    {
+     "path": "references/workflow/s3-block.md",
+     "anchor": "逐目推进（最细知识点）",
+     "role": "application"
+    },
+    {
+     "path": "references/handout/unit-schema.md",
+     "anchor": "讲义概念单元 schema（所有风格共用）",
+     "role": "application"
+    },
+    {
+     "path": "references/teaching/lesson-prep.md",
+     "anchor": "备课短表：先定本次能力，再决定讲什么（T01）",
+     "role": "application"
+    }
    ],
    "scenes": [
     "s3-teach",
     "s3-handout",
     "s3-deep"
-   ]
+   ],
+   "cluster": null,
+   "rule_ids": []
   },
   {
    "id": "I-NEW-NOTATION",
@@ -2434,11 +2720,17 @@
    "owner": "references/teaching/explanation-craft.md#新记号/新操作讲透",
    "marker": "intent:I-NEW-NOTATION@global",
    "consumers": [
-    "references/teaching/lesson-flow.md"
+    {
+     "path": "references/teaching/lesson-flow.md",
+     "anchor": "交互式工作样例（所有风格共用）",
+     "role": "application"
+    }
    ],
    "scenes": [
     "s3-teach"
-   ]
+   ],
+   "cluster": null,
+   "rule_ids": []
   },
   {
    "id": "I-CONFIRMED-PRIOR",
@@ -2446,11 +2738,17 @@
    "owner": "references/teaching/lesson-prep.md#课首与旧知锚定",
    "marker": "intent:I-CONFIRMED-PRIOR@global",
    "consumers": [
-    "references/workflow/s3-block.md"
+    {
+     "path": "references/workflow/s3-block.md",
+     "anchor": "逐目推进（最细知识点）",
+     "role": "application"
+    }
    ],
    "scenes": [
     "s3-teach"
-   ]
+   ],
+   "cluster": null,
+   "rule_ids": []
   },
   {
    "id": "I-SOURCE-GRADING",
@@ -2458,31 +2756,101 @@
    "owner": "references/ops/evidence.md#来源分级与出处四要素",
    "marker": "intent:I-SOURCE-GRADING@global",
    "consumers": [
-    "references/handout/quality.md",
-    "references/teaching/lesson-flow.md",
-    "references/workflow/s0-s2-setup.md"
+    {
+     "path": "references/handout/quality.md",
+     "anchor": "9. 来源、范围与评估真实性（阶段 3）",
+     "role": "application"
+    },
+    {
+     "path": "references/teaching/lesson-flow.md",
+     "anchor": "核心教学序列（硬规则）",
+     "role": "application"
+    },
+    {
+     "path": "references/workflow/s0-s2-setup.md",
+     "anchor": "S2 计划确认中",
+     "role": "application"
+    }
    ],
    "scenes": [
     "s0-s2",
     "s3-teach",
     "s3-handout",
     "s5-close"
+   ],
+   "cluster": null,
+   "rule_ids": [
+    "R19"
    ]
   },
   {
    "id": "I-ANSWER-BOX-CONTENT",
    "scope": "content",
-   "owner": "references/handout/unit-schema.md#讲义概念单元 schema",
+   "owner": "references/handout/unit-schema.md#答案框体例（学科无关）",
    "marker": "intent:I-ANSWER-BOX-CONTENT@content",
    "consumers": [
-    "references/handout/typography.md",
-    "references/handout/self-check.md"
+    {
+     "path": "references/assessment/scoring.md",
+     "anchor": "批改与申诉",
+     "role": "standard"
+    },
+    {
+     "path": "references/handout/styles.md",
+     "anchor": "标准讲义（默认）",
+     "role": "application"
+    },
+    {
+     "path": "references/handout/pipeline.md",
+     "anchor": "2.2 ③ 豁免 canonical 标签",
+     "role": "application"
+    },
+    {
+     "path": "references/handout/pipeline.md",
+     "anchor": "2.3 交付标识",
+     "role": "application"
+    },
+    {
+     "path": "references/subjects/math-practice.md",
+     "anchor": "答案形态与最小单元",
+     "role": "form"
+    },
+    {
+     "path": "references/subjects/science-practice.md",
+     "anchor": "答案形态与最小单元",
+     "role": "form"
+    },
+    {
+     "path": "references/subjects/language-practice.md",
+     "anchor": "答案形态与最小单元",
+     "role": "form"
+    },
+    {
+     "path": "references/subjects/computing-practice.md",
+     "anchor": "答案形态与最小单元",
+     "role": "form"
+    },
+    {
+     "path": "references/subjects/humanities-practice.md",
+     "anchor": "答案形态与最小单元",
+     "role": "form"
+    },
+    {
+     "path": "references/subjects/medicine-practice.md",
+     "anchor": "答案形态与最小单元",
+     "role": "form"
+    },
+    {
+     "path": "references/subjects/skill-practice.md",
+     "anchor": "答案形态与最小单元",
+     "role": "form"
+    }
    ],
    "scenes": [
     "s3-handout",
-    "s3-deep",
     "s5-close"
-   ]
+   ],
+   "cluster": "answer-box",
+   "rule_ids": []
   },
   {
    "id": "I-ANSWER-BOX-VISUAL",
@@ -2490,12 +2858,18 @@
    "owner": "references/handout/typography.md#4.5 答案框",
    "marker": "intent:I-ANSWER-BOX-VISUAL@visual",
    "consumers": [
-    "references/handout/unit-schema.md"
+    {
+     "path": "references/handout/unit-schema.md",
+     "anchor": "答案框体例（学科无关）",
+     "role": "content"
+    }
    ],
    "scenes": [
     "s3-handout",
     "s3-deep"
-   ]
+   ],
+   "cluster": "answer-box",
+   "rule_ids": []
   },
   {
    "id": "I-SUPPORT-LEVELS",
@@ -2503,16 +2877,34 @@
    "owner": "references/handout/support-levels.md#6. L1/L2/L3 支持级",
    "marker": "intent:I-SUPPORT-LEVELS@handout",
    "consumers": [
-    "references/handout/pipeline.md",
-    "references/handout/styles.md",
-    "references/handout/unit-schema.md",
-    "references/handout/enhancements.md"
+    {
+     "path": "references/handout/pipeline.md",
+     "anchor": "5.2 设计：六问、例子与支持级",
+     "role": "application"
+    },
+    {
+     "path": "references/handout/styles.md",
+     "anchor": "标准讲义（默认）",
+     "role": "application"
+    },
+    {
+     "path": "references/handout/unit-schema.md",
+     "anchor": "讲义概念单元 schema（所有风格共用）",
+     "role": "application"
+    },
+    {
+     "path": "references/handout/enhancements.md",
+     "anchor": "10. P1 质量与运营（可选增强）",
+     "role": "application"
+    }
    ],
    "scenes": [
     "s3-handout",
     "s3-deep",
     "handout-enhance"
-   ]
+   ],
+   "cluster": null,
+   "rule_ids": []
   },
   {
    "id": "I-STYLE-DEFINITION",
@@ -2520,12 +2912,24 @@
    "owner": "references/handout/styles.md#标准讲义（默认）",
    "marker": "intent:I-STYLE-DEFINITION@handout",
    "consumers": [
-    "references/handout/pipeline.md",
-    "references/handout/templates.md"
+    {
+     "path": "references/handout/pipeline.md",
+     "anchor": "0.1 风格选择",
+     "role": "selection"
+    },
+    {
+     "path": "references/handout/templates.md",
+     "anchor": "4. 类型模板（阶段 2）",
+     "role": "matrix"
+    }
    ],
    "scenes": [
     "s3-handout",
     "s3-deep"
+   ],
+   "cluster": null,
+   "rule_ids": [
+    "R31"
    ]
   },
   {
@@ -2534,10 +2938,18 @@
    "owner": "references/handout/styles.md#风格切换映射",
    "marker": "intent:I-STYLE-RETEACH@chat",
    "consumers": [
-    "references/teaching/interaction.md"
+    {
+     "path": "references/teaching/interaction-diagnosis.md",
+     "anchor": "修复动作（连错与负反馈，R40）",
+     "role": "application"
+    }
    ],
    "scenes": [
     "s3-deep"
+   ],
+   "cluster": null,
+   "rule_ids": [
+    "R24"
    ]
   },
   {
@@ -2546,10 +2958,18 @@
    "owner": "references/workflow/s3-block.md#分块呈现（R41）",
    "marker": "intent:I-R41-BLOCK@handout",
    "consumers": [
-    "references/handout/quality.md"
+    {
+     "path": "references/handout/quality.md",
+     "anchor": "9. 来源、范围与评估真实性（阶段 3）",
+     "role": "application"
+    }
    ],
    "scenes": [
     "s3-handout"
+   ],
+   "cluster": null,
+   "rule_ids": [
+    "R41"
    ]
   },
   {
@@ -2558,12 +2978,22 @@
    "owner": "references/handout/figures.md#图像可视化双轨",
    "marker": "intent:I-FIGURE-GEN@handout",
    "consumers": [
-    "references/handout/quality.md",
-    "references/handout/self-check.md"
+    {
+     "path": "references/handout/quality.md",
+     "anchor": "9. 来源、范围与评估真实性（阶段 3）",
+     "role": "application"
+    },
+    {
+     "path": "references/handout/self-check.md",
+     "anchor": "11. 自检与证据",
+     "role": "application"
+    }
    ],
    "scenes": [
     "s3-handout"
-   ]
+   ],
+   "cluster": null,
+   "rule_ids": []
   },
   {
    "id": "I-READER-PATH",
@@ -2571,13 +3001,23 @@
    "owner": "references/handout/reader-path.md#8. 读者路径与导航（P1）",
    "marker": "intent:I-READER-PATH@handout",
    "consumers": [
-    "references/handout/unit-schema.md",
-    "references/handout/quality.md"
+    {
+     "path": "references/handout/unit-schema.md",
+     "anchor": "讲义概念单元 schema（所有风格共用）",
+     "role": "application"
+    },
+    {
+     "path": "references/handout/quality.md",
+     "anchor": "9. 来源、范围与评估真实性（阶段 3）",
+     "role": "application"
+    }
    ],
    "scenes": [
     "s3-handout",
     "s3-deep"
-   ]
+   ],
+   "cluster": null,
+   "rule_ids": []
   },
   {
    "id": "I-SELF-TEST-VS-GROUP",
@@ -2585,15 +3025,55 @@
    "owner": "references/assessment/generation.md#题量预算与自测≠题组",
    "marker": "intent:I-SELF-TEST-VS-GROUP@handout",
    "consumers": [
-    "references/handout/unit-schema.md",
-    "references/handout/pipeline.md",
-    "references/workflow/s3-block.md",
-    "references/workflow/s3-cycle.md"
+    {
+     "path": "references/handout/pipeline.md",
+     "anchor": "1. 一页合同（目标态，11 条）",
+     "role": "application"
+    },
+    {
+     "path": "references/handout/pipeline.md",
+     "anchor": "3.4 两道自测 = 配对 + 迁移",
+     "role": "application"
+    },
+    {
+     "path": "references/handout/pipeline.md",
+     "anchor": "5.3 生成：四段与类型化落点",
+     "role": "application"
+    },
+    {
+     "path": "references/handout/unit-schema.md",
+     "anchor": "讲义概念单元 schema（所有风格共用）",
+     "role": "application"
+    },
+    {
+     "path": "references/handout/styles.md",
+     "anchor": "标准讲义（默认）",
+     "role": "application"
+    },
+    {
+     "path": "references/handout/support-levels.md",
+     "anchor": "6. L1/L2/L3 支持级",
+     "role": "application"
+    },
+    {
+     "path": "references/workflow/s3-block.md",
+     "anchor": "逐目推进（最细知识点）",
+     "role": "application"
+    },
+    {
+     "path": "references/workflow/s3-cycle.md",
+     "anchor": "每轮小步（五步）",
+     "role": "application"
+    }
    ],
    "scenes": [
     "s3-teach",
     "s3-handout",
     "s3-deep"
+   ],
+   "cluster": null,
+   "rule_ids": [
+    "R6"
    ]
   },
   {
@@ -2602,16 +3082,41 @@
    "owner": "references/assessment/generation.md#出题范围与未讲授过滤（R35）",
    "marker": "intent:I-UNTAUGHT-FILTER@global",
    "consumers": [
-    "references/teaching/lesson-flow.md",
-    "references/workflow/s3-block.md",
-    "references/workflow/s4-review.md",
-    "references/assessment/scheduling.md"
+    {
+     "path": "references/teaching/lesson-flow.md",
+     "anchor": "核心教学序列（硬规则）",
+     "role": "application"
+    },
+    {
+     "path": "references/workflow/s3-block.md",
+     "anchor": "逐目推进（最细知识点）",
+     "role": "application"
+    },
+    {
+     "path": "references/workflow/s4-review.md",
+     "anchor": "复习债治理（R36）",
+     "role": "application"
+    },
+    {
+     "path": "references/assessment/scheduling.md",
+     "anchor": "间隔调度",
+     "role": "application"
+    },
+    {
+     "path": "references/workflow/s3-cycle.md",
+     "anchor": "每轮小步（五步）",
+     "role": "application"
+    }
    ],
    "scenes": [
     "s3-teach",
     "s3-handout",
     "s3-exercise",
     "s4-review"
+   ],
+   "cluster": null,
+   "rule_ids": [
+    "R35"
    ]
   },
   {
@@ -2620,12 +3125,24 @@
    "owner": "references/assessment/scoring.md#复述证据",
    "marker": "intent:I-RESTATEMENT@global",
    "consumers": [
-    "references/teaching/interaction.md",
-    "references/workflow/s3-block.md"
+    {
+     "path": "references/teaching/interaction.md",
+     "anchor": "复述执行",
+     "role": "application"
+    },
+    {
+     "path": "references/workflow/s3-block.md",
+     "anchor": "S3 闸口（可检验）",
+     "role": "application"
+    }
    ],
    "scenes": [
     "s3-teach",
     "s4-review"
+   ],
+   "cluster": null,
+   "rule_ids": [
+    "R7"
    ]
   },
   {
@@ -2634,12 +3151,24 @@
    "owner": "references/assessment/scoring.md#判分口径",
    "marker": "intent:I-GRADING-STATES@global",
    "consumers": [
-    "references/teaching/interaction.md",
-    "references/workflow/s3-block.md"
+    {
+     "path": "references/teaching/interaction.md",
+     "anchor": "反馈策略（T09）",
+     "role": "application"
+    },
+    {
+     "path": "references/workflow/s3-block.md",
+     "anchor": "S3 闸口（可检验）",
+     "role": "application"
+    }
    ],
    "scenes": [
     "s3-teach",
     "s4-review"
+   ],
+   "cluster": null,
+   "rule_ids": [
+    "R3"
    ]
   },
   {
@@ -2652,7 +3181,245 @@
     "s3-teach",
     "s3-exercise",
     "s4-review"
+   ],
+   "cluster": null,
+   "rule_ids": [
+    "T09"
    ]
+  },
+  {
+   "id": "I-KP-TYPED-GATE",
+   "scope": "global",
+   "cluster": null,
+   "owner": "references/workflow/s3-block.md#S3 闸口（可检验）",
+   "marker": "intent:I-KP-TYPED-GATE@global",
+   "consumers": [
+    {
+     "path": "references/assessment/scoring.md",
+     "anchor": "视觉任务证据",
+     "role": "standard"
+    },
+    {
+     "path": "references/data/curriculum.md",
+     "anchor": "课程体系文件",
+     "role": "field"
+    },
+    {
+     "path": "references/data/layout.md",
+     "anchor": "题组与判分文件（exercises/）",
+     "role": "field"
+    },
+    {
+     "path": "references/workflow/s0-s2-setup.md",
+     "anchor": "S2 计划确认中",
+     "role": "field"
+    }
+   ],
+   "scenes": [
+    "s0-s2",
+    "s3-teach",
+    "s3-exercise"
+   ],
+   "rule_ids": [
+    "R4"
+   ]
+  },
+  {
+   "id": "I-SIX-BEAT",
+   "scope": "global",
+   "cluster": null,
+   "owner": "references/teaching/lesson-flow.md#单节课六拍",
+   "marker": "intent:I-SIX-BEAT@global",
+   "consumers": [
+    {
+     "path": "references/workflow/s3-cycle.md",
+     "anchor": "每轮小步（五步）",
+     "role": "application"
+    },
+    {
+     "path": "references/workflow/s3-block.md",
+     "anchor": "逐目推进（最细知识点）",
+     "role": "application"
+    }
+   ],
+   "scenes": [
+    "s3-teach"
+   ],
+   "rule_ids": [
+    "R34"
+   ]
+  },
+  {
+   "id": "I-RHYTHM",
+   "scope": "global",
+   "cluster": null,
+   "owner": "references/workflow/pacing.md#休息与节律（R39）",
+   "marker": "intent:I-RHYTHM@global",
+   "consumers": [
+    {
+     "path": "SKILL.md",
+     "anchor": "全场景必载硬规则",
+     "role": "statute"
+    },
+    {
+     "path": "references/teaching/lesson-flow.md",
+     "anchor": "核心教学序列（硬规则）",
+     "role": "application"
+    },
+    {
+     "path": "references/workflow/s0-s2-setup.md",
+     "anchor": "S2 计划确认中",
+     "role": "application"
+    }
+   ],
+   "scenes": [
+    "s0-s2",
+    "s3-teach"
+   ],
+   "rule_ids": [
+    "R39"
+   ]
+  },
+  {
+   "id": "I-FINAL-TARGET",
+   "scope": "global",
+   "cluster": null,
+   "owner": "references/data/layout.md#结课综合测验目标线（99-）",
+   "marker": "intent:I-FINAL-TARGET@global",
+   "consumers": [
+    {
+     "path": "references/workflow/s5-close.md",
+     "anchor": "S5 结课",
+     "role": "standard"
+    }
+   ],
+   "scenes": [
+    "persist",
+    "s5-close"
+   ],
+   "rule_ids": []
+  },
+  {
+   "id": "I-REVIEW-RETURN",
+   "scope": "global",
+   "cluster": null,
+   "owner": "references/workflow/s4-review.md#S4 复习巩固",
+   "marker": "intent:I-REVIEW-RETURN@global",
+   "consumers": [
+    {
+     "path": "references/routing/shortcuts.md",
+     "anchor": "快捷指令明细",
+     "role": "application"
+    }
+   ],
+   "scenes": [
+    "shortcuts",
+    "s4-review"
+   ],
+   "rule_ids": []
+  },
+  {
+   "id": "I-CLOSE-RESUME",
+   "scope": "global",
+   "cluster": null,
+   "owner": "references/workflow/s5-close.md#S5 结课",
+   "marker": "intent:I-CLOSE-RESUME@global",
+   "consumers": [
+    {
+     "path": "references/routing/shortcuts.md",
+     "anchor": "快捷指令明细",
+     "role": "application"
+    }
+   ],
+   "scenes": [
+    "s5-close",
+    "shortcuts"
+   ],
+   "rule_ids": [
+    "R5"
+   ]
+  },
+  {
+   "id": "I-VISUAL-EVIDENCE",
+   "scope": "global",
+   "cluster": null,
+   "owner": "references/assessment/scoring.md#视觉任务证据",
+   "marker": "intent:I-VISUAL-EVIDENCE@global",
+   "consumers": [
+    {
+     "path": "references/workflow/s3-block.md",
+     "anchor": "S3 闸口（可检验）",
+     "role": "application"
+    }
+   ],
+   "scenes": [
+    "s3-teach",
+    "s3-exercise"
+   ],
+   "rule_ids": [
+    "R20"
+   ]
+  },
+  {
+   "id": "I-EXERCISE-SCHEMA",
+   "scope": "global",
+   "cluster": null,
+   "owner": "references/data/layout.md#题组与判分文件（exercises/）",
+   "marker": "intent:I-EXERCISE-SCHEMA@global",
+   "consumers": [
+    {
+     "path": "references/workflow/s3-block.md",
+     "anchor": "逐目推进（最细知识点）",
+     "role": "application"
+    },
+    {
+     "path": "references/assessment/scoring.md",
+     "anchor": "批改与申诉",
+     "role": "standard"
+    }
+   ],
+   "scenes": [
+    "s3-teach",
+    "s3-exercise"
+   ],
+   "rule_ids": []
+  },
+  {
+   "id": "I-MATERIAL-ROUTE",
+   "scope": "global",
+   "cluster": null,
+   "owner": "references/handout/quality.md#材料型按材料结构分流",
+   "marker": "intent:I-MATERIAL-ROUTE@global",
+   "consumers": [
+    {
+     "path": "references/handout/styles.md",
+     "anchor": "精读笔记式（论证文材料默认）",
+     "role": "application"
+    }
+   ],
+   "scenes": [
+    "s3-handout"
+   ],
+   "rule_ids": []
+  },
+  {
+   "id": "I-POSTURE",
+   "scope": "global",
+   "cluster": null,
+   "owner": "references/teaching/lesson-prep.md#教学姿态三档（S2 选定，默认混合）",
+   "marker": "intent:I-POSTURE@global",
+   "consumers": [
+    {
+     "path": "references/workflow/s0-s2-setup.md",
+     "anchor": "S2 计划确认中",
+     "role": "selection"
+    }
+   ],
+   "scenes": [
+    "s0-s2",
+    "s3-teach"
+   ],
+   "rule_ids": []
   }
  ]
 }

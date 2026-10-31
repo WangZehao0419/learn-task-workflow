@@ -1,6 +1,6 @@
 # 医学与健康群 · 出题切片
 
-<!-- owns: 本群题型阶梯、群级共享误区库、判定题构造、答案形态与最小单元、视觉任务、给分点结构；must-not-define: 题量预算与出题四步（assessment/generation.md）、判分四态与伺服（assessment/scoring.md）、讲义五要素与答案框体例（handout/）、学科专属误区（disciplines/medicine.md） -->
+<!-- owns: 本群题型阶梯、群级共享误区库、判定题构造、答案形态与最小单元（学科群形态）、视觉任务、给分点结构；must-not-define: 题量预算与出题四步（assessment/generation.md）、判分四态与伺服（assessment/scoring.md）、讲义五要素与答案框体例（handout/unit-schema.md）、学科专属误区（disciplines/medicine.md） -->
 
 ## 题型阶梯
 
@@ -26,7 +26,6 @@
 | 只记表现不记时间轴 | 分不清急慢、分不清先后 | 教材并列呈现 | 画病程时间线，标可逆点 |
 | 用疾病标签代替分析 | 把症状直接归因于既有诊断 | 标签效应 | 去标签重述病例，重新推理 |
 
-备课取 2–3 条，本学员历史错因优先占坑。
 
 ## 判定题构造
 

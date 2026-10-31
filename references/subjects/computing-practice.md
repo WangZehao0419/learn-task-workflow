@@ -1,6 +1,6 @@
 # 计算与技术群 · 出题切片
 
-<!-- owns: 本群题型阶梯、群级共享误区库、判定题构造、答案形态与最小单元、视觉任务、给分点结构；must-not-define: 题量预算与出题四步（assessment/generation.md）、判分四态与伺服（assessment/scoring.md）、讲义五要素与答案框体例（handout/）、理论课与算法专项（disciplines/computing-theory.md） -->
+<!-- owns: 本群题型阶梯、群级共享误区库、判定题构造、答案形态与最小单元（学科群形态）、视觉任务、给分点结构；must-not-define: 题量预算与出题四步（assessment/generation.md）、判分四态与伺服（assessment/scoring.md）、讲义五要素与答案框体例（handout/unit-schema.md）、理论课与算法专项（disciplines/computing-theory.md） -->
 
 ## 题型阶梯
 
@@ -32,7 +32,6 @@
 | 跑通即正确 | 一个用例过就交付 | 样例太友好 | 补边界用例（空、零、负数、最大） |
 | 照抄 AI 代码不验证 | 不跑就交 | 生成结果看着像对的 | 一次实跑胜过十次目测 |
 
-备课取 2–3 条，本学员历史错因优先占坑。
 
 ## 判定题构造
 

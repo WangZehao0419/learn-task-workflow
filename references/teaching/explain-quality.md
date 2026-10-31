@@ -2,7 +2,7 @@
 
 <!-- owns: 元方法教学（T12/R44）、预判误区清单（R42）、智能变式一次一维（R43）、每步检查理解（R45）、依据句模板、示例设计红线；must-not-define: 目与闸口（workflow/s3-block.md）、判分四态与闸口比例（assessment/scoring.md）、出题流水线步骤（assessment/generation.md，本册只供其引用）、提示阶梯与反馈（teaching/interaction.md）、呈现版式与密度（teaching/presentation.md）、六拍节拍（teaching/lesson-flow.md） -->
 
-本册回答「怎么把一个知识点讲透」：不只教「是什么」，还教「怎么想」。备课动作见 `teaching/lesson-flow.md`「备课短表（T01）」新增的预判误区与元方法两行；出题侧消费见 `assessment/generation.md`（干扰项绑定、一次一维、术语对账）。
+本册回答「怎么把一个知识点讲透」：不只教「是什么」，还教「怎么想」。备课动作见 `teaching/lesson-prep.md`「备课短表」新增的预判误区与元方法两行；出题侧消费见 `assessment/generation.md`（干扰项绑定、一次一维、术语对账）。
 
 ## 元方法教学（T12）
 

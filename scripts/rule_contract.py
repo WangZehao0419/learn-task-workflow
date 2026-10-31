@@ -19,7 +19,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-SCHEMA = "ltw-rules/1"
+SCHEMA = "ltw-rules/2"
 REQUIRED_TOP = ("schema", "version", "files", "rules", "constants", "scenes")
 REQUIRED_CONST = (
     "phases", "types", "subject_families", "group_slugs", "discipline_slugs",
@@ -493,6 +493,12 @@ def _allowed_files(data: dict, expanded: dict, sid: str) -> set:
     return allowed
 
 
+def _consumer_path(consumer) -> str:
+    if isinstance(consumer, dict):
+        return consumer.get("path", "")
+    return consumer
+
+
 def check_intents(data: dict, root: Path, expanded: dict) -> list:
     """intent 正本唯一、marker 唯一、consumer 有指针、owner 可加载。"""
     issues = []
@@ -518,15 +524,16 @@ def check_intents(data: dict, root: Path, expanded: dict) -> list:
                           % (it.get("id"), text.count(marker)))
         short = rel.split("references/", 1)[-1]
         for consumer in it.get("consumers", []):
-            cp = root / consumer
+            cpath = _consumer_path(consumer)
+            cp = root / cpath
             if not cp.exists():
                 issues.append("E-TOPOLOGY-DEADREF: intent %s consumer 不存在：%s"
-                              % (it.get("id"), consumer))
+                              % (it.get("id"), cpath))
                 continue
             ct = cp.read_text(encoding="utf-8", errors="replace")
             if rel not in ct and short not in ct:
                 issues.append("E-TOPOLOGY-DEADREF: intent %s consumer %s 缺指向 owner 的指针"
-                              % (it.get("id"), consumer))
+                              % (it.get("id"), cpath))
         if not any(rel in _allowed_files(data, expanded, sid) for sid in it.get("scenes", [])):
             issues.append("E-TOPOLOGY-OWNER: intent %s owner %s 不在任何声明场景的 core/stack/supplements"
                           % (it.get("id"), rel))
@@ -539,13 +546,14 @@ def check_intent_pointers(data: dict, root: Path, expanded: dict) -> list:
     for it in data.get("intents", []):
         rel = it.get("owner", "").split("#", 1)[0]
         for consumer in it.get("consumers", []):
+            cpath = _consumer_path(consumer)
             for sid in it.get("scenes", []):
-                if consumer not in expanded.get(sid, set()):
+                if cpath not in expanded.get(sid, set()):
                     continue
                 if rel not in _allowed_files(data, expanded, sid):
                     issues.append(
                         "E-TOPOLOGY-DEADREF: intent %s 在场景 %s：%s 引用 %s 不在 core/stack/supplements"
-                        % (it.get("id"), sid, consumer, rel))
+                        % (it.get("id"), sid, cpath, rel))
     return issues
 
 
@@ -1109,12 +1117,390 @@ def _selftest() -> int:
     return 0
 
 
+def _norm_heading(line: str) -> str:
+    s = line.lstrip("#").strip().replace("**", "").strip()
+    return re.sub(r"\s+", " ", s)
+
+
+def _heading_rows(root: Path, rel: str) -> list:
+    p = root / rel
+    if not p.exists():
+        return []
+    rows = []
+    inside_fence = False
+    for ln in p.read_text(encoding="utf-8", errors="replace").splitlines():
+        if ln.strip().startswith("```"):
+            inside_fence = not inside_fence
+            continue
+        if inside_fence:
+            continue
+        if ln.startswith("#"):
+            rows.append((len(ln) - len(ln.lstrip("#")), _norm_heading(ln)))
+    return rows
+
+
+def _label_exists(root: Path, rel: str, anchor: str) -> bool:
+    """标题之外的加粗/独立标签也算可解析锚点（仓库既有写法）。"""
+    p = root / rel
+    if not p.exists():
+        return False
+    a = re.sub(r"\s+", " ", anchor.replace("**", "").strip())
+    inside_fence = False
+    for ln in p.read_text(encoding="utf-8", errors="replace").splitlines():
+        if ln.strip().startswith("```"):
+            inside_fence = not inside_fence
+            continue
+        if inside_fence:
+            continue
+        s = ln.strip()
+        s = re.sub(r"^[-*+>]\s*", "", s)
+        s = re.sub(r"^#+\s*", "", s).replace("**", "").strip()
+        if s == a or s.startswith(a):
+            return True
+        if ("**" + anchor + "**") in ln:
+            return True
+    return False
+
+
+def _resolve_heading(root: Path, rel: str, anchor: str) -> bool:
+    a = re.sub(r"\s+", " ", anchor.replace("**", "").strip())
+    for _, h in _heading_rows(root, rel):
+        if h == a or h.startswith(a) or a in h:
+            return True
+    return _label_exists(root, rel, anchor)
+
+
+def _section_text(root: Path, rel: str, anchor: str) -> str:
+    p = root / rel
+    if not p.exists():
+        return ""
+    lines = p.read_text(encoding="utf-8", errors="replace").splitlines()
+    a = re.sub(r"\s+", " ", anchor.replace("**", "").strip())
+    start = None
+    level = 0
+    for i, ln in enumerate(lines):
+        if not ln.startswith("#"):
+            continue
+        h = _norm_heading(ln)
+        if h == a or h.startswith(a) or a in h:
+            start = i
+            level = len(ln) - len(ln.lstrip("#"))
+            break
+    if start is None:
+        return ""
+    end = len(lines)
+    for j in range(start + 1, len(lines)):
+        if not lines[j].startswith("#"):
+            continue
+        lv = len(lines[j]) - len(lines[j].lstrip("#"))
+        if lv <= level:
+            end = j
+            break
+    return "\n".join(lines[start:end])
+
+
+POINTER_RE = re.compile(r"`([^`]+\.md)(?:#([^`]+))?`(?:「([^」]+)」)?")
+
+
+def _pointer_refs(text: str) -> list:
+    out = []
+    for m in POINTER_RE.finditer(text):
+        path = m.group(1).strip()
+        anchor = (m.group(2) or m.group(3) or "").strip()
+        out.append((path, anchor))
+    return out
+
+
+def _normalize_target(root: Path, target: str) -> str | None:
+    """把规则文档里的相对路径归一化；数据/模板路径返回 None。"""
+    t = target.strip()
+    if not t or "..." in t or "{" in t or "*" in t or "<" in t or ">" in t:
+        return None
+    if t.startswith(("references/", "docs/", "scripts/", "evals/", "contracts/", "SKILL.md")):
+        return t
+    if t.startswith(("materials/", "exercises/")):
+        return None
+    cand = "references/" + t
+    if (root / cand).exists():
+        return cand
+    name = Path(t).name
+    matches = [p.relative_to(root).as_posix() for p in root.glob("references/**/" + name)]
+    return matches[0] if len(matches) == 1 else None
+
+
+def check_pointer_targets(data: dict, root: Path) -> list:
+    """文件存在 + references 标题可解析；不对 docs/scripts/evals 做标题解析。"""
+    issues = []
+    sources = [(f["path"], f.get("kind", "rule")) for f in data["files"]]
+    sources.append(("SKILL.md", "router"))
+    seen = set()
+    for rel, _kind in sources:
+        p = root / rel
+        if not p.exists():
+            continue
+        for target, anchor in _pointer_refs(p.read_text(encoding="utf-8", errors="replace")):
+            target = _normalize_target(root, target)
+            if not target:
+                continue
+            key = (rel, target, anchor)
+            if key in seen:
+                continue
+            seen.add(key)
+            if not (root / target).exists():
+                issues.append("E-POINTER-FILE: %s -> %s" % (rel, target))
+                continue
+            if anchor and target.startswith("references/") and not _resolve_heading(root, target, anchor):
+                issues.append("E-POINTER-ANCHOR: %s -> %s#%s" % (rel, target, anchor))
+    return issues
+
+
+def check_pointer_loadability(data: dict, root: Path, expanded: dict) -> list:
+    """rule 文件在 core 场景中引用的 references 目标必须在该场景可加载。"""
+    pairs = {}
+    for f in data["files"]:
+        if f.get("kind") == "router":
+            continue
+        rel = f["path"]
+        p = root / rel
+        if not p.exists():
+            continue
+        for target, _anchor in _pointer_refs(p.read_text(encoding="utf-8", errors="replace")):
+            target = _normalize_target(root, target)
+            if not target or not target.startswith("references/") or target == rel:
+                continue
+            for sid, core in expanded.items():
+                if rel not in core:
+                    continue
+                if target not in _allowed_files(data, expanded, sid):
+                    pairs.setdefault((rel, target), set()).add(sid)
+    return ["E-POINTER-LOAD: %s -> %s（场景 %s）" % (a, b, ",".join(sorted(s)))
+            for (a, b), s in sorted(pairs.items())]
+
+
+def check_disk_orphans(data: dict, root: Path) -> list:
+    token_names = _token_names(data)
+    declared = set(_expand_files([f["path"] for f in data["files"]], token_names))
+    disk = {p.relative_to(root).as_posix() for p in root.glob("references/**/*.md")}
+    issues = ["E-TOPOLOGY-ORPHAN: 磁盘未登记 %s" % p for p in sorted(disk - declared)]
+    issues += ["E-TOPOLOGY-ORPHAN: 契约缺文件 %s" % p for p in sorted(declared - disk)]
+    return issues
+
+
+def check_intent_owners(data: dict) -> list:
+    issues = []
+    by_owner = {}
+    for it in data.get("intents", []):
+        by_owner.setdefault(it.get("owner", ""), []).append(it)
+    for owner, items in sorted(by_owner.items()):
+        if len(items) <= 1:
+            continue
+        clusters = {it.get("cluster") for it in items}
+        roles = {tuple(sorted(c.get("role", "") for c in it.get("consumers", []) if isinstance(c, dict))) for it in items}
+        if len(clusters) == 1 and None not in clusters and len(roles) == len(items):
+            continue
+        issues.append("E-TOPOLOGY-OWNER-DUP: %s 被 %s 共用" % (owner, ",".join(it["id"] for it in items)))
+    return issues
+
+
+def check_intent_map(data: dict) -> list:
+    issues = []
+    intents = {it["id"]: it for it in data.get("intents", [])}
+    for r in data["rules"]:
+        intent = r.get("intent")
+        if not intent:
+            issues.append("E-TOPOLOGY-INTENT: rule %s 缺 intent" % r["id"])
+            continue
+        if intent == "local":
+            continue
+        it = intents.get(intent)
+        if not it:
+            issues.append("E-TOPOLOGY-INTENT: rule %s 指向不存在 intent %s" % (r["id"], intent))
+            continue
+        owner_file = r["owner"].split("#", 1)[0]
+        allowed = {it.get("owner", "").split("#", 1)[0]}
+        allowed |= {_consumer_path(c) for c in it.get("consumers", [])}
+        if owner_file not in allowed:
+            issues.append("E-TOPOLOGY-INTENT: rule %s owner %s 不是 %s 的 owner/consumer"
+                          % (r["id"], owner_file, intent))
+    for it in data.get("intents", []):
+        expected = sorted(r["id"] for r in data["rules"] if r.get("intent") == it["id"])
+        actual = sorted(it.get("rule_ids", []))
+        if expected != actual:
+            issues.append("E-TOPOLOGY-INTENT: %s rule_ids 不一致（期望 %s，实际 %s）"
+                          % (it["id"], expected, actual))
+    return issues
+
+
+def check_heading_unique(data: dict, root: Path) -> list:
+    issues = []
+    for f in data["files"]:
+        seen = set()
+        for lv, h in _heading_rows(root, f["path"]):
+            key = (lv, h)
+            if key in seen:
+                issues.append("W-TOPOLOGY-HEADING-DUP: %s 同级重复标题 %s" % (f["path"], h))
+            seen.add(key)
+    return issues
+
+
+def check_marker_scope(data: dict, root: Path) -> list:
+    issues = []
+    for it in data.get("intents", []):
+        owner = it.get("owner", "")
+        if "#" not in owner:
+            continue
+        rel, anchor = owner.split("#", 1)
+        marker = "<!-- %s -->" % it.get("marker", "")
+        body = _section_text(root, rel, anchor)
+        if body.count(marker) != 1:
+            issues.append("W-TOPOLOGY-MARKER-SCOPE: %s marker 不在 owner 小节内（当前 %d）"
+                          % (it["id"], body.count(marker)))
+    return issues
+
+
+def _parse_skill_supplements(text: str, root: Path) -> set:
+    start = text.find("**补读表**")
+    end = text.find("**补读失败**", start if start != -1 else 0)
+    if start == -1:
+        return set()
+    block = text[start:end if end != -1 else len(text)]
+    out = set()
+    for ln in block.splitlines():
+        if not ln.lstrip().startswith("|"):
+            continue
+        m = re.match(r"^\|\s*`([a-z0-9-]+)`\s*\|", ln)
+        if not m:
+            continue
+        sid = m.group(1)
+        files = re.findall(r"`([^`]+\.md)`", ln)
+        sections = re.findall(r"「([^」]+)」", ln)
+        intents = re.findall(r"`(I-[A-Z0-9-]+@[a-z]+)`", ln)
+        if len(files) == 1 and len(sections) == 1 and len(intents) == 1:
+            f = files[0]
+            f = _normalize_target(root, f)
+            if f:
+                out.add((sid, f, sections[0], intents[0]))
+    return out
+
+
+def check_supplement_audit(data: dict, root: Path) -> list:
+    issues = []
+    max_per = data["constants"]["scenes_budget"].get("supplements_per_scene_max")
+    declared = set()
+    for sid, sc in data["scenes"].items():
+        items = sc.get("supplements", [])
+        if max_per is not None and len(items) > max_per:
+            issues.append("E-TOPOLOGY-SUPPLEMENT: 场景 %s 补读 %d > %d" % (sid, len(items), max_per))
+        for s in items:
+            declared.add((sid, s["file"], s["section"], s.get("intent", "")))
+    text = (root / "SKILL.md").read_text(encoding="utf-8", errors="replace")
+    actual = _parse_skill_supplements(text, root)
+    for row in sorted(declared - actual):
+        issues.append("E-TOPOLOGY-SUPPLEMENT: SKILL 补读表缺 %s" % (row,))
+    for row in sorted(actual - declared):
+        issues.append("E-TOPOLOGY-SUPPLEMENT: SKILL 补读表多 %s" % (row,))
+    return issues
+
+
+def check_load_table_extra(data: dict, root: Path) -> list:
+    text = (root / "SKILL.md").read_text(encoding="utf-8", errors="replace")
+    start = text.find("## 加载场景表")
+    end = text.find("## 场景叠加与补读")
+    block = text[start:end if end > start else len(text)]
+    rows = set()
+    for ln in block.splitlines():
+        m = re.match(r"^\|\s*`([a-z0-9-]+)`\s*\|", ln)
+        if m:
+            rows.add(m.group(1))
+    extra = rows - set(data["scenes"])
+    return ["E-TOPOLOGY-SCENES: SKILL 场景表多余行 %s" % s for s in sorted(extra)]
+
+
+def check_schema_mirror(data: dict, root: Path) -> list:
+    try:
+        sc = json.loads((root / "contracts" / "scripts-contract.json").read_text(encoding="utf-8"))
+        for item in sc.get("scripts_contract", []):
+            if item.get("script") == "rule_contract.py" and item.get("schema") != data.get("schema"):
+                return ["E-TOPOLOGY-SCHEMA: scripts-contract.json schema %s ≠ rules.json %s"
+                        % (item.get("schema"), data.get("schema"))]
+    except (OSError, ValueError):
+        return ["E-TOPOLOGY-SCHEMA: scripts-contract.json 不可读"]
+    return []
+
+
+def check_section_number_refs(data: dict, root: Path) -> list:
+    """§N 引用必须有可解析的编号标题；跨文件引用优先按同行最近文件名解析。"""
+    issues = []
+    by_base = {}
+    for f in data["files"]:
+        by_base.setdefault(Path(f["path"]).name, []).append(f["path"])
+    for f in data["files"]:
+        rel = f["path"]
+        p = root / rel
+        if not p.exists():
+            continue
+        text = p.read_text(encoding="utf-8", errors="replace")
+        for m in re.finditer(r"§(\d+(?:\.\d+)?)", text):
+            num = m.group(1)
+            before = text[max(0, m.start() - 40):m.start()]
+            names = re.findall(r"`?([A-Za-z0-9_./-]+\.md)`?", before)
+            if not names:
+                continue
+            target = names[-1]
+            name = target.split("/")[-1]
+            if not target.startswith("references/"):
+                if len(by_base.get(name, [])) != 1:
+                    continue
+                target = by_base[name][0]
+            rows = _heading_rows(root, target)
+            ok = any(re.match(re.escape(num) + r"(?:\.|\s|$)", h) for _, h in rows)
+            if not ok:
+                issues.append("E-TOPOLOGY-SECTIONNUM: %s §%s 无对应编号标题（目标 %s）"
+                              % (rel, num, target))
+    return issues
+
+
+def audit(data: dict, root: Path) -> dict:
+    scene_issues, expanded = check_scenes(data, root)
+    issues = []
+    issues += check_pointer_targets(data, root)
+    issues += check_disk_orphans(data, root)
+    issues += check_intent_owners(data)
+    issues += check_intent_map(data)
+    issues += check_heading_unique(data, root)
+    issues += check_marker_scope(data, root)
+    issues += check_supplement_audit(data, root)
+    issues += check_load_table_extra(data, root)
+    issues += check_schema_mirror(data, root)
+    issues += check_section_number_refs(data, root)
+    load = check_pointer_loadability(data, root, expanded)
+    # 报告模式：全部列出；调用方人工分诊
+    return {
+        "mode": "audit",
+        "files": len(data["files"]),
+        "rules": len(data["rules"]),
+        "scenes": len(data["scenes"]),
+        "intents": len(data.get("intents", [])),
+        "scene_issues": scene_issues,
+        "pointer_issues": [i for i in issues if i.startswith("E-POINTER")],
+        "contract_issues": [i for i in issues if not i.startswith("E-POINTER")],
+        "loadability_issues": load,
+        "counts": {
+            "pointer": len([i for i in issues if i.startswith("E-POINTER")]),
+            "contract": len([i for i in issues if not i.startswith("E-POINTER")]),
+            "loadability": len(load),
+        },
+    }
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="规则契约加载与拓扑检查")
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--selftest", action="store_true")
     g.add_argument("--topology", action="store_true")
     g.add_argument("--coverage", action="store_true")
+    g.add_argument("--audit", action="store_true")
+    g.add_argument("--audit-strict", action="store_true")
     g.add_argument("--get", metavar="DOTTED")
     ap.add_argument("--strict-pointers", action="store_true",
                     help="显式开启指针闭合检查（当前默认开启）")
@@ -1128,6 +1514,14 @@ def main(argv=None) -> int:
             r = topology()
             print(json.dumps(r, ensure_ascii=False, indent=1))
             return 0 if r["ok"] else 1
+        if args.audit or args.audit_strict:
+            d = load()
+            r = audit(d, skill_root())
+            print(json.dumps(r, ensure_ascii=False, indent=1))
+            if args.audit_strict:
+                bad = r["pointer_issues"] or r["contract_issues"] or r["scene_issues"]
+                return 1 if bad else 0
+            return 0
         if args.coverage:
             r = coverage(strict=not args.no_strict_pointers)
             print(json.dumps(r, ensure_ascii=False, indent=1))

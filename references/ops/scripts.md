@@ -27,7 +27,7 @@
 | `check_environment.py` | `[--manifest <路径>] [--capability <名称>]... [--selftest]` | 只读诊断 | 脚本调用出现解释器/版本类失败时诊断一次 |
 | `verify_explanation.py` | `<材料目录或单文件> [--selftest] [--reader]` | 只读静态校验，不写盘 | 讲义定稿前；`--reader` 加跑读者版 W 级检查 |
 | `prereq_check.py` | `--list <课程体系.md> --scan <题组或讲义.md>... [--extra-terms "…"] [--extra-file <文件>] [--scan-all] [--selftest]` | 只读对账，不写盘 | 判分题交付前（R46 出题前术语对账）；目行补登记 `引入` 列后跑 |
-| `rule_contract.py` | `--selftest \| --topology \| --coverage [--strict-pointers \| --no-strict-pointers]` | 只读校验契约、拓扑、场景覆盖、intent 登记、补读小节与指针闭合 | 修改契约/分册结构后、打包前 |
+| `rule_contract.py` | `--selftest \| --topology \| --coverage [--strict-pointers \| --no-strict-pointers] \| --audit \| --audit-strict` | 只读校验契约、拓扑、场景覆盖、intent 登记、补读小节与指针闭合；`--audit` 只读报告指针/孤儿/owner/补读/schema 问题，不改变闸口退出码；`--audit-strict` 把 pointer/contract/scene 问题作为失败（loadability 信息项不参与） | 修改契约/分册结构后、打包前；结构巡检时跑 `--audit`，CI/交付闸口跑 `--audit-strict` |
 
 完整参数、退出码与 notes 的机器可读版本见 `contracts/scripts-contract.json`；脚本 docstring 只保留算法/参数说明，不再维护完整错误码表。
 
@@ -94,6 +94,9 @@
 | verify_explanation | `W-NO-TIER` | 讲义单元缺 tier 标签 |
 | rule_contract | `E-CONTRACT-MISSING` / `E-CONTRACT-INVALID` | 契约缺失 / 畸形 |
 | rule_contract | `E-TOPOLOGY-DAG` / `E-TOPOLOGY-DEADREF` / `E-TOPOLOGY-ERRORCODE` / `E-TOPOLOGY-FILE` / `E-TOPOLOGY-HEADER` / `E-TOPOLOGY-LEADWORDS` / `E-TOPOLOGY-LOAD` / `E-TOPOLOGY-MIRROR` / `E-TOPOLOGY-OWNER` / `E-TOPOLOGY-SCENES` / `E-TOPOLOGY-VERSION` | 依赖成环 / 引用未定义编号或补读小节 / 未声明错误码 / 文件缺失 / 职责头缺失 / lead_words 双写漂移 / 加载指令 / 速查表覆盖缺口 / owner 锚点失效或 intent 正本/marker 失效 / 场景覆盖缺口（含 stack/supplements/intent scene） / 版本不一致 |
+| rule_contract | `E-POINTER-ANCHOR` / `E-POINTER-FILE` / `E-POINTER-LOAD` | 指针目标文件/标题不存在，或 rule 文件在 core 场景引用了不可加载 owner |
+| rule_contract | `E-TOPOLOGY-INTENT` / `E-TOPOLOGY-ORPHAN` / `E-TOPOLOGY-OWNER-DUP` / `E-TOPOLOGY-SCHEMA` / `E-TOPOLOGY-SECTIONNUM` / `E-TOPOLOGY-SUPPLEMENT` | 规则-intent 映射不闭合 / 磁盘孤儿 / owner 重复 / schema 镜像不一致 / §N 无对应标题 / 补读表漂移 |
+| rule_contract | `W-TOPOLOGY-HEADING-DUP` / `W-TOPOLOGY-MARKER-SCOPE` | 同级标题重复 / marker 不在 owner 小节内 |
 | verify_load_budget | `E-LOAD-BUDGET` | 加载场景字符量/文件数超预算，或场景内文件缺失 |
 | prereq_check | `E-TERM-UNTAUGHT` / `E-LIST-MISSING` / `E-LIST-EMPTY` / `E-SCAN-MISSING` / `W-TERM-UNTAUGHT` | 术语对账违规（题面出现未引入术语）/ 清单缺失 / 清单零可用行 / 扫描文件缺失；`W-TERM-UNTAUGHT` 为逐条违规提示（stderr），exit 1 |
 
@@ -121,6 +124,8 @@ python -B scripts/prereq_check.py --selftest
 python -B scripts/rule_contract.py --selftest
 python -B scripts/rule_contract.py --topology
 python -B scripts/rule_contract.py --coverage --strict-pointers
+python -B scripts/rule_contract.py --audit
+python -B scripts/rule_contract.py --audit-strict
 python -B evals/verify-formula-typesetting.py
 python -B evals/verify-load-budget.py
 python -B evals/verify-load-budget.py --selftest
@@ -141,6 +146,6 @@ python -B evals/verify-readability.py
 
 ## 当前核验
 
-- 适用版本：9.10.0
+- 适用版本：9.11.0
 - 核验日期：2026-10-31
 - 环境依赖：`skill-dependencies.json`（Python `min_version`）；只有 `check_environment.py` 输出 `ready` 才能继续。

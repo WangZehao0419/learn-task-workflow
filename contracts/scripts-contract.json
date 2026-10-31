@@ -71,15 +71,15 @@
   },
   {
    "script": "rule_contract.py",
-   "usage": "--selftest | --topology | --coverage | --get <dotted>",
+   "usage": "--selftest | --topology | --coverage | --audit | --audit-strict | --get <dotted>",
    "default_behavior": "只读；加载并校验 contracts/rules.json，输出 JSON",
    "exit_codes": {
     "0": "正常/校验通过",
     "1": "契约缺失/畸形或拓扑问题",
     "2": "用法错误"
    },
-   "schema": "ltw-rules/1",
-   "notes": "契约唯一来源 contracts/rules.json；缺失/畸形报 E-CONTRACT-MISSING/E-CONTRACT-INVALID；--topology 检查无加载指令、职责头、owner 指针、依赖无环、版本四方一致、全仓错误码 ⊆ 契约 errors、operations 速查表双向覆盖、lead_words 双写一致、T/F/R 编号引用必有定义；--coverage 另加场景覆盖与 SKILL.md 场景表一致性，其中 {group}/{discipline} 令牌按 constants.group_slugs/discipline_slugs 展开。"
+   "schema": "ltw-rules/2",
+   "notes": "契约唯一来源 contracts/rules.json；缺失/畸形报 E-CONTRACT-MISSING/E-CONTRACT-INVALID；--topology 检查无加载指令、职责头、owner 指针、依赖无环、版本四方一致、全仓错误码 ⊆ 契约 errors、operations 速查表双向覆盖、lead_words 双写一致、T/F/R 编号引用必有定义；--coverage 另加场景覆盖、SKILL.md 场景表一致性、intent/consumer 指针闭合；--audit 只读报告指针文件/锚点、磁盘孤儿、owner 重复、intent 映射、补读集合、schema 镜像与 §N 引用，不改变闸口退出码；--audit-strict 在同一报告上把 pointer/contract/scene 问题作为失败（loadability 信息项不参与），用于结构巡检闸口；{group}/{discipline} 令牌按 constants.group_slugs/discipline_slugs 展开。"
   },
   {
    "script": "prereq_check.py",

@@ -1,7 +1,7 @@
 {
  "schema": "ltw-evals/2",
  "skill": "learn-task-workflow",
- "applies_to_version": "9.10.0",
+ "applies_to_version": "9.11.0",
  "updated_at": "2026-10-31",
  "grading_axes": [
   "教学正确性",
@@ -237,6 +237,90 @@
    "reviewer": null,
    "formula_checks": null,
    "review_note": "阻断：化学配平与学科正确性须独立评审者核验"
+  },
+  {
+   "id": "E25",
+   "scenario": "S3 讲义场景判别",
+   "kind": "human",
+   "prompt": "把刚才讲的整理成讲义",
+   "fixture": "S3 学习任务 / 无任务近邻输入",
+   "pass_condition": "主场景 s3-handout；不重开整节讲授；讲义按 pipeline 生成",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null,
+   "review_note": "待真人回放；未跑前不得标通过"
+  },
+  {
+   "id": "E26",
+   "scenario": "S3 深讲场景判别",
+   "kind": "human",
+   "prompt": "这段再讲深一点",
+   "fixture": "S3 学习任务 / 无任务近邻输入",
+   "pass_condition": "主场景 s3-deep；不重跑整节；深度按 explanation-depth",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null,
+   "review_note": "待真人回放；未跑前不得标通过"
+  },
+  {
+   "id": "E27",
+   "scenario": "S3 边讲边写",
+   "kind": "human",
+   "prompt": "边讲边写讲义",
+   "fixture": "S3 学习任务 / 无任务近邻输入",
+   "pass_condition": "s3-teach 主讲后按 handout/pipeline 追加草稿；不整篇投喂；同轮只一个主场景",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null,
+   "review_note": "待真人回放；未跑前不得标通过"
+  },
+  {
+   "id": "E28",
+   "scenario": "复习近邻误触发",
+   "kind": "human",
+   "prompt": "帮我复习一下这份合同的要点",
+   "fixture": "S3 学习任务 / 无任务近邻输入",
+   "pass_condition": "不触发系统学习；按文档要点回顾处理，不建学习档",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null,
+   "review_note": "待真人回放；未跑前不得标通过"
+  },
+  {
+   "id": "E29",
+   "scenario": "无任务考考我",
+   "kind": "human",
+   "prompt": "考考我刚学的",
+   "fixture": "S3 学习任务 / 无任务近邻输入",
+   "pass_condition": "无任务先澄清主题与意图；不静默建目录",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null,
+   "review_note": "待真人回放；未跑前不得标通过"
+  },
+  {
+   "id": "E30",
+   "scenario": "S3 完整一轮预算",
+   "kind": "human",
+   "prompt": "继续学习，讲完这一节",
+   "fixture": "S3 学习任务 / 无任务近邻输入",
+   "pass_condition": "s3-teach 核心 16 文件；补读按动作触发；不超 49,000 字符",
+   "actual_output": null,
+   "run_id": null,
+   "scores": null,
+   "verdict": "未验证",
+   "reviewer": null,
+   "review_note": "待真人回放；未跑前不得标通过"
   }
  ]
 }
