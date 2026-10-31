@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/1",
- "version": "9.8.0",
+ "version": "9.9.0",
  "files": [
   {
    "id": "triggers",
@@ -1428,6 +1428,43 @@
    "scenes": [
     "s3-teach"
    ]
+  },
+  {
+   "id": "R47",
+   "owner": "references/assessment/generation.md#出题流水线（四步）",
+   "type": "definition",
+   "scenes": [
+    "s3-exercise",
+    "s4-review",
+    "s5-close"
+   ]
+  },
+  {
+   "id": "R48",
+   "owner": "references/assessment/generation.md#出题流水线（四步）",
+   "type": "definition",
+   "scenes": [
+    "s3-exercise",
+    "s4-review",
+    "s5-close"
+   ]
+  },
+  {
+   "id": "R49",
+   "owner": "references/workflow/pacing.md#最小可行日（兜底）",
+   "type": "definition",
+   "scenes": [
+    "s0-s2"
+   ]
+  },
+  {
+   "id": "R50",
+   "owner": "references/data/curriculum.md#课程体系文件",
+   "type": "definition",
+   "scenes": [
+    "s0-s2",
+    "persist"
+   ]
   }
  ],
  "constants": {
@@ -2240,7 +2277,7 @@
     "references/ops/scripts.md",
     "references/data/memory.md"
    ],
-   "chars_max": 30100,
+   "chars_max": 30800,
    "stack": [
     {
      "scene": "failure",
@@ -2315,7 +2352,7 @@
    "files": [
     "references/ops/literature.md"
    ],
-   "chars_max": 10000
+   "chars_max": 12000
   }
  },
  "intents": [
