@@ -292,8 +292,10 @@ def next_interval(grade, stability=None, difficulty=None, elapsed=None,
 
 # 输入行已由 parse_progress_sections 剥去「- 」前缀
 WRONG_LINE_RE = re.compile(r"^\[(\d{4}-\d{2}-\d{2})\]\s*(.*)$")
-META_KEYS = ("S=", "D=", "last=", "due=", "信心=", "cw", "顽固", "evt=", "attempt_id=", "子类=")
-# ↑ v2.5：`evt=`/`attempt_id=` 也列为元数据挂载标记——仅含 `evt=` 的弱项投影（无 S/D/cw）
+META_KEYS = ("S=", "D=", "last=", "due=", "信心=", "evt=", "attempt_id=", "子类=", "错因=", "级=")
+# ↑ v2.6：与 META_TOKEN_RES 的「键=」形态一一对应（v2.5 的 attempt_id= 现已补解析器）；
+#   cw/顽固 为无值标记，拆分判定改由 _looks_like_meta 按整段括注逐 token 可解析判定，
+#   避免普通中文括注（如「抄自 cw 笔记」）因子串命中被误拆。
 #   此前不被拆出，导致同一次作答的投影无法归组合并。
 # 元数据逐键严格格式（分隔后整 token fullmatch）：只认合法前缀会把 S=3oops 截成 3、
 # 信心=50 截成 5，把坏内容当有效观测——v2.4 起一律 fullmatch，坏 token 显式记入
@@ -309,6 +311,7 @@ META_TOKEN_RES = (
     ("子类", re.compile(r"子类=(\S+)"), lambda g: g),
     ("级", re.compile(r"级=(\S+)"), lambda g: g if g in ("A", "B", "C") else None),
     ("evt", re.compile(r"evt=([A-Za-z0-9_\-]+)"), lambda g: g),
+    ("attempt_id", re.compile(r"attempt_id=([A-Za-z0-9_\-]+)"), lambda g: g),
 )
 # 空区占位标记：薄弱点/错题本/归档区无内容时按文档写「无」，解析器须跳过，不得当作坏数据
 # 整行「无+括注」形态（如「无（暂无错题）」）同为占位；「无法/无向」等真实知识点开头不受影响
@@ -350,6 +353,7 @@ def parse_meta(meta_text):
     """
     meta = {"S": None, "D": None, "last": None, "due": None, "信心": None,
             "cw": False, "顽固": False, "错因": None, "子类": None, "级": None, "evt": None,
+            "attempt_id": None,
             "invalid_tokens": [], "dup_keys": [], "信心_retro": False}
     tokens = [t for t in re.split(r"[，,;；\s]+", meta_text or "") if t]
     seen = set()
@@ -398,13 +402,36 @@ def parse_meta(meta_text):
     return meta
 
 
+def _looks_like_meta(candidate):
+    """括注是否为元数据段：逐 token（分词口径同 parse_meta）判定——
+
+    「键=」形态的键必须 ∈ META_KEYS，cw/顽固 须为独立 token；出现任何
+    非元数据词（如「抄自 cw 笔记」的「抄自」）即判普通括注，不拆。
+    """
+    toks = [t for t in re.split(r"[，,;；\s]+", candidate) if t]
+    if not toks:
+        return False
+    for tok in toks:
+        if tok in ("cw", "顽固"):
+            continue
+        key = tok.split("=", 1)[0] if "=" in tok else None
+        if key is not None and (key + "=") in META_KEYS:
+            continue
+        return False
+    return True
+
+
 def split_weak_item(line):
-    """薄弱点行：尾部全角/半角括号内含调度元数据时拆出（推荐全角，半角兜底），否则整行是条目文本。"""
+    """薄弱点行：尾部全角/半角括注为元数据段时拆出（推荐全角，半角兜底），否则整行是条目文本。
+
+    拆分判定用 _looks_like_meta（v2.6）：整段括注逐 token 均为元数据形态才拆，
+    纯子串命中不再触发；混合散文与元数据的括注不拆（元数据留在条目名，不静默拆碎）。
+    """
     for close_ch, open_ch in (("）", "（"), (")", "(")):
         if line.endswith(close_ch) and open_ch in line:
             idx = line.rfind(open_ch)
             candidate = line[idx + 1:-1]
-            if any(k in candidate for k in META_KEYS):
+            if _looks_like_meta(candidate):
                 return line[:idx].strip(), candidate
     return line, None
 
@@ -1452,6 +1479,17 @@ def selftest():
     ok = ok and m21b["invalid_tokens"] == []
     m21c = parse_meta("S=3，S=4，D=3")                             # 重复键 → 标坏
     ok = ok and m21c["invalid_tokens"] and m21c["S"] == 3.0
+    # 断言 21d（v2.6）：META_KEYS 与 META_TOKEN_RES 对齐——attempt_id= 有解析器不再告警；
+    # 错因=/级= 括注拆出；纯子串括注不误拆；坏值括注仍拆出走 W-META-INVALID 路径。
+    m21d = parse_meta("S=3，attempt_id=A-9，evt=E1")
+    ok = ok and m21d["attempt_id"] == "A-9" and m21d["evt"] == "E1"
+    ok = ok and m21d["invalid_tokens"] == []
+    w21e_name, w21e_meta = split_weak_item("极限定义（错因=理解性，级=A）")
+    ok = ok and w21e_name == "极限定义" and w21e_meta == "错因=理解性，级=A"
+    w21f_name, w21f_meta = split_weak_item("点（抄自 cw 笔记）")
+    ok = ok and w21f_name == "点（抄自 cw 笔记）" and w21f_meta is None
+    w21g_name, w21g_meta = split_weak_item("坏S点（S=3oops）")
+    ok = ok and w21g_name == "坏S点" and w21g_meta == "S=3oops"
 
     # 断言 22：校准「先形成合法观察再统计」——无日期条目不再误计且与告警一致；
     # 孤立/低信心 cw 不再越过闸口；互补投影合并、冲突投影作废。

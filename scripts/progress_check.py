@@ -343,7 +343,15 @@ def parse_attempts(text):
     """
     attempts, incomplete = [], 0
     invalid_result = []   # 写了 正确性=/档位= 但取值非法的行（放行模式报 E-ENUM-GRADE）
+    # v9.11.4：剔除 ``` 围栏内行——代码块中的示例/文档化判分行不是真实证据
+    #（口径对齐 verify_explanation.compute_visible 的围栏感知）。
+    in_fence = False
     for ln in evidence_section(text).splitlines():
+        if ln.lstrip().startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
         s = ln.strip()
         if not s.startswith("- "):
             continue
@@ -427,8 +435,8 @@ def parse_target_ratio(ev_text):
     if not m:
         return None
     num, den = float(m.group(1)), float(m.group(2))
-    if den <= 0 or num < 0 or num > den:
-        return None
+    if den <= 0 or num < 0 or num > den or num == 0:
+        return None   # v9.11.4：a=0 视为非法（0 分目标线可架空阈值门），声明存在即 E-FINAL-INVALID-TARGET
     return num / den, "目标线 " + m.group(1) + "/" + m.group(2)
 
 
@@ -892,9 +900,10 @@ def check(task_dir, release=False, proposed=None):
     ratio_field = (fields.get("节目标线") or "").strip()
     if ratio_field:
         m = re.fullmatch(r"(\d+)\s*/\s*(\d+)", ratio_field)
-        if not m or int(m.group(2)) <= 0 or int(m.group(1)) > int(m.group(2)):
+        if (not m or int(m.group(2)) <= 0 or int(m.group(1)) > int(m.group(2))
+                or int(m.group(1)) == 0):
             errors.append({"code": "E-GATE-RATIO-INVALID",
-                           "message": "「节目标线」非法（须为 0 ≤ a ≤ b 且 b > 0）：" + ratio_field})
+                           "message": "「节目标线」非法（须为 1 ≤ a ≤ b 且 b > 0；a=0 视为非法）：" + ratio_field})
         else:
             gate_ratio = int(m.group(1)) / int(m.group(2))
             gate_label = "节目标线 " + ratio_field
@@ -1777,6 +1786,11 @@ def selftest():
         (d_ratio_ok / "progress.md").write_text(GOOD.replace("- 复习来源阶段：无\n", "- 复习来源阶段：无\n- 节目标线：3/4\n"), encoding="utf-8")
         r_ratio_ok = check(d_ratio_ok)
         ok = ok and not any(e["code"] == "E-GATE-RATIO-INVALID" for e in r_ratio_ok["errors"])
+        d_ratio_zero = Path(td) / "ratio-zero"
+        d_ratio_zero.mkdir()
+        (d_ratio_zero / "progress.md").write_text(GOOD.replace("- 复习来源阶段：无\n", "- 复习来源阶段：无\n- 节目标线：0/5\n"), encoding="utf-8")
+        r_ratio_zero = check(d_ratio_zero)
+        ok = ok and any(e["code"] == "E-GATE-RATIO-INVALID" for e in r_ratio_zero["errors"])
         # ① 规范态：小写 [x] + 判分记录 → 通过
         d = Path(td) / "good"
         (d / "exercises").mkdir(parents=True)
@@ -2298,7 +2312,7 @@ def selftest():
                          _final_ev(7, 10) + "\n目标线：7/10\n"})
         r40d = check(d40d, release=True)
         ok = ok and r40d["ok"]
-        for index, target in enumerate(("2/0", "abc", "-1/2")):
+        for index, target in enumerate(("2/0", "abc", "-1/2", "0/5")):
             d40_invalid = _mk2(
                 "r01-done-invalid-target-" + str(index),
                 DONE_HEAD + "## 学习路线\n- [x] 1. 变量\n",
@@ -2485,6 +2499,17 @@ def selftest():
         ev_en = parse_attempts(EV_ENGLISH)
         ok = ok and [a["result"] for a in ev_en["attempts"]] == [None, None]
         ok = ok and ev_en["invalid_result"] == ["correct", "partial"]
+
+        # v9.11.4：围栏内示例行不计入判分证据（围栏感知口径对齐 verify_explanation）
+        EV_FENCED = (
+            "## 作答与判分\n"
+            "- 题1：作答「3」｜正确性=对｜独立性=独立｜调度档=Good\n"
+            "```\n"
+            "- 题2：作答「4」｜正确性=对｜独立性=独立｜调度档=Good\n"
+            "```\n" + RESTATE)
+        ev_fence = parse_attempts(EV_FENCED)
+        ok = ok and len(ev_fence["attempts"]) == 1
+        ok = ok and ev_fence["attempts"][0]["result"] == "correct"
 
         EV_VOID_CORRECTED = (
             "## 作答与判分\n"

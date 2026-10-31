@@ -1,6 +1,6 @@
 # 学科层总则：三轴、判档与深度标尺
 
-<!-- owns: 三轴分层与取用顺序、学科→学科群判定表、学科包准入判据、跨群裁决、掌握深度标尺（SOLO/DOK/Bloom）、误区库消费纪律、类比优先级、视觉任务来源、对照源指针、应试技巧包；must-not-define: 六拍与教学序列（teaching/lesson-flow.md）、内容类型处方（teaching/content-types.md）、判分四态与闸口（assessment/scoring.md）、出题流水线（assessment/generation.md）、数据字段（data/） -->
+<!-- owns: 三轴分层与取用顺序、学科→学科群判定表、学科包准入判据、跨群裁决、掌握深度标尺（SOLO/DOK/Bloom）、误区库消费纪律、视觉任务来源、对照源指针、应试技巧包；must-not-define: 六拍与教学序列（teaching/lesson-flow.md）、内容类型处方（teaching/content-types.md）、判分四态与闸口（assessment/scoring.md）、出题流水线（assessment/generation.md）、数据字段（data/） -->
 
 ## 三轴与取用顺序
 
@@ -42,7 +42,7 @@
 
 ## 类比与视觉
 
-类比优先级：画像①层「类比领域」＞ 群默认类比。锚点必须确证已会，讲清「哪里像、哪里不像」，不拿类比替代定义。视觉任务只用原始图／表并记录页码、图号或数据位置；替代禁令与证据资格见 `assessment/scoring.md`「视觉任务证据」。
+类比优先级、锚点确证与「不拿类比替代定义」的唯一事实源见 `teaching/explanation-craft.md`「类比纪律」。视觉任务只用原始图／表并记录页码、图号或数据位置；替代禁令与证据资格见 `assessment/scoring.md`「视觉任务证据」。
 
 ## 对照源
 
