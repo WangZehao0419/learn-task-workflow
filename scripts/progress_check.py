@@ -19,7 +19,8 @@
      W-KP-SUMMARY-MISMATCH（覆盖摘要行计数与逐行实际不符；rows 空但摘要行有值照常核对）、
      W-KP-LIST-MISSING（指针存在但文件不存在或不可读）、
      W-KP-HOLD-CROSS（清单摘要暂缓数 ≠ 暂缓区块可比条目数（处置为暂缓的条目）/ 清单排除数 ≠ 处置为排除的条目数；
-     「滚雪球候选」等设计性范围外条目与排除条目均不计入暂缓比对基数）。
+     「滚雪球候选」等设计性范围外条目与排除条目均不计入暂缓比对基数）、
+     W-CURRENT-SECTION（「当前节」与学习路线勾选/阶段不一致；仅提示）。
 
 用法：
     python progress_check.py <任务目录>              # 日常校验（warning 仅提示，不拦截）
@@ -762,6 +763,31 @@ def parse_routes(text):
     return lessons, unparsed_routes
 
 
+def current_section_warning(fields, lessons, phase):
+    """校验「当前节」与学习路线勾选/阶段一致；仅 warning，不阻断。"""
+    if phase not in ("逐节学习", "结课", "已完成"):
+        return None
+    raw = (fields.get("当前节") or "").strip()
+    if not re.fullmatch(r"\d+", raw) or not lessons:
+        return None
+    current = int(raw)
+    nums = sorted(n for n, _done, _label in lessons)
+    if current not in nums and current != nums[-1] + 1:
+        return "「当前节」=" + str(current) + " 不在学习路线节号 " + str(nums) + " 中"
+    if phase in ("结课", "已完成"):
+        if current not in (nums[-1], nums[-1] + 1):
+            return "阶段「" + phase + "」时「当前节」应为末节序号 " + str(nums[-1])
+        return None
+    done = {n for n, is_done, _label in lessons if is_done}
+    earlier_undone = [n for n, is_done, _label in lessons if not is_done and n < current]
+    if earlier_undone:
+        return "「当前节」=" + str(current) + " 之前的节仍未勾选已掌握：" + str(earlier_undone)
+    later = [n for n in nums if n > current]
+    if current in done and later:
+        return "节 " + str(current) + " 已勾选已掌握，但「当前节」仍为 " + str(current) + "（应递增到下一节）"
+    return None
+
+
 def parse_log(text):
     """从记忆.md「学习日志」区提取条目行（审计记录检索用）。"""
     log_lines = []
@@ -908,6 +934,9 @@ def check(task_dir, release=False, proposed=None):
             errors.append({"code": "E-MISSING-FIELD", "message": "缺少必填字段 '" + key + "'"})
 
     phase = fields.get("当前阶段", "")
+    cs_warning = current_section_warning(fields, lessons, phase)
+    if cs_warning:
+        warnings.append({"code": "W-CURRENT-SECTION", "message": cs_warning})
     # 「起点」由 S1 产出：S0（接料建档）与 S1（诊断摸底，进行中）不要求；
     # 诊断结束进入 S2 起（计划确认中/逐节学习/复习巩固/结课/已完成）必填。
     # 旧规则「离开 S0 即必填」会把 S1 进行中误判为缺字段。
@@ -2585,6 +2614,15 @@ def selftest():
                                 "exercises/01-变量-2026-01-01.md": EV_OK}), release=True)
         ok = ok and any(w["code"] == "W-MATERIAL-COVERAGE-GAP" and "数学（下册）" in w["message"]
                         for w in r_cprefix["warnings"])
+
+        _lessons_cs = [(1, True, "A"), (2, False, "B")]
+        ok = ok and current_section_warning({"当前节": "2"}, _lessons_cs, "逐节学习") is None
+        ok = ok and current_section_warning({"当前节": "1"}, _lessons_cs, "逐节学习") is not None
+        ok = ok and current_section_warning({"当前节": "2"}, _lessons_cs, "已完成") is None
+        ok = ok and current_section_warning({"当前节": "1"}, _lessons_cs, "已完成") is not None
+        ok = ok and current_section_warning({"当前节": "全部"}, _lessons_cs, "逐节学习") is None
+        ok = ok and current_section_warning({"当前节": "2"}, [(1, True, "A")], "逐节学习") is None
+        ok = ok and current_section_warning({"当前节": "3"}, [(1, True, "A")], "逐节学习") is not None
 
         for args in (["x", "--changed-lessons", "0"],
                      ["x", "--changed-lessons", ""],

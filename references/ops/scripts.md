@@ -80,6 +80,7 @@
 | progress_check | `W-NO-ROUTE` / `W-UNPARSED-ROUTE` / `W-NO-COVERAGE` / `W-NO-COVERAGE-AUDIT` | 无路线 / 路线畸形 / 无覆盖 / 缺审计 |
 | progress_check / task_index | `W-UNPARSED-HOLD` / `W-MULTI-EVIDENCE` / `W-CURSOR-DANGLING` / `W-NO-PROPOSED-STATE` | 暂缓条目畸形 / 多份证据 / 游标悬空 / 未提供拟提交状态 |
 | progress_check | `W-KP` / `W-KP-LIST-MISSING` / `W-KP-SUMMARY-MISMATCH` / `W-KP-HOLD-CROSS` / `W-KP-STATE-MISMATCH` | 课程体系缺失 / 覆盖摘要不符 / 双写不交 / 状态不符 |
+| progress_check | `W-CURRENT-SECTION` | `当前节` 与学习路线勾选/阶段不一致（节末未递增、跳节或未写末节序号） |
 | progress_check | `W-UNPARSED-KP` / `W-UNPARSED-MODULE` / `W-UNPARSED-MATERIAL` / `W-MODULE` / `W-MODULE-CONTRACT-INCOMPLETE` / `W-MATERIAL-COVERAGE-GAP` | 课程体系目行 / 章规划行 / 材料条目畸形，或章规划与材料覆盖契约不完整 |
 | progress_check | `W-STALE-REVIEW-ORIGIN` | 复习来源阶段指向已失效的阶段值 |
 | scheduler | `W-PROGRESS` / `W-PROGRESS-MISSING` / `W-PROGRESS-UNREADABLE` / `W-CONFIDENCE-AMBIGUOUS` / `W-CW-LOWCONF` / `W-CW-ORPHAN` / `W-META-INVALID` / `W-NO-EVT` | 任务进度缺失/不可读；信心/时序歧义、低信心 cw、孤立 cw、元数据非法；校准不计或跳过；条目缺 `evt=` 按单条观察计入 |
@@ -146,6 +147,6 @@ python -B evals/verify-readability.py
 
 ## 当前核验
 
-- 适用版本：9.11.1
+- 适用版本：9.11.2
 - 核验日期：2026-10-31
 - 环境依赖：`skill-dependencies.json`（Python `min_version`）；只有 `check_environment.py` 输出 `ready` 才能继续。
