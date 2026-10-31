@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/2",
- "version": "9.11.0",
+ "version": "9.11.1",
  "files": [
   {
    "id": "triggers",
