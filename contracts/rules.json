@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/2",
- "version": "9.11.6",
+ "version": "9.11.7",
  "retired_rule_ids": [
   "T02",
   "T07",
@@ -947,6 +947,38 @@
     "curriculum"
    ],
    "kind": "rule"
+  },
+  {
+   "id": "error-codes",
+   "path": "references/ops/error-codes.md",
+   "layer": 1,
+   "owns": "错误码速查表（E/W 码人读触发条件速查）",
+   "depends_on": [],
+   "kind": "rule"
+  },
+  {
+   "id": "exercise-files",
+   "path": "references/assessment/exercise-files.md",
+   "layer": 1,
+   "owns": "exercises/ 文件结构与字段（题组/关键能力/作答与判分/复述/参考答案区块）、组卷答案区块",
+   "depends_on": [],
+   "kind": "rule"
+  },
+  {
+   "id": "presentation-examples",
+   "path": "references/teaching/presentation-examples.md",
+   "layer": 1,
+   "owns": "版式样例参照（讲授/步骤示范/反馈/路线四组完整示意）",
+   "depends_on": [],
+   "kind": "rule"
+  },
+  {
+   "id": "style-examples",
+   "path": "references/handout/style-examples.md",
+   "layer": 1,
+   "owns": "标准讲义成品范例参照（对照格式与密度，非讲义内容）",
+   "depends_on": [],
+   "kind": "rule"
   }
  ],
  "rules": [
@@ -1072,7 +1104,8 @@
    "owner": "references/handout/pipeline.md#1. 一页合同（目标态，11 条）",
    "type": "definition",
    "scenes": [
-    "s3-handout"
+    "s3-handout",
+    "s3-handout-revise"
    ],
    "intent": "local"
   },
@@ -1123,7 +1156,8 @@
    "scenes": [
     "persist",
     "s3-handout",
-    "s3-exercise"
+    "s3-exercise",
+    "s3-handout-revise"
    ],
    "intent": "local"
   },
@@ -1191,7 +1225,8 @@
    "owner": "references/handout/styles.md#风格切换映射",
    "type": "definition",
    "scenes": [
-    "s3-deep"
+    "s3-deep",
+    "s3-handout-revise"
    ],
    "intent": "I-STYLE-RETEACH"
   },
@@ -1237,12 +1272,10 @@
   },
   {
    "id": "R29",
-   "owner": "references/ops/scripts.md#错误码速查",
+   "owner": "references/ops/error-codes.md#错误码速查",
    "type": "schema",
    "scenes": [
-    "persist",
-    "s3-handout",
-    "s3-exercise"
+    "failure"
    ],
    "intent": "local"
   },
@@ -1251,7 +1284,8 @@
    "owner": "references/handout/pipeline.md#2.11 定稿硬项",
    "type": "definition",
    "scenes": [
-    "s3-handout"
+    "s3-handout",
+    "s3-handout-revise"
    ],
    "intent": "local"
   },
@@ -1260,7 +1294,8 @@
    "owner": "references/handout/pipeline.md#0.1 风格选择",
    "type": "definition",
    "scenes": [
-    "s3-handout"
+    "s3-handout",
+    "s3-handout-revise"
    ],
    "intent": "I-STYLE-DEFINITION"
   },
@@ -1525,7 +1560,8 @@
    "owner": "references/workflow/s3-block.md#分块呈现（R41）",
    "type": "definition",
    "scenes": [
-    "s3-handout"
+    "s3-handout",
+    "s3-handout-revise"
    ],
    "intent": "I-R41-BLOCK"
   },
@@ -2038,7 +2074,9 @@
    "chars_max": 34000,
    "supplement_files_max": 4,
    "supplement_chars_max": 20000,
-   "supplements_per_scene_max": 4
+   "supplements_per_scene_max": 4,
+   "round_chars_max": 137800,
+   "stack_sum_chars_max": 46000
   },
   "group_slugs": {
    "数学与统计": "math",
@@ -2215,6 +2253,12 @@
      "section": "due-queue 与复习预算",
      "when": "进入新节先查 due-queue / 讲授轮前置检查",
      "intent": "I-DUE-QUEUE@global"
+    },
+    {
+     "file": "references/teaching/presentation-examples.md",
+     "section": "版式样例（示意）",
+     "when": "首次定版式/版式拿不准时",
+     "intent": "I-PRESENTATION-EXAMPLES@content"
     }
    ]
   },
@@ -2229,6 +2273,7 @@
     "references/ops/typography.md",
     "references/assessment/scheduling.md"
    ],
+   "chars_max": 25400,
    "stack": [
     {
      "scene": "formulas",
@@ -2259,10 +2304,16 @@
      "intent": "I-SELF-TEST-VS-GROUP@handout"
     },
     {
-     "file": "references/data/layout.md",
+     "file": "references/assessment/exercise-files.md",
      "section": "题组与判分文件（exercises/）",
      "when": "写判分落盘 attempt 字段",
      "intent": "I-EXERCISE-SCHEMA@global"
+    },
+    {
+     "file": "references/teaching/presentation-examples.md",
+     "section": "版式样例（示意）",
+     "when": "首次定版式/版式拿不准时",
+     "intent": "I-PRESENTATION-EXAMPLES@content"
     }
    ]
   },
@@ -2293,8 +2344,8 @@
    "supplements": []
   },
   "s3-handout": {
-   "label": "S3 讲义生成",
-   "chars_max": 74000,
+   "label": "S3 讲义生成（新建/整册重写）",
+   "chars_max": 68100,
    "files": [
     "references/workflow/s3-block.md",
     "references/teaching/explain-quality.md",
@@ -2365,6 +2416,90 @@
      "section": "题量预算与自测≠题组",
      "when": "写自测/题组题量预算时",
      "intent": "I-SELF-TEST-VS-GROUP@handout"
+    },
+    {
+     "file": "references/handout/style-examples.md",
+     "section": "标准讲义成品范例",
+     "when": "撰写标准讲义需对照成品格式时",
+     "intent": "I-STYLE-EXAMPLES@content"
+    }
+   ]
+  },
+  "s3-handout-revise": {
+   "label": "S3 讲义修订（回填错因/换风格/二次定稿/呈现定版）",
+   "files": [
+    "references/workflow/s3-block.md",
+    "references/handout/pipeline.md",
+    "references/handout/templates.md",
+    "references/handout/support-levels.md",
+    "references/handout/styles.md",
+    "references/handout/unit-schema.md",
+    "references/handout/quality.md",
+    "references/handout/typography.md",
+    "references/handout/self-check.md",
+    "references/ops/typography.md",
+    "references/ops/scripts.md",
+    "references/subjects/{group}-practice.md"
+   ],
+   "chars_max": 60800,
+   "stack": [
+    {
+     "scene": "formulas",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "evidence",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "failure",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "composition",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "discipline",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "handout-export",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "handout-enhance",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "literature",
+     "when": "按能力触发"
+    }
+   ],
+   "supplements": [
+    {
+     "file": "references/teaching/explanation-depth.md",
+     "section": "深度分层",
+     "when": "修订需调整深度分配或深讲单元",
+     "intent": "I-DEPTH@global"
+    },
+    {
+     "file": "references/assessment/generation.md",
+     "section": "出题范围与未讲授过滤（R35）",
+     "when": "回填变体需核对出题域",
+     "intent": "I-UNTAUGHT-FILTER@global"
+    },
+    {
+     "file": "references/assessment/generation.md",
+     "section": "题量预算与自测≠题组",
+     "when": "回填变体或复核题量预算",
+     "intent": "I-SELF-TEST-VS-GROUP@handout"
+    },
+    {
+     "file": "references/handout/style-examples.md",
+     "section": "标准讲义成品范例",
+     "when": "换风格改稿需对照成品格式",
+     "intent": "I-STYLE-EXAMPLES@content"
     }
    ]
   },
@@ -2380,7 +2515,7 @@
     "references/subjects/{group}-practice.md",
     "references/ops/scripts.md"
    ],
-   "chars_max": 39000,
+   "chars_max": 31600,
    "stack": [
     {
      "scene": "formulas",
@@ -2411,7 +2546,7 @@
      "intent": "I-FEEDBACK@global"
     },
     {
-     "file": "references/data/layout.md",
+     "file": "references/assessment/exercise-files.md",
      "section": "题组与判分文件（exercises/）",
      "when": "写题组/判分文件",
      "intent": "I-EXERCISE-SCHEMA@global"
@@ -2419,18 +2554,15 @@
    ]
   },
   "s3-deep": {
-   "label": "深讲概念 / 换风格重讲 / 呈现定版",
+   "label": "深讲概念 / 换风格重讲",
    "files": [
     "references/teaching/presentation.md",
-    "references/handout/templates.md",
-    "references/handout/typography.md",
     "references/ops/typography.md",
     "references/handout/styles.md",
-    "references/handout/unit-schema.md",
     "references/teaching/explanation-depth.md",
     "references/teaching/explanation-density.md"
    ],
-   "chars_max": 42500,
+   "chars_max": 19600,
    "stack": [
     {
      "scene": "formulas",
@@ -2471,6 +2603,12 @@
      "section": "8. 读者路径与导航（P1）",
      "when": "读者版重排时",
      "intent": "I-READER-PATH@handout"
+    },
+    {
+     "file": "references/handout/style-examples.md",
+     "section": "标准讲义成品范例",
+     "when": "换风格重讲需对照成品格式时",
+     "intent": "I-STYLE-EXAMPLES@content"
     }
    ]
   },
@@ -2575,7 +2713,7 @@
     "references/ops/scripts.md",
     "references/data/memory.md"
    ],
-   "chars_max": 30800,
+   "chars_max": 23700,
    "stack": [
     {
      "scene": "failure",
@@ -2587,7 +2725,8 @@
    "label": "任何失败 / 环境阻断",
    "files": [
     "references/ops/failure.md",
-    "references/ops/environment.md"
+    "references/ops/environment.md",
+    "references/ops/error-codes.md"
    ]
   },
   "formulas": {
@@ -2679,7 +2818,8 @@
    "scenes": [
     "s3-teach",
     "s3-handout",
-    "s3-deep"
+    "s3-deep",
+    "s3-handout-revise"
    ],
    "cluster": null,
    "rule_ids": []
@@ -2704,7 +2844,8 @@
    "scenes": [
     "s3-teach",
     "s3-handout",
-    "s3-deep"
+    "s3-deep",
+    "s3-handout-revise"
    ],
    "cluster": null,
    "rule_ids": []
@@ -2922,7 +3063,8 @@
    ],
    "scenes": [
     "s3-handout",
-    "s5-close"
+    "s5-close",
+    "s3-handout-revise"
    ],
    "cluster": "answer-box",
    "rule_ids": []
@@ -2941,7 +3083,7 @@
    ],
    "scenes": [
     "s3-handout",
-    "s3-deep"
+    "s3-handout-revise"
    ],
    "cluster": "answer-box",
    "rule_ids": []
@@ -2976,7 +3118,8 @@
    "scenes": [
     "s3-handout",
     "s3-deep",
-    "handout-enhance"
+    "handout-enhance",
+    "s3-handout-revise"
    ],
    "cluster": null,
    "rule_ids": []
@@ -3000,7 +3143,8 @@
    ],
    "scenes": [
     "s3-handout",
-    "s3-deep"
+    "s3-deep",
+    "s3-handout-revise"
    ],
    "cluster": null,
    "rule_ids": [
@@ -3020,7 +3164,8 @@
     }
    ],
    "scenes": [
-    "s3-deep"
+    "s3-deep",
+    "s3-handout-revise"
    ],
    "cluster": null,
    "rule_ids": [
@@ -3040,7 +3185,8 @@
     }
    ],
    "scenes": [
-    "s3-handout"
+    "s3-handout",
+    "s3-handout-revise"
    ],
    "cluster": null,
    "rule_ids": [
@@ -3302,7 +3448,7 @@
     },
     {
      "path": "references/data/layout.md",
-     "anchor": "题组与判分文件（exercises/）",
+     "anchor": "结课综合测验目标线（99-）",
      "role": "field"
     },
     {
@@ -3531,7 +3677,7 @@
    "id": "I-EXERCISE-SCHEMA",
    "scope": "global",
    "cluster": null,
-   "owner": "references/data/layout.md#题组与判分文件（exercises/）",
+   "owner": "references/assessment/exercise-files.md#题组与判分文件（exercises/）",
    "marker": "intent:I-EXERCISE-SCHEMA@global",
    "consumers": [
     {
@@ -3570,7 +3716,8 @@
     }
    ],
    "scenes": [
-    "s3-handout"
+    "s3-handout",
+    "s3-handout-revise"
    ],
    "rule_ids": []
   },
@@ -3797,6 +3944,44 @@
    ],
    "scenes": [
     "s3-close"
+   ],
+   "rule_ids": []
+  },
+  {
+   "id": "I-PRESENTATION-EXAMPLES",
+   "scope": "content",
+   "cluster": null,
+   "owner": "references/teaching/presentation-examples.md#版式样例（示意）",
+   "marker": "intent:I-PRESENTATION-EXAMPLES@content",
+   "consumers": [
+    {
+     "path": "references/teaching/presentation.md",
+     "anchor": "讲授轮版式：对话轮呈现标记（软默认，所有风格共用）",
+     "role": "application"
+    }
+   ],
+   "scenes": [
+    "s3-teach",
+    "s3-grade"
+   ],
+   "rule_ids": []
+  },
+  {
+   "id": "I-STYLE-EXAMPLES",
+   "scope": "content",
+   "cluster": null,
+   "owner": "references/handout/style-examples.md#标准讲义成品范例",
+   "marker": "intent:I-STYLE-EXAMPLES@content",
+   "consumers": [
+    {
+     "path": "references/handout/styles.md",
+     "anchor": "标准讲义（默认）",
+     "role": "application"
+    }
+   ],
+   "scenes": [
+    "s3-handout",
+    "s3-deep"
    ],
    "rule_ids": []
   }

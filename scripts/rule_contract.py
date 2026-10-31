@@ -7,7 +7,7 @@
 --topology 检查：references 无加载指令、owns/must-not-define 职责头、
 R/T/F 规则 owner 锚点可解析、依赖无环、
 版本四方一致（SKILL.md / rules.json / skill-dependencies.json / evals.json）、
-全仓 E-/W- 错误码 ⊆ 契约 errors、operations.md 速查表与 errors 双向覆盖、
+全仓 E-/W- 错误码 ⊆ 契约 errors、error-codes.md 速查表与 errors 双向覆盖、
 handout.md canonical 集合与 headings.lead_words 双写一致。
 """
 from __future__ import annotations
@@ -339,17 +339,17 @@ def check_error_codes(declared: set, root: Path) -> tuple[set, list]:
 
 
 def check_mirror(declared: set, ops_text: str) -> list:
-    """operations.md 错误码速查表与契约 errors 双向覆盖。
+    """error-codes.md 错误码速查表与契约 errors 双向覆盖。
 
     逐字覆盖为常规要求；家族根码（如 E-BOX，仅作前缀匹配用、脚本从不逐字
-    发出）可由operations.md 中其任一子码覆盖。
+    发出）可由error-codes.md 中其任一子码覆盖。
     """
     ops_codes = set(ERROR_CODE_RE.findall(ops_text))
-    issues = ["E-TOPOLOGY-MIRROR: operations.md 含未声明码 %s" % c
+    issues = ["E-TOPOLOGY-MIRROR: error-codes.md 含未声明码 %s" % c
               for c in sorted(ops_codes - declared)]
     for c in sorted(declared - ops_codes):
         if not any(o.startswith(c + "-") for o in ops_codes):
-            issues.append("E-TOPOLOGY-MIRROR: operations.md 缺码 %s 条目" % c)
+            issues.append("E-TOPOLOGY-MIRROR: error-codes.md 缺码 %s 条目" % c)
     return issues
 
 
@@ -426,9 +426,13 @@ def check_scenes(data: dict, root: Path) -> tuple[list, dict]:
     covered = set()
     for files in expanded.values():
         covered |= files
+    # 补读目标也算可达（v9.11.7）：样例/参照类文件允许纯补读挂载，不强制进 core。
+    # 可达性仍受三重约束兜底：每场景补读文件数上限、补读小节必须存在、指针闭合。
+    covered |= {x.get("file") for sc in data["scenes"].values()
+                for x in sc.get("supplements", []) if x.get("file")}
     for f in data["files"]:
         if f["path"] not in covered:
-            issues.append("E-TOPOLOGY-SCENES: 文件未属于任何场景 %s" % f["path"])
+            issues.append("E-TOPOLOGY-SCENES: 文件未属于任何场景（core 或补读可达） %s" % f["path"])
     for r in data["rules"]:
         scs = r.get("scenes") or []
         if not scs:
@@ -697,12 +701,12 @@ def topology(path: Path | None = None) -> dict:
     used, code_issues = check_error_codes(declared, root)
     issues += code_issues
 
-    # 8. operations.md 速查表双向覆盖
-    ops_path = root / "references" / "ops" / "scripts.md"
-    if ops_path.exists():
-        issues += check_mirror(declared, ops_path.read_text(encoding="utf-8", errors="replace"))
+    # 8. 错误码速查表双向覆盖（v9.11.7 起速查表正本在 ops/error-codes.md）
+    mirror_path = root / "references" / "ops" / "error-codes.md"
+    if mirror_path.exists():
+        issues += check_mirror(declared, mirror_path.read_text(encoding="utf-8", errors="replace"))
     else:
-        issues.append("E-TOPOLOGY-MIRROR: ops/scripts.md 不存在")
+        issues.append("E-TOPOLOGY-MIRROR: ops/error-codes.md 不存在")
 
     # 9. lead_words 双写一致
     handout_path = root / "references" / "ops" / "typography.md"

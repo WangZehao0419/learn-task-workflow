@@ -3,7 +3,10 @@
 """加载场景预算验收（只读、零网络、幂等）。
 
 对 contracts/rules.json 的 scenes 逐场景计算「展开后文件字符总量」与文件数，
-对照 constants.scenes_budget（files_max/chars_max）与场景级 chars_max 覆盖项。
+对照 constants.scenes_budget（files_max/chars_max）与场景级 chars_max 覆盖项；
+并计算轮级最坏加载（常驻 SKILL.md+triggers + 主场景 core + persist core
++ 补读全文件 + 单个最大叠加场景 core）与同轮叠加总和（stack_sum），
+对照 round_chars_max / stack_sum_chars_max（契约缺省键则跳过该项检查）。
 超预算 → E-LOAD-BUDGET，exit 1。
 """
 import argparse
@@ -123,6 +126,30 @@ def pointer_stats(root: Path, data: dict) -> list:
     return rows
 
 
+def round_stats(root: Path, data: dict) -> list:
+    """轮级最坏加载（v9.11.7）：常驻（SKILL.md + routing/triggers.md）
+    + 主场景 core + persist core + 补读全文件 + 单个最大叠加场景 core；
+    stack_sum = 同轮全部叠加场景 core 之和。entry 的 core 即 triggers.md，
+    已计入常驻，不重复计；persist 自身轮不重复计 persist。"""
+    base = _size(root / "SKILL.md") + _size(root / "references" / "routing" / "triggers.md")
+    persist_files = data["scenes"].get("persist", {}).get("files", [])
+    persist_chars = _chars(root, persist_files, data) if persist_files else 0
+    rows = []
+    for sid, sc in data["scenes"].items():
+        supp_files = sorted({x.get("file") for x in sc.get("supplements", []) if x.get("file")})
+        supp_chars = sum(_size(root / f) for f in supp_files)
+        stack = [x.get("scene") for x in sc.get("stack", []) if x.get("scene") in data["scenes"]]
+        stack_chars = [_chars(root, data["scenes"][s]["files"], data) for s in stack]
+        main = 0 if sid == "entry" else _chars(root, sc["files"], data)
+        pers = 0 if sid == "persist" else persist_chars
+        rows.append({
+            "scene": sid,
+            "round_chars": base + main + pers + supp_chars + (max(stack_chars) if stack_chars else 0),
+            "stack_sum_chars": sum(stack_chars),
+        })
+    return rows
+
+
 def _selftest() -> int:
     import tempfile
     failures = []
@@ -168,6 +195,46 @@ def _selftest() -> int:
 
     chk("missing file detected", missing_file)
 
+    def round_over_budget():
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "a.md").write_text("x" * 100, encoding="utf-8")
+            data = {
+                "constants": {
+                    "scenes_budget": {"files_max": 17, "chars_max": 1000},
+                    "group_slugs": {},
+                    "discipline_slugs": [],
+                },
+                "scenes": {"s": {"files": ["a.md"]}},
+            }
+            rows = round_stats(root, data)
+            assert rows[0]["round_chars"] == 100, rows
+            assert rows[0]["round_chars"] > 50, rows  # 50 作假想 round_chars_max
+
+    chk("round budget detected", round_over_budget)
+
+    def stack_sum_detected():
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "a.md").write_text("x" * 40, encoding="utf-8")
+            (root / "b.md").write_text("y" * 40, encoding="utf-8")
+            data = {
+                "constants": {
+                    "scenes_budget": {"files_max": 17, "chars_max": 1000},
+                    "group_slugs": {},
+                    "discipline_slugs": [],
+                },
+                "scenes": {
+                    "base": {"files": ["a.md"], "stack": [{"scene": "extra", "when": "按能力触发"}]},
+                    "extra": {"files": ["b.md"]},
+                },
+            }
+            rows = round_stats(root, data)
+            assert rows[0]["stack_sum_chars"] == 40, rows
+            assert rows[0]["round_chars"] == 80, rows  # 常驻 0 + 主 40 + 叠加最大 40
+
+    chk("stack sum detected", stack_sum_detected)
+
     if failures:
         print("SELFTEST FAILED:", ", ".join(failures))
         return 1
@@ -204,10 +271,23 @@ def main(argv=None) -> int:
                           % (r["scene"], r["chars"], r["chars_max"]))
     pointer_rows = pointer_stats(root, data) if args.pointers else []
     pointer_warnings = [w for r in pointer_rows for w in r["warnings"]]
+    budget = data["constants"]["scenes_budget"]
+    round_max = budget.get("round_chars_max")
+    stack_sum_max = budget.get("stack_sum_chars_max")
+    round_rows = round_stats(root, data)
+    for r in round_rows:
+        if round_max is not None and r["round_chars"] > round_max:
+            issues.append("E-LOAD-BUDGET: 轮级 %s 最坏加载 %d > round_chars_max %s"
+                          % (r["scene"], r["round_chars"], round_max))
+        if stack_sum_max is not None and r["stack_sum_chars"] > stack_sum_max:
+            issues.append("E-LOAD-BUDGET: 场景 %s 叠加总和 %d > stack_sum_chars_max %s"
+                          % (r["scene"], r["stack_sum_chars"], stack_sum_max))
+    round_worst = max(round_rows, key=lambda r: r["round_chars"]) if round_rows else None
     print(json.dumps({
         "ok": not issues,
         "scenes": len(rows),
         "worst": max(rows, key=lambda r: r["chars"])["scene"] if rows else None,
+        "round_worst": round_worst,
         "issues": issues,
         "pointers": pointer_rows,
         "pointer_warnings": pointer_warnings,
@@ -220,6 +300,9 @@ def main(argv=None) -> int:
               % (r["scene"], r["core_chars"], r["supplement_files"], r["supplement_chars"],
                  r["stack_scenes"], r["stack_chars_max"],
                  (" WARN " + "; ".join(r["warnings"])) if r["warnings"] else ""))
+    for r in round_rows:
+        print("  [rnd] %-18s round=%d/%s stack_sum=%d/%s"
+              % (r["scene"], r["round_chars"], round_max, r["stack_sum_chars"], stack_sum_max))
     return 1 if issues else 0
 
 

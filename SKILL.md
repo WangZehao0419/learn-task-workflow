@@ -1,7 +1,7 @@
 ---
 name: learn-task-workflow
 description: 私人家教工作流：把系统学习需求跑成带硬闸口、进度落盘、跨会话可续学的任务流，含间隔重复与掌握后保持复习、判分四态与作废申诉、KP 分型验收与课程体系契约（章/节/目三级规划）、条件化出题四步流水线与讲义生成、错因归因纠偏、按内容类型与学科群分流教学（单节课六拍：先教后练，永不先测未讲内容），新手先看完整示例再做题、新记号当场讲透；支持独立生成学习用讲义/题组/试卷。以「系统学习」意图触发：「我要学X」「教我X」「带我学X」「带我读X」「精读X」「帮我啃X」「从零开始学X」「零基础学X」「备考X」「我要考研/考证」「家教模式」「开始上课」「继续学习」「接着上次继续学」「调整学习计划」「我的学习进度」「学到哪了」「学习简报」「学习周报」「考考我」「给X写讲义」「给X出题」「组一套卷」。不触发：普通知识问答、单题解题求助（如「这道题怎么做」）、代写作业/文章/报告、单纯总结材料（归 summarize）、主题调研写文档（归 research）、课程仓库脚手架（归 scaffold-exercises）、只要学习建议或只要计划文档；「教我X」「帮我复习X」「考考我」等高频词必须指向系统学习意图或已有学习任务，否则先澄清。宿主另有独立教学工作区或正式文档排版能力时，用户显式调用则让位，二者勿同时启动。
-version: 9.11.6
+version: 9.11.7
 author: 王责豪
 agent_created: true
 ---
@@ -91,14 +91,15 @@ agent_created: true
 | `s3-teach` | S3 讲授（六拍） | `references/workflow/s3-block.md` · `references/workflow/s3-cycle.md` · `references/teaching/lesson-flow.md` · `references/teaching/lesson-prep.md` · `references/teaching/interaction.md` · `references/teaching/presentation.md` · `references/teaching/explain-quality.md` · `references/teaching/explanation-depth.md` · `references/teaching/explanation-density.md` · `references/teaching/explanation-craft.md` · `references/teaching/content-types.md` · `references/ops/typography.md` · `references/subjects/{group}-teach.md` |
 | `s3-grade` | S3 批改与热身（步①②⑤） | `references/workflow/s3-block.md` · `references/workflow/s3-cycle.md` · `references/assessment/scoring.md` · `references/teaching/interaction.md` · `references/teaching/interaction-diagnosis.md` · `references/ops/typography.md` · `references/assessment/scheduling.md` |
 | `s3-close` | S3 节末五件套 | `references/workflow/s3-close.md` · `references/assessment/scheduling.md` · `references/data/curriculum.md` · `references/data/progress-schema.md` · `references/data/reconciliation.md` · `references/assessment/scoring.md` |
-| `s3-handout` | S3 讲义生成 | `references/workflow/s3-block.md` · `references/teaching/explain-quality.md` · `references/teaching/explanation-density.md` · `references/teaching/explanation-craft.md` · `references/handout/pipeline.md` · `references/handout/templates.md` · `references/handout/support-levels.md` · `references/handout/styles.md` · `references/handout/unit-schema.md` · `references/handout/quality.md` · `references/handout/typography.md` · `references/handout/figures.md` · `references/handout/self-check.md` · `references/ops/typography.md` · `references/ops/scripts.md` · `references/subjects/{group}-practice.md` |
+| `s3-handout` | S3 讲义生成（新建/整册重写） | `references/workflow/s3-block.md` · `references/teaching/explain-quality.md` · `references/teaching/explanation-density.md` · `references/teaching/explanation-craft.md` · `references/handout/pipeline.md` · `references/handout/templates.md` · `references/handout/support-levels.md` · `references/handout/styles.md` · `references/handout/unit-schema.md` · `references/handout/quality.md` · `references/handout/typography.md` · `references/handout/figures.md` · `references/handout/self-check.md` · `references/ops/typography.md` · `references/ops/scripts.md` · `references/subjects/{group}-practice.md` |
+| `s3-handout-revise` | S3 讲义修订（回填/换风格/二次定稿/呈现定版） | `references/workflow/s3-block.md` · `references/handout/pipeline.md` · `references/handout/templates.md` · `references/handout/support-levels.md` · `references/handout/styles.md` · `references/handout/unit-schema.md` · `references/handout/quality.md` · `references/handout/typography.md` · `references/handout/self-check.md` · `references/ops/typography.md` · `references/ops/scripts.md` · `references/subjects/{group}-practice.md` |
 | `s3-exercise` | S3 题组/判分 | `references/workflow/s3-block.md` · `references/assessment/generation.md` · `references/assessment/scoring.md` · `references/teaching/content-types.md` · `references/ops/typography.md` · `references/subjects/common.md` · `references/subjects/{group}-practice.md` · `references/ops/scripts.md` |
-| `s3-deep` | 深讲概念 / 换风格重讲 / 呈现定版 | `references/teaching/presentation.md` · `references/handout/templates.md` · `references/handout/styles.md` · `references/handout/unit-schema.md` · `references/handout/typography.md` · `references/teaching/explanation-depth.md` · `references/teaching/explanation-density.md` · `references/ops/typography.md` |
+| `s3-deep` | 深讲概念 / 换风格重讲 | `references/teaching/presentation.md` · `references/handout/styles.md` · `references/teaching/explanation-depth.md` · `references/teaching/explanation-density.md` · `references/ops/typography.md` |
 | `s4-review` | S4 复习与清债 | `references/workflow/s4-review.md` · `references/assessment/scheduling.md` · `references/assessment/generation.md` · `references/teaching/interaction.md` · `references/teaching/interaction-diagnosis.md` · `references/ops/typography.md` · `references/data/progress-schema.md` · `references/subjects/common.md` · `references/subjects/{group}-review.md` |
 | `s5-close` | S5 结课 | `references/workflow/coverage-audit.md` · `references/workflow/s5-close.md` · `references/assessment/scoring.md` · `references/assessment/generation.md` · `references/handout/quality.md` · `references/handout/self-check.md` · `references/ops/typography.md` · `references/data/reconciliation.md` · `references/subjects/common.md` |
 | `discipline` | 学科内容包（按学科叠加） | `references/disciplines/{discipline}.md` |
 | `persist` | 任何落盘 / 续学 | `references/data/layout.md` · `references/data/progress-schema.md` · `references/data/curriculum.md` · `references/data/memory.md` · `references/ops/scripts.md` |
-| `failure` | 任何失败 / 环境阻断 | `references/ops/failure.md` · `references/ops/environment.md` |
+| `failure` | 任何失败 / 环境阻断 | `references/ops/failure.md` · `references/ops/environment.md` · `references/ops/error-codes.md` |
 | `formulas` | 公式/符号输出 | `references/ops/formulas.md` · `references/ops/formula-subjects.md` |
 | `evidence` | 溯源核验 | `references/ops/evidence.md` |
 | `composition` | 两个机制如何组合 | `references/ops/composition.md` |
@@ -127,6 +128,7 @@ agent_created: true
 | `s3-grade` | `formulas` · `evidence` · `failure` · `composition` · `discipline` | 同上 |
 | `s3-close` | `evidence` · `failure` · `discipline` | 同上 |
 | `s3-handout` | `formulas` · `evidence` · `failure` · `composition` · `discipline` · `handout-export` · `handout-enhance` · `literature` | 同上 + 导出/读者版 / P1P2 / 文献审计 |
+| `s3-handout-revise` | `formulas` · `evidence` · `failure` · `composition` · `discipline` · `handout-export` · `handout-enhance` · `literature` | 同上 + 导出/读者版 / P1P2 / 文献审计 |
 | `s3-exercise` | `formulas` · `evidence` · `failure` · `composition` · `discipline` | 同上 |
 | `s3-deep` | `formulas` · `evidence` · `failure` · `composition` · `discipline` | 同上 |
 | `s4-review` | `formulas` · `evidence` · `failure` · `composition` · `discipline` | 同上 |
@@ -154,19 +156,29 @@ agent_created: true
 | `s5-close` | `handout/unit-schema.md`「讲义概念单元 schema」 | 结课验收核对单元槽位 | `I-ANSWER-BOX-CONTENT@content` |
 | `s0-s2` | `ops/evidence.md`「来源分级与出处四要素」 | S2 来源核验 | `I-SOURCE-GRADING@global` |
 | `handout-enhance` | `handout/support-levels.md`「6. L1/L2/L3 支持级」 | P1 质量回路升降支持级 | `I-SUPPORT-LEVELS@handout` |
-| `s3-grade` | `data/layout.md`「题组与判分文件（exercises/）」 | 写判分落盘 attempt 字段 | `I-EXERCISE-SCHEMA@global` |
+| `s3-grade` | `assessment/exercise-files.md`「题组与判分文件（exercises/）」 | 写判分落盘 attempt 字段 | `I-EXERCISE-SCHEMA@global` |
 | `s3-teach` | `workflow/pacing.md`「休息与节律（R39）」 | 讲授轮需要学习段节律/断新 | `I-RHYTHM@global` |
 | `s3-teach` | `assessment/scheduling.md`「due-queue 与复习预算」 | 进入新节先查 due-queue / 讲授轮前置检查 | `I-DUE-QUEUE@global` |
-| `s3-exercise` | `data/layout.md`「题组与判分文件（exercises/）」 | 写题组/判分文件 | `I-EXERCISE-SCHEMA@global` |
+| `s3-exercise` | `assessment/exercise-files.md`「题组与判分文件（exercises/）」 | 写题组/判分文件 | `I-EXERCISE-SCHEMA@global` |
 | `s0-s2` | `workflow/s3-block.md`「S3 闸口（可检验）」 | 排计划时为目声明类型/验收口径 | `I-KP-TYPED-GATE@global` |
 | `s0-s2` | `teaching/lesson-prep.md`「教学姿态三档（S2 选定，默认混合）」 | S2 选择教学姿态 | `I-POSTURE@global` |
 | `shortcuts` | `workflow/s4-review.md`「S4 复习巩固」 | 帮我复习/已完成→复习 | `I-REVIEW-RETURN@global` |
 | `shortcuts` | `workflow/s5-close.md`「S5 结课」 | 已完成后再学/再学选路 | `I-CLOSE-RESUME@global` |
 | `s5-close` | `data/layout.md`「结课综合测验目标线（99-）」 | 写结课综合测验目标线 | `I-FINAL-TARGET@global` |
+| `s3-handout-revise` | `teaching/explanation-depth.md`「深度分层」 | 修订需调整深度分配或深讲单元 | `I-DEPTH@global` |
+| `s3-handout-revise` | `assessment/generation.md`「出题范围与未讲授过滤（R35）」 | 回填变体需核对出题域 | `I-UNTAUGHT-FILTER@global` |
+| `s3-handout-revise` | `assessment/generation.md`「题量预算与自测≠题组」 | 回填变体或复核题量预算 | `I-SELF-TEST-VS-GROUP@handout` |
+| `s3-handout-revise` | `handout/style-examples.md`「标准讲义成品范例」 | 换风格改稿需对照成品格式 | `I-STYLE-EXAMPLES@content` |
+| `s3-teach` | `teaching/presentation-examples.md`「版式样例（示意）」 | 首次定版式/版式拿不准 | `I-PRESENTATION-EXAMPLES@content` |
+| `s3-grade` | `teaching/presentation-examples.md`「版式样例（示意）」 | 首次定版式/版式拿不准 | `I-PRESENTATION-EXAMPLES@content` |
+| `s3-handout` | `handout/style-examples.md`「标准讲义成品范例」 | 撰写标准讲义需对照成品格式 | `I-STYLE-EXAMPLES@content` |
+| `s3-deep` | `handout/style-examples.md`「标准讲义成品范例」 | 换风格重讲需对照成品格式 | `I-STYLE-EXAMPLES@content` |
 
 **补读失败**：目标缺失、不可读、anchor 不存在 → 停止当前运行，说明停止点/缺失条件/恢复条件；不用「我记得规则」继续，也不用低标准替代。
 
-**加载成本**：分册按当前轮读取，不整册通读；各场景核心集见上表，此处不再复述文件清单。三层各取一份：内容类型处方（`content-types`）+ 学科群切片（按场景取一片）+ 学科包（命中时叠加）。S3 按步分场景：讲授/检验走 `s3-teach`，收作业/热身/批改走 `s3-grade`，节末五件套走 `s3-close`，题组/判分走 `s3-exercise`，复习走 `s4-review`，写/改讲义走 `s3-handout`，跨会话落盘走 `persist`；出现学习者可见公式才加 `formulas`；溯源核验才加 `evidence`；失败才加 `failure`；机制冲突才加 `composition`；打印/读者版才加 `handout-export`；P1/P2 才加 `handout-enhance`；文献审计才加 `literature`。
+**轮级硬上限**：轮级最坏加载 = 常驻（本文件 + `routing/triggers.md`）+ 主场景 core + persist core + 补读全文件 + 单个最大叠加场景 core，受契约 `scenes_budget.round_chars_max` 约束；同轮全部叠加场景 core 之和受 `stack_sum_chars_max` 约束。两者由 `evals/verify-load-budget.py` 硬校验，超限即失败——加规则先拆场景，不抬上限。
+
+**加载成本**：分册按当前轮读取，不整册通读；各场景核心集见上表，此处不再复述文件清单。三层各取一份：内容类型处方（`content-types`）+ 学科群切片（按场景取一片）+ 学科包（命中时叠加）。S3 按步分场景：讲授/检验走 `s3-teach`，收作业/热身/批改走 `s3-grade`，节末五件套走 `s3-close`，题组/判分走 `s3-exercise`，复习走 `s4-review`，写讲义走 `s3-handout`、改讲义/二次定稿/呈现定版走 `s3-handout-revise`，跨会话落盘走 `persist`；出现学习者可见公式才加 `formulas`；溯源核验才加 `evidence`；失败才加 `failure`；机制冲突才加 `composition`；打印/读者版才加 `handout-export`；P1/P2 才加 `handout-enhance`；文献审计才加 `literature`。
 
 ## 参考文件（按需加载）
 
@@ -177,7 +189,7 @@ agent_created: true
 - `references/teaching/` —— 单节课六拍、备课短表、提问/反馈/纠错、呈现版式、讲解质量四册、内容类型处方。
 - `references/assessment/` —— 判分口径、出题流水线与过滤、间隔调度。
 - `references/data/` —— 三簿字段正本（progress/课程体系/记忆）、画像、引用对账。
-- `references/ops/` —— 红线与失败处置、脚本手册、文字排印、公式、证据分级、文献依据。
+- `references/ops/` —— 红线与失败处置、脚本手册与错误码速查、文字排印、公式、证据分级、文献依据。
 - `references/handout/` —— 讲义流水线、单元 schema、支持级、六套风格、版面与出厂自检。
 - `references/subjects/` 与 `references/disciplines/` —— 七个学科群的四类切片与十二个学科包（取用顺序见 `subjects/common.md`）。
 - `contracts/rules.json` —— 枚举/阈值/预算/标题白名单/错误码/加载场景的机器契约；脚本通过 `scripts/rule_contract.py` 读取。

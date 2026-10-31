@@ -2,6 +2,7 @@
 
 完整逐版本提交信息见 git log 与各 tag；逐版本审计基准（coverage-audit / no-loss-ledger / intent-map / fix-baseline / scene-split-baseline）见 `docs/review/`。
 
+- **v9.11.7**（2026-11-01）—— 第二批加载经济学批：persist（每个落盘轮的固定底座）减重 23%——错误码速查表迁 `ops/error-codes.md`（仅失败时经 failure 场景读取）、exercises/ 文件结构迁 `assessment/exercise-files.md`（出题/批改/结课轮按补读读取）；版式样例与讲义成品范例外置为按需补读参照；讲义修订拆独立场景 `s3-handout-revise`（回填/换风格/二次定稿/呈现定版，57,898 chars）；s3-deep 卸掉讲义格式三件（37,655→18,663，−50%）；轮级最坏加载与同轮叠加总和入硬上限（`round_chars_max`/`stack_sum_chars_max`，verify-load-budget 超限 exit 1）。基准与三态比对见 `docs/review/v9.11.7-load-econ-baseline.md`。
 - **v9.11.6**（2026-11-01）—— 卫生批：脚本裸崩点（非 UTF-8）、版本解析截断、跨节判分证据对账、死代码与死路径清理、悬空编号退役注记、README/CHANGELOG/历史 tag 补齐。
 - **v9.11.5**（2026-11-01）—— S3 讲学循环按轮拆三场景（讲课 / 批改 / 节末收尾），场景 19→21，意图 39→40，SKILL.md 减重 19.8%，加载预算全部回到低位。
 - **v9.11.4**（2026-11-01）—— 五阶段评审修复：双正本收敛为指针、S5 出题域对齐、判分证据剔除代码围栏、调度器元数据分叉、目标线 a=0 堵口。
