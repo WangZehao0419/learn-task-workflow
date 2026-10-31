@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/2",
- "version": "9.11.4",
+ "version": "9.11.5",
  "files": [
   {
    "id": "triggers",
@@ -968,7 +968,7 @@
    "owner": "references/assessment/scoring.md#判分口径",
    "type": "definition",
    "scenes": [
-    "s3-teach",
+    "s3-grade",
     "s3-exercise",
     "s4-review",
     "s5-close"
@@ -1010,7 +1010,7 @@
    "owner": "references/assessment/scoring.md#复述证据",
    "type": "definition",
    "scenes": [
-    "s3-teach",
+    "s3-grade",
     "s3-exercise",
     "s4-review",
     "s5-close"
@@ -1141,7 +1141,7 @@
    "owner": "references/assessment/scoring.md#视觉任务证据",
    "type": "definition",
    "scenes": [
-    "s3-teach",
+    "s3-grade",
     "s3-exercise"
    ],
    "intent": "I-VISUAL-EVIDENCE"
@@ -1151,7 +1151,7 @@
    "owner": "references/assessment/scoring.md#难度伺服",
    "type": "definition",
    "scenes": [
-    "s3-teach",
+    "s3-grade",
     "s3-exercise",
     "s4-review"
    ],
@@ -1191,7 +1191,7 @@
    "owner": "references/teaching/interaction-diagnosis.md#定级与猜测答对",
    "type": "definition",
    "scenes": [
-    "s3-teach",
+    "s3-grade",
     "s4-review"
    ],
    "intent": "local"
@@ -1269,7 +1269,7 @@
    "owner": "references/teaching/interaction-diagnosis.md#错因分类与补救（T10）",
    "type": "definition",
    "scenes": [
-    "s3-teach",
+    "s3-grade",
     "s4-review"
    ],
    "intent": "local"
@@ -1345,7 +1345,7 @@
    "owner": "references/teaching/interaction-diagnosis.md#错因分类与补救（T10）",
    "type": "definition",
    "scenes": [
-    "s3-teach",
+    "s3-grade",
     "s4-review"
    ],
    "intent": "local"
@@ -1506,7 +1506,7 @@
    "owner": "references/teaching/interaction-diagnosis.md#修复动作（连错与负反馈，R40）",
    "type": "definition",
    "scenes": [
-    "s3-teach",
+    "s3-grade",
     "s4-review"
    ],
    "intent": "local"
@@ -2152,23 +2152,20 @@
    "label": "S3 讲授（六拍）",
    "files": [
     "references/workflow/s3-block.md",
+    "references/workflow/s3-cycle.md",
     "references/teaching/lesson-flow.md",
+    "references/teaching/lesson-prep.md",
     "references/teaching/interaction.md",
     "references/teaching/presentation.md",
     "references/teaching/explain-quality.md",
-    "references/teaching/content-types.md",
-    "references/assessment/scoring.md",
-    "references/ops/typography.md",
-    "references/subjects/{group}-teach.md",
-    "references/workflow/s3-cycle.md",
-    "references/workflow/s3-close.md",
     "references/teaching/explanation-depth.md",
     "references/teaching/explanation-density.md",
     "references/teaching/explanation-craft.md",
-    "references/teaching/lesson-prep.md",
-    "references/teaching/interaction-diagnosis.md"
+    "references/teaching/content-types.md",
+    "references/ops/typography.md",
+    "references/subjects/{group}-teach.md"
    ],
-   "chars_max": 49000,
+   "chars_max": 41000,
    "stack": [
     {
      "scene": "formulas",
@@ -2195,28 +2192,96 @@
     {
      "file": "references/assessment/generation.md",
      "section": "出题范围与未讲授过滤（R35）",
-     "when": "讲授热身/确认题需要出题域时",
+     "when": "讲授检验/确认题需要出题域",
      "intent": "I-UNTAUGHT-FILTER@global"
-    },
-    {
-     "file": "references/assessment/generation.md",
-     "section": "题量预算与自测≠题组",
-     "when": "讲授热身/确认题需要题量预算时",
-     "intent": "I-SELF-TEST-VS-GROUP@handout"
-    },
-    {
-     "file": "references/data/layout.md",
-     "section": "题组与判分文件（exercises/）",
-     "when": "写正式确认 attempt 字段",
-     "intent": "I-EXERCISE-SCHEMA@global"
     },
     {
      "file": "references/workflow/pacing.md",
      "section": "休息与节律（R39）",
      "when": "讲授轮需要学习段节律/断新时",
      "intent": "I-RHYTHM@global"
+    },
+    {
+     "file": "references/assessment/scheduling.md",
+     "section": "due-queue 与复习预算",
+     "when": "进入新节先查 due-queue / 讲授轮前置检查",
+     "intent": "I-DUE-QUEUE@global"
     }
    ]
+  },
+  "s3-grade": {
+   "label": "S3 批改与热身（步①②⑤）",
+   "files": [
+    "references/workflow/s3-block.md",
+    "references/workflow/s3-cycle.md",
+    "references/assessment/scoring.md",
+    "references/teaching/interaction.md",
+    "references/teaching/interaction-diagnosis.md",
+    "references/ops/typography.md",
+    "references/assessment/scheduling.md"
+   ],
+   "stack": [
+    {
+     "scene": "formulas",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "evidence",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "failure",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "composition",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "discipline",
+     "when": "按能力触发"
+    }
+   ],
+   "supplements": [
+    {
+     "file": "references/assessment/generation.md",
+     "section": "题量预算与自测≠题组",
+     "when": "热身/练习出题需要题量预算",
+     "intent": "I-SELF-TEST-VS-GROUP@handout"
+    },
+    {
+     "file": "references/data/layout.md",
+     "section": "题组与判分文件（exercises/）",
+     "when": "写判分落盘 attempt 字段",
+     "intent": "I-EXERCISE-SCHEMA@global"
+    }
+   ]
+  },
+  "s3-close": {
+   "label": "S3 节末五件套",
+   "files": [
+    "references/workflow/s3-close.md",
+    "references/assessment/scheduling.md",
+    "references/data/curriculum.md",
+    "references/data/progress-schema.md",
+    "references/data/reconciliation.md",
+    "references/assessment/scoring.md"
+   ],
+   "stack": [
+    {
+     "scene": "evidence",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "failure",
+     "when": "按能力触发"
+    },
+    {
+     "scene": "discipline",
+     "when": "按能力触发"
+    }
+   ],
+   "supplements": []
   },
   "s3-handout": {
    "label": "S3 讲义生成",
@@ -3078,7 +3143,7 @@
     }
    ],
    "scenes": [
-    "s3-teach",
+    "s3-grade",
     "s3-handout",
     "s3-deep"
    ],
@@ -3153,7 +3218,7 @@
     }
    ],
    "scenes": [
-    "s3-teach",
+    "s3-grade",
     "s4-review"
    ],
    "cluster": null,
@@ -3179,7 +3244,7 @@
     }
    ],
    "scenes": [
-    "s3-teach",
+    "s3-grade",
     "s4-review"
    ],
    "cluster": null,
@@ -3200,7 +3265,7 @@
     }
    ],
    "scenes": [
-    "s3-teach",
+    "s3-grade",
     "s3-exercise",
     "s4-review"
    ],
@@ -3239,7 +3304,7 @@
    ],
    "scenes": [
     "s0-s2",
-    "s3-teach",
+    "s3-grade",
     "s3-exercise"
    ],
    "rule_ids": [
@@ -3301,6 +3366,32 @@
    "rule_ids": [
     "R39"
    ]
+  },
+  {
+   "id": "I-DUE-QUEUE",
+   "scope": "global",
+   "cluster": null,
+   "owner": "references/assessment/scheduling.md#due-queue 与复习预算",
+   "marker": "intent:I-DUE-QUEUE@global",
+   "consumers": [
+    {
+     "path": "references/workflow/s3-cycle.md",
+     "anchor": "S3 逐节学习（循环体）",
+     "role": "application"
+    },
+    {
+     "path": "references/workflow/s3-cycle.md",
+     "anchor": "每轮小步（五步）",
+     "role": "application"
+    }
+   ],
+   "scenes": [
+    "s3-teach",
+    "s3-grade",
+    "s3-close",
+    "s4-review"
+   ],
+   "rule_ids": []
   },
   {
    "id": "I-FINAL-TARGET",
@@ -3420,7 +3511,7 @@
     }
    ],
    "scenes": [
-    "s3-teach",
+    "s3-grade",
     "s3-exercise"
    ],
    "rule_ids": [
@@ -3451,7 +3542,7 @@
     }
    ],
    "scenes": [
-    "s3-teach",
+    "s3-grade",
     "s3-exercise"
    ],
    "rule_ids": []
@@ -3696,7 +3787,7 @@
     }
    ],
    "scenes": [
-    "s3-teach"
+    "s3-close"
    ],
    "rule_ids": []
   }
