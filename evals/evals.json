@@ -1,7 +1,7 @@
 {
  "schema": "ltw-evals/2",
  "skill": "learn-task-workflow",
- "applies_to_version": "9.11.2",
+ "applies_to_version": "9.11.3",
  "updated_at": "2026-10-31",
  "grading_axes": [
   "教学正确性",

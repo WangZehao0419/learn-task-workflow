@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/2",
- "version": "9.11.2",
+ "version": "9.11.3",
  "files": [
   {
    "id": "triggers",
@@ -1319,7 +1319,7 @@
     "s3-teach",
     "s4-review"
    ],
-   "intent": "local"
+   "intent": "I-DIRECT-ANSWER"
   },
   {
    "id": "T08",
@@ -2988,6 +2988,11 @@
      "path": "references/handout/self-check.md",
      "anchor": "11. 自检与证据",
      "role": "application"
+    },
+    {
+     "path": "references/handout/typography.md",
+     "anchor": "4.2 图",
+     "role": "application"
     }
    ],
    "scenes": [
@@ -3065,6 +3070,11 @@
      "path": "references/workflow/s3-cycle.md",
      "anchor": "每轮小步（五步）",
      "role": "application"
+    },
+    {
+     "path": "references/handout/pipeline.md",
+     "anchor": "3.3 四段支架",
+     "role": "application"
     }
    ],
    "scenes": [
@@ -3107,6 +3117,11 @@
      "path": "references/workflow/s3-cycle.md",
      "anchor": "每轮小步（五步）",
      "role": "application"
+    },
+    {
+     "path": "SKILL.md",
+     "anchor": "全场景必载硬规则",
+     "role": "statute"
     }
    ],
    "scenes": [
@@ -3177,7 +3192,13 @@
    "scope": "global",
    "owner": "references/teaching/interaction.md#反馈策略（T09）",
    "marker": "intent:I-FEEDBACK@global",
-   "consumers": [],
+   "consumers": [
+    {
+     "path": "references/teaching/presentation.md",
+     "anchor": "讲授与反馈语气契约（学员可见输出）",
+     "role": "application"
+    }
+   ],
    "scenes": [
     "s3-teach",
     "s3-exercise",
@@ -3351,6 +3372,51 @@
      "path": "references/workflow/s3-block.md",
      "anchor": "S3 闸口（可检验）",
      "role": "application"
+    },
+    {
+     "path": "references/subjects/math-practice.md",
+     "anchor": "视觉任务",
+     "role": "application"
+    },
+    {
+     "path": "references/subjects/science-practice.md",
+     "anchor": "视觉任务",
+     "role": "application"
+    },
+    {
+     "path": "references/subjects/humanities-practice.md",
+     "anchor": "视觉任务",
+     "role": "application"
+    },
+    {
+     "path": "references/subjects/medicine-practice.md",
+     "anchor": "视觉任务",
+     "role": "application"
+    },
+    {
+     "path": "references/subjects/computing-practice.md",
+     "anchor": "视觉任务",
+     "role": "application"
+    },
+    {
+     "path": "references/subjects/language-practice.md",
+     "anchor": "视觉任务",
+     "role": "application"
+    },
+    {
+     "path": "references/subjects/skill-practice.md",
+     "anchor": "视觉任务",
+     "role": "application"
+    },
+    {
+     "path": "references/subjects/common.md",
+     "anchor": "类比与视觉",
+     "role": "application"
+    },
+    {
+     "path": "references/teaching/lesson-prep.md",
+     "anchor": "来源备课与讲授证据",
+     "role": "application"
     }
    ],
    "scenes": [
@@ -3377,6 +3443,11 @@
      "path": "references/assessment/scoring.md",
      "anchor": "批改与申诉",
      "role": "standard"
+    },
+    {
+     "path": "references/workflow/s3-block.md",
+     "anchor": "S3 闸口（可检验）",
+     "role": "application"
     }
    ],
    "scenes": [
@@ -3418,6 +3489,213 @@
    ],
    "scenes": [
     "s0-s2",
+    "s3-teach"
+   ],
+   "rule_ids": []
+  },
+  {
+   "id": "I-DIRECT-ANSWER",
+   "scope": "global",
+   "cluster": null,
+   "owner": "references/teaching/interaction.md#提问与提示起点（T06）",
+   "marker": "intent:I-DIRECT-ANSWER@global",
+   "consumers": [
+    {
+     "path": "references/teaching/lesson-flow.md",
+     "anchor": "核心教学序列（硬规则）",
+     "role": "application"
+    },
+    {
+     "path": "SKILL.md",
+     "anchor": "执行约束",
+     "role": "application"
+    },
+    {
+     "path": "references/ops/composition.md",
+     "anchor": "跨机制组合规则",
+     "role": "application"
+    }
+   ],
+   "scenes": [
+    "s3-teach",
+    "s4-review"
+   ],
+   "rule_ids": [
+    "T06"
+   ]
+  },
+  {
+   "id": "I-NAMING-DISCIPLINE",
+   "scope": "global",
+   "cluster": null,
+   "owner": "SKILL.md#全场景必载硬规则",
+   "marker": "intent:I-NAMING-DISCIPLINE@global",
+   "consumers": [
+    {
+     "path": "references/workflow/s3-block.md",
+     "anchor": "逐目推进（最细知识点）",
+     "role": "application"
+    },
+    {
+     "path": "references/teaching/lesson-prep.md",
+     "anchor": "课首定位（拍 1，每节第一次讲授前，2–3 句 + 知识点清单一行一个，计讲授不计新轮）",
+     "role": "application"
+    },
+    {
+     "path": "references/data/curriculum.md",
+     "anchor": "课程体系文件",
+     "role": "application"
+    }
+   ],
+   "scenes": [
+    "s0-s2",
+    "s3-teach"
+   ],
+   "rule_ids": []
+  },
+  {
+   "id": "I-NO-CAP-PER-MU",
+   "scope": "global",
+   "cluster": null,
+   "owner": "references/workflow/s3-block.md#逐目推进（最细知识点）",
+   "marker": "intent:I-NO-CAP-PER-MU@global",
+   "consumers": [
+    {
+     "path": "references/workflow/s0-s2-setup.md",
+     "anchor": "S2 计划确认中",
+     "role": "application"
+    },
+    {
+     "path": "references/workflow/s3-cycle.md",
+     "anchor": "S3 逐节学习（循环体）",
+     "role": "application"
+    }
+   ],
+   "scenes": [
+    "s3-teach",
+    "s0-s2"
+   ],
+   "rule_ids": []
+  },
+  {
+   "id": "I-TARGET-SCOPE",
+   "scope": "global",
+   "cluster": null,
+   "owner": "references/workflow/s0-s2-setup.md#S2 计划确认中",
+   "marker": "intent:I-TARGET-SCOPE@global",
+   "consumers": [
+    {
+     "path": "references/teaching/lesson-flow.md",
+     "anchor": "核心教学序列（硬规则）",
+     "role": "application"
+    },
+    {
+     "path": "references/workflow/s5-close.md",
+     "anchor": "S5 结课",
+     "role": "application"
+    }
+   ],
+   "scenes": [
+    "s0-s2"
+   ],
+   "rule_ids": []
+  },
+  {
+   "id": "I-EVIDENCE-FIRST",
+   "scope": "global",
+   "cluster": null,
+   "owner": "references/workflow/gates.md#通用闸口协议",
+   "marker": "intent:I-EVIDENCE-FIRST@global",
+   "consumers": [
+    {
+     "path": "SKILL.md",
+     "anchor": "全场景必载硬规则",
+     "role": "statute"
+    }
+   ],
+   "scenes": [
+    "s0-s2"
+   ],
+   "rule_ids": []
+  },
+  {
+   "id": "I-LEDGER-NOT-IN-TEXT",
+   "scope": "global",
+   "cluster": null,
+   "owner": "references/teaching/presentation.md#对话讲授契约（所有风格共用）",
+   "marker": "intent:I-LEDGER-NOT-IN-TEXT@global",
+   "consumers": [
+    {
+     "path": "SKILL.md",
+     "anchor": "全场景必载硬规则",
+     "role": "statute"
+    }
+   ],
+   "scenes": [
+    "s3-teach"
+   ],
+   "rule_ids": []
+  },
+  {
+   "id": "I-CALIBRATION-SNAPSHOT",
+   "scope": "global",
+   "cluster": null,
+   "owner": "references/assessment/scheduling.md#校准画像",
+   "marker": "intent:I-CALIBRATION-SNAPSHOT@global",
+   "consumers": [
+    {
+     "path": "references/workflow/s4-review.md",
+     "anchor": "S4 复习巩固（可从逐节学习或结课随时插入）",
+     "role": "application"
+    },
+    {
+     "path": "references/ops/composition.md",
+     "anchor": "跨机制组合规则",
+     "role": "application"
+    }
+   ],
+   "scenes": [
+    "s4-review"
+   ],
+   "rule_ids": []
+  },
+  {
+   "id": "I-KEEP-REVIEW-WRITE",
+   "scope": "global",
+   "cluster": null,
+   "owner": "references/data/progress-schema.md#复习调度字段（薄弱点 / 错题本 / 保持复习条目元数据）",
+   "marker": "intent:I-KEEP-REVIEW-WRITE@global",
+   "consumers": [
+    {
+     "path": "references/workflow/s4-review.md",
+     "anchor": "S4 复习巩固（可从逐节学习或结课随时插入）",
+     "role": "application"
+    },
+    {
+     "path": "references/workflow/s3-close.md",
+     "anchor": "节末收尾五件套（闸口达标后执行）",
+     "role": "application"
+    }
+   ],
+   "scenes": [
+    "s4-review"
+   ],
+   "rule_ids": []
+  },
+  {
+   "id": "I-CLOSE-FIVE",
+   "scope": "global",
+   "cluster": null,
+   "owner": "references/workflow/s3-close.md#节末收尾五件套（闸口达标后执行）",
+   "marker": "intent:I-CLOSE-FIVE@global",
+   "consumers": [
+    {
+     "path": "references/workflow/s3-block.md",
+     "anchor": "S3 闸口（可检验）",
+     "role": "application"
+    }
+   ],
+   "scenes": [
     "s3-teach"
    ],
    "rule_ids": []

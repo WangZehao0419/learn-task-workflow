@@ -27,6 +27,8 @@
 
 ### 校准画像
 
+<!-- intent:I-CALIBRATION-SNAPSHOT@global -->
+
 校准画像是脚本对既有「信心 / cw」元数据的**实时只读统计**：**不新增任何 progress.md 字段，不落任何新文件**。进入 S4 时由模型运行：
 
 `python "<技能根>/scripts/scheduler.py" calibration --root "<数据根>" [--slug "<slug>"]`
