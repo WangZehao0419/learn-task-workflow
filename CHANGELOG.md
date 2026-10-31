@@ -2,6 +2,7 @@
 
 完整逐版本提交信息见 git log 与各 tag；逐版本审计基准（coverage-audit / no-loss-ledger / intent-map / fix-baseline / scene-split-baseline）见 `docs/review/`。
 
+- **v9.11.8**（2026-11-01）—— teach 减重批：s3-teach 40,000→37,833 chars（−5.4%，12 文件）——讲义分块规则（R41）与深讲审计细则迁讲义流水线、智能变式结构判据（R43）迁出题分册、人设唯一事实源收进 SKILL.md、分册导航压缩、版式样例回归规则正文并撤销独立样例文件（腾出的补读槽改挂 explanation-craft 整册，引入新记号/类比时才读）；修复两个拆场景遗留的「规则常载在 A、触发在 B 却不可达」缺口：批改轮反馈版式（版式节迁入批改也加载的 interaction）与节末轮深度验收（s3-close 补读挂载）。基准与三态比对见 `docs/review/v9.11.8-teach-slim-baseline.md`。
 - **v9.11.7**（2026-11-01）—— 第二批加载经济学批：persist（每个落盘轮的固定底座）减重 23%——错误码速查表迁 `ops/error-codes.md`（仅失败时经 failure 场景读取）、exercises/ 文件结构迁 `assessment/exercise-files.md`（出题/批改/结课轮按补读读取）；版式样例与讲义成品范例外置为按需补读参照；讲义修订拆独立场景 `s3-handout-revise`（回填/换风格/二次定稿/呈现定版，57,898 chars）；s3-deep 卸掉讲义格式三件（37,655→18,663，−50%）；轮级最坏加载与同轮叠加总和入硬上限（`round_chars_max`/`stack_sum_chars_max`，verify-load-budget 超限 exit 1）。基准与三态比对见 `docs/review/v9.11.7-load-econ-baseline.md`。
 - **v9.11.6**（2026-11-01）—— 卫生批：脚本裸崩点（非 UTF-8）、版本解析截断、跨节判分证据对账、死代码与死路径清理、悬空编号退役注记、README/CHANGELOG/历史 tag 补齐。
 - **v9.11.5**（2026-11-01）—— S3 讲学循环按轮拆三场景（讲课 / 批改 / 节末收尾），场景 19→21，意图 39→40，SKILL.md 减重 19.8%，加载预算全部回到低位。

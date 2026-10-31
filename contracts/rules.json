@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/2",
- "version": "9.11.7",
+ "version": "9.11.8",
  "retired_rule_ids": [
   "T02",
   "T07",
@@ -965,14 +965,6 @@
    "kind": "rule"
   },
   {
-   "id": "presentation-examples",
-   "path": "references/teaching/presentation-examples.md",
-   "layer": 1,
-   "owns": "版式样例参照（讲授/步骤示范/反馈/路线四组完整示意）",
-   "depends_on": [],
-   "kind": "rule"
-  },
-  {
    "id": "style-examples",
    "path": "references/handout/style-examples.md",
    "layer": 1,
@@ -1557,7 +1549,7 @@
   },
   {
    "id": "R41",
-   "owner": "references/workflow/s3-block.md#分块呈现（R41）",
+   "owner": "references/handout/pipeline.md#分块呈现（R41）",
    "type": "definition",
    "scenes": [
     "s3-handout",
@@ -1577,7 +1569,7 @@
   },
   {
    "id": "R43",
-   "owner": "references/teaching/explain-quality.md#智能变式一次一维（R43）",
+   "owner": "references/assessment/generation.md#智能变式一次一维（R43）",
    "type": "definition",
    "scenes": [
     "s3-exercise",
@@ -2207,12 +2199,11 @@
     "references/teaching/explain-quality.md",
     "references/teaching/explanation-depth.md",
     "references/teaching/explanation-density.md",
-    "references/teaching/explanation-craft.md",
     "references/teaching/content-types.md",
     "references/ops/typography.md",
     "references/subjects/{group}-teach.md"
    ],
-   "chars_max": 41000,
+   "chars_max": 39700,
    "stack": [
     {
      "scene": "formulas",
@@ -2255,10 +2246,10 @@
      "intent": "I-DUE-QUEUE@global"
     },
     {
-     "file": "references/teaching/presentation-examples.md",
-     "section": "版式样例（示意）",
-     "when": "首次定版式/版式拿不准时",
-     "intent": "I-PRESENTATION-EXAMPLES@content"
+     "file": "references/teaching/explanation-craft.md",
+     "section": "新记号/新操作讲透",
+     "when": "引入新记号/首次用类比/零基础首目定 CRA 序",
+     "intent": "I-NEW-NOTATION@global"
     }
    ]
   },
@@ -2308,12 +2299,6 @@
      "section": "题组与判分文件（exercises/）",
      "when": "写判分落盘 attempt 字段",
      "intent": "I-EXERCISE-SCHEMA@global"
-    },
-    {
-     "file": "references/teaching/presentation-examples.md",
-     "section": "版式样例（示意）",
-     "when": "首次定版式/版式拿不准时",
-     "intent": "I-PRESENTATION-EXAMPLES@content"
     }
    ]
   },
@@ -2341,7 +2326,14 @@
      "when": "按能力触发"
     }
    ],
-   "supplements": []
+   "supplements": [
+    {
+     "file": "references/teaching/explanation-depth.md",
+     "section": "学员侧深度验收（深讲概念节末）",
+     "when": "深讲概念节末验收",
+     "intent": "I-DEPTH@global"
+    }
+   ]
   },
   "s3-handout": {
    "label": "S3 讲义生成（新建/整册重写）",
@@ -2877,7 +2869,7 @@
      "role": "application"
     },
     {
-     "path": "references/workflow/s3-block.md",
+     "path": "references/handout/pipeline.md",
      "anchor": "分块呈现（R41）",
      "role": "application"
     }
@@ -3175,7 +3167,7 @@
   {
    "id": "I-R41-BLOCK",
    "scope": "handout",
-   "owner": "references/workflow/s3-block.md#分块呈现（R41）",
+   "owner": "references/handout/pipeline.md#分块呈现（R41）",
    "marker": "intent:I-R41-BLOCK@handout",
    "consumers": [
     {
@@ -3479,8 +3471,8 @@
      "role": "application"
     },
     {
-     "path": "references/workflow/s3-block.md",
-     "anchor": "逐目推进（最细知识点）",
+     "path": "references/handout/pipeline.md",
+     "anchor": "分块呈现（R41）",
      "role": "application"
     }
    ],
@@ -3944,25 +3936,6 @@
    ],
    "scenes": [
     "s3-close"
-   ],
-   "rule_ids": []
-  },
-  {
-   "id": "I-PRESENTATION-EXAMPLES",
-   "scope": "content",
-   "cluster": null,
-   "owner": "references/teaching/presentation-examples.md#版式样例（示意）",
-   "marker": "intent:I-PRESENTATION-EXAMPLES@content",
-   "consumers": [
-    {
-     "path": "references/teaching/presentation.md",
-     "anchor": "讲授轮版式：对话轮呈现标记（软默认，所有风格共用）",
-     "role": "application"
-    }
-   ],
-   "scenes": [
-    "s3-teach",
-    "s3-grade"
    ],
    "rule_ids": []
   },

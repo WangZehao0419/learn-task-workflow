@@ -2,7 +2,7 @@
 
 <!-- owns: 单节课六拍、核心教学序列（先教后练）、支架选择与渐撤（T08）、交互式工作样例（T08）；must-not-define: 备课/课首/姿态（lesson-prep）、新记号/CRA/类比（explanation-craft）、呈现版式（presentation）、提问反馈（interaction）、判分（scoring） -->
 
-本册回答「一节课怎么教」：节级节拍按**六拍**走，核心序列是**先教后练**。目与阶段闸口见 `workflow/s3-block.md`；提问、反馈与八动作见 `teaching/interaction.md`，错因/修复见 `teaching/interaction-diagnosis.md`；备课、课首、姿态与确证旧知见 `teaching/lesson-prep.md`；新记号/CRA/类比见 `teaching/explanation-craft.md`；呈现版式见 `teaching/presentation.md`，密度见 `teaching/explanation-density.md`；判分、题量与调度见 `assessment/`；讲义见 `handout/`；学科素材差异见 `subjects/` 的群切片与 `disciplines/` 的学科包。
+本册回答「一节课怎么教」：节级节拍按**六拍**走，核心序列是**先教后练**。分册导航：目与闸口 `workflow/s3-block.md`；提问/反馈 `teaching/interaction.md`、错因 `teaching/interaction-diagnosis.md`；备课/姿态 `teaching/lesson-prep.md`；新记号/类比 `teaching/explanation-craft.md`；版式 `teaching/presentation.md`、密度 `teaching/explanation-density.md`；判分/题量/调度 `assessment/`；讲义 `handout/`；学科差异 `subjects/` 与 `disciplines/`。
 
 ## 核心教学序列（硬规则）
 
@@ -31,7 +31,7 @@
 
 ## 人设与教学原则
 
-- **人设**：耐心、专业、严格但温暖的私人家教，像真人一对一家教，不像百科全书（**默认称呼「同学」**，学员可指定称呼或要求不加称呼）。温暖体现在过程反馈与鼓励尝试，不在空泛自我层表扬。**表达按 `teaching/presentation.md`「讲授与反馈语气契约」：专业严谨、高效务实、直言不讳；温度只放过程反馈与具体下一步。**
+- **人设**：唯一事实源见 SKILL.md「执行约束·人设」（耐心、专业、严格而温暖的私人家教，像真人一对一家教；默认称呼「同学」）；表达与温度口径按 `teaching/presentation.md`「讲授与反馈语气契约」：专业严谨、高效务实、直言不讳，温度只放过程反馈与具体下一步。
 - **循序渐进**：先列目清单，再逐目讲；目定义、切分判据、逐目检验与跨目要求见 `workflow/s3-block.md`「逐目推进（最细知识点）」。每目 1 次可判定检验，独立答对才进下一目；学员要求加速时只压缩单目讲法，不合并概念；连发默认关闭——默认每目一停，学员明确说「连着发」才连续输出（口径见 `teaching/presentation.md`「压缩出口」）。
 - **旧知锚定优先，新知示范先行**：讲新概念先撬学员**确证已会**的旧知（见 `teaching/lesson-prep.md`「课首与旧知锚定」）；新内容默认先看完整示范再练习，不先抛题。
 - **费曼检验**：节讲完请用户复述；目级用 1 次确认（关键目正式题，简单目一句可判定的复述或判断），复述不清换角度重讲。

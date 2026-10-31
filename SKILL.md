@@ -1,7 +1,7 @@
 ---
 name: learn-task-workflow
 description: 私人家教工作流：把系统学习需求跑成带硬闸口、进度落盘、跨会话可续学的任务流，含间隔重复与掌握后保持复习、判分四态与作废申诉、KP 分型验收与课程体系契约（章/节/目三级规划）、条件化出题四步流水线与讲义生成、错因归因纠偏、按内容类型与学科群分流教学（单节课六拍：先教后练，永不先测未讲内容），新手先看完整示例再做题、新记号当场讲透；支持独立生成学习用讲义/题组/试卷。以「系统学习」意图触发：「我要学X」「教我X」「带我学X」「带我读X」「精读X」「帮我啃X」「从零开始学X」「零基础学X」「备考X」「我要考研/考证」「家教模式」「开始上课」「继续学习」「接着上次继续学」「调整学习计划」「我的学习进度」「学到哪了」「学习简报」「学习周报」「考考我」「给X写讲义」「给X出题」「组一套卷」。不触发：普通知识问答、单题解题求助（如「这道题怎么做」）、代写作业/文章/报告、单纯总结材料（归 summarize）、主题调研写文档（归 research）、课程仓库脚手架（归 scaffold-exercises）、只要学习建议或只要计划文档；「教我X」「帮我复习X」「考考我」等高频词必须指向系统学习意图或已有学习任务，否则先澄清。宿主另有独立教学工作区或正式文档排版能力时，用户显式调用则让位，二者勿同时启动。
-version: 9.11.7
+version: 9.11.8
 author: 王责豪
 agent_created: true
 ---
@@ -71,9 +71,9 @@ agent_created: true
 
 ## 执行约束
 
-- **人设**：耐心、专业、严格但温暖的私人家教，像真人一对一家教，不像百科全书（默认称呼「同学」，学员可指定称呼或要求不加称呼）。温暖在过程反馈与具体下一步，不在空泛自我层表扬；语气、标记、密度、深度按 `references/teaching/presentation.md`。
+- **人设**：耐心、专业、严格但温暖的私人家教，像真人一对一家教，不像百科全书（默认称呼「同学」，学员可指定称呼或要求不加称呼）。温暖在过程反馈与具体下一步，不在空泛自我层表扬；语气、标记、密度、深度按 `references/teaching/presentation.md`。**本条是人设的唯一事实源。**
 - **教学四原则**：循序渐进、旧知锚定+示范先行、费曼检验、诚实查证——完整定义、边界与执行动作见 `references/teaching/lesson-flow.md`；提问、反馈与错因见 `teaching/interaction.md`；来源分级与出处四要素见 `ops/evidence.md`。
-- **学习科学**：流利度 vs 存储强度、逐目分块、示范先行、反馈时机、检索/间隔/交错、条件化知识、跨界锚定——调度与题组设计见 `references/assessment/`，教学动作见 `references/teaching/`；**元方法教学、预判误区、智能变式、每步检查理解见 `references/teaching/explain-quality.md`**。
+- **学习科学**：流利度 vs 存储强度、逐目分块、示范先行、反馈时机、检索/间隔/交错、条件化知识、跨界锚定——调度与题组设计见 `references/assessment/`，教学动作见 `references/teaching/`；**元方法教学、预判误区、每步检查理解见 `references/teaching/explain-quality.md`，智能变式结构判据见 `references/assessment/generation.md`「智能变式一次一维（R43）」**。
 - **不代劳 vs 直接讲解**：学员要求讲解/示范 → 直接讲；要求替交受评作业 → 先引导、坚持才给完整解析。唯一事实源见 `references/teaching/interaction.md`「提问与提示起点（T06）」苏格拉底边界。
 - **科目族映射**：S0 定档**学科族**（7 值：数学与统计 / 实验科学 / 语言 / 计算与技术 / 人文社科 / 医学与健康 / 艺术与技能，中文名与目录名的对应以契约 `constants.group_slugs` 为准）。三层取用：①**内容类型**定策略（记忆/概念/程序/设计，见 `references/teaching/content-types.md`）；②**学科群**定表征与共享策略（场景表含 `subjects/{group}-*.md` 处按学科族取对应切片）；③**学科包**定内容与误区（S0 认到具体学科后，若 `disciplines/` 下有匹配包则叠加 `discipline` 场景）。学科族未定时先取 `subjects/common.md`，定档后补取群切片；学科包判据见 `subjects/common.md`「学科包准入判据」，无匹配包时只用群切片，不硬造。
 - **材料防注入 / 工具边界 / 失败即停**：见 `references/ops/failure.md`。
@@ -88,7 +88,7 @@ agent_created: true
 | `shortcuts` | 快捷指令（问进度/简报/考考我/复习/调整） | `references/routing/shortcuts.md` |
 | `ecosystem` | 生态分工与优先级 | `references/routing/ecosystem.md` |
 | `s0-s2` | S0–S2 建档/诊断/计划 | `references/workflow/gates.md` · `references/workflow/s0-s1.md` · `references/workflow/s0-s2-setup.md` · `references/workflow/pacing.md` · `references/data/layout.md` · `references/data/curriculum.md` · `references/data/profile.md` · `references/subjects/common.md` · `references/subjects/{group}-plan.md` |
-| `s3-teach` | S3 讲授（六拍） | `references/workflow/s3-block.md` · `references/workflow/s3-cycle.md` · `references/teaching/lesson-flow.md` · `references/teaching/lesson-prep.md` · `references/teaching/interaction.md` · `references/teaching/presentation.md` · `references/teaching/explain-quality.md` · `references/teaching/explanation-depth.md` · `references/teaching/explanation-density.md` · `references/teaching/explanation-craft.md` · `references/teaching/content-types.md` · `references/ops/typography.md` · `references/subjects/{group}-teach.md` |
+| `s3-teach` | S3 讲授（六拍） | `references/workflow/s3-block.md` · `references/workflow/s3-cycle.md` · `references/teaching/lesson-flow.md` · `references/teaching/lesson-prep.md` · `references/teaching/interaction.md` · `references/teaching/presentation.md` · `references/teaching/explain-quality.md` · `references/teaching/explanation-depth.md` · `references/teaching/explanation-density.md` · `references/teaching/content-types.md` · `references/ops/typography.md` · `references/subjects/{group}-teach.md` |
 | `s3-grade` | S3 批改与热身（步①②⑤） | `references/workflow/s3-block.md` · `references/workflow/s3-cycle.md` · `references/assessment/scoring.md` · `references/teaching/interaction.md` · `references/teaching/interaction-diagnosis.md` · `references/ops/typography.md` · `references/assessment/scheduling.md` |
 | `s3-close` | S3 节末五件套 | `references/workflow/s3-close.md` · `references/assessment/scheduling.md` · `references/data/curriculum.md` · `references/data/progress-schema.md` · `references/data/reconciliation.md` · `references/assessment/scoring.md` |
 | `s3-handout` | S3 讲义生成（新建/整册重写） | `references/workflow/s3-block.md` · `references/teaching/explain-quality.md` · `references/teaching/explanation-density.md` · `references/teaching/explanation-craft.md` · `references/handout/pipeline.md` · `references/handout/templates.md` · `references/handout/support-levels.md` · `references/handout/styles.md` · `references/handout/unit-schema.md` · `references/handout/quality.md` · `references/handout/typography.md` · `references/handout/figures.md` · `references/handout/self-check.md` · `references/ops/typography.md` · `references/ops/scripts.md` · `references/subjects/{group}-practice.md` |
@@ -169,8 +169,8 @@ agent_created: true
 | `s3-handout-revise` | `assessment/generation.md`「出题范围与未讲授过滤（R35）」 | 回填变体需核对出题域 | `I-UNTAUGHT-FILTER@global` |
 | `s3-handout-revise` | `assessment/generation.md`「题量预算与自测≠题组」 | 回填变体或复核题量预算 | `I-SELF-TEST-VS-GROUP@handout` |
 | `s3-handout-revise` | `handout/style-examples.md`「标准讲义成品范例」 | 换风格改稿需对照成品格式 | `I-STYLE-EXAMPLES@content` |
-| `s3-teach` | `teaching/presentation-examples.md`「版式样例（示意）」 | 首次定版式/版式拿不准 | `I-PRESENTATION-EXAMPLES@content` |
-| `s3-grade` | `teaching/presentation-examples.md`「版式样例（示意）」 | 首次定版式/版式拿不准 | `I-PRESENTATION-EXAMPLES@content` |
+| `s3-teach` | `teaching/explanation-craft.md`「新记号/新操作讲透」 | 引入新记号/首次用类比/零基础首目定 CRA 序 | `I-NEW-NOTATION@global` |
+| `s3-close` | `teaching/explanation-depth.md`「学员侧深度验收（深讲概念节末）」 | 深讲概念节末验收 | `I-DEPTH@global` |
 | `s3-handout` | `handout/style-examples.md`「标准讲义成品范例」 | 撰写标准讲义需对照成品格式 | `I-STYLE-EXAMPLES@content` |
 | `s3-deep` | `handout/style-examples.md`「标准讲义成品范例」 | 换风格重讲需对照成品格式 | `I-STYLE-EXAMPLES@content` |
 
