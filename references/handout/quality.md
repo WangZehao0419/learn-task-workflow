@@ -8,7 +8,7 @@
 - ## 12. 证据与边界
 - ### 材料型按材料结构分流
 
-> 已迁出：P1 质量与运营→`handout/enhancements.md`；P2 章节层→`handout/reader-path.md`；图像双轨→`handout/figures.md`；出厂自检→`handout/self-check.md`；分块呈现→`workflow/s3-block.md`。
+> 相关正本：P1 质量与运营→`handout/enhancements.md`；P2 章节层→`handout/reader-path.md`；图像双轨→`handout/figures.md`；出厂自检→`handout/self-check.md`；分块呈现→`workflow/s3-block.md`。
 
 ## 9. 来源、范围与评估真实性（阶段 3）
 

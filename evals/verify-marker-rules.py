@@ -7,8 +7,9 @@
   五项新规则做**行为级**机器验证：在临时目录构造讲义夹具，真实运行
   scripts/verify_explanation.py（子进程），断言其退出码与违规码输出。
   与 verify_explanation.py --selftest 的区别：selftest 走进程内函数调用，
-  本脚本走完整 CLI 路径（含目录扫描与退出码语义），作为 E56–E60 的
-  machine_ref 证据。不写任何仓库文件、不访问网络，可重复运行（幂等）。
+  本脚本走完整 CLI 路径（含目录扫描与退出码语义），作为 evals.json
+  machine_evidence_ref 所列 verify 脚本族的一员（讲义五要素行为契约）。
+  不写任何仓库文件、不访问网络，可重复运行（幂等）。
 
 检查项（5 组，共 19 项）：
   1. 旧编号写法不特判：

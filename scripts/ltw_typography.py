@@ -395,6 +395,7 @@ _DEFAULT_LAYOUT = {
     "hard_line_max": 400,
     "anchor_gap_max": 400,
     "para_chars_max": 150,
+    "para_sentences_max": 4,
     "hr_max": 3,
     "section_bold_floor_chars": 300,
     "table_cols_max_hard": 4,
@@ -540,9 +541,46 @@ def check_layout(text, cfg=None):
         add("W", "W-LAYOUT-ANCHOR-GAP", pend_start,
             "文末连续正文约 %d 字无视觉锚点——每约一屏（%d 字）给一个锚点" % (pending, gap_max))
 
+    # W1b. 段落长度：每段 ≤ para_sentences_max 句或 ≤ para_chars_max 字
+    #      （与强调下限同一豁免表；列表/表格/引用/标题/围栏行不进段落）
+    floor_exempt = cfg.get("emphasis_floor_exempt", [])
+    para_sents = int(cfg.get("para_sentences_max", 4))
+    para_chars = int(cfg.get("para_chars_max", 150))
+    state = {"para_start": None, "parts": [], "sec_ln": ""}
+
+    def _flush_para():
+        if state["para_start"] is None:
+            return
+        if any(e in state["sec_ln"] for e in floor_exempt):
+            return
+        body = "".join(state["parts"])
+        sents = len(re.findall(r"[。！？!?]", body))
+        chars = len(re.sub(r"\s", "", body))
+        if sents > para_sents or chars > para_chars:
+            add("W", "W-LAYOUT-PARA-LONG", state["para_start"],
+                "段落约 %d 句 / %d 字（基线 ≤%d 句或 ≤%d 字）——拆段，一段一义"
+                % (sents, chars, para_sents, para_chars))
+
+    for i, ln in enumerate(lines):
+        if fence[i]:
+            _flush_para()
+            state["para_start"], state["parts"] = None, []
+            continue
+        stripped = ln.strip()
+        if not stripped or HR_RE.match(ln) or anchor_re.match(ln):
+            _flush_para()
+            state["para_start"], state["parts"] = None, []
+            if re.match(r"^##\s", ln):
+                state["sec_ln"] = ln
+            continue
+        if state["para_start"] is None:
+            state["para_start"] = i
+            state["parts"] = []
+        state["parts"].append(vis[i])
+    _flush_para()
+
     # W2. 强调下限：H2 节正文 ≥floor_chars 而零加粗 = 强调清零
     #     （题组/判分/答案等记录型区块豁免——台账不考究强调，见 constants.layout）
-    floor_exempt = cfg.get("emphasis_floor_exempt", [])
     sec_start = sec_chars = sec_bold = None
     sec_exempt = False
     for i, ln in enumerate(lines):
@@ -600,6 +638,7 @@ _SELFTEST_CASES = [
     ("W-LAYOUT-SEPARATOR", "# 题\n\n---\n\n---\n\n---\n\n---\n\n正文。\n", "W"),
     ("W-LAYOUT-LATEX-ARROW", "# 题\n\n主语 $\\rightarrow$ 直接宾语\n", "W"),
     ("W-LAYOUT-LINE-ENDING", "# 题\r\n\r\n正文一句。\n", "W"),
+    ("W-LAYOUT-PARA-LONG", "# 题\n\n第一句。第二句。第三句。第四句。第五句。第六句。\n", "W"),
     ("clean", "# 题\n\n一句**关键**判断。\n\n- 列表项\n1. 有序项\n\n| a | b |\n|---|---|\n| 1 | 2 |\n", None),
 ]
 

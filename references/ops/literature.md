@@ -53,7 +53,7 @@
 | 产品参考：轮型/提示/反馈（`teaching/presentation.md` 对话呈现系统） | Khanmigo（不直接给答案/逐步提示）；Math Academy（小步/掌握/间隔复习）；OpenAI Study Mode（分节+quick check）；Duolingo（bite-size） | **产品设计参考**：不当作实验证据；不引入游戏化/学习风格 |
 | 排除：bionic reading（首字母加粗提速） | Snell 2024（Acta Psychologica）：无收益；Zhao et al. 2025 RCT：不优于无修改文本 | **明确不采用**；中文场景更无依据 |
 | 排除：「注意力只有 8 秒」类流行数字 | 出处为营销文章，学界不认可 | **明确不采用**：不作为任何时长/密度规则的依据 |
-| 排除：渐进式总结分层加粗体系（Forte） | 个人知识管理经验（Forte Labs 博客），无教学实验 | **明确不采用**：与信号稀缺原则冲突（连续加粗降低扫读效率）；只取「结论先行」，已并入既有规则 |
+| 排除：渐进式总结分层加粗体系（Forte） | 个人知识管理经验（Forte Labs 博客），无教学实验 | **明确不采用**：与信号稀缺原则冲突（连续加粗降低扫读效率）；只取「结论先行」（信号规则已覆盖） |
 | KP 前置链与拓扑排序（`data/curriculum.md` + kp_sort.py） | 学习进阶方法论（Corcoran, Mosher & Rogat 2009：序列是假设、须按学员验证）；知识空间理论/ALEKS 大规模验证前置结构（Cosyn et al. 2021） | 方向支持：按任务自建+摸底校准=按学员验证的微缩版；不进口外部进阶路径 |
 | Parsons 题（`subjects/computing-practice.md`） | Ericson 等：与手写代码学习等效、解题效率更高 | 方向支持：干扰项可降低新手效率，成人敏感度未测——干扰项克制使用 |
 | CRA/CPA 序（`teaching/explanation-craft.md`、数学族） | Peltier et al. 2020 元分析、Bouck et al. 2018 综述 | 方向支持（人群受限）：强证据集中在学习障碍人群；一般学员属设计决策，不写「研究表明」 |

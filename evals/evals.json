@@ -1,7 +1,7 @@
 {
  "schema": "ltw-evals/2",
  "skill": "learn-task-workflow",
- "applies_to_version": "9.13.0",
+ "applies_to_version": "9.13.1",
  "updated_at": "2026-11-01",
  "grading_axes": [
   "教学正确性",
@@ -30,7 +30,7 @@
   "禁用": "不得用关键词检查代替教学准确性与体验评价；不得编造分数或输出；未跑的条目不得标「通过」。"
  },
  "formula_checks_rubric": {
-  "声明": "FORMULA 系列用例的附加检查字段，按 0–2 记分；仅作附加证据，不替代五轴主评分。",
+  "声明": "FORMULA 系列用例的附加检查字段，按 0–2 记分；仅作附加证据，不替代五轴主评分。逐维定义唯一口径文件见 evals/formula-checks-rubric.md。",
   "学科内容": {
    "0": "公式/方程或条件错误",
    "1": "大体正确但漏条件/核验",
@@ -143,7 +143,7 @@
    "verdict": "通过",
    "reviewer": "主审（评审会话，与执行子代理分离）",
    "formula_checks": null,
-   "review_note": "纯文本目标豁免路径，行内可辨分组+定义域条件"
+   "review_note": "纯文本目标豁免路径，行内可辨分组+定义域条件；formula_checks 不适用（纯文本目标，无渲染产物可打渲染/复制维）"
   },
   {
    "id": "FORMULA-02",
@@ -227,7 +227,7 @@
    "verdict": "通过",
    "reviewer": "主审（评审会话，与执行子代理分离）",
    "formula_checks": null,
-   "review_note": "纯文本豁免完整交付；括号两角色+条件差异讲清"
+   "review_note": "纯文本豁免完整交付；括号两角色+条件差异讲清；formula_checks 不适用（纯文本豁免，无渲染产物）"
   },
   {
    "id": "FORMULA-06",
@@ -248,7 +248,7 @@
    "verdict": "通过",
    "reviewer": "主审（评审会话，与执行子代理分离）",
    "formula_checks": null,
-   "review_note": "零公式化（formulas 不触发边界）；两要件解释正确"
+   "review_note": "零公式化（formulas 不触发边界）；两要件解释正确；formula_checks 不适用（非公式任务无公式产物）"
   },
   {
    "id": "FORMULA-07",
@@ -269,7 +269,7 @@
    "verdict": "通过",
    "reviewer": "主审（评审会话，与执行子代理分离）",
    "formula_checks": null,
-   "review_note": "代码边界：源码全程代码标记，解释控制序列与转义"
+   "review_note": "代码边界：源码全程代码标记，解释控制序列与转义；formula_checks 不适用（源码以代码形态承载，非公式渲染）"
   },
   {
    "id": "FORMULA-08",
@@ -277,7 +277,7 @@
    "kind": "human",
    "prompt": "解释方程 sqrt((x+1)/(x-1))=2/3 的解法与成立条件。",
    "fixture": "无脚本任务：讲解含嵌套结构的方程",
-   "pass_condition": "分母、根号覆盖范围和 x≠1/根式内非负条件清楚；窄屏不横向溢出",
+   "pass_condition": "宿主已实测 → 分母、根号覆盖范围和 x≠1/根式内非负条件清楚；窄屏不横向溢出。宿主未实测 → 按规则停机：报告停止点与两条恢复路径（纯文本豁免/七项样例实测），不得冒充渲染或擅自纯文本顶替",
    "actual_output": "定义域先行（x≤-1 或 x>1）→ 平方 → 9(x+1)=4(x-1) → x=-13/5 → 验根代回 4/9 成立",
    "run_id": "replay-v9.12.2-20261101-1aa21e7",
    "scores": {
@@ -290,7 +290,7 @@
    "verdict": "通过",
    "reviewer": "主审（评审会话，与执行子代理分离）",
    "formula_checks": null,
-   "review_note": "定义域先行+验根（x=-13/5 代回 4/9 核实）；主审复核学科内容正确"
+   "review_note": "定义域先行+验根（x=-13/5 代回 4/9 核实）；主审复核学科内容正确；formula_checks 未逐维记分（首轮回放按当时单分支口径交付；双分支口径为 v9.13.1 对齐 F02–04 补记，渲染分支待宿主实测后按五维补记）"
   },
   {
    "id": "FORMULA-09",
@@ -298,7 +298,7 @@
    "kind": "human",
    "prompt": "用 v=Δs/Δt 解释平均速度并代入一个数值例子，再用 F=ma 展示两步推导（如先求 a 再求 F）。",
    "fixture": "无脚本任务：物理讲解场景",
-   "pass_condition": "变量先定义；数值和单位分开；单位换算/量纲一致；每步保留所用定律或近似；推导与结论可复制",
+   "pass_condition": "宿主已实测 → 变量先定义；数值和单位分开；单位换算/量纲一致；每步保留所用定律或近似；推导与结论可复制。宿主未实测 → 按规则停机：报告停止点与两条恢复路径，不得冒充渲染或擅自纯文本顶替",
    "actual_output": "先定义量再写关系式；3000 m/60 s=50 m/s（驳平均的平均）；F=ma 两步 2 m/s²→4 N，量纲自洽",
    "run_id": "replay-v9.12.2-20261101-1aa21e7",
    "scores": {
@@ -311,7 +311,7 @@
    "verdict": "通过",
    "reviewer": "主审（评审会话，与执行子代理分离）",
    "formula_checks": null,
-   "review_note": "物理专节全落点；数值与量纲主审核实正确（50 m/s、2 m/s²、4 N）"
+   "review_note": "物理专节全落点；数值与量纲主审核实正确（50 m/s、2 m/s²、4 N）；formula_checks 未逐维记分（首轮回放交付；双分支口径为 v9.13.1 补记，渲染分支待宿主实测后按五维补记）"
   },
   {
    "id": "FORMULA-10",
@@ -332,7 +332,7 @@
    "verdict": "通过",
    "reviewer": "主审（评审会话，与执行子代理分离）",
    "formula_checks": null,
-   "review_note": "化学专节全落点；配平核对与位置语义正确；验纯安全提示"
+   "review_note": "化学专节全落点；配平核对与位置语义正确；验纯安全提示；formula_checks 未逐维记分（首轮回放交付；渲染分支待宿主实测后按五维补记）"
   },
   {
    "id": "E25",

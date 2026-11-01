@@ -240,6 +240,10 @@ def main(argv=None) -> int:
     c.check("3.l ltw_typography --selftest 通过",
             proc.returncode == 0 and "0 FAIL" in (proc.stdout or ""), (proc.returncode, (proc.stdout or "")[-200:]))
 
+    rc, out = run_layout_cli(lambda t: t + "\n" + "词" * 210 + "，**关键判断**在此。\n\n" + "词" * 210 + "，收束一句。\n")
+    c.check("3.m 抓到：连续正文无视觉锚点（W 不拦截）",
+            rc == 0 and "W-LAYOUT-ANCHOR-GAP" in out, (rc, out[-300:]))
+
     total = c.ok + c.fail
     print(f"verify-readability: {total} checks, {c.ok} OK, {c.fail} FAIL")
     return 1 if c.fail else 0
