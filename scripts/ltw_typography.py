@@ -398,6 +398,11 @@ _DEFAULT_LAYOUT = {
     "hr_max": 3,
     "section_bold_floor_chars": 300,
     "table_cols_max_hard": 4,
+    "emphasis_floor_exempt": [
+        "题组", "作答与判分", "复述检查清单", "操作作品验收",
+        "参考答案", "答案", "备注", "来源", "参考资料",
+        "自测", "概念地图", "总表", "清单", "检验", "检验题", "检验问题",
+    ],
 }
 
 
@@ -536,19 +541,25 @@ def check_layout(text, cfg=None):
             "文末连续正文约 %d 字无视觉锚点——每约一屏（%d 字）给一个锚点" % (pending, gap_max))
 
     # W2. 强调下限：H2 节正文 ≥floor_chars 而零加粗 = 强调清零
+    #     （题组/判分/答案等记录型区块豁免——台账不考究强调，见 constants.layout）
+    floor_exempt = cfg.get("emphasis_floor_exempt", [])
     sec_start = sec_chars = sec_bold = None
+    sec_exempt = False
     for i, ln in enumerate(lines):
         if fence[i]:
             continue
         if re.match(r"^##\s", ln):
-            if sec_start is not None and sec_chars >= floor_chars and sec_bold == 0:
+            if (sec_start is not None and sec_chars >= floor_chars
+                    and sec_bold == 0 and not sec_exempt):
                 add("W", "W-LAYOUT-EMPHASIS-FLOOR", sec_start,
                     "本节正文约 %d 字零加粗（强调清零）——关键判断/易错点至少标一处" % sec_chars)
             sec_start, sec_chars, sec_bold = i, 0, 0
+            sec_exempt = any(e in ln for e in floor_exempt)
         elif sec_start is not None:
             sec_chars += len(vis[i].strip())
             sec_bold += len(re.findall(r"\*\*[^*]+\*\*", ln))
-    if sec_start is not None and sec_chars >= floor_chars and sec_bold == 0:
+    if (sec_start is not None and sec_chars >= floor_chars
+            and sec_bold == 0 and not sec_exempt):
         add("W", "W-LAYOUT-EMPHASIS-FLOOR", sec_start,
             "末节正文约 %d 字零加粗（强调清零）——关键判断/易错点至少标一处" % sec_chars)
 

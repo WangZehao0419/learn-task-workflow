@@ -227,7 +227,7 @@ def main(argv=None) -> int:
     c.check("3.i 抓到：行尾混用（W 不拦截）",
             rc == 0 and "W-LAYOUT-LINE-ENDING" in out, (rc, out[-300:]))
 
-    rc, out = run_layout_cli(lambda t: t + "## 备注\n\n" + "注" * 350 + "\n")
+    rc, out = run_layout_cli(lambda t: t + "## 使用注意\n\n" + "注" * 350 + "\n")
     c.check("3.j 抓到：整节零加粗（强调清零）",
             rc == 0 and "W-LAYOUT-EMPHASIS-FLOOR" in out, (rc, out[-300:]))
 

@@ -1959,7 +1959,25 @@
    "para_chars_max": 150,
    "hr_max": 3,
    "section_bold_floor_chars": 300,
-   "table_cols_max_hard": 4
+   "table_cols_max_hard": 4,
+   "emphasis_floor_exempt": [
+    "题组",
+    "作答与判分",
+    "复述检查清单",
+    "操作作品验收",
+    "参考答案",
+    "答案",
+    "备注",
+    "来源",
+    "参考资料",
+    "自测",
+    "概念地图",
+    "总表",
+    "清单",
+    "检验",
+    "检验题",
+    "检验问题"
+   ]
   },
   "scheduler": {
    "grade_base": {
