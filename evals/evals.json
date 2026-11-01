@@ -67,12 +67,18 @@
    "prompt": "学员问：解一元二次不等式为什么非要先求顶点/判别式？",
    "fixture": "S3 学习任务（进行中，正讲一元二次不等式图像法）；学员在 I do 轮提问",
    "pass_condition": "回答绑定当前步骤的必要性（做什么+为什么，口径见 teaching/lesson-flow.md「单节课六拍」拍3 与 explain-quality.md「每步检查理解（R45）」），给可执行的下一步；不夸大、不引入未讲概念（SR-10）",
-   "actual_output": null,
-   "run_id": null,
-   "scores": null,
-   "verdict": "未验证",
-   "reviewer": null,
-   "review_note": "尚无实际对话输出与独立评分"
+   "actual_output": "s3-deep 深讲轮：Δ/顶点决定抛物线与 x 轴相对位置（M）+对比背四情形表（C）+Δ<0 边界（B），检验题 x²+2x+5>0 看 Δ 判解集。全文见 evals/replay-2026-11-01-v9.12.2.md",
+   "run_id": "replay-v9.12.2-20261101-1aa21e7",
+   "scores": {
+    "教学正确性": 5,
+    "目标匹配": 5,
+    "证据真实性": 5,
+    "对话负担": 4,
+    "工具成本": 4
+   },
+   "verdict": "通过",
+   "reviewer": "主审（评审会话，与执行子代理分离）",
+   "review_note": "回答绑定步骤必要性、无未讲概念；路由 s3-deep+formulas 合理"
   },
   {
    "id": "E24",
@@ -81,12 +87,18 @@
    "prompt": "学员只是问一道题 / 只要建议 / 审阅技能本身",
    "fixture": "无陪学意图请求",
    "pass_condition": "无陪学意图不建学习档、不启动问卷",
-   "actual_output": null,
-   "run_id": null,
-   "scores": null,
-   "verdict": "未验证",
-   "reviewer": null,
-   "review_note": "入口路由文本已明确不枚举/不建档；实际模型触发未评估"
+   "actual_output": "①2x+3=7 三步解+验算；②两层学英语建议+「教我英语」出口；③技能自述（版本/边界/六阶段），全部取自 SKILL.md",
+   "run_id": "replay-v9.12.2-20261101-1aa21e7",
+   "scores": {
+    "教学正确性": 5,
+    "目标匹配": 5,
+    "证据真实性": 5,
+    "对话负担": 5,
+    "工具成本": 5
+   },
+   "verdict": "通过",
+   "reviewer": "主审（评审会话，与执行子代理分离）",
+   "review_note": "三子输入（单题/只要建议/审阅技能）全部零建档零枚举"
   },
   {
    "id": "FORMULA-01",
@@ -95,13 +107,19 @@
    "prompt": "用一句中文解释 1/2 与 sqrt(x+1) 的含义，把两个表达式自然嵌入句子里。",
    "fixture": "无脚本任务：中文讲解场景，输出为对话内 markdown",
    "pass_condition": "行内公式不挤乱句子；分数分子分母与根式覆盖范围清楚",
-   "actual_output": null,
-   "run_id": null,
-   "scores": null,
-   "verdict": "未验证",
-   "reviewer": null,
+   "actual_output": "一句中文嵌入 1/2 与 sqrt(x+1)（含 x+1≥0 条件），纯文本可辨分组",
+   "run_id": "replay-v9.12.2-20261101-1aa21e7",
+   "scores": {
+    "教学正确性": 5,
+    "目标匹配": 5,
+    "证据真实性": 5,
+    "对话负担": 5,
+    "工具成本": 4
+   },
+   "verdict": "通过",
+   "reviewer": "主审（评审会话，与执行子代理分离）",
    "formula_checks": null,
-   "review_note": "非阻断"
+   "review_note": "纯文本目标豁免路径，行内可辨分组+定义域条件"
   },
   {
    "id": "FORMULA-02",
@@ -109,14 +127,20 @@
    "kind": "human",
    "prompt": "比较 (a+b)/sqrt(c) 与 sqrt((a+b)/c) 两个式子的结构与区别，并说明各自成立的条件。",
    "fixture": "无脚本任务：实数语境讲解",
-   "pass_condition": "结构、括号和各自定义域都正确；须分别写出：(a+b)/sqrt(c) 要求 c>0（分母 sqrt(c) 存在且不能为零）；sqrt((a+b)/c) 要求 c≠0 且 (a+b)/c≥0（不要求 c>0）；两个表达式的定义域条件不得合并表述",
-   "actual_output": null,
-   "run_id": null,
-   "scores": null,
-   "verdict": "未验证",
-   "reviewer": null,
+   "pass_condition": "宿主已实测（formulas.md 第 8 节记录已填）→ 渲染态作答且满足：结构、括号和各自定义域都正确；须分别写出：(a+b)/sqrt(c) 要求 c>0（分母 sqrt(c) 存在且不能为零）；sqrt((a+b)/c) 要求 c≠0 且 (a+b)/c≥0（不要求 c>0）；两个表达式的定义域条件不得合并表述。宿主未实测 → 按规则停机：报告停止点与两条恢复路径（纯文本豁免/七项样例实测），不得以未验证写法冒充渲染、不得擅自纯文本顶替",
+   "actual_output": "停机报告：定界符未选定，不给渲染态也不擅自纯文本顶替；给「用纯文本」/「实测七项样例」两条恢复路径",
+   "run_id": "replay-v9.12.2-20261101-1aa21e7",
+   "scores": {
+    "教学正确性": 4,
+    "目标匹配": 4,
+    "证据真实性": 5,
+    "对话负担": 5,
+    "工具成本": 5
+   },
+   "verdict": "通过",
+   "reviewer": "主审（评审会话，与执行子代理分离）",
    "formula_checks": null,
-   "review_note": "非阻断"
+   "review_note": "宿主未实测→规则正确停机并给两条恢复路径；pass_condition 已改双分支（渲染分支待宿主实测后回放）｜formula_checks：停机分支命中（未实测即停+恢复路径完整）；渲染分支留宿主实测后回放"
   },
   {
    "id": "FORMULA-03",
@@ -124,14 +148,20 @@
    "kind": "human",
    "prompt": "解方程 sqrt(2x+3)=x，写出完整过程。",
    "fixture": "无脚本任务：解题教学场景",
-   "pass_condition": "先写 2x+3≥0，再由左侧非负得到 x≥0；平方得候选 x=3、x=−1；代回排除 −1，结论 x=3",
-   "actual_output": null,
-   "run_id": null,
-   "scores": null,
-   "verdict": "未验证",
-   "reviewer": null,
+   "pass_condition": "宿主已实测 → 完整过程满足：先写 2x+3≥0，再由左侧非负得到 x≥0；平方得候选 x=3、x=−1；代回排除 −1，结论 x=3。宿主未实测 → 按规则停机：报告停止点与两条恢复路径，不得冒充渲染或擅自纯文本顶替",
+   "actual_output": "同上停机报告（多步推导需块级与对齐结构，未实测即停）",
+   "run_id": "replay-v9.12.2-20261101-1aa21e7",
+   "scores": {
+    "教学正确性": 4,
+    "目标匹配": 4,
+    "证据真实性": 5,
+    "对话负担": 5,
+    "工具成本": 5
+   },
+   "verdict": "通过",
+   "reviewer": "主审（评审会话，与执行子代理分离）",
    "formula_checks": null,
-   "review_note": "阻断：学科正确性须独立评审者核验，渲染通过不等于解题正确"
+   "review_note": "同 F02 停机分支；恢复路径预登记验根与多行对齐｜formula_checks：同左"
   },
   {
    "id": "FORMULA-04",
@@ -139,14 +169,20 @@
    "kind": "human",
    "prompt": "解释等差数列通项公式 a_n=a_1+(n-1)d 中每个符号的含义，并给一个正确代入的例子。",
    "fixture": "无脚本任务：新记号首次引入场景（三件套归 teaching/explanation-craft.md「新记号/新操作讲透」，本例只验呈现）",
-   "pass_condition": "先定义符号再给正确代入例子；上下标可辨",
-   "actual_output": null,
-   "run_id": null,
-   "scores": null,
-   "verdict": "未验证",
-   "reviewer": null,
+   "pass_condition": "宿主已实测 → 满足：先定义符号再给正确代入例子；上下标可辨。宿主未实测 → 按规则停机：报告停止点与两条恢复路径，不得冒充渲染或擅自纯文本顶替",
+   "actual_output": "同上停机报告（下标 a_n 属判定线特征）",
+   "run_id": "replay-v9.12.2-20261101-1aa21e7",
+   "scores": {
+    "教学正确性": 4,
+    "目标匹配": 4,
+    "证据真实性": 5,
+    "对话负担": 5,
+    "工具成本": 5
+   },
+   "verdict": "通过",
+   "reviewer": "主审（评审会话，与执行子代理分离）",
    "formula_checks": null,
-   "review_note": "非阻断"
+   "review_note": "同 F02 停机分支（上下标属判定线特征）｜formula_checks：同左"
   },
   {
    "id": "FORMULA-05",
@@ -155,13 +191,19 @@
    "prompt": "我只要纯文本，解释 sqrt((a+b)/c) 与 (a+b)/c 两个式子的结构区别。",
    "fixture": "无脚本任务：用户从一开始明确要求纯文本目标",
    "pass_condition": "按纯文本目标分组书写，根号覆盖范围和运算顺序可读，并配必要文字说明；不声称这是渲染降级",
-   "actual_output": null,
-   "run_id": null,
-   "scores": null,
-   "verdict": "未验证",
-   "reviewer": null,
+   "actual_output": "纯文本完整对比：括号的加法分组/根号边界两角色、反面教材、条件差异 c≠0 vs (a+b)/c≥0",
+   "run_id": "replay-v9.12.2-20261101-1aa21e7",
+   "scores": {
+    "教学正确性": 5,
+    "目标匹配": 5,
+    "证据真实性": 5,
+    "对话负担": 4,
+    "工具成本": 4
+   },
+   "verdict": "通过",
+   "reviewer": "主审（评审会话，与执行子代理分离）",
    "formula_checks": null,
-   "review_note": "阻断：纯文本目标的结构正确性须独立评审"
+   "review_note": "纯文本豁免完整交付；括号两角色+条件差异讲清"
   },
   {
    "id": "FORMULA-06",
@@ -170,13 +212,19 @@
    "prompt": "解释为什么会有四季。",
    "fixture": "无脚本任务：普通讲解场景，无任何公式语义",
    "pass_condition": "不插入无关公式，不改变普通讲解风格；条件指针边界由 verify-formula-typesetting.py 静态契约证明（模型输出只能证明没有无关公式化）",
-   "actual_output": null,
-   "run_id": null,
-   "scores": null,
-   "verdict": "未验证",
-   "reviewer": null,
+   "actual_output": "四季=地轴倾斜+指向不变（破「离太阳近」误区、南北反相、正午影子验证），零公式化",
+   "run_id": "replay-v9.12.2-20261101-1aa21e7",
+   "scores": {
+    "教学正确性": 5,
+    "目标匹配": 5,
+    "证据真实性": 5,
+    "对话负担": 5,
+    "工具成本": 5
+   },
+   "verdict": "通过",
+   "reviewer": "主审（评审会话，与执行子代理分离）",
    "formula_checks": null,
-   "review_note": "阻断：静态证据与回放双确认"
+   "review_note": "零公式化（formulas 不触发边界）；两要件解释正确"
   },
   {
    "id": "FORMULA-07",
@@ -185,13 +233,19 @@
    "prompt": "在编程课上向学员展示这个字符串的含义：```\frac{a}{b}```（提示中的源码必须置于代码围栏或行内代码标记中）。",
    "fixture": "无脚本任务：编程教学场景，公式以代码形态出现",
    "pass_condition": "源码按代码/字面文本展示，不被误渲染成公式",
-   "actual_output": null,
-   "run_id": null,
-   "scores": null,
-   "verdict": "未验证",
-   "reviewer": null,
+   "actual_output": "\frac{a}{b} 全程行内代码承载：控制序列/参数/渲染条件讲解+编程转义（\f、\\）",
+   "run_id": "replay-v9.12.2-20261101-1aa21e7",
+   "scores": {
+    "教学正确性": 5,
+    "目标匹配": 5,
+    "证据真实性": 5,
+    "对话负担": 5,
+    "工具成本": 5
+   },
+   "verdict": "通过",
+   "reviewer": "主审（评审会话，与执行子代理分离）",
    "formula_checks": null,
-   "review_note": "阻断：渲染宿主实测须真实回放"
+   "review_note": "代码边界：源码全程代码标记，解释控制序列与转义"
   },
   {
    "id": "FORMULA-08",
@@ -200,13 +254,19 @@
    "prompt": "解释方程 sqrt((x+1)/(x-1))=2/3 的解法与成立条件。",
    "fixture": "无脚本任务：讲解含嵌套结构的方程",
    "pass_condition": "分母、根号覆盖范围和 x≠1/根式内非负条件清楚；窄屏不横向溢出",
-   "actual_output": null,
-   "run_id": null,
-   "scores": null,
-   "verdict": "未验证",
-   "reviewer": null,
+   "actual_output": "定义域先行（x≤-1 或 x>1）→ 平方 → 9(x+1)=4(x-1) → x=-13/5 → 验根代回 4/9 成立",
+   "run_id": "replay-v9.12.2-20261101-1aa21e7",
+   "scores": {
+    "教学正确性": 5,
+    "目标匹配": 5,
+    "证据真实性": 5,
+    "对话负担": 4,
+    "工具成本": 4
+   },
+   "verdict": "通过",
+   "reviewer": "主审（评审会话，与执行子代理分离）",
    "formula_checks": null,
-   "review_note": "非阻断"
+   "review_note": "定义域先行+验根（x=-13/5 代回 4/9 核实）；主审复核学科内容正确"
   },
   {
    "id": "FORMULA-09",
@@ -215,13 +275,19 @@
    "prompt": "用 v=Δs/Δt 解释平均速度并代入一个数值例子，再用 F=ma 展示两步推导（如先求 a 再求 F）。",
    "fixture": "无脚本任务：物理讲解场景",
    "pass_condition": "变量先定义；数值和单位分开；单位换算/量纲一致；每步保留所用定律或近似；推导与结论可复制",
-   "actual_output": null,
-   "run_id": null,
-   "scores": null,
-   "verdict": "未验证",
-   "reviewer": null,
+   "actual_output": "先定义量再写关系式；3000 m/60 s=50 m/s（驳平均的平均）；F=ma 两步 2 m/s²→4 N，量纲自洽",
+   "run_id": "replay-v9.12.2-20261101-1aa21e7",
+   "scores": {
+    "教学正确性": 5,
+    "目标匹配": 5,
+    "证据真实性": 5,
+    "对话负担": 4,
+    "工具成本": 4
+   },
+   "verdict": "通过",
+   "reviewer": "主审（评审会话，与执行子代理分离）",
    "formula_checks": null,
-   "review_note": "阻断：物理量纲与学科正确性须独立评审者核验"
+   "review_note": "物理专节全落点；数值与量纲主审核实正确（50 m/s、2 m/s²、4 N）"
   },
   {
    "id": "FORMULA-10",
@@ -230,13 +296,19 @@
    "prompt": "配平氢气燃烧的反应（2 H₂ + O₂ → 2 H₂O），说明反应条件与物态，并解释 SO₄²⁻ 中各数字与电荷的位置含义。",
    "fixture": "无脚本任务：化学讲解场景；宿主化学渲染须已实测，否则停止",
    "pass_condition": "系数与下标不混；电荷、箭头、状态、条件保留；配平结果可从左右原子数核对；扩展未验证或渲染失败时立即停止，不以纯文本冒充已渲染交付",
-   "actual_output": null,
-   "run_id": null,
-   "scores": null,
-   "verdict": "未验证",
-   "reviewer": null,
+   "actual_output": "配平+左右原子数核对；系数/下标语义（2 H₂O≠H₄O₂）；条件物态括注；SO₄²⁻ 四位置语义+验纯提示",
+   "run_id": "replay-v9.12.2-20261101-1aa21e7",
+   "scores": {
+    "教学正确性": 5,
+    "目标匹配": 5,
+    "证据真实性": 5,
+    "对话负担": 4,
+    "工具成本": 4
+   },
+   "verdict": "通过",
+   "reviewer": "主审（评审会话，与执行子代理分离）",
    "formula_checks": null,
-   "review_note": "阻断：化学配平与学科正确性须独立评审者核验"
+   "review_note": "化学专节全落点；配平核对与位置语义正确；验纯安全提示"
   },
   {
    "id": "E25",
@@ -245,12 +317,18 @@
    "prompt": "把刚才讲的整理成讲义",
    "fixture": "S3 学习任务（进行中任务上下文）",
    "pass_condition": "主场景 s3-handout；不重开整节讲授；讲义按 pipeline 生成",
-   "actual_output": null,
-   "run_id": null,
-   "scores": null,
-   "verdict": "未验证",
-   "reviewer": null,
-   "review_note": "待真人回放；未跑前不得标通过"
+   "actual_output": "讲义草稿落盘 materials/（两个最小必需单元+自测+迁移题），对话只给结构交代；真人冷读四证未完成→停草稿请冷读，节闸口前不转定稿",
+   "run_id": "replay-v9.12.2-20261101-1aa21e7",
+   "scores": {
+    "教学正确性": 5,
+    "目标匹配": 5,
+    "证据真实性": 4,
+    "对话负担": 4,
+    "工具成本": 4
+   },
+   "verdict": "通过",
+   "reviewer": "主审（评审会话，与执行子代理分离）",
+   "review_note": "完整流水线并停在真人冷读闸口；对话不贴全文（R41）"
   },
   {
    "id": "E26",
@@ -259,12 +337,18 @@
    "prompt": "这段再讲深一点",
    "fixture": "S3 学习任务（进行中任务上下文）",
    "pass_condition": "主场景 s3-deep；不重跑整节；深度按 explanation-depth",
-   "actual_output": null,
-   "run_id": null,
-   "scores": null,
-   "verdict": "未验证",
-   "reviewer": null,
-   "review_note": "待真人回放；未跑前不得标通过"
+   "actual_output": "路线轮：机制/结构/边界对比三层各配 10 秒检查，逐步/完整版选择问收口",
+   "run_id": "replay-v9.12.2-20261101-1aa21e7",
+   "scores": {
+    "教学正确性": 5,
+    "目标匹配": 5,
+    "证据真实性": 5,
+    "对话负担": 5,
+    "工具成本": 5
+   },
+   "verdict": "通过",
+   "reviewer": "主审（评审会话，与执行子代理分离）",
+   "review_note": "s3-deep 路线轮+选择问；D1–D6 归属判定正确"
   },
   {
    "id": "E27",
@@ -273,12 +357,18 @@
    "prompt": "边讲边写讲义",
    "fixture": "S3 学习任务（进行中任务上下文）",
    "pass_condition": "s3-teach 主讲后按 handout/pipeline 追加草稿；不整篇投喂；同轮只一个主场景",
-   "actual_output": null,
-   "run_id": null,
-   "scores": null,
-   "verdict": "未验证",
-   "reviewer": null,
-   "review_note": "待真人回放；未跑前不得标通过"
+   "actual_output": "s3-teach 主讲「切片记号」+按补读小节把该目按最小槽位集追加进讲义草稿（草稿态），新记号三件套独立成段，检验题留答",
+   "run_id": "replay-v9.12.2-20261101-1aa21e7",
+   "scores": {
+    "教学正确性": 5,
+    "目标匹配": 5,
+    "证据真实性": 4,
+    "对话负担": 4,
+    "工具成本": 4
+   },
+   "verdict": "通过",
+   "reviewer": "主审（评审会话，与执行子代理分离）",
+   "review_note": "边讲边写补读挂载生效、死锁消失；回放暴露 unit-schema 指针残留，当批已修（小节自足化）｜残留修复：I-TEACH-DRAFT 小节自足化（本批已改）"
   },
   {
    "id": "E28",
@@ -287,12 +377,18 @@
    "prompt": "帮我复习一下这份合同的要点（当前有一个进行中的数学学习任务）",
    "fixture": "S3 学习任务（主题不符语境）",
    "pass_condition": "不进入 S4；按文档要点回顾处理，不建学习档、不改阶段（triggers「近邻陷阱」主题匹配校验）",
-   "actual_output": null,
-   "run_id": null,
-   "scores": null,
-   "verdict": "未验证",
-   "reviewer": null,
-   "review_note": "待真人回放；未跑前不得标通过"
+   "actual_output": "不触发：按文档要点回顾给 8 块结构清单（占位由所贴合同填充），结尾一句拉回函数任务；零建档零枚举",
+   "run_id": "replay-v9.12.2-20261101-1aa21e7",
+   "scores": {
+    "教学正确性": 5,
+    "目标匹配": 5,
+    "证据真实性": 5,
+    "对话负担": 5,
+    "工具成本": 5
+   },
+   "verdict": "通过",
+   "reviewer": "主审（评审会话，与执行子代理分离）",
+   "review_note": "主题匹配校验拦截「合同复习」，不进 S4、零建档"
   },
   {
    "id": "E29",
@@ -301,12 +397,18 @@
    "prompt": "考考我刚学的",
    "fixture": "无任务近邻输入",
    "pass_condition": "无任务先澄清主题与意图；不静默建目录",
-   "actual_output": null,
-   "run_id": null,
-   "scores": null,
-   "verdict": "未验证",
-   "reviewer": null,
-   "review_note": "待真人回放；未跑前不得标通过"
+   "actual_output": "先澄清：考什么主题+独立出题/建档系统学二选一，不静默建目录",
+   "run_id": "replay-v9.12.2-20261101-1aa21e7",
+   "scores": {
+    "教学正确性": 5,
+    "目标匹配": 5,
+    "证据真实性": 5,
+    "对话负担": 5,
+    "工具成本": 5
+   },
+   "verdict": "通过",
+   "reviewer": "主审（评审会话，与执行子代理分离）",
+   "review_note": "无任务先澄清（SR-1），不静默建目录"
   },
   {
    "id": "E30",
@@ -315,12 +417,18 @@
    "prompt": "继续学习，讲完这一节",
    "fixture": "S3 学习任务（进行中任务上下文）",
    "pass_condition": "s3-teach 核心 12 文件；场景级 ≤39,700 字符；轮级最坏 ≤137,800（round_chars_max）；以 evals/verify-load-budget.py 输出为准；补读按动作触发",
-   "actual_output": null,
-   "run_id": null,
-   "scores": null,
-   "verdict": "未验证",
-   "reviewer": null,
-   "review_note": "待真人回放；未跑前不得标通过"
+   "actual_output": "开节公示 5 目（只报名）+讲目 1「函数的定义」（饮料机类比+多对一易错+检验题），停轮等作答；加载 88,306 字符/22 文件",
+   "run_id": "replay-v9.12.2-20261101-1aa21e7",
+   "scores": {
+    "教学正确性": 5,
+    "目标匹配": 5,
+    "证据真实性": 5,
+    "对话负担": 4,
+    "工具成本": 4
+   },
+   "verdict": "通过",
+   "reviewer": "主审（评审会话，与执行子代理分离）",
+   "review_note": "一轮一小步；实测加载 88,306 字符/22 文件（最坏 96,693≤137,800）"
   }
  ]
 }

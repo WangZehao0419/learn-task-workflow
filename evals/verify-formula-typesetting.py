@@ -123,10 +123,18 @@ def group_evals(evals_data, c):
     miss_keys = {i: [k for k in CASE_REQUIRED_KEYS if k not in by_id[i]] for i in present}
     c.check("5.2 每条 FORMULA 含全部必需键", all(not v for v in miss_keys.values()),
             str({k: v for k, v in miss_keys.items() if v}))
-    bad_verdict = [i for i in present if by_id[i].get("verdict") != "未验证"]
-    c.check("5.3 每条 verdict == 未验证", not bad_verdict, str(bad_verdict))
-    not_null = [i for i in present if any(by_id[i].get(k) is not None for k in CASE_NONE_KEYS)]
-    c.check("5.4 证据字段均为 null", not not_null, str(not_null))
+    bad_verdict = [i for i in present if by_id[i].get("verdict") not in ("通过", "未通过", "未验证")]
+    c.check("5.3 verdict 取值合法（通过/未通过/未验证）", not bad_verdict, str(bad_verdict))
+    judged = [i for i in present if by_id[i].get("verdict") != "未验证"]
+    incomplete = [i for i in judged
+                  if any(by_id[i].get(k) is None
+                         for k in ("actual_output", "run_id", "scores", "reviewer"))]
+    c.check("5.4 已判定用例证据字段完整（run_id/actual_output/scores/reviewer 非空）",
+            not incomplete, str(incomplete))
+    fake_pass = [i for i in present
+                 if by_id[i].get("verdict") == "未验证"
+                 and any(by_id[i].get(k) is not None for k in CASE_NONE_KEYS)]
+    c.check("5.4b 未验证用例不得携带运行证据", not fake_pass, str(fake_pass))
     rubric = data.get("formula_checks_rubric")
     c.check("5.5 formula_checks_rubric 含五维与阻断规则",
             isinstance(rubric, dict) and all(k in rubric for k in RUBRIC_KEYS))
