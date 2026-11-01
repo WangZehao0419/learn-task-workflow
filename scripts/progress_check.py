@@ -22,7 +22,8 @@
      「滚雪球候选」等设计性范围外条目与排除条目均不计入暂缓比对基数）、
      W-CURRENT-SECTION（「当前节」与学习路线勾选/阶段不一致；仅提示）、
      W-GRADED-LOSS-UNLOGGED（节判分记录中「判错」行或标「→ 入薄弱点」行未入薄弱点/错题本；
-     j-/z-/00-/99-/S4- 前缀文件与作废行豁免，无 KP 且无「目=」的行跳过不误报；仅提示）。
+     含 j- 加练（R55 判错仍入账）；z-/00-/99-/S4- 前缀文件与作废行豁免，无 KP 且无「目=」
+     的行跳过不误报；仅提示）。
 
 用法：
     python progress_check.py <任务目录>              # 日常校验（warning 仅提示，不拦截）
@@ -1143,9 +1144,10 @@ def check(task_dir, release=False, proposed=None):
                     seen_aid[aid] = (proj, num)
 
     # v9.12.0（R51/R55 配套护栏）：节判分记录中的「判错」行或标「→ 入薄弱点」行应同轮入账
-    # （薄弱点/错题本，s3-cycle 步⑤「判错同轮归因定级」）。只校验按 lesson_id 选中的节证据；
-    # j-（加练）/z-（自创变式）/00-/99-/S4- 前缀文件与作废行豁免；无 KP 且无「目=」的行
-    # 无法可靠对账，跳过不误报。warning 级：提醒补账，不拦截。
+    # （薄弱点/错题本，s3-cycle 步⑤「判错同轮归因定级」）。只校验按 lesson_id 选中的节证据，
+    # 含 j-（加练——R55 规定加练判错仍入账，护栏照常覆盖）；z-（自创变式自答自评）/
+    # 00-/99-/S4- 前缀文件与作废行豁免；无 KP 且无「目=」的行无法可靠对账，跳过不误报。
+    # warning 级：提醒补账，不拦截。
     if lesson_evidence:
         ledger_lines = []
         _lsec = None
@@ -1167,7 +1169,7 @@ def check(task_dir, release=False, proposed=None):
 
         for _num in sorted(lesson_evidence):
             _fname = lesson_file.get(_num, "").lower()
-            if _fname.startswith(("j-", "z-", "00-", "99-", "s4-")):
+            if _fname.startswith(("z-", "00-", "99-", "s4-")):
                 continue
             for a in parse_attempts(lesson_evidence[_num])["attempts"]:
                 if a["voided"]:
@@ -2756,7 +2758,8 @@ def selftest():
             ok = ok and rc == 2
 
         # ㊱ v9.12.0 判错↔入账护栏（W-GRADED-LOSS-UNLOGGED）：判错未入账 → W；
-        # 已入账（薄弱点含该 KP）→ 无告警；j- 加练文件豁免；「需巩固」标注 → coverage 计数。
+        # 已入账（薄弱点含该 KP）→ 无告警；j- 加练文件照常覆盖（入账则无告警、未入账则 W）；
+        # 「需巩固」标注 → coverage 计数。
         _led_head = ("# 学习任务：示例\n- 数据根：D:/x/.learning\n- 当前阶段：逐节学习\n- 类型：知识型\n"
                      "- 学科族：数学与统计\n- 目标：掌握\n- 起点：入门\n- 当前节：1\n- 最近更新：2026-01-02\n\n")
         _led_tail = ("\n## 暂缓与范围外\n- 无\n\n## 本次交接\n- 总结：-\n- 下次先做：-\n- 未解决：无\n\n"
@@ -2792,13 +2795,36 @@ def selftest():
         (d_logged / "课程体系.md").write_text(_led_curr_cons, encoding="utf-8")
         (d_logged / "exercises" / "01-极限-2026-01-01.md").write_text(
             _fixture_evidence_text("01-极限-2026-01-01.md", _ev_wrong), encoding="utf-8")
-        (d_logged / "exercises" / "j-加练-2025-12-31.md").write_text(
-            "lesson_id=L-01\n## 作答与判分\n"
-            "- 题1：作答「9」｜正确性=错｜独立性=独立｜KP=KP-01-01｜调度档=Again\n", encoding="utf-8")
         r_logged = check(d_logged)
         ok = ok and r_logged["ok"]
         ok = ok and not any(w["code"] == "W-GRADED-LOSS-UNLOGGED" for w in r_logged["warnings"])
         ok = ok and r_logged["coverage"]["needs_consolidation"] == 1
+
+        # j- 加练照常受护栏覆盖：判错已入账 → 无告警；未入账 → W
+        d_jlogged = Path(td) / "j-loss-logged"
+        (d_jlogged / "exercises").mkdir(parents=True)
+        (d_jlogged / "progress.md").write_text(
+            _led_head + "## 薄弱点\n- KP-01-01 数列极限：加练挑战题口径错（S=3.0，D=3，last=2026-01-02，due=2026-01-05）\n\n"
+            "## 错题本\n- 无\n" + _led_tail, encoding="utf-8")
+        (d_jlogged / "课程体系.md").write_text(_led_curr, encoding="utf-8")
+        (d_jlogged / "exercises" / "j-加练-2026-01-02.md").write_text(
+            "lesson_id=L-01\n## 作答与判分\n"
+            "- 题1：作答「9」｜正确性=错｜独立性=独立｜KP=KP-01-01｜调度档=Again\n", encoding="utf-8")
+        r_jlogged = check(d_jlogged)
+        ok = ok and r_jlogged["ok"]
+        ok = ok and not any(w["code"] == "W-GRADED-LOSS-UNLOGGED" for w in r_jlogged["warnings"])
+
+        d_jnolog = Path(td) / "j-loss-unlogged"
+        (d_jnolog / "exercises").mkdir(parents=True)
+        (d_jnolog / "progress.md").write_text(
+            _led_head + "## 薄弱点\n- 无\n\n## 错题本\n- 无\n" + _led_tail, encoding="utf-8")
+        (d_jnolog / "课程体系.md").write_text(_led_curr, encoding="utf-8")
+        (d_jnolog / "exercises" / "j-加练-2026-01-02.md").write_text(
+            "lesson_id=L-01\n## 作答与判分\n"
+            "- 题1：作答「9」｜正确性=错｜独立性=独立｜KP=KP-01-01｜调度档=Again\n", encoding="utf-8")
+        r_jnolog = check(d_jnolog)
+        ok = ok and r_jnolog["ok"] and any(
+            w["code"] == "W-GRADED-LOSS-UNLOGGED" for w in r_jnolog["warnings"])
 
     print(("OK " if ok else "FAIL ") + "progress_check --selftest")
     return 0 if ok else 1

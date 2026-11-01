@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/2",
- "version": "9.12.0",
+ "version": "9.12.1",
  "retired_rule_ids": [
   "T02",
   "T07",
