@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""ltw_typography - 讲义读者版/排版检查模块（被 verify_explanation.py --reader 调用）。
+"""ltw_typography - 讲义读者版/排版检查模块 + 文件结构可读性闸口（独立 CLI）。
 
-纯函数：不写盘、不联网、不读环境变量。规则数值来自 contracts/rules.json 的
-constants.reader；本模块只做可静态判定的结构项，语义上的“是否更易读”仍归人工读者验证。
+两种用法：
+1. 被 verify_explanation.py --reader 调用（run_checks，讲义读者版 W-READER-*，不阻断）；
+2. 独立闸口：`python -B scripts/ltw_typography.py <学员可读.md>... [--selftest]`
+   —— 按 ops/layout.md 对任意学员可读文件跑 E/W 级结构检查（E-LAYOUT-*/W-LAYOUT-*），
+   任一 E 级违规退出码 1。规则数值来自 contracts/rules.json 的 constants.layout。
+
+纯函数：不写盘、不联网、不读环境变量。语义上的"是否更易读"仍归人工读者验证。
 """
+import json
 import re
 from pathlib import Path
 
@@ -374,3 +380,270 @@ def run_checks(lines, doc, vis, fence, base_dir, box_rows, add, cfg):
     check_caption(lines, fence, add, cfg)
     check_linktext(lines, fence, add, cfg)
     check_table_align(lines, fence, add, cfg)
+
+
+# ═══════════════════════════════════════════════════════════════════
+# 文件结构可读性闸口（ops/layout.md；独立 CLI 用，constants.layout 驱动）
+# ═══════════════════════════════════════════════════════════════════
+
+# 列表标记后无空格：`1.（题 1）`、`-要点`、`1、题面`——CommonMark 不认定为列表。
+LIST_SPACE_RE = re.compile(r"^(\s*(?:>\s*)*)(\d+[.)、]|[-*+])(?=[^\s\d.）)\-*+])")
+HR_RE = re.compile(r"^\s*(?:-{3,}|\*{3,}|_{3,})\s*$")
+LATEX_ARROW_RE = re.compile(
+    r"\$\\(?:right|left|Right|Left|long|Long|leftright|Leftright)arrow\b[^$]*\$|\$\\to\b[^$]*\$")
+_DEFAULT_LAYOUT = {
+    "hard_line_max": 400,
+    "anchor_gap_max": 400,
+    "para_chars_max": 150,
+    "hr_max": 3,
+    "section_bold_floor_chars": 300,
+    "table_cols_max_hard": 4,
+}
+
+
+def _load_layout_cfg():
+    """读 contracts/rules.json 的 constants.layout；缺失时用内置默认。"""
+    path = Path(__file__).resolve().parent.parent / "contracts" / "rules.json"
+    try:
+        cfg = json.loads(path.read_text(encoding="utf-8"))["constants"].get("layout", {})
+    except (OSError, UnicodeError, ValueError, KeyError):
+        cfg = {}
+    out = dict(_DEFAULT_LAYOUT)
+    out.update({k: v for k, v in cfg.items()})
+    return out
+
+
+def _vis_lines(lines):
+    """可见正文（剥围栏/代码/公式）。复用 verify_explanation 的实现（惰性导入避免环）。"""
+    global _COMPUTE_VISIBLE
+    if _COMPUTE_VISIBLE is None:
+        from verify_explanation import compute_visible as fn
+        _COMPUTE_VISIBLE = fn
+    return _COMPUTE_VISIBLE(lines)
+
+
+_COMPUTE_VISIBLE = None
+
+
+def check_layout(text, cfg=None):
+    """学员可读文件的结构可读性检查（ops/layout.md）。
+
+    返回 (sev, code, lineno_1based, msg) 列表；sev ∈ {"E", "W"}。
+    只做可静态判定项；「是否更易读」的语义判断仍归人工读者。
+    """
+    cfg = dict(_DEFAULT_LAYOUT, **(cfg or {}))
+    lines = text.splitlines()
+    vis, fence = _vis_lines(lines)
+    findings = []
+
+    def add(sev, code, idx, msg):
+        findings.append((sev, code, idx + 1, msg))
+
+    hard_line = int(cfg["hard_line_max"])
+    gap_max = int(cfg["anchor_gap_max"])
+    floor_chars = int(cfg["section_bold_floor_chars"])
+    hr_max = int(cfg["hr_max"])
+    cols_max = int(cfg["table_cols_max_hard"])
+
+    # E1. 行内 $ 当行成对（跳过围栏与 $$ 跨行块内行）
+    in_fence = in_math = False
+    for i, ln in enumerate(lines):
+        if in_fence:
+            if ln.lstrip().startswith("```"):
+                in_fence = False
+            continue
+        if ln.lstrip().startswith("```"):
+            in_fence = True
+            continue
+        if in_math:
+            if "$$" in ln:
+                in_math = False
+            continue
+        if "$$" in ln:
+            if ln.count("$$") % 2 == 1:
+                in_math = True
+            continue
+        if ln.count("$") % 2 == 1:
+            add("E", "E-LAYOUT-MATH-UNPAIRED", i,
+                "行内 $ 不成对（本行 %d 个）——补齐定界符；编辑残片（如「ightarrow$」）必须删除；"
+                "美元金额请转义 \\$ 或写「美元」" % ln.count("$"))
+
+    # E2. 列表标记后必须空格
+    for i, ln in enumerate(lines):
+        if fence[i]:
+            continue
+        m = LIST_SPACE_RE.match(ln)
+        if m:
+            add("E", "E-LAYOUT-LIST-SPACE", i,
+                "列表标记「%s」后无空格——CommonMark 不认定为列表，渲染成文字墙；"
+                "标记后先空格再写内容，顿号条目（1、）一律改「1. 」" % m.group(2))
+
+    # E3. 单行可见正文超硬上限（标题/表格/引用行豁免，与 W-READER-LONGLINE 同口径）
+    for i, ln in enumerate(lines):
+        if fence[i]:
+            continue
+        s = vis[i].strip()
+        if not s or s.startswith(("#", "|", ">")) or ln.lstrip().startswith(("|", ">")):
+            continue
+        if len(s) > hard_line:
+            add("E", "E-LAYOUT-LONGLINE", i,
+                "单行可见正文 %d 字（硬上限 %d）——一行塞了多个逻辑层；"
+                "按每题卡片拆短行，台账内容移出正文" % (len(s), hard_line))
+
+    # E4. 标题不跳级
+    prev = 0
+    for i, ln in enumerate(lines):
+        if fence[i]:
+            continue
+        m = re.match(r"^(#{1,6})\s+", ln)
+        if not m:
+            continue
+        level = len(m.group(1))
+        if prev and level > prev + 1:
+            add("E", "E-LAYOUT-HEADING-SKIP", i,
+                "标题层级跳级 H%d→H%d——用 H2 分单元、H3 分小节，不跳级" % (prev, level))
+        prev = level
+
+    # E5. 表格列数硬上限 + 表头分隔行
+    for block in table_blocks(lines, fence):
+        if len(block) < 2 or not is_table_sep(lines[block[1]]):
+            add("E", "E-LAYOUT-TABLE-WIDE", block[0],
+                "表格缺表头分隔行——补「| 列名 | … |」与「|---|---|」，或改列表/卡片")
+            continue
+        cols = len(table_cells(lines[block[0]]))
+        if cols > cols_max:
+            add("E", "E-LAYOUT-TABLE-WIDE", block[0],
+                "表格 %d 列（硬上限 %d）——拆成卡片、两张表或列表" % (cols, cols_max))
+
+    # W1. 视觉锚点间距：连续正文超过 gap_max 字无任何锚点
+    anchor_re = re.compile(r"^(#{1,6}\s|\s*(?:[-*+]|\d+[.)])\s|\||>|\s*!\[)")
+    pending = 0
+    pend_start = 0
+    for i, ln in enumerate(lines):
+        if fence[i]:
+            continue
+        if HR_RE.match(ln) or anchor_re.match(ln) or ("$" in ln):
+            if pending > gap_max:
+                add("W", "W-LAYOUT-ANCHOR-GAP", pend_start,
+                    "连续正文约 %d 字无视觉锚点——每约一屏（%d 字）给一个标题/列表/表格/图/公式/引用块"
+                    % (pending, gap_max))
+            pending = 0
+            pend_start = i + 1
+            continue
+        pending += len(vis[i].strip())
+    if pending > gap_max:
+        add("W", "W-LAYOUT-ANCHOR-GAP", pend_start,
+            "文末连续正文约 %d 字无视觉锚点——每约一屏（%d 字）给一个锚点" % (pending, gap_max))
+
+    # W2. 强调下限：H2 节正文 ≥floor_chars 而零加粗 = 强调清零
+    sec_start = sec_chars = sec_bold = None
+    for i, ln in enumerate(lines):
+        if fence[i]:
+            continue
+        if re.match(r"^##\s", ln):
+            if sec_start is not None and sec_chars >= floor_chars and sec_bold == 0:
+                add("W", "W-LAYOUT-EMPHASIS-FLOOR", sec_start,
+                    "本节正文约 %d 字零加粗（强调清零）——关键判断/易错点至少标一处" % sec_chars)
+            sec_start, sec_chars, sec_bold = i, 0, 0
+        elif sec_start is not None:
+            sec_chars += len(vis[i].strip())
+            sec_bold += len(re.findall(r"\*\*[^*]+\*\*", ln))
+    if sec_start is not None and sec_chars >= floor_chars and sec_bold == 0:
+        add("W", "W-LAYOUT-EMPHASIS-FLOOR", sec_start,
+            "末节正文约 %d 字零加粗（强调清零）——关键判断/易错点至少标一处" % sec_chars)
+
+    # W3. 分隔线全文 ≤ hr_max 条
+    hr_seen = 0
+    for i, ln in enumerate(lines):
+        if fence[i]:
+            continue
+        if HR_RE.match(ln):
+            hr_seen += 1
+            if hr_seen == hr_max + 1:
+                add("W", "W-LAYOUT-SEPARATOR", i,
+                    "分隔线超过 %d 条——只用于一级大区块之间，其余删除" % hr_max)
+
+    # W4. 行尾全文统一
+    if "\r\n" in text and re.search(r"(?<!\r)\n", text):
+        add("W", "W-LAYOUT-LINE-ENDING", 0,
+            "行尾混用 CRLF 与 LF——全文统一为一种（建议 LF）")
+
+    # W5. 非公式语境的 LaTeX 箭头（全文无 $$ 块且无结构命令时才判）
+    if "$$" not in text and not re.search(r"\\(?:frac|sqrt|sum|int)\b", text):
+        for i, ln in enumerate(lines):
+            if fence[i]:
+                continue
+            if LATEX_ARROW_RE.search(ln):
+                add("W", "W-LAYOUT-LATEX-ARROW", i,
+                    "非公式语境用 LaTeX 箭头——关系记号改 Unicode（→/⇒）；真公式按 ops/formulas.md")
+
+    return findings
+
+
+_SELFTEST_CASES = [
+    ("E-LAYOUT-LIST-SPACE", "# 题\n\n1.（题 1）判定下列词性\n", "E"),
+    ("E-LAYOUT-LONGLINE", "# 题\n\n" + "这" * 401 + "\n", "E"),
+    ("E-LAYOUT-MATH-UNPAIRED", "# 题\n\n残行 ightarrow$ v2.0\n", "E"),
+    ("E-LAYOUT-HEADING-SKIP", "# A\n\n## B\n\n#### D\n", "E"),
+    ("E-LAYOUT-TABLE-WIDE", "# 题\n\n| a | b | c | d | e |\n|---|---|---|---|---|\n| 1 | 2 | 3 | 4 | 5 |\n", "E"),
+    ("W-LAYOUT-SEPARATOR", "# 题\n\n---\n\n---\n\n---\n\n---\n\n正文。\n", "W"),
+    ("W-LAYOUT-LATEX-ARROW", "# 题\n\n主语 $\\rightarrow$ 直接宾语\n", "W"),
+    ("W-LAYOUT-LINE-ENDING", "# 题\r\n\r\n正文一句。\n", "W"),
+    ("clean", "# 题\n\n一句**关键**判断。\n\n- 列表项\n1. 有序项\n\n| a | b |\n|---|---|\n| 1 | 2 |\n", None),
+]
+
+
+def _selftest():
+    ok = fail = 0
+    for name, sample, want_sev in _SELFTEST_CASES:
+        fs = check_layout(sample)
+        codes = {(s, c) for s, c, _, _ in fs}
+        if want_sev is None:
+            passed = not any(s == "E" for s, _, _, _ in fs)
+            print("[{}] selftest {}：期望零 E，实际 {}".format(
+                "OK" if passed else "FAIL", name, [c for s, c, _, _ in fs if s == "E"]))
+        else:
+            passed = any(s == want_sev and c == name for s, c, _, _ in fs)
+            print("[{}] selftest {}：期望 {} 命中".format(
+                "OK" if passed else "FAIL", name, name))
+        ok += passed
+        fail += not passed
+    print("ltw_typography --selftest: {} checks, {} OK, {} FAIL".format(ok + fail, ok, fail))
+    return 1 if fail else 0
+
+
+def main(argv=None):
+    import argparse
+    ap = argparse.ArgumentParser(
+        description="文件结构可读性闸口（ops/layout.md；E 级违规退出码 1；只读）")
+    ap.add_argument("paths", nargs="*", help="学员可读 .md 文件（可多个）")
+    ap.add_argument("--selftest", action="store_true", help="运行内置突变体自测")
+    args = ap.parse_args(argv)
+    if args.selftest:
+        return _selftest()
+    if not args.paths:
+        ap.error("需要至少一个 .md 路径，或 --selftest")
+    cfg = _load_layout_cfg()
+    bad = 0
+    for p in args.paths:
+        path = Path(p)
+        try:
+            # newline="" 保留原始行尾——行尾混用检查（W-LAYOUT-LINE-ENDING）依赖原始字节
+            with path.open("r", encoding="utf-8", newline="") as fh:
+                text = fh.read()
+        except (OSError, UnicodeError) as exc:
+            print("[E] E-READ-FILE 0 {} 读取失败：{}".format(path, exc))
+            bad += 1
+            continue
+        fs = check_layout(text, cfg)
+        for sev, code, ln, msg in fs:
+            print("[{}] {} {}:{} {}".format(sev, code, path, ln, msg))
+        if any(f[0] == "E" for f in fs):
+            bad += 1
+    print("ltw_typography: {} 个文件，{} 个存在 E 级违规".format(len(args.paths), bad))
+    return 1 if bad else 0
+
+
+if __name__ == "__main__":
+    import sys
+    sys.exit(main())
