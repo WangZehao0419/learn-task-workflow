@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/2",
- "version": "9.11.8",
+ "version": "9.12.0",
  "retired_rule_ids": [
   "T02",
   "T07",
@@ -1658,6 +1658,55 @@
     "persist"
    ],
    "intent": "local"
+  },
+  {
+   "id": "R51",
+   "owner": "references/workflow/s3-cycle.md#每轮小步（五步）",
+   "type": "protocol",
+   "scenes": [
+    "s3-teach",
+    "s3-grade"
+   ],
+   "intent": "local"
+  },
+  {
+   "id": "R52",
+   "owner": "references/workflow/s4-review.md#S4 复习巩固（可从逐节学习或结课随时插入）",
+   "type": "protocol",
+   "scenes": [
+    "s4-review"
+   ],
+   "intent": "local"
+  },
+  {
+   "id": "R53",
+   "owner": "references/workflow/s4-review.md#S4 复习巩固（可从逐节学习或结课随时插入）",
+   "type": "protocol",
+   "scenes": [
+    "s4-review"
+   ],
+   "intent": "local"
+  },
+  {
+   "id": "R54",
+   "owner": "references/data/progress-schema.md#progress.md 字段（唯一事实源）",
+   "type": "definition",
+   "scenes": [
+    "s3-close",
+    "s4-review",
+    "persist"
+   ],
+   "intent": "local"
+  },
+  {
+   "id": "R55",
+   "owner": "references/assessment/generation.md#可选加练（巩固与举一反三，R55）",
+   "type": "definition",
+   "scenes": [
+    "s3-exercise",
+    "s4-review"
+   ],
+   "intent": "I-REINFORCE"
   }
  ],
  "constants": {
@@ -1743,7 +1792,8 @@
    "unit_check_max": 1,
    "core_total_max": 6,
    "l3_review_min": 3,
-   "l3_review_max": 5
+   "l3_review_max": 5,
+   "reinforce_max": 3
   },
   "schemas": {
    "index": "learn-task-index/7",
@@ -2006,6 +2056,7 @@
     "W-CW-LOWCONF",
     "W-CW-ORPHAN",
     "W-EMPTY-EVIDENCE",
+    "W-GRADED-LOSS-UNLOGGED",
     "W-KP",
     "W-KP-HOLD-CROSS",
     "W-KP-LIST-MISSING",
@@ -2332,6 +2383,12 @@
      "section": "学员侧深度验收（深讲概念节末）",
      "when": "深讲概念节末验收",
      "intent": "I-DEPTH@global"
+    },
+    {
+     "file": "references/assessment/generation.md",
+     "section": "可选加练（巩固与举一反三，R55）",
+     "when": "学员接受节末加练征询",
+     "intent": "I-REINFORCE@global"
     }
    ]
   },
@@ -3957,6 +4014,33 @@
     "s3-deep"
    ],
    "rule_ids": []
+  },
+  {
+   "id": "I-REINFORCE",
+   "scope": "global",
+   "cluster": null,
+   "owner": "references/assessment/generation.md#可选加练（巩固与举一反三，R55）",
+   "marker": "intent:I-REINFORCE@global",
+   "consumers": [
+    {
+     "path": "references/workflow/s3-close.md",
+     "anchor": "节末收尾五件套（闸口达标后执行）",
+     "role": "application"
+    },
+    {
+     "path": "references/routing/shortcuts.md",
+     "anchor": "快捷指令明细",
+     "role": "application"
+    }
+   ],
+   "scenes": [
+    "s3-close",
+    "s4-review",
+    "s3-exercise"
+   ],
+   "rule_ids": [
+    "R55"
+   ]
   }
  ]
 }

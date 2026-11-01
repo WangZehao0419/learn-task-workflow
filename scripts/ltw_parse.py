@@ -159,7 +159,10 @@ def parse_kp_row(segs):
         sec_decl = int(sec_m.group(1))
     # 摸底「已会」括注探测（全角/半角括号双兼容）
     bottom_note = raw_status.startswith("已会") or re.match(r"^未讲[(（]\s*已会", raw_status) is not None
+    # v9.12.0（R54）：「需巩固」标注探测（`已讲（需巩固：依据，日期）`）——基值仍为已讲，仅作只读计数
+    needs_consolidation = "需巩固" in raw_status
     return {"id": kid, "sec": int(m.group(1)), "no": int(m.group(2)),
             "sec_decl": sec_decl, "prereqs": prereqs, "status": base,
-            "bottom_note": bottom_note, "type": kp_type, "visual_tasks": visual_tasks,
+            "bottom_note": bottom_note, "needs_consolidation": needs_consolidation,
+            "type": kp_type, "visual_tasks": visual_tasks,
             "intro": intro}

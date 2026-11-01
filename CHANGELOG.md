@@ -2,6 +2,8 @@
 
 完整逐版本提交信息见 git log 与各 tag；逐版本审计基准（coverage-audit / no-loss-ledger / intent-map / fix-baseline / scene-split-baseline）见 `docs/review/`。
 
+- **v9.12.0**（2026-11-01）—— 巩固回路批（重档）：修「学完即止」的 7 处记忆断点——热身到期项后台记账（R51：记调度档但不对学员报分、不计熔断连错；同条累计 2 次答错 → 目行加「需巩固」标注）、每次开课先读 due-queue 并报逾期复习债、保持复习目级化（R54：每目关闭即入间隔调度，节级条目改为存量兼容；「需巩固」以「已讲（需巩固：…）」括注形态落地，枚举与摘要零破坏）、薄弱点清除判据跨日化（R52：2 轮全对须跨日，同日只计 1 轮；学员要求加速可同日但按 hard 档入保持兜底）、归档错题每 2–3 节变式回访（R53）、S4 收尾 teach-back 不省（可用轻量形态）、新增判错↔入账护栏 `W-GRADED-LOSS-UNLOGGED`（节判分记录「判错」行未入薄弱点/错题本即告警；j-/z-/00-/99-/S4- 豁免）；新增**可选加练**（R55：举一反三题组 = 两道同构异表题并排对比 + 学员一句话总结共同结构 + 1 道远迁移题；跨节串联综合题 = ≥2 已讲节内容连用；节末一句话征询 + 快捷指令「来点挑战/加练」双入口，拒绝零评判、可关征询留指令，落 `exercises/j-加练-<日期>.md` 不计闸口，`budget.reinforce_max=3`）。断点清单与外部证据见 `docs/research/v9.12.0-retention-evidence.md`，应改清单与三态比对见 `docs/review/v9.12.0-retention-baseline.md`。
+
 - **v9.11.8**（2026-11-01）—— teach 减重批：s3-teach 40,000→37,833 chars（−5.4%，12 文件）——讲义分块规则（R41）与深讲审计细则迁讲义流水线、智能变式结构判据（R43）迁出题分册、人设唯一事实源收进 SKILL.md、分册导航压缩、版式样例回归规则正文并撤销独立样例文件（腾出的补读槽改挂 explanation-craft 整册，引入新记号/类比时才读）；修复两个拆场景遗留的「规则常载在 A、触发在 B 却不可达」缺口：批改轮反馈版式（版式节迁入批改也加载的 interaction）与节末轮深度验收（s3-close 补读挂载）。基准与三态比对见 `docs/review/v9.11.8-teach-slim-baseline.md`。
 - **v9.11.7**（2026-11-01）—— 第二批加载经济学批：persist（每个落盘轮的固定底座）减重 23%——错误码速查表迁 `ops/error-codes.md`（仅失败时经 failure 场景读取）、exercises/ 文件结构迁 `assessment/exercise-files.md`（出题/批改/结课轮按补读读取）；版式样例与讲义成品范例外置为按需补读参照；讲义修订拆独立场景 `s3-handout-revise`（回填/换风格/二次定稿/呈现定版，57,898 chars）；s3-deep 卸掉讲义格式三件（37,655→18,663，−50%）；轮级最坏加载与同轮叠加总和入硬上限（`round_chars_max`/`stack_sum_chars_max`，verify-load-budget 超限 exit 1）。基准与三态比对见 `docs/review/v9.11.7-load-econ-baseline.md`。
 - **v9.11.6**（2026-11-01）—— 卫生批：脚本裸崩点（非 UTF-8）、版本解析截断、跨节判分证据对账、死代码与死路径清理、悬空编号退役注记、README/CHANGELOG/历史 tag 补齐。

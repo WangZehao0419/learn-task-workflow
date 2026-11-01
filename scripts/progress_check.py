@@ -20,7 +20,9 @@
      W-KP-LIST-MISSING（指针存在但文件不存在或不可读）、
      W-KP-HOLD-CROSS（清单摘要暂缓数 ≠ 暂缓区块可比条目数（处置为暂缓的条目）/ 清单排除数 ≠ 处置为排除的条目数；
      「滚雪球候选」等设计性范围外条目与排除条目均不计入暂缓比对基数）、
-     W-CURRENT-SECTION（「当前节」与学习路线勾选/阶段不一致；仅提示）。
+     W-CURRENT-SECTION（「当前节」与学习路线勾选/阶段不一致；仅提示）、
+     W-GRADED-LOSS-UNLOGGED（节判分记录中「判错」行或标「→ 入薄弱点」行未入薄弱点/错题本；
+     j-/z-/00-/99-/S4- 前缀文件与作废行豁免，无 KP 且无「目=」的行跳过不误报；仅提示）。
 
 用法：
     python progress_check.py <任务目录>              # 日常校验（warning 仅提示，不拦截）
@@ -161,6 +163,8 @@ ATTEMPT_ID_ANY_RE = re.compile(r"(?:attempt_id|evt)\s*[=＝]\s*([A-Za-z0-9_\-]+)
 ABILITY_TAG_RE = re.compile(r"能力\s*[=＝]\s*([Cc]\d+)")
 # v6.1 分型验收标签：attempt 行写 KP=KP-01-01（记忆/程序/视觉）；复述勾选行写 KP 编号（概念/设计）
 ATTEMPT_KP_RE = re.compile(r"(?:^|[｜|，,；;\s])(?:KP|kp)\s*[=＝]\s*(KP-\d+-\d+)")
+AIM_RE = re.compile(r"目\s*[=＝]\s*([^｜|，,]+)")          # 无目行任务的确认题对象（目=<目名>）
+WEAK_TAG_RE = re.compile(r"→\s*入薄弱点")                  # 判分行显式标注入薄弱点
 VISUAL_TAG_RE = re.compile(r"(?:^|[｜|，,；;\s])(?:视觉|visual)\s*[=＝]\s*([^｜|，,；;\s]+)")
 KEY_ABILITY_HEAD_RE = re.compile(r"关键能力")
 KEY_ABILITY_ROW_RE = re.compile(r"^\s*-\s*([Cc]\d+)\s*[：:]\s*(.+?)\s*$")
@@ -381,6 +385,7 @@ def parse_attempts(text):
         aid = ATTEMPT_ID_ROW_RE.search(body)
         ab = ABILITY_TAG_RE.search(body)
         kp_tag = ATTEMPT_KP_RE.search(body)
+        aim_m = AIM_RE.search(body)
         vis_tag = VISUAL_TAG_RE.search(body)
         qm = QNUM_RE.search(body)
         if not (has_answer or result is not None or indep is not None or aid or ab
@@ -395,6 +400,8 @@ def parse_attempts(text):
             "attempt_id": aid.group(1) if aid else "",
             "ability": ab.group(1).upper() if ab else "",
             "kp": kp_tag.group(1) if kp_tag else "",
+            "aim": aim_m.group(1).strip() if aim_m else "",
+            "to_weak": bool(WEAK_TAG_RE.search(body)),
             "visual": vis_tag.group(1).strip() if vis_tag else "",
             "has_answer": has_answer, "result": result, "correct": correct,
             "indep": indep, "graded": graded, "voided": voided,
@@ -860,6 +867,7 @@ def check(task_dir, release=False, proposed=None):
     delta = None              # 候选快照相对磁盘原状态的**真实新增掌握**集合
     evidence_used = []        # 各节实际选用的判分证据文件（确定性选取透明化）
     lesson_evidence = {}      # 节号 -> 判分记录全文（分型验收复用，避免重复选证据）
+    lesson_file = {}          # 节号 -> 选中的判分证据文件名（判错入账护栏的前缀豁免判断用）
     prog = task_dir / "progress.md"
     if proposed.get("text") is not None:
         text = proposed["text"]
@@ -1078,6 +1086,7 @@ def check(task_dir, release=False, proposed=None):
             evidence_used.append(chosen)
             best, best_text = "real", _read_evidence(ex_dir, chosen)
             lesson_evidence[num] = best_text
+            lesson_file[num] = chosen
         else:
             # 无 real 证据：仍按确定性顺序找 template/empty，给出可核查的拦截原因
             best, best_text = "empty", ""
@@ -1133,6 +1142,49 @@ def check(task_dir, release=False, proposed=None):
                 else:
                     seen_aid[aid] = (proj, num)
 
+    # v9.12.0（R51/R55 配套护栏）：节判分记录中的「判错」行或标「→ 入薄弱点」行应同轮入账
+    # （薄弱点/错题本，s3-cycle 步⑤「判错同轮归因定级」）。只校验按 lesson_id 选中的节证据；
+    # j-（加练）/z-（自创变式）/00-/99-/S4- 前缀文件与作废行豁免；无 KP 且无「目=」的行
+    # 无法可靠对账，跳过不误报。warning 级：提醒补账，不拦截。
+    if lesson_evidence:
+        ledger_lines = []
+        _lsec = None
+        for _raw in text.splitlines():
+            _s = _raw.strip()
+            if _s.startswith("## "):
+                _lsec = _s[3:].strip()
+                continue
+            if _lsec in ("薄弱点", "错题本") and _s.startswith("- "):
+                _body = _s[2:].strip()
+                if _body and _body not in ("无", "无。"):
+                    ledger_lines.append(_body)
+
+        def _ledger_hit(key):
+            if not key:
+                return True
+            nk = normalize_kp_id(key)
+            return any(key in ln or (nk and nk in ln) for ln in ledger_lines)
+
+        for _num in sorted(lesson_evidence):
+            _fname = lesson_file.get(_num, "").lower()
+            if _fname.startswith(("j-", "z-", "00-", "99-", "s4-")):
+                continue
+            for a in parse_attempts(lesson_evidence[_num])["attempts"]:
+                if a["voided"]:
+                    continue
+                if a["result"] != "incorrect" and not a["to_weak"]:
+                    continue
+                key = a["kp"] or a.get("aim", "")
+                if _ledger_hit(key):
+                    continue
+                warnings.append({"code": "W-GRADED-LOSS-UNLOGGED",
+                                 "message": "节 " + str(_num) + " 判分记录中「" + (a["qid"] or "?") +
+                                            "」判 " + (a["result"] or "部分入账") + "（" +
+                                            (a["kp"] or key or "无 KP 映射") +
+                                            "）未入薄弱点/错题本——判错同轮归因定级并入账"
+                                            "（`workflow/s3-cycle.md` 每轮小步⑤）；若已口头处理请补记条目"
+                                            "（warning，不拦截）"})
+
     # 未解析勾选行：出现勾选语法却未被识别（不得静默）
     for line in unparsed_routes:
         warnings.append({"code": "W-UNPARSED-ROUTE",
@@ -1183,6 +1235,7 @@ def check(task_dir, release=False, proposed=None):
         "hold_unparsed": len(malformed_holds),
         "route_undone": route_undone,
         "audit_record_found": audit_record_found,
+        "needs_consolidation": 0,  # v9.12.0（R54）：目行「需巩固」标注计数（kp 块解析后回填）
     }
 
     # ── 课程体系目行只读告警（warning 非 error，不阻断） ──
@@ -1225,6 +1278,9 @@ def check(task_dir, release=False, proposed=None):
                     else:
                         seen_ids.add(normalized_id)
                         rows_unique.append(r)
+                # v9.12.0（R54）：「需巩固」标注只读计数（基值仍按已讲参与各项判定）
+                coverage["needs_consolidation"] = sum(
+                    1 for r in rows_unique if r.get("needs_consolidation"))
                 # v6.1 分型验收：只对声明了类型/视觉任务的 KP 生效；未声明行仍走统一闸口。
                 if release and lesson_evidence:
                     typed_by_sec = {}
@@ -2698,6 +2754,51 @@ def selftest():
             except SystemExit as exc:
                 rc = exc.code
             ok = ok and rc == 2
+
+        # ㊱ v9.12.0 判错↔入账护栏（W-GRADED-LOSS-UNLOGGED）：判错未入账 → W；
+        # 已入账（薄弱点含该 KP）→ 无告警；j- 加练文件豁免；「需巩固」标注 → coverage 计数。
+        _led_head = ("# 学习任务：示例\n- 数据根：D:/x/.learning\n- 当前阶段：逐节学习\n- 类型：知识型\n"
+                     "- 学科族：数学与统计\n- 目标：掌握\n- 起点：入门\n- 当前节：1\n- 最近更新：2026-01-02\n\n")
+        _led_tail = ("\n## 暂缓与范围外\n- 无\n\n## 本次交接\n- 总结：-\n- 下次先做：-\n- 未解决：无\n\n"
+                     "## 下次续学\n- 阶段：逐节学习；节：第 1 节\n")
+        _led_curr = ("# 课程体系：示例\n- 版本：1\n\n## 学习路线\n### 章1 ｜ 数学\n"
+                     "- [x] 1. 极限（lesson_id=L-01）\n"
+                     "  - KP-01-01 ｜ 数列极限 ｜ 节 1 ｜ 前置：  ｜ 来源：x ｜ 状态：已讲\n"
+                     "  - KP-01-02 ｜ 函数极限 ｜ 节 1 ｜ 前置：KP-01-01 ｜ 来源：x ｜ 状态：已讲\n")
+        _led_curr_cons = _led_curr.replace("KP-01-02 ｜ 函数极限 ｜ 节 1 ｜ 前置：KP-01-01 ｜ 来源：x ｜ 状态：已讲",
+                                           "KP-01-02 ｜ 函数极限 ｜ 节 1 ｜ 前置：KP-01-01 ｜ 来源：x ｜ "
+                                           "状态：已讲（需巩固：热身累计 2 次答错，2026-01-02）")
+        _ev_wrong = ("## 作答与判分\n"
+                     "- 题1：作答「1」｜正确性=对｜独立性=独立｜调度档=Good\n"
+                     "- 题2：作答「2」｜正确性=错｜独立性=独立｜KP=KP-01-02｜调度档=Again\n")
+        d_loss = Path(td) / "loss-unlogged"
+        (d_loss / "exercises").mkdir(parents=True)
+        (d_loss / "progress.md").write_text(
+            _led_head + "## 薄弱点\n- 无\n\n## 错题本\n- 无\n" + _led_tail, encoding="utf-8")
+        (d_loss / "课程体系.md").write_text(_led_curr, encoding="utf-8")
+        (d_loss / "exercises" / "01-极限-2026-01-01.md").write_text(
+            _fixture_evidence_text("01-极限-2026-01-01.md", _ev_wrong), encoding="utf-8")
+        r_loss = check(d_loss)
+        ok = ok and r_loss["ok"] and any(
+            w["code"] == "W-GRADED-LOSS-UNLOGGED" and "KP-01-02" in w["message"]
+            for w in r_loss["warnings"])
+        ok = ok and r_loss["coverage"]["needs_consolidation"] == 0
+
+        d_logged = Path(td) / "loss-logged"
+        (d_logged / "exercises").mkdir(parents=True)
+        (d_logged / "progress.md").write_text(
+            _led_head + "## 薄弱点\n- KP-01-02 函数极限：代入符号错（S=3.0，D=3，last=2026-01-02，due=2026-01-05）\n\n"
+            "## 错题本\n- 无\n" + _led_tail, encoding="utf-8")
+        (d_logged / "课程体系.md").write_text(_led_curr_cons, encoding="utf-8")
+        (d_logged / "exercises" / "01-极限-2026-01-01.md").write_text(
+            _fixture_evidence_text("01-极限-2026-01-01.md", _ev_wrong), encoding="utf-8")
+        (d_logged / "exercises" / "j-加练-2025-12-31.md").write_text(
+            "lesson_id=L-01\n## 作答与判分\n"
+            "- 题1：作答「9」｜正确性=错｜独立性=独立｜KP=KP-01-01｜调度档=Again\n", encoding="utf-8")
+        r_logged = check(d_logged)
+        ok = ok and r_logged["ok"]
+        ok = ok and not any(w["code"] == "W-GRADED-LOSS-UNLOGGED" for w in r_logged["warnings"])
+        ok = ok and r_logged["coverage"]["needs_consolidation"] == 1
 
     print(("OK " if ok else "FAIL ") + "progress_check --selftest")
     return 0 if ok else 1
