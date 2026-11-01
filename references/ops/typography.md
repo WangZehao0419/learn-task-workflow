@@ -71,7 +71,7 @@
 
 ## 交付起笔与答案标识
 
-**canonical 集合**：`解`、`答`、`解答`、`证明`、`参考答案`、`答案`、`参考概括`、`参考译文`、`译文`、`范文`、`例文`、`代码`、`脚本`、`输出`、`步骤`、`操作`、`方案`、`设计说明`、`Model answer`、`Sample answer`、`Answer`、`Solution`、`Proof`、`Translation`、`Output`、`Code`、`Script`、`Steps`、`Key`。
+**canonical 集合**：`解`、`答`、`解答`、`证明`、`参考答案`、`答案`、`参考概括`、`参考译文`、`译文`、`范文`、`例文`、`代码`、`脚本`、`输出`、`步骤`、`操作`、`方案`、`设计说明`、`练习方案`、`诊断`、`Model answer`、`Sample answer`、`Answer`、`Solution`、`Proof`、`Translation`、`Output`、`Code`、`Script`、`Steps`、`Key`。
 
 ## 断行与句子
 

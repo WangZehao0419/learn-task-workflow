@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/2",
- "version": "9.12.1",
+ "version": "9.12.2",
  "retired_rule_ids": [
   "T02",
   "T07",
@@ -138,7 +138,7 @@
    "id": "handout-pipeline",
    "path": "references/handout/pipeline.md",
    "layer": 3,
-   "owns": "讲义一页合同、状态与定稿、理解核心、四步流水线、决策日志",
+   "owns": "讲义一页合同、一致性裁决、理解核心、深讲审计（2.7）、四步流水线、分块呈现（R41）、决策日志、风格选择",
    "depends_on": [
     "s3-block",
     "scoring",
@@ -251,7 +251,7 @@
    "id": "subjects-common",
    "path": "references/subjects/common.md",
    "layer": 1,
-   "owns": "三轴分层与取用顺序、学科→学科群判定表、学科包准入判据、跨群裁决、掌握深度标尺（SOLO/DOK/Bloom）、误区库消费纪律、类比优先级、视觉任务来源、应试技巧包",
+   "owns": "三轴分层与取用顺序、学科→学科群判定表、学科包准入判据、跨群裁决、掌握深度标尺（SOLO/DOK/Bloom）、误区库消费纪律、视觉任务来源、对照源指针、应试技巧包",
    "depends_on": [],
    "kind": "rule"
   },
@@ -269,7 +269,7 @@
    "id": "subjects-math-teach",
    "path": "references/subjects/math-teach.md",
    "layer": 1,
-   "owns": "数学与统计群：六拍内群差异、学科思维实践、表征体系、类比库、记号与术语纪律、标准流程示范",
+   "owns": "六拍内的群差异、学科思维实践（数学实践八条）、表征体系、类比库、记号与术语纪律、标准流程示范、元素交互性与撤架",
    "depends_on": [
     "subjects-common"
    ],
@@ -309,7 +309,7 @@
    "id": "subjects-science-teach",
    "path": "references/subjects/science-teach.md",
    "layer": 1,
-   "owns": "实验科学群：六拍内群差异、学科思维实践、表征体系、类比库、记号与术语纪律、标准流程示范",
+   "owns": "六拍内的群差异、学科思维实践（建模循环与科学实践）、多重表征体系、类比库、记号与单位纪律、标准流程示范、实验设计的教学顺序",
    "depends_on": [
     "subjects-common"
    ],
@@ -389,7 +389,7 @@
    "id": "subjects-computing-teach",
    "path": "references/subjects/computing-teach.md",
    "layer": 1,
-   "owns": "计算与技术群：六拍内群差异、学科思维实践、表征体系、类比库、记号与术语纪律、标准流程示范",
+   "owns": "六拍内的群差异（读先于写、子目标标注、trace）、计算思维实践、表征体系、类比库、记号与术语纪律、实跑纪律、标准流程示范",
    "depends_on": [
     "subjects-common"
    ],
@@ -429,7 +429,7 @@
    "id": "subjects-humanities-teach",
    "path": "references/subjects/humanities-teach.md",
    "layer": 1,
-   "owns": "人文社科群：六拍内群差异、学科思维实践、表征体系、类比库、记号与术语纪律、标准流程示范",
+   "owns": "六拍内的群差异（反驳式呈现、概念四件套、案例）、学科思维实践、表征体系、类比库、术语纪律、论证写作的标准流程",
    "depends_on": [
     "subjects-common"
    ],
@@ -499,7 +499,7 @@
    "id": "subjects-skill-plan",
    "path": "references/subjects/skill-plan.md",
    "layer": 1,
-   "owns": "艺术与技能群：群边界与借用、内容结构与前置链、目标深度锚点、排期侧重",
+   "owns": "本群边界与借用、能力边界声明、内容结构与前置链、目标深度锚点、排期侧重",
    "depends_on": [
     "subjects-common"
    ],
@@ -509,7 +509,7 @@
    "id": "subjects-skill-teach",
    "path": "references/subjects/skill-teach.md",
    "layer": 1,
-   "owns": "艺术与技能群：六拍内群差异、学科思维实践、表征体系、类比库、记号与术语纪律、标准流程示范",
+   "owns": "六拍内的群差异（分阶段教学、外部注意焦点、练习设计）、技能学习的思维实践、表征体系、类比库、术语纪律、线下任务单的写法",
    "depends_on": [
     "subjects-common"
    ],
@@ -727,7 +727,7 @@
    "id": "teaching-explanation-depth",
    "path": "references/teaching/explanation-depth.md",
    "layer": 2,
-   "owns": "深度分层、机制豁免、三层追问、D1–D6、反浅薄清单、学员侧深度验收、冲刺压缩",
+   "owns": "深度分层、机制豁免、学员侧深度验收、冲刺压缩",
    "depends_on": [],
    "kind": "rule"
   },
@@ -1839,6 +1839,8 @@
     "设计说明",
     "解",
     "答",
+    "练习方案",
+    "诊断",
     "Model answer",
     "Sample answer",
     "Answer",
@@ -2041,6 +2043,7 @@
     "E-TOPOLOGY-ORPHAN",
     "E-TOPOLOGY-OWNER",
     "E-TOPOLOGY-OWNER-DUP",
+    "E-TOPOLOGY-ROUTE",
     "E-TOPOLOGY-SCENES",
     "E-TOPOLOGY-SCHEMA",
     "E-TOPOLOGY-SECTIONNUM",
@@ -2116,8 +2119,8 @@
    "files_max": 17,
    "chars_max": 34000,
    "supplement_files_max": 4,
-   "supplement_chars_max": 20000,
-   "supplements_per_scene_max": 4,
+   "supplement_chars_max": 24000,
+   "supplements_per_scene_max": 5,
    "round_chars_max": 137800,
    "stack_sum_chars_max": 46000
   },
@@ -2301,6 +2304,12 @@
      "section": "新记号/新操作讲透",
      "when": "引入新记号/首次用类比/零基础首目定 CRA 序",
      "intent": "I-NEW-NOTATION@global"
+    },
+    {
+     "file": "references/handout/pipeline.md",
+     "section": "边讲边写（同轮追加草稿）",
+     "when": "边讲边写讲义需要按流水线追加草稿",
+     "intent": "I-TEACH-DRAFT@handout"
     }
    ]
   },
@@ -2974,7 +2983,9 @@
    "scenes": [
     "s3-teach",
     "s3-handout",
-    "s3-deep"
+    "s3-deep",
+    "s3-close",
+    "s3-handout-revise"
    ],
    "cluster": null,
    "rule_ids": []
@@ -3349,7 +3360,8 @@
    "scenes": [
     "s3-grade",
     "s3-handout",
-    "s3-deep"
+    "s3-deep",
+    "s3-handout-revise"
    ],
    "cluster": null,
    "rule_ids": [
@@ -3397,7 +3409,8 @@
     "s3-teach",
     "s3-handout",
     "s3-exercise",
-    "s4-review"
+    "s4-review",
+    "s3-handout-revise"
    ],
    "cluster": null,
    "rule_ids": [
@@ -4011,7 +4024,8 @@
    ],
    "scenes": [
     "s3-handout",
-    "s3-deep"
+    "s3-deep",
+    "s3-handout-revise"
    ],
    "rule_ids": []
   },
@@ -4041,6 +4055,24 @@
    "rule_ids": [
     "R55"
    ]
+  },
+  {
+   "id": "I-TEACH-DRAFT",
+   "scope": "handout",
+   "cluster": null,
+   "owner": "references/handout/pipeline.md#边讲边写（同轮追加草稿）",
+   "marker": "intent:I-TEACH-DRAFT@handout",
+   "consumers": [
+    {
+     "path": "references/routing/triggers.md",
+     "anchor": "S3 内场景判别（a–f 之后的第二层）",
+     "role": "application"
+    }
+   ],
+   "scenes": [
+    "s3-teach"
+   ],
+   "rule_ids": []
   }
  ]
 }

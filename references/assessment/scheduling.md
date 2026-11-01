@@ -12,7 +12,7 @@
 
 - **新条目首次调度**（S3 新产生的薄弱点 / 错题 / 保持复习）：
   `python "<技能根>/scripts/scheduler.py" next-interval --grade <判分档> --new-card --last <今天> --today <今天> [--init-shift {-1|0|1}]`
-  —— grade 取该条判分档（判错=again）；保持复习初始条目固定用 `--grade good`；`--init-shift` 影响初始 D：顺向检索 -1（默认 0），反向问 / 迁移 +1；返回 stability_new / difficulty_new / due。
+  —— grade 取该条判分档（判错=again）；保持复习初始条目用 `--grade good`（例外：学员要求加速的同日清除按 `--grade hard` 档入保持，见 `workflow/s4-review.md`「S4 复习巩固」闸口）；`--init-shift` 影响初始 D：顺向检索 -1（默认 0），反向问 / 迁移 +1；返回 stability_new / difficulty_new / due。
 - **既有条目复习判分**（S4）：
   `python "<技能根>/scripts/scheduler.py" next-interval --grade <grade> --stability <S> --difficulty <D> --last <last> --today <今天> [--current-due <原due>]`。
   **同会话重复答对**（`--last` 与 `--today` 同日）：必须同时传 `--current-due <原due>`；脚本返回 `same_session=true` 并原样返回该 due，S/D 不变——只刷新召回，不把一天内反复刷题记成长期保持。非同日复习不传 `--current-due`。保持复习按同一命令更新；`partial` 用 `again`，`未判/作废` 不写 S/D。前提：`due` 由脚本生成、不要手改；手改 due 的条目先按当前 S 与手工 due 对齐后再复习。

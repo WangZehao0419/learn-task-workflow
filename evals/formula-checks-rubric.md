@@ -1,12 +1,12 @@
 # formula_checks 附加评分口径（评测侧）
 
 > 本文是 formula_checks 的唯一口径；`evals.json` 的 `formula_checks_rubric` 只作评分模板，引用本文，不另立定义。
-> 本文属评测资产（evals/），不随运行时技能分册加载；涉及的公式排版规则本体见 `references/formulas.md`（文中「第 N 节」以该文件为准）。
+> 本文属评测资产（evals/），不随运行时技能分册加载；涉及的公式排版规则本体见 `references/ops/formulas.md`（文中「第 N 节」以该文件为准；原第 4/5/6 节已迁 `references/ops/formula-subjects.md`）。
 
 - **仅作评测附加字段**，不替代 evals.json 现有五轴主评分（0–5），不改变现有分数与 verdict 语义。
 - 字段名 formula_checks，五维各 0–2 分，逐维独立记分、不折算，各维附一句理由写入 review_note。
 - 证据字段固定为：prompt、fixture、actual_output、run_id、scores、verdict、reviewer、review_note；run 标识建议 formula-typesetting-<版本>-<YYYYMMDD>-<短commit>。
-- 评分者独立核对学科内容：**渲染通过不等于学科正确**（见 formulas.md 第 4、5 节），渲染检查者不得兼任学科评分。
+- 评分者独立核对学科内容：**渲染通过不等于学科正确**（物理/化学约定见 `ops/formula-subjects.md` 第 4–6 节），渲染检查者不得兼任学科评分。
 - 结构渲染、复制保真两维的评分须引用 formulas.md 第 8 节 (d) 的检查结果作为证据。
 
 | 维度 | 0 分 | 1 分 | 2 分 |

@@ -5,7 +5,7 @@
 契约固定为 <技能根>/contracts/rules.json。缺失/畸形时所有调用方必须 fail closed。
 
 --topology 检查：references 无加载指令、owns/must-not-define 职责头、
-R/T/F 规则 owner 锚点可解析、依赖无环、
+ R/T/F 规则 owner 锚点可解析、依赖无环、triggers 场景判别表行内引用在该行主场景可达（E-TOPOLOGY-ROUTE）、
 版本四方一致（SKILL.md / rules.json / skill-dependencies.json / evals.json）、
 全仓 E-/W- 错误码 ⊆ 契约 errors、error-codes.md 速查表与 errors 双向覆盖、
 handout.md canonical 集合与 headings.lead_words 双写一致。
@@ -497,6 +497,44 @@ def _allowed_files(data: dict, expanded: dict, sid: str) -> set:
     return allowed
 
 
+ROUTE_FILE_RE = re.compile(
+    r"(?:references/)?((?:routing|workflow|teaching|assessment|data|ops|handout|subjects|"
+    r"disciplines)/[A-Za-z0-9._{}-]+\.md)")
+
+
+def check_route(data: dict, root: Path, expanded: dict) -> list:
+    """E-TOPOLOGY-ROUTE：triggers「S3 内场景判别」表行内引用的 reference 文件，
+    必须能在该行主场景加载（core/叠加/补读）——防「规则在 A、触发在 B 却不可达」。"""
+    issues = []
+    tp = root / "references" / "routing" / "triggers.md"
+    if not tp.exists():
+        return issues
+    text = tp.read_text(encoding="utf-8", errors="replace")
+    m = re.search(r"### S3 内场景判别[^\n]*\n(.*?)(?=\n\*\*数据访问条件|\Z)", text, re.S)
+    if not m:
+        return issues
+    for line in m.group(1).splitlines():
+        if not line.lstrip().startswith("|"):
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) < 2 or set(cells[0]) <= set("-: "):
+            continue
+        sm = re.search(r"`([^`]+)`", cells[1])
+        if not sm:
+            continue
+        sid = sm.group(1)
+        if sid not in data["scenes"]:
+            issues.append("E-TOPOLOGY-ROUTE: 场景判别行主场景未定义 %s" % sid)
+            continue
+        allowed = _allowed_files(data, expanded, sid)
+        for fm in ROUTE_FILE_RE.finditer(line):
+            rel = "references/" + fm.group(1)
+            if rel not in allowed:
+                issues.append("E-TOPOLOGY-ROUTE: 场景判别行（主场景 %s）引用不可达文件 %s"
+                              % (sid, rel))
+    return issues
+
+
 def _consumer_path(consumer) -> str:
     if isinstance(consumer, dict):
         return consumer.get("path", "")
@@ -730,6 +768,12 @@ def topology(path: Path | None = None) -> dict:
         if p.exists():
             ref_texts.append((f["path"], p.read_text(encoding="utf-8", errors="replace")))
     issues += check_number_refs(rule_ids, ref_texts)
+
+    # 11. triggers 场景判别表引用可达性（v9.12.2，E-TOPOLOGY-ROUTE）
+    tokens = _token_names(data)
+    expanded = {sid: set(_expand_files(sc.get("files", []), tokens))
+                for sid, sc in data["scenes"].items()}
+    issues += check_route(data, root, expanded)
 
     return {
         "ok": not issues,
@@ -1113,6 +1157,30 @@ def _selftest() -> int:
         assert any("缺指向 owner 的指针" in i for i in issues), issues
 
     chk("consumer pointer missing detected", consumer_pointer_missing)
+
+    def route_unreachable_detected():
+        import tempfile
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            trig = root / "references" / "routing"
+            trig.mkdir(parents=True)
+            (trig / "triggers.md").write_text(
+                "### S3 内场景判别（a–f 之后的第二层）\n\n"
+                "| 当前动作 | 主场景 | 叠加/下一步 | 不做什么 |\n"
+                "|---|---|---|---|\n"
+                "| 边讲边写 | `s3-x` 主讲，按 `handout/pipeline.md` 追加 | 不整场景加载 | — |\n"
+                "| 正常行 | `s3-y` | 无引用 | — |\n",
+                encoding="utf-8")
+            data = {"scenes": {
+                "s3-x": {"files": ["references/teaching/a.md"], "stack": [], "supplements": []},
+                "s3-y": {"files": ["references/teaching/b.md"], "stack": [], "supplements": []}}}
+            expanded = {sid: set(sc.get("files", [])) for sid, sc in data["scenes"].items()}
+            issues = check_route(data, root, expanded)
+            assert any("E-TOPOLOGY-ROUTE" in i and "pipeline.md" in i for i in issues), issues
+            data["scenes"]["s3-x"]["supplements"] = [{"file": "references/handout/pipeline.md"}]
+            assert not check_route(data, root, expanded), "补读命中后不应再报"
+
+    chk("route unreachable detected", route_unreachable_detected)
 
     if failures:
         print("SELFTEST FAILED:", ", ".join(failures))

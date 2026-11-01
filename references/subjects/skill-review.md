@@ -1,6 +1,6 @@
 # 艺术与技能群 · 复习切片
 
-<!-- owns: 本群复习形态与间隔侧重、错因分流与纠错脚本、冲刺侧重；must-not-define: 调度算法（assessment/scheduling.md）、判分与错因八动作（assessment/scoring.md 与 teaching/interaction.md）、复习流程（workflow/s4-review.md） -->
+<!-- owns: 本群复习形态与间隔侧重、错因分流与纠错脚本、冲刺侧重；must-not-define: 调度算法（assessment/scheduling.md）、判分（assessment/scoring.md）·教学八动作与反馈（teaching/interaction.md）·错因（teaching/interaction-diagnosis.md）、复习流程（workflow/s4-review.md） -->
 
 ## 复习形态与间隔侧重
 
