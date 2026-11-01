@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/2",
- "version": "9.12.2",
+ "version": "9.13.0",
  "retired_rule_ids": [
   "T02",
   "T07",
@@ -693,6 +693,16 @@
    "layer": 1,
    "owns": "文字排印：标点、数字、单位、空格、字体语义、交付起笔/答案标识 canonical 集合",
    "depends_on": [],
+   "kind": "rule"
+  },
+  {
+   "id": "ops-layout",
+   "path": "references/ops/layout.md",
+   "layer": 1,
+   "owns": "学员可读落盘文件的结构可读性：E 级硬禁令、W 级强制基线、结构模式选择树、机器闸口",
+   "depends_on": [
+    "ops-typography"
+   ],
    "kind": "rule"
   },
   {
@@ -1943,6 +1953,14 @@
    ],
    "table_align_min_numeric": 2
   },
+  "layout": {
+   "hard_line_max": 400,
+   "anchor_gap_max": 400,
+   "para_chars_max": 150,
+   "hr_max": 3,
+   "section_bold_floor_chars": 300,
+   "table_cols_max_hard": 4
+  },
   "scheduler": {
    "grade_base": {
     "hard": 1.4,
@@ -2003,6 +2021,11 @@
     "E-IMG-READ",
     "E-KEY-ABILITY-UNMET",
     "E-KP-TYPED-GATE",
+    "E-LAYOUT-HEADING-SKIP",
+    "E-LAYOUT-LIST-SPACE",
+    "E-LAYOUT-LONGLINE",
+    "E-LAYOUT-MATH-UNPAIRED",
+    "E-LAYOUT-TABLE-WIDE",
     "E-LEDGER-RESIDUE",
     "E-LESSON-ID-DUP",
     "E-LESSON-ID-MISSING",
@@ -2065,6 +2088,11 @@
     "W-KP-LIST-MISSING",
     "W-KP-STATE-MISMATCH",
     "W-KP-SUMMARY-MISMATCH",
+    "W-LAYOUT-ANCHOR-GAP",
+    "W-LAYOUT-EMPHASIS-FLOOR",
+    "W-LAYOUT-LATEX-ARROW",
+    "W-LAYOUT-LINE-ENDING",
+    "W-LAYOUT-SEPARATOR",
     "W-LEDGER-DRAFT",
     "W-MARKER-CONTENT",
     "W-MATERIAL-COVERAGE-GAP",
@@ -2359,6 +2387,12 @@
      "section": "题组与判分文件（exercises/）",
      "when": "写判分落盘 attempt 字段",
      "intent": "I-EXERCISE-SCHEMA@global"
+    },
+    {
+     "file": "references/ops/layout.md",
+     "section": "硬禁令",
+     "when": "判分落盘前",
+     "intent": "I-FILE-LAYOUT@global"
     }
    ]
   },
@@ -2478,7 +2512,7 @@
     {
      "file": "references/handout/style-examples.md",
      "section": "标准讲义成品范例",
-     "when": "撰写标准讲义需对照成品格式时",
+     "when": "首写某风格讲义前，先读该风格成品范例时",
      "intent": "I-STYLE-EXAMPLES@content"
     }
    ]
@@ -2556,8 +2590,14 @@
     {
      "file": "references/handout/style-examples.md",
      "section": "标准讲义成品范例",
-     "when": "换风格改稿需对照成品格式",
+     "when": "换风格改稿前，先读目标风格成品范例时",
      "intent": "I-STYLE-EXAMPLES@content"
+    },
+    {
+     "file": "references/ops/layout.md",
+     "section": "硬禁令",
+     "when": "讲义修订落盘前",
+     "intent": "I-FILE-LAYOUT@global"
     }
    ]
   },
@@ -2608,6 +2648,12 @@
      "section": "题组与判分文件（exercises/）",
      "when": "写题组/判分文件",
      "intent": "I-EXERCISE-SCHEMA@global"
+    },
+    {
+     "file": "references/ops/layout.md",
+     "section": "硬禁令",
+     "when": "题组/判分文件写盘前",
+     "intent": "I-FILE-LAYOUT@global"
     }
    ]
   },
@@ -2665,7 +2711,7 @@
     {
      "file": "references/handout/style-examples.md",
      "section": "标准讲义成品范例",
-     "when": "换风格重讲需对照成品格式时",
+     "when": "换风格重讲前，先读目标风格成品范例时",
      "intent": "I-STYLE-EXAMPLES@content"
     }
    ]
@@ -2712,6 +2758,12 @@
      "section": "判分口径",
      "when": "复习判分/复述/定级时",
      "intent": "I-GRADING-STATES@global"
+    },
+    {
+     "file": "references/ops/layout.md",
+     "section": "硬禁令",
+     "when": "复习产物落盘前",
+     "intent": "I-FILE-LAYOUT@global"
     }
    ]
   },
@@ -2759,6 +2811,12 @@
      "section": "结课综合测验目标线（99-）",
      "when": "写结课综合测验目标线",
      "intent": "I-FINAL-TARGET@global"
+    },
+    {
+     "file": "references/ops/layout.md",
+     "section": "硬禁令",
+     "when": "结课产物落盘前",
+     "intent": "I-FILE-LAYOUT@global"
     }
    ]
   },
@@ -4071,6 +4129,28 @@
    ],
    "scenes": [
     "s3-teach"
+   ],
+   "rule_ids": []
+  },
+  {
+   "id": "I-FILE-LAYOUT",
+   "scope": "global",
+   "cluster": null,
+   "owner": "references/ops/layout.md#文件结构可读性：硬禁令与基线",
+   "marker": "intent:I-FILE-LAYOUT@global",
+   "consumers": [
+    {
+     "path": "references/assessment/exercise-files.md",
+     "anchor": "题组与判分文件（exercises/）",
+     "role": "application"
+    }
+   ],
+   "scenes": [
+    "s3-exercise",
+    "s3-grade",
+    "s3-handout-revise",
+    "s4-review",
+    "s5-close"
    ],
    "rule_ids": []
   }

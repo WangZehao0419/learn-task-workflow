@@ -26,6 +26,7 @@
 | `kp_sort.py` | `<课程体系.md> [--selftest]` | 只读、零写盘 | 知识型/技能型排序子步 |
 | `check_environment.py` | `[--manifest <路径>] [--capability <名称>]... [--selftest]` | 只读诊断 | 脚本调用出现解释器/版本类失败时诊断一次 |
 | `verify_explanation.py` | `<材料目录或单文件> [--selftest] [--reader]` | 只读静态校验，不写盘 | 讲义定稿前；`--reader` 加跑读者版 W 级检查 |
+| `ltw_typography.py`（直跑） | `<学员可读.md>... [--selftest]` | 只读；按 `ops/layout.md` 查 E/W 级结构，有 E 违规退出 1 | 学员文件落盘前 |
 | `prereq_check.py` | `--list <课程体系.md> --scan <题组或讲义.md>... [--extra-terms "…"] [--extra-file <文件>] [--scan-all] [--selftest]` | 只读对账，不写盘 | 判分题交付前（R46 出题前术语对账）；目行补登记 `引入` 列后跑 |
 | `rule_contract.py` | `--selftest \| --topology \| --coverage [--strict-pointers \| --no-strict-pointers] \| --audit \| --audit-strict` | 只读校验契约、拓扑、场景覆盖、intent 登记、补读小节与指针闭合；`--audit` 只读报告指针/孤儿/owner/补读/schema 问题，不改变闸口退出码；`--audit-strict` 把 pointer/contract/scene 问题作为失败（loadability 信息项不参与） | 修改契约/分册结构后、打包前；结构巡检时跑 `--audit`，CI/交付闸口跑 `--audit-strict` |
 
@@ -36,7 +37,7 @@
 - **脚本路径基准** = `<技能根>/scripts/<脚本名>.py`（不写裸 `scripts/…` 依赖 cwd）。
 - **数据根基准** = 显式 `--root`（或 progress_check 的任务目录实参），不依赖脚本默认根。
 - **解释器**统一 `python`（仅有 `python3` 时等价替换）。
-- `task_index` / `progress_check` / `scheduler` / `kp_sort` / `prereq_check` 带 `--selftest`；`check_environment` / `verify_explanation` / `rule_contract` 也带 `--selftest`。
+- `task_index` / `progress_check` / `scheduler` / `kp_sort` / `prereq_check` 带 `--selftest`；`check_environment` / `verify_explanation` / `rule_contract` / `ltw_typography` 也带 `--selftest`。
 - 契约文件固定为 `<技能根>/contracts/rules.json`；缺失/畸形 → 依赖契约的脚本一律 fail closed，报 `E-CONTRACT-MISSING` / `E-CONTRACT-INVALID`（`prereq_check`、`check_environment` 不读契约，不在其列）。
 
 ## 退出码与错误码

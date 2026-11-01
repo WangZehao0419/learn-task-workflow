@@ -1,7 +1,7 @@
 ---
 name: learn-task-workflow
 description: 私人家教工作流：把系统学习需求跑成带硬闸口、进度落盘、跨会话可续学的任务流，含间隔重复与掌握后保持复习、判分四态与作废申诉、KP 分型验收与课程体系契约（章/节/目三级规划）、条件化出题四步流水线与讲义生成、错因归因纠偏、按内容类型与学科群分流教学（单节课六拍：先教后练，永不先测未讲内容），新手先看完整示例再做题、新记号当场讲透；支持独立生成学习用讲义/题组/试卷。以「系统学习」意图触发：「我要学X」「教我X」「带我学X」「带我读X」「精读X」「帮我啃X」「从零开始学X」「零基础学X」「备考X」「我要考研/考证」「家教模式」「开始上课」「继续学习」「接着上次继续学」「调整学习计划」「我的学习进度」「学到哪了」「学习简报」「学习周报」「考考我」「来点挑战」「加练」「给X写讲义」「给X出题」「组一套卷」。不触发：普通知识问答、单题解题求助（如「这道题怎么做」）、代写作业/文章/报告、单纯总结材料（归 summarize）、主题调研写文档（归 research）、课程仓库脚手架（归 scaffold-exercises）、只要学习建议或只要计划文档；「教我X」「帮我复习X」「考考我」等高频词必须指向系统学习意图或已有学习任务，否则先澄清。宿主另有独立教学工作区或正式文档排版能力时，用户显式调用则让位，二者勿同时启动。
-version: 9.12.2
+version: 9.13.0
 author: 王责豪
 agent_created: true
 ---
@@ -157,6 +157,11 @@ agent_created: true
 | `s0-s2` | `ops/evidence.md`「来源分级与出处四要素」 | S2 来源核验 | `I-SOURCE-GRADING@global` |
 | `handout-enhance` | `handout/support-levels.md`「6. L1/L2/L3 支持级」 | P1 质量回路升降支持级 | `I-SUPPORT-LEVELS@handout` |
 | `s3-grade` | `assessment/exercise-files.md`「题组与判分文件（exercises/）」 | 写判分落盘 attempt 字段 | `I-EXERCISE-SCHEMA@global` |
+| `s3-grade` | `ops/layout.md`「硬禁令」 | 判分落盘前 | `I-FILE-LAYOUT@global` |
+| `s3-exercise` | `ops/layout.md`「硬禁令」 | 题组/判分文件写盘前 | `I-FILE-LAYOUT@global` |
+| `s3-handout-revise` | `ops/layout.md`「硬禁令」 | 讲义修订落盘前 | `I-FILE-LAYOUT@global` |
+| `s4-review` | `ops/layout.md`「硬禁令」 | 复习产物落盘前 | `I-FILE-LAYOUT@global` |
+| `s5-close` | `ops/layout.md`「硬禁令」 | 结课产物落盘前 | `I-FILE-LAYOUT@global` |
 | `s3-teach` | `workflow/pacing.md`「休息与节律（R39）」 | 讲授轮需要学习段节律/断新 | `I-RHYTHM@global` |
 | `s3-teach` | `assessment/scheduling.md`「due-queue 与复习预算」 | 进入新节先查 due-queue / 讲授轮前置检查 | `I-DUE-QUEUE@global` |
 | `s3-exercise` | `assessment/exercise-files.md`「题组与判分文件（exercises/）」 | 写题组/判分文件 | `I-EXERCISE-SCHEMA@global` |
@@ -168,13 +173,13 @@ agent_created: true
 | `s3-handout-revise` | `teaching/explanation-depth.md`「深度分层」 | 修订需调整深度分配或深讲单元 | `I-DEPTH@global` |
 | `s3-handout-revise` | `assessment/generation.md`「出题范围与未讲授过滤（R35）」 | 回填变体需核对出题域 | `I-UNTAUGHT-FILTER@global` |
 | `s3-handout-revise` | `assessment/generation.md`「题量预算与自测≠题组」 | 回填变体或复核题量预算 | `I-SELF-TEST-VS-GROUP@handout` |
-| `s3-handout-revise` | `handout/style-examples.md`「标准讲义成品范例」 | 换风格改稿需对照成品格式 | `I-STYLE-EXAMPLES@content` |
+| `s3-handout-revise` | `handout/style-examples.md`「标准讲义成品范例」 | 换风格改稿前，先读目标风格成品范例 | `I-STYLE-EXAMPLES@content` |
 | `s3-teach` | `teaching/explanation-craft.md`「新记号/新操作讲透」 | 引入新记号/首次用类比/零基础首目定 CRA 序 | `I-NEW-NOTATION@global` |
 | `s3-teach` | `handout/pipeline.md`「边讲边写（同轮追加草稿）」 | 边讲边写讲义需要按流水线追加草稿 | `I-TEACH-DRAFT@handout` |
 | `s3-close` | `teaching/explanation-depth.md`「学员侧深度验收（深讲概念节末）」 | 深讲概念节末验收 | `I-DEPTH@global` |
 | `s3-close` | `assessment/generation.md`「可选加练（巩固与举一反三，R55）」 | 学员接受节末加练征询 | `I-REINFORCE@global` |
-| `s3-handout` | `handout/style-examples.md`「标准讲义成品范例」 | 撰写标准讲义需对照成品格式 | `I-STYLE-EXAMPLES@content` |
-| `s3-deep` | `handout/style-examples.md`「标准讲义成品范例」 | 换风格重讲需对照成品格式 | `I-STYLE-EXAMPLES@content` |
+| `s3-handout` | `handout/style-examples.md`「标准讲义成品范例」 | 首写某风格讲义前，先读该风格成品范例 | `I-STYLE-EXAMPLES@content` |
+| `s3-deep` | `handout/style-examples.md`「标准讲义成品范例」 | 换风格重讲前，先读目标风格成品范例 | `I-STYLE-EXAMPLES@content` |
 
 **补读失败**：目标缺失、不可读、anchor 不存在 → 停止当前运行，说明停止点/缺失条件/恢复条件；不用「我记得规则」继续，也不用低标准替代。
 
@@ -191,7 +196,7 @@ agent_created: true
 - `references/teaching/` —— 单节课六拍、备课短表、提问/反馈/纠错、呈现版式、讲解质量四册、内容类型处方。
 - `references/assessment/` —— 判分口径、出题流水线与过滤、间隔调度。
 - `references/data/` —— 三簿字段正本（progress/课程体系/记忆）、画像、引用对账。
-- `references/ops/` —— 红线与失败处置、脚本手册与错误码速查、文字排印、公式、证据分级、文献依据。
+- `references/ops/` —— 红线与失败处置、脚本手册与错误码速查、文字排印、文件结构可读性、公式、证据分级、文献依据。
 - `references/handout/` —— 讲义流水线、单元 schema、支持级、六套风格、版面与出厂自检。
 - `references/subjects/` 与 `references/disciplines/` —— 七个学科群的四类切片与十二个学科包（取用顺序见 `subjects/common.md`）。
 - `contracts/rules.json` —— 枚举/阈值/预算/标题白名单/错误码/加载场景的机器契约；脚本通过 `scripts/rule_contract.py` 读取。
