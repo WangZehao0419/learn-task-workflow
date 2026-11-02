@@ -244,6 +244,24 @@ def main(argv=None) -> int:
     c.check("3.m 抓到：连续正文无视觉锚点（W 不拦截）",
             rc == 0 and "W-LAYOUT-ANCHOR-GAP" in out, (rc, out[-300:]))
 
+    rc, out = run_layout_cli(lambda t: t
+                             + "**这一整段话全部加粗了，没有任何重点层级可言，学员扫读时信号完全丢失。**\n" * 3
+                             + "本节很容易错 🔥 请把 *斜体强调* 的写法改掉。\n")
+    c.check("3.n 抓到：整段加粗（E 拦截）与装饰符号（W）",
+            rc == 1 and "E-LAYOUT-EMPHASIS-HEAVY" in out and "W-LAYOUT-DECOR" in out,
+            (rc, out[-300:]))
+
+    rc, out = run_layout_cli()
+    c.check("3.o 健康样板无强调上限/装饰违规",
+            rc == 0 and "E-LAYOUT-EMPHASIS-HEAVY" not in out
+            and "W-LAYOUT-EMPHASIS-TOTAL" not in out and "W-LAYOUT-DECOR" not in out,
+            (rc, out[-300:]))
+
+    rc, out = run_layout_cli(lambda t: "- 状态：草稿（撰写中）\n" + t
+                             + "**这一整段话全部加粗了，没有任何重点层级可言，学员扫读时信号完全丢失。**\n" * 3)
+    c.check("3.p 草稿态不豁免整段加粗闸口",
+            rc == 1 and "E-LAYOUT-EMPHASIS-HEAVY" in out, (rc, out[-300:]))
+
     total = c.ok + c.fail
     print(f"verify-readability: {total} checks, {c.ok} OK, {c.fail} FAIL")
     return 1 if c.fail else 0

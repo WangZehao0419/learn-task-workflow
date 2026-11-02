@@ -399,6 +399,10 @@ _DEFAULT_LAYOUT = {
     "hr_max": 3,
     "section_bold_floor_chars": 300,
     "table_cols_max_hard": 4,
+    "emphasis_fullpara_ratio": 0.8,
+    "emphasis_fullpara_min_chars": 30,
+    "emphasis_total_ratio_max": 0.3,
+    "emphasis_total_min_chars": 300,
     "emphasis_floor_exempt": [
         "题组", "作答与判分", "复述检查清单", "操作作品验收",
         "参考答案", "答案", "备注", "来源", "参考资料",
@@ -601,6 +605,50 @@ def check_layout(text, cfg=None):
         add("W", "W-LAYOUT-EMPHASIS-FLOOR", sec_start,
             "末节正文约 %d 字零加粗（强调清零）——关键判断/易错点至少标一处" % sec_chars)
 
+    # W2b. 强调上限：成段正文整段加粗（E 级硬拦截）+ 全文加粗总量 / 装饰符号（W 级）
+    #     （补「强调只有下限没有上限」的机器盲区；判据与豁免见 ops/layout.md 硬禁令与 W 基线）
+    fp_ratio = float(cfg["emphasis_fullpara_ratio"])
+    fp_min = int(cfg["emphasis_fullpara_min_chars"])
+    tot_max = float(cfg["emphasis_total_ratio_max"])
+    tot_min = int(cfg["emphasis_total_min_chars"])
+    decor_re = re.compile("[\U0001F000-\U0001FAFF\u2600-\u27BF\u2B00-\u2BFF\uFE0F]")
+    decor_exempt = set("✓✔✗✘✅❌❎🟢🟡🟠🔴➕➖➗")
+    italic_re = re.compile(r"(?<!\*)\*(?!\*)[^*\s][^*]*?(?<!\s)\*(?!\*)")
+    underline_re = re.compile(r"</?u>", re.IGNORECASE)
+    list_re = re.compile(r"^\s*(?:[-*+]\s+|\d+[.、)]\s*)")
+    total_bold = total_vis = 0
+    decor_lines = []
+    for i, ln in enumerate(lines):
+        if fence[i]:
+            continue
+        s = ln.strip()
+        if not s or s.startswith("|"):
+            continue
+        # 装饰符号（W）：emoji（判例徽章/来源分级/数学运算符豁免）、斜体、下划线；表格行与含 $ 数学行豁免
+        if "$" not in ln and (
+                any(ch not in decor_exempt for ch in decor_re.findall(ln))
+                or italic_re.search(ln) or underline_re.search(ln)):
+            decor_lines.append(i)
+        if s.startswith("#") or s.startswith(">"):
+            continue  # 加粗总量与整段加粗不计标题/引用行
+        pairs = re.findall(r"\*\*([^*]+)\*\*", ln)
+        nb = sum(len(m) for m in pairs)
+        nv = max(0, len(re.sub(r"\s", "", list_re.sub("", ln, count=1))) - 4 * len(pairs))
+        total_bold += nb
+        total_vis += nv
+        if (list_re.match(ln) is None and nv >= fp_min and nv > 0
+                and nb / nv >= fp_ratio and re.search(r"[。！？!?]", ln)):
+            add("E", "E-LAYOUT-EMPHASIS-HEAVY", i,
+                "整段强调等于没有强调——改为普通正文，只留 1 处关键判断/易错点加粗")
+    if total_vis >= tot_min and total_vis > 0 and total_bold / total_vis > tot_max:
+        add("W", "W-LAYOUT-EMPHASIS-TOTAL", 0,
+            "全文加粗约 %d%%（上限三成）——只留术语首现/关键判断/易错点"
+            % round(total_bold * 100 / total_vis))
+    if decor_lines:
+        add("W", "W-LAYOUT-DECOR", decor_lines[0],
+            "装饰符号强调（emoji/斜体/下划线）共 %d 处——强调只用加粗（判例徽章/来源分级豁免）"
+            % len(decor_lines))
+
     # W3. 分隔线全文 ≤ hr_max 条
     hr_seen = 0
     for i, ln in enumerate(lines):
@@ -639,6 +687,8 @@ _SELFTEST_CASES = [
     ("W-LAYOUT-LATEX-ARROW", "# 题\n\n主语 $\\rightarrow$ 直接宾语\n", "W"),
     ("W-LAYOUT-LINE-ENDING", "# 题\r\n\r\n正文一句。\n", "W"),
     ("W-LAYOUT-PARA-LONG", "# 题\n\n第一句。第二句。第三句。第四句。第五句。第六句。\n", "W"),
+    ("E-LAYOUT-EMPHASIS-HEAVY", "# 讲义\n\n" + "**这一整段话全部加粗了，没有任何重点层级可言，学员扫读时信号完全丢失。**\n" * 3 + "\n", "E"),
+    ("W-LAYOUT-DECOR", "# 讲义\n\n本节很容易错 ✅ 请把 *斜体强调* 的写法改掉。\n", "W"),
     ("clean", "# 题\n\n一句**关键**判断。\n\n- 列表项\n1. 有序项\n\n| a | b |\n|---|---|\n| 1 | 2 |\n", None),
 ]
 

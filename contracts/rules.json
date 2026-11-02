@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/2",
- "version": "9.13.5",
+ "version": "9.14.0",
  "retired_rule_ids": [
   "T02",
   "T07",
@@ -1964,6 +1964,10 @@
    "hr_max": 3,
    "section_bold_floor_chars": 300,
    "table_cols_max_hard": 4,
+   "emphasis_fullpara_ratio": 0.8,
+   "emphasis_fullpara_min_chars": 30,
+   "emphasis_total_ratio_max": 0.3,
+   "emphasis_total_min_chars": 300,
    "emphasis_floor_exempt": [
     "题组",
     "作答与判分",
@@ -2043,6 +2047,7 @@
     "E-IMG-READ",
     "E-KEY-ABILITY-UNMET",
     "E-KP-TYPED-GATE",
+    "E-LAYOUT-EMPHASIS-HEAVY",
     "E-LAYOUT-HEADING-SKIP",
     "E-LAYOUT-LIST-SPACE",
     "E-LAYOUT-LONGLINE",
@@ -2111,7 +2116,9 @@
     "W-KP-STATE-MISMATCH",
     "W-KP-SUMMARY-MISMATCH",
     "W-LAYOUT-ANCHOR-GAP",
+    "W-LAYOUT-DECOR",
     "W-LAYOUT-EMPHASIS-FLOOR",
+    "W-LAYOUT-EMPHASIS-TOTAL",
     "W-LAYOUT-LATEX-ARROW",
     "W-LAYOUT-LINE-ENDING",
     "W-LAYOUT-PARA-LONG",
