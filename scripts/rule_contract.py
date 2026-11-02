@@ -691,6 +691,45 @@ def coverage(path: Path | None = None, strict: bool = True) -> dict:
     }
 
 
+def check_const_mirrors(data: dict, root: Path) -> list:
+    """constants 与脚本内置默认值的镜像一致性。
+
+    ltw_typography 为「契约缺失时可降级运行」保留了一组内置默认值：读者版标题豁免表
+    与 layout 阈值表。同一事实写两处必然漂移，这里把「契约改了、脚本没跟」变成
+    机器可拦的拓扑错误（复用既有 E-TOPOLOGY-MIRROR，不新增错误码）。
+    """
+    scripts_dir = str(root / "scripts")
+    if scripts_dir not in sys.path:
+        sys.path.insert(0, scripts_dir)
+    try:
+        import ltw_typography
+    except Exception:
+        return ["E-TOPOLOGY-MIRROR: scripts/ltw_typography.py 无法导入，常量镜像未核对"]
+    issues = []
+    consts = data["constants"]
+    expect = list(consts.get("reader", {}).get("heading_body_exempt", []))
+    actual = list(ltw_typography.DEFAULT_HEADING_BODY_EXEMPT)
+    if actual != expect:
+        issues.append(
+            "E-TOPOLOGY-MIRROR: ltw_typography.DEFAULT_HEADING_BODY_EXEMPT 与"
+            " constants.reader.heading_body_exempt 不一致（脚本 %d 项 / 契约 %d 项）"
+            % (len(actual), len(expect)))
+    layout = consts.get("layout", {})
+    defaults = ltw_typography._DEFAULT_LAYOUT
+    if set(defaults) != set(layout):
+        issues.append(
+            "E-TOPOLOGY-MIRROR: ltw_typography._DEFAULT_LAYOUT 键集与 constants.layout 不一致"
+            "（契约多 %s / 脚本多 %s）"
+            % (sorted(set(layout) - set(defaults)), sorted(set(defaults) - set(layout))))
+    else:
+        diff = [k for k in layout if defaults[k] != layout[k]]
+        if diff:
+            issues.append(
+                "E-TOPOLOGY-MIRROR: ltw_typography._DEFAULT_LAYOUT 取值与 constants.layout 不一致：%s"
+                % ", ".join(sorted(diff)))
+    return issues
+
+
 def topology(path: Path | None = None) -> dict:
     root = skill_root()
     data = load(path)
@@ -756,6 +795,9 @@ def topology(path: Path | None = None) -> dict:
 
     # 9.5 补读/supplement 小节必须存在（窄版；不扫散文 §）
     issues += check_section_refs(data, root)
+
+    # 9.6 脚本内置默认值与契约常量镜像一致（防止双写漂移）
+    issues += check_const_mirrors(data, root)
 
     # 10. T/F/R 编号引用必有定义
     rule_ids = {r["id"] for r in data["rules"]}

@@ -16,7 +16,7 @@
 
 ## 脚本清单
 
-七个用户脚本 + 一个契约模块，均 stdlib-only、幂等可重跑，基础 Python 版本以 `skill-dependencies.json` 的 `min_version` 为准。
+八个用户脚本 + 一个契约模块，均 stdlib-only、幂等可重跑，基础 Python 版本以 `skill-dependencies.json` 的 `min_version` 为准。
 
 | 脚本 | 用法 | 默认行为 | 何时跑 |
 |---|---|---|---|
@@ -102,6 +102,6 @@ python -B evals/verify-readability.py
 
 ## 当前核验
 
-- 适用版本：9.13.2
-- 核验日期：2026-11-01
+- 适用版本：9.13.3
+- 核验日期：2026-11-02
 - 环境依赖：`skill-dependencies.json`（Python `min_version`）；只有 `check_environment.py` 输出 `ready` 才能继续。

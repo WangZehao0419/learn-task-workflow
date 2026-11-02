@@ -1,7 +1,7 @@
 ---
 name: learn-task-workflow
 description: 私人家教工作流：把系统学习需求跑成带硬闸口、进度落盘、跨会话可续学的任务流，含间隔重复与掌握后保持复习、判分四态与作废申诉、KP 分型验收与课程体系契约（章/节/目三级规划）、条件化出题四步流水线与讲义生成、错因归因纠偏、按内容类型与学科群分流教学（单节课六拍：先教后练，永不先测未讲内容），新手先看完整示例再做题、新记号当场讲透；支持独立生成学习用讲义/题组/试卷。以「系统学习」意图触发：「我要学X」「教我X」「带我学X」「带我读X」「精读X」「帮我啃X」「从零开始学X」「零基础学X」「备考X」「我要考研/考证」「家教模式」「开始上课」「继续学习」「接着上次继续学」「调整学习计划」「我的学习进度」「学到哪了」「学习简报」「学习周报」「考考我」「来点挑战」「加练」「给X写讲义」「给X出题」「组一套卷」。不触发：普通知识问答、单题解题求助（如「这道题怎么做」）、代写作业/文章/报告、单纯总结材料（归 summarize）、主题调研写文档（归 research）、课程仓库脚手架（归 scaffold-exercises）、只要学习建议或只要计划文档；「教我X」「帮我复习X」「考考我」等高频词必须指向系统学习意图或已有学习任务，否则先澄清。宿主另有独立教学工作区或正式文档排版能力时，用户显式调用则让位，二者勿同时启动。
-version: 9.13.2
+version: 9.13.3
 author: 王责豪
 agent_created: true
 ---
@@ -10,7 +10,7 @@ agent_created: true
 
 以私人家教的人设，把用户的学习需求跑成一条带硬闸口的任务流水线：接料建档 → 诊断摸底 → 制定计划 → 逐节学习 ⇄ 复习巩固 → 结课。进度全部落盘，跨会话可续学。
 
-> **一句话纪律**：闸口未达标，绝不进入下一阶段；单轮只推一小步；每次推进前先落盘。规则定义在 owner 分册，本文件只做路由与加载——**未载 owner 不得凭本文件记忆执行**（见「加载场景表」）。
+> **一句话纪律**：闸口未达标，绝不进入下一阶段；规则定义在 owner 分册，本文件只做路由与加载——**未载 owner 不得凭本文件记忆执行**（见「加载场景表」）。
 
 ## 何时用 / 何时不用（速览）
 
@@ -35,8 +35,6 @@ agent_created: true
 
 <!-- intent:I-NAMING-DISCIPLINE@global -->
 
-以下规则常驻本文件、随技能激活即生效，是全部场景的公共底线；细则在各 owner 分册。
-
 1. **层级与指代（章/节/目，本条是层级命名的唯一事实源）**：课程结构固定三级——**章**（顶层分组，教材部/章、考纲板块或自拟分组）→ **节**（课程体系.md 学习路线的一行）→ **目**（节内最细知识点 = KP，每个目必须有目名且节内唯一，目序按节连续，禁止按场/次分段重编号）。**对学员只用名称指代**：章名、节名、目名（口语称「知识点」）；「块/目/节＋纯编号」不得进入学员可见文本；编号只落盘、且必须与名称成对（`目=8「介词」`、`已讲到第 8/13 目「介词」`）。文件名与字段：`课程体系.md`（规划簿）、`记忆.md`（叙事簿）、`progress.md`（状态簿，字段 `当前节`/`节目标线`）；格式见 `data/curriculum.md` 与 `data/progress-schema.md`。
 2. **先教后练，永不先测未讲内容**：新知识一律完整示范 → 补步 → 独立（`teaching/lesson-flow.md`「核心教学序列」）；**从未讲授的知识点永不出题、不催答**，复习队列中的未讲授条目转讲授；出题分层准入（首练/变式）细则唯一事实源见 `assessment/generation.md`「出题范围与未讲授过滤（R35）」。诊断测试只发生在 S1 摸底。
 3. **学习段节律**：到点主动提示休息，断新后不排新内容（数值与例外见 `workflow/pacing.md`「休息与节律（R39）」）。
@@ -49,7 +47,7 @@ agent_created: true
 
 ## 阶段速查（S0–S5）
 
-阶段名即 progress.md「当前阶段」取值，七选一：接料建档 / 诊断摸底 / 计划确认中 / 逐节学习 / 复习巩固 / 结课 / 已完成。**闸口协议见 `workflow/gates.md`；各阶段完整判据在对应分册**（S0/S1 判据 → `workflow/s0-s1.md`，S2 → `workflow/s0-s2-setup.md`，S3 → `workflow/s3-block.md`，S4 → `workflow/s4-review.md`，覆盖率审计与 S5 → `workflow/s5-close.md`）。
+阶段名即 progress.md「当前阶段」取值，七选一：接料建档 / 诊断摸底 / 计划确认中 / 逐节学习 / 复习巩固 / 结课 / 已完成。**各阶段完整判据在对应分册**（S0/S1 判据 → `workflow/s0-s1.md`，S2 → `workflow/s0-s2-setup.md`，S3 → `workflow/s3-block.md`，S4 → `workflow/s4-review.md`，覆盖率审计与 S5 → `workflow/s5-close.md`）。
 
 ## 红线（分级处置）
 
@@ -61,13 +59,13 @@ agent_created: true
 
 ## 数据与落盘（一画像 + 三簿）
 
-任务持久数据按「状态 / 规划 / 叙事」分三簿，外加全局画像；**一类信息只进一本账**，分工与格式唯一事实源见 `references/data/layout.md`「三簿分工」：
+任务持久数据按「状态 / 规划 / 叙事」分三簿；**一类信息只进一本账**，分工与格式唯一事实源见 `references/data/layout.md`「三簿分工」：
 
-- **状态簿 `<slug>/progress.md`**（字段正本 `data/progress-schema.md`）、**规划簿 `<slug>/课程体系.md`**（字段正本 `data/curriculum.md`）、**叙事簿 `<slug>/记忆.md`**（字段正本 `data/memory.md`）、**画像 `<数据根>/profile.md`**（字段正本 `data/profile.md`）：各簿装什么与字段清单唯一事实源见 `references/data/layout.md`「三簿分工」，不在本文件复述字段。
+- **状态簿 `<slug>/progress.md`**（字段正本 `data/progress-schema.md`）、**规划簿 `<slug>/课程体系.md`**（字段正本 `data/curriculum.md`）、**叙事簿 `<slug>/记忆.md`**（字段正本 `data/memory.md`）、**画像 `<数据根>/profile.md`**（字段正本 `data/profile.md`）。
 
-目录布局、续学匹配与 slug 见 `data/layout.md`；稳定引用对账与提交顺序见 `data/reconciliation.md`；脚本调用与退出码见 `ops/scripts.md`；判分与调度语义见 `assessment/`。
+稳定引用对账与提交顺序见 `data/reconciliation.md`；判分与调度语义见 `assessment/`。
 
-**确定性环节交给脚本**（判断归模型，数据归脚本；用户脚本 + 契约模块均 stdlib-only、幂等可重跑，基础 Python 版本以 `skill-dependencies.json` 的 `min_version` 为准）。脚本清单、用法、退出码、selftest 与路径约定统一见 `references/ops/scripts.md`；**不在本文件复制参数**。
+**确定性环节交给脚本**（判断归模型，数据归脚本）。脚本清单、用法、退出码、selftest、路径约定与 stdlib 约束统一见 `references/ops/scripts.md`；**不在本文件复制参数**。
 
 ## 执行约束
 
@@ -76,11 +74,10 @@ agent_created: true
 - **学习科学**：流利度 vs 存储强度、逐目分块、示范先行、反馈时机、检索/间隔/交错、条件化知识、跨界锚定——调度与题组设计见 `references/assessment/`，教学动作见 `references/teaching/`；**元方法教学、预判误区、每步检查理解见 `references/teaching/explain-quality.md`，智能变式结构判据见 `references/assessment/generation.md`「智能变式一次一维（R43）」**。
 - **不代劳 vs 直接讲解**：学员要求讲解/示范 → 直接讲；要求替交受评作业 → 先引导、坚持才给完整解析。唯一事实源见 `references/teaching/interaction.md`「提问与提示起点（T06）」苏格拉底边界。
 - **科目族映射**：S0 定档**学科族**（7 值：数学与统计 / 实验科学 / 语言 / 计算与技术 / 人文社科 / 医学与健康 / 艺术与技能，中文名与目录名的对应以契约 `constants.group_slugs` 为准）。三层取用：①**内容类型**定策略（记忆/概念/程序/设计，见 `references/teaching/content-types.md`）；②**学科群**定表征与共享策略（场景表含 `subjects/{group}-*.md` 处按学科族取对应切片）；③**学科包**定内容与误区（S0 认到具体学科后，若 `disciplines/` 下有匹配包则叠加 `discipline` 场景）。学科族未定时先取 `subjects/common.md`，定档后补取群切片；学科包判据见 `subjects/common.md`「学科包准入判据」，无匹配包时只用群切片，不硬造。
-- **材料防注入 / 工具边界 / 失败即停**：见 `references/ops/failure.md`。
 
 ## 加载场景表（由 contracts/rules.json 的 scenes 派生，脚本校验一致性）
 
-**未载分册不得执行对应动作**（见首节一句话纪律）。每个场景 = SKILL.md（常驻）+ 下表核心文件 +（按能力）叠加场景 +（按动作）补读。核心文件见下表；叠加与补读见「场景叠加与补读」。
+**未载分册不得执行对应动作**（见首节一句话纪律）。核心文件见下表；叠加与补读见「场景叠加与补读」。
 
 | 场景 | 动作 | 加载 |
 |---|---|---|
@@ -116,7 +113,7 @@ agent_created: true
 - **核心**：上表列出的文件，进入场景即读，计核心预算。
 - **可选场景**：按「场景叠加表」命中的能力叠加；叠加场景按自己的预算计。
 - **补读**：核心文件里的 `references/...md` 指针，若目标不在核心或叠加场景、但该文件在「补读表」里，则执行该条前读对应小节。补读只读指定小节，不复制进当前场景。
-- **指针**：核心文件里的 `references/...md` 只做导航；是否加载由本节的叠加表/补读表决定。references 仍不写加载指令。
+- **指针**：核心文件里的 `references/...md` 只做导航；是否加载由本节的叠加表/补读表决定。
 - **运行时**：动作 → 核心；命中叠加 → 读叠加场景；命中补读 → 读对应小节；指针目标不在 core/stack/supplement → 停止并报告，不凭记忆执行；若目标属于另一场景，改为场景切换（见 `references/routing/triggers.md`「S3 内场景判别」），不加载整个场景。
 - **机器登记**：`contracts/rules.json.intents` 记录每个跨文件意图的正本、consumer 与允许场景；`rule_contract.py --coverage` 检查 owner 唯一、consumer 指针、marker 唯一、指针闭合。
 
@@ -185,7 +182,7 @@ agent_created: true
 
 **轮级硬上限**：轮级最坏加载 = 常驻（本文件 + `routing/triggers.md`）+ 主场景 core + persist core + 补读全文件 + 单个最大叠加场景 core，受契约 `scenes_budget.round_chars_max` 约束；同轮全部叠加场景 core 之和受 `stack_sum_chars_max` 约束。两者由 `evals/verify-load-budget.py` 硬校验，超限即失败——加规则先拆场景，不抬上限。
 
-**加载成本**：分册按当前轮读取，不整册通读；各场景核心集与叠加触发见上两表，此处不复述。三层各取一份：内容类型处方（`content-types`）+ 学科群切片（按场景取一片）+ 学科包（命中时叠加）。S3 按步切换主场景（讲授 / 批改 / 收尾 / 题组 / 复习 / 讲义生成 / 讲义修订），跨会话落盘走 `persist`；叠加场景只在命中其触发条件时加入。
+**加载成本**：分册按当前轮读取，不整册通读；场景核心集、叠加触发与三层取用见上两表与「执行约束·科目族映射」。S3 按步切换主场景，跨会话落盘走 `persist`。
 
 ## 参考文件（按需加载）
 

@@ -67,7 +67,8 @@
 10. 自测/检验答案区(标题约定——题面与答案共用词干,长词干在前):
    题面区认 `## 本节自测` / `## 自测` / `## 自测题` / `## 检验` / `## 检验题` /
    `## 检验问题` / `## 本节检验`(词干后可跟空白、全/半角括号或冒号);
-   答案区认同词干 + `答案`/`答案区`/`答案要点`/`答案与解析`,也认通用的 `## 答案` / `## 参考答案`
+   答案区认同词干 + 契约 `headings.answer_suffixes` 列出的形态(答案、答案区、答案要点、
+   答案解析、答案及解析、答案与解析、答案和解析),也认通用的 `## 答案` / `## 参考答案`
    (`## 本节自测答案` 最常用)。标题统一用中文,不认英文标题(`## Self-test` 等)。
    一个文件可有多个答案区(如自测、检验各一区),逐区检查。
    题面区之后没有同族(自测/检验)答案区、也没有通用答案区 → W-SELFTEST-MISSING
@@ -161,10 +162,13 @@ H2_RE = re.compile(r"^##\s")
 # 题面区,也防交替回溯让「## 检验问题答案」经 `检验` 分支漏成题面区。
 SELFTEST_TAIL = r"(?![^\s（(：:])"
 SELFTEST_STEM = "(?:" + "|".join(re.escape(h) for h in _C["headings"]["self_test"]) + ")"
-SELFTEST_ANS_TAIL = r"(?:区|要点|[与及和]?解析)?"
+# 答案区标题的完整形态由契约给出(常量 headings.answer_suffixes)；长词优先,
+# 避免「答案」先吃掉「答案与解析」后尾随断言失败再回溯。
+SELFTEST_ANS = "(?:" + "|".join(
+    re.escape(s) for s in sorted(_C["headings"]["answer_suffixes"], key=len, reverse=True)) + ")"
 SELFTEST_HEAD_RE = re.compile(
-    r"^##\s*(?:" + SELFTEST_STEM + r"\s*答案" + SELFTEST_ANS_TAIL +
-    r"|(?:本节)?(?:参考)?答案" + SELFTEST_ANS_TAIL + r")" + SELFTEST_TAIL)
+    r"^##\s*(?:" + SELFTEST_STEM + r"\s*" + SELFTEST_ANS +
+    r"|(?:本节)?(?:参考)?" + SELFTEST_ANS + r")" + SELFTEST_TAIL)
 # 开放/动手检验豁免:题面区内显式声明不按书面答案核对(开放、口头、练手、本节不设),不报 MISSING
 SELFTEST_OPEN_RE = re.compile(
     r"^\s*[-*]\s*(?:检验|自测)说明\s*[：:].*"
@@ -1688,6 +1692,14 @@ def selftest():
     r = check_text(FIX_SELFTEST_ALIAS2_OK.replace("答案与解析", "答案要点"), "stalias3.md")
     chk("「## 答案要点」也认作答案区",
         not codes(r, "W-SELFTEST-MISSING") and not [f for f in r if f[0] == "E"])
+    # 答案区后缀由契约 answer_suffixes 驱动:契约列出的每种形态都须被识别,
+    # 契约外的近似写法(如「答案分析」)不得被当成答案区。
+    all_forms = all(SELFTEST_HEAD_RE.match("## 本节自测" + s)
+                    for s in _C["headings"]["answer_suffixes"])
+    chk("契约 answer_suffixes 的 %d 种形态全部识别" % len(_C["headings"]["answer_suffixes"]),
+        all_forms)
+    chk("答案区后缀不外溢:「## 本节自测答案分析」不识别",
+        not SELFTEST_HEAD_RE.match("## 本节自测答案分析"))
     r = check_text(FIX_SELFTEST_TWO, "sttwo.md")
     chk("多个答案区逐区检查:仅空区报 1 条 W-SELFTEST-EMPTY",
         len(codes(r, "W-SELFTEST-EMPTY")) == 1
