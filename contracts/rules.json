@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/2",
- "version": "9.14.0",
+ "version": "9.14.1",
  "retired_rule_ids": [
   "T02",
   "T07",
@@ -1717,6 +1717,15 @@
     "s4-review"
    ],
    "intent": "I-REINFORCE"
+  },
+  {
+   "id": "R56",
+   "owner": "references/teaching/explain-quality.md#概念探测（elicit，不计分，R56）",
+   "type": "definition",
+   "scenes": [
+    "s3-teach"
+   ],
+   "intent": "I-CONCEPT-PROBE"
   }
  ],
  "constants": {
@@ -2514,10 +2523,6 @@
     {
      "scene": "handout-enhance",
      "when": "按能力触发"
-    },
-    {
-     "scene": "literature",
-     "when": "按能力触发"
     }
    ],
    "supplements": [
@@ -2591,10 +2596,6 @@
     },
     {
      "scene": "handout-enhance",
-     "when": "按能力触发"
-    },
-    {
-     "scene": "literature",
      "when": "按能力触发"
     }
    ],
@@ -4178,6 +4179,31 @@
     "s5-close"
    ],
    "rule_ids": []
+  },
+  {
+   "id": "I-CONCEPT-PROBE",
+   "scope": "global",
+   "cluster": null,
+   "owner": "references/teaching/explain-quality.md#概念探测（elicit，不计分，R56）",
+   "marker": "intent:I-CONCEPT-PROBE@global",
+   "consumers": [
+    {
+     "path": "references/teaching/lesson-flow.md",
+     "anchor": "核心教学序列（硬规则）",
+     "role": "application"
+    },
+    {
+     "path": "references/teaching/content-types.md",
+     "anchor": "内容类型教学处方",
+     "role": "application"
+    }
+   ],
+   "scenes": [
+    "s3-teach"
+   ],
+   "rule_ids": [
+    "R56"
+   ]
   }
  ]
 }
