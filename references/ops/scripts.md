@@ -102,6 +102,6 @@ python -B evals/verify-readability.py
 
 ## 当前核验
 
-- 适用版本：9.13.1
+- 适用版本：9.13.2
 - 核验日期：2026-11-01
 - 环境依赖：`skill-dependencies.json`（Python `min_version`）；只有 `check_environment.py` 输出 `ready` 才能继续。
