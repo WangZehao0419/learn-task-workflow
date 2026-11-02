@@ -2,13 +2,6 @@
 
 <!-- owns: 对话轮型、讲授轮版式、结构预算、五段内容契约、压缩出口、讲授与反馈语气；must-not-define: 深度分层（explanation-depth）、密度（explanation-density）、类比/新记号（explanation-craft）、六拍（lesson-flow）、提问与反馈内容（interaction）、讲义版面（handout） -->
 
-## 目录
-
-- ## 对话呈现系统（轮型，所有风格共用）
-- ## 对话讲授契约
-- ### 讲授轮版式：对话轮呈现标记
-- ## 讲授与反馈语气契约（学员可见输出）
-
 
 ## 对话呈现系统（轮型，所有风格共用）
 

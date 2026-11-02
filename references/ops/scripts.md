@@ -2,16 +2,6 @@
 
 <!-- owns: 脚本 CLI、退出码、错误码入口、selftest、路径约定、只读/原子写、打包验证；must-not-define: 教学/判分/数据语义（指向 owner） -->
 
-## 目录
-
-- 脚本清单
-- 路径与解释器约定
-- 退出码与错误码
-- 只读与原子写
-- 自测
-- 打包与验证
-- 当前核验
-
 本册是脚本的**操作手册**：怎么调、退出码怎么看、什么时候跑。业务语义在各自 owner：判分见 `assessment/scoring.md`、调度见 `assessment/scheduling.md`，阶段闸口见 `workflow/gates.md`，数据字段见 `data/progress-schema.md`，失败处置见 `ops/failure.md`。
 
 ## 脚本清单
@@ -102,6 +92,6 @@ python -B evals/verify-readability.py
 
 ## 当前核验
 
-- 适用版本：9.13.3
+- 适用版本：9.13.4
 - 核验日期：2026-11-02
 - 环境依赖：`skill-dependencies.json`（Python `min_version`）；只有 `check_environment.py` 输出 `ready` 才能继续。

@@ -2,12 +2,6 @@
 
 <!-- owns: 类型判定与四类矩阵（①–⑤ 输出面）；must-not-define: 支持级/状态层（support-levels）、六套风格（styles）、单元 schema（unit-schema）、版式（typography）、来源（quality） -->
 
-## 目录
-
-- ## 4. 类型模板（阶段 2）
-- ### 4.1 类型判定
-- ### 4.2 四类矩阵
-
 > 已迁出：支持级/状态层→`handout/support-levels.md`；六套风格→`handout/styles.md`；单元 schema→`handout/unit-schema.md`。
 
 ## 4. 类型模板（阶段 2）

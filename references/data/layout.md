@@ -2,15 +2,6 @@
 
 <!-- owns: 数据根（F11）、续学匹配（R28）、目录布局、slug 规则、版本号体系；must-not-define: progress 字段（progress-schema）、稳定引用与对账（reconciliation）、教学流程、判分、exercises/ 文件结构（assessment/exercise-files.md） -->
 
-## 目录
-
-- ## 数据根（稳定根）
-- ## 目录布局
-- ## 结课综合测验目标线（99-）
-- ## slug 规则与冲突处理
-- ## 版本号体系
-- ## 三簿分工（数据布局总纲）
-
 题组与判分文件（exercises/）的结构与字段正本：`assessment/exercise-files.md`。
 
 ## 数据根（稳定根）

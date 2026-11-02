@@ -2,15 +2,6 @@
 
 <!-- owns: 讲义版面：设计原则、页面架构、字体系统、元素版面、教学例版面、元素预算；must-not-define: 打印/无障碍（print-a11y）、读者路径（reader-path）、自检（self-check）、内容 schema（unit-schema）、文字标点（ops/typography） -->
 
-## 目录
-
-- ## 1. 设计原则与边界
-- ## 2. 页面架构与版式基线
-- ## 3. 字体系统：标题、段落、列表
-- ## 4. 元素系统：表格、图、代码、答案框
-- ## 9. 教学例版面
-- ## 10. 元素预算与视觉一致性
-
 > 相关正本：打印/PDF、中文印刷、无障碍→`handout/print-a11y.md`；读者路径→`handout/reader-path.md`；出厂自检→`handout/self-check.md`。
 
 本册管「读者拿到讲义后怎么读、怎么排版」，不改变五要素、答案框与密度规则；质量取舍优先级链与「不为版面删内容」见 `teaching/explanation-density.md`「讲解文本密度原则」。文字标点/数字/单位/字体语义见 `ops/typography.md`；公式结构见 `ops/formulas.md`；内容槽位见 `handout/unit-schema.md`；来源与评估真实性见 `handout/quality.md`；打印/PDF 与无障碍见 `handout/print-a11y.md`；读者路径见 `handout/reader-path.md`。

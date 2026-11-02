@@ -2,12 +2,6 @@
 
 <!-- owns: 讲义来源与评估真实性、覆盖行、深度分配、教学例/评估例真实性、材料型分流、证据边界；must-not-define: P1/P2（enhancements）、图像生成（figures）、出厂自检（self-check）、版式（typography）、流程（pipeline） -->
 
-## 目录
-
-- ## 9. 来源、范围与评估真实性（阶段 3）
-- ## 12. 证据与边界
-- ### 材料型按材料结构分流
-
 > 相关正本：P1 质量与运营→`handout/enhancements.md`；P2 章节层→`handout/reader-path.md`；图像双轨→`handout/figures.md`；出厂自检→`handout/self-check.md`；分块呈现→`workflow/s3-block.md`。
 
 ## 9. 来源、范围与评估真实性（阶段 3）
