@@ -34,8 +34,8 @@ python -B scripts/rule_contract.py --selftest
 python -B evals/verify-load-budget.py
 ```
 
-全部脚本命令、退出码与 selftest 清单见 `references/ops/scripts.md`；逐版本审计基准（coverage-audit / no-loss-ledger / intent-map）见 `docs/review/`。
+全部脚本命令、退出码与 selftest 清单见 `references/ops/scripts.md`；逐版本审计要点（自 v9.16.3 起）写入 `CHANGELOG.md` 对应版本条目。
 
 ## 发布流程要点
 
-版本号五方同步（`SKILL.md` / `contracts/rules.json` / `skill-dependencies.json` / `evals.json` / `ops/scripts.md`「适用版本」，由 `rule_contract.py --topology` 机检），自 v9.16.1 起 scripts.md 适用版本纳入机检；每个版本先落基准文档（docs/review/）再动文件，交付按基准三态比对。版本历史见 `CHANGELOG.md`。
+版本号五方同步（`SKILL.md` / `contracts/rules.json` / `skill-dependencies.json` / `evals.json` / `ops/scripts.md`「适用版本」，由 `rule_contract.py --topology` 机检），自 v9.16.1 起 scripts.md 适用版本纳入机检；自 v9.16.3 起审计基准文档不再入库（维护侧档案库 docs/ 已退役、永不重建），每版本审计要点写入 CHANGELOG 对应版本条目。版本历史见 `CHANGELOG.md`。

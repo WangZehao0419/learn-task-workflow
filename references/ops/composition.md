@@ -30,7 +30,7 @@
 
 ## 跨文件意图唯一 owner
 
-唯一事实源 = `contracts/rules.json.intents`（机器可读：id / scope / owner / marker / consumers / scenes）。本册不再维护第二份意图表；人读视图由 `docs/review/v9.11.3-intent-map.md` 生成。
+唯一事实源 = `contracts/rules.json.intents`（机器可读：id / scope / owner / marker / consumers / scenes）。本册不再维护第二份意图表；人读意图视图已随维护侧档案库于 v9.16.3 退役。
 
 新增跨文件意图的顺序：先登记 intent（owner + marker + consumers + scenes），再在 owner 小节写 `<!-- intent:... -->`，最后在 consumer 写指向 owner 的指针。`rule_contract.py --coverage` 检查 owner 唯一、marker 唯一、consumer 指针与指针闭合；`--no-strict-pointers` 只用于临时排查。
 

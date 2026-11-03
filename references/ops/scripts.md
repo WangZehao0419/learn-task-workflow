@@ -94,6 +94,6 @@ python -B evals/verify-round-layout.py --selftest
 
 ## 当前核验
 
-- 适用版本：9.16.2
+- 适用版本：9.16.3
 - 核验日期：2026-11-04
 - 环境依赖：`skill-dependencies.json`（Python `min_version`）；只有 `check_environment.py` 输出 `ready` 才能继续。
