@@ -439,7 +439,7 @@ def check_scenes(data: dict, root: Path) -> tuple[list, dict]:
             issues.append("E-TOPOLOGY-SCENES: 规则未挂场景 %s" % r["id"])
             continue
         owner_file = r["owner"].split("#", 1)[0]
-        if not any(owner_file in expanded.get(sid, set()) for sid in scs):
+        if not any(owner_file in _allowed_files(data, expanded, sid) for sid in scs):
             issues.append("E-TOPOLOGY-SCENES: 规则 %s owner %s 不在其场景内"
                           % (r["id"], owner_file))
 

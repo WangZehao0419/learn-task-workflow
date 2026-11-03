@@ -78,9 +78,11 @@ python -B evals/verify-load-budget.py --selftest
 python -B evals/verify-load-budget.py --pointers
 python -B evals/verify-marker-rules.py
 python -B evals/verify-readability.py
+python -B evals/verify-round-layout.py
+python -B evals/verify-round-layout.py --selftest
 ```
 
-`rule_contract --selftest` 覆盖契约缺失/空文件/非法 JSON/缺键/枚举重复；`--topology` 覆盖无加载指令、职责头齐全、指针可解析、声明依赖无环；`--coverage` 在拓扑之上加场景覆盖（文件/规则挂场景、owner ∈ 场景、SKILL.md 场景表一致）、intent 正本/marker/consumer 指针与指针闭合（默认开启，`--no-strict-pointers` 可临时关闭）。`verify-load-budget --pointers` 只读报告每场景补读文件数、补读字符与叠加场景最坏字符，补读软上限只 warning。
+`rule_contract --selftest` 覆盖契约缺失/空文件/非法 JSON/缺键/枚举重复；`--topology` 覆盖无加载指令、职责头齐全、指针可解析、声明依赖无环；`--coverage` 在拓扑之上加场景覆盖（文件/规则挂场景、规则 owner ∈ 场景可加载集 core/叠加/补读、SKILL.md 场景表一致）、intent 正本/marker/consumer 指针与指针闭合（默认开启，`--no-strict-pointers` 可临时关闭）。`verify-load-budget --pointers` 只读报告每场景补读文件数、补读字符与叠加场景最坏字符，补读软上限只 warning。
 
 ## 打包与验证
 

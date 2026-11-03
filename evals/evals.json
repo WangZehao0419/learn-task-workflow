@@ -1,7 +1,7 @@
 {
  "schema": "ltw-evals/2",
  "skill": "learn-task-workflow",
- "applies_to_version": "9.15.0",
+ "applies_to_version": "9.15.1",
  "updated_at": "2026-11-03",
  "grading_axes": [
   "教学正确性",
@@ -82,7 +82,7 @@
   },
   "阻断规则": "machine 类以 ltw_typography 退出码为准；human 类结构合规/判分可读性必须为 2 才算通过。"
  },
- "machine_evidence_ref": "包内九个模块 --selftest（task_index / progress_check / scheduler / kp_sort / prereq_check / check_environment / verify_explanation / rule_contract / ltw_typography）与 rule_contract --topology 退出 0；evals/ 四个 verify-*.py 行为/结构测试退出 0。以上均为静态/行为级证据，不是真人教学回放。读者版/排版检查：ltw_typography 模块（W-READER-* 系列）随 verify_explanation --selftest 与 evals/verify-readability.py 回归；文件结构闸口（E/W-LAYOUT-*）随 ltw_typography --selftest 与 verify-readability.py 第 3 组回归。",
+ "machine_evidence_ref": "包内九个模块 --selftest（task_index / progress_check / scheduler / kp_sort / prereq_check / check_environment / verify_explanation / rule_contract / ltw_typography）与 rule_contract --topology 退出 0；evals/ 五个 verify-*.py 行为/结构测试退出 0（含 verify-round-layout.py 的 7 份夹具与 6 项变异自测）。以上均为静态/行为级证据，不是真人教学回放。读者版/排版检查：ltw_typography 模块（W-READER-* 系列）随 verify_explanation --selftest 与 evals/verify-readability.py 回归；文件结构闸口（E/W-LAYOUT-*）随 ltw_typography --selftest 与 verify-readability.py 第 3 组回归。",
  "cases": [
   {
    "id": "E01",
@@ -489,14 +489,26 @@
   },
   {
    "id": "E34",
-   "scenario": "S4 清债开场轮与出题轮版式（非讲授轮地板）",
+   "scenario": "S4 交付轮版式（轮首句与题组）",
    "kind": "human",
-   "prompt": "S4 续学开场：清 2 条到期复习（出 2 道装配题）并预告下一目",
+   "prompt": "S4 续学：清 2 条到期复习（出 2 道装配题），并说明清完讲哪一目",
    "fixture": "任一进行中任务 S4 复习巩固，due-queue 有 2 条到期",
-   "pass_condition": "开场双读固定两行（今日清 N 条 + 信心分布读数含分母，样本 <5 加注）；出题轮有首行锚点、一题一块、结尾信心分提交格式固定一行；无裸段落出题、无全角空格对齐、无题干整句加粗；引号按 ops/typography.md 功能分工（标示「」/引述 “”）",
+   "pass_condition": "轮首句至多两句、一段，含「清几条」与「其中有没有很有把握却答错的」，不出现 cw/占比/分母/问题记录/信心读数；只说有几条不说哪条；题组以 `**题 N**` 起块、一题一块，提交格式独立一行（信心分 1–5，报低不扣分）；无轮型名、无 `**续学**｜` 状态锚点、无 `｜` 或台账式 `=`、无全角空格对齐、无题干整句加粗；「已讲到第 N/M 目「…」」这类编号对合法",
+   "actual_output": "**续学**｜第 1 节「第一节」，已讲到第 22 目「表语与主语补足语的区分」，下一个目是第 23 目「定语」。当前处在复习插入轮，先清两条到期复习，再开讲「定语」。\n\n- 今日清债 2 条：一条测「名词主语先换成代词，再决定动词要不要加 -s」，一条测 decide 的名词写法。另有几条到期日更早的，今天清完这 2 条就够，剩下的按原日期顺延。\n- 信心读数：16 条问题记录里有 5 条带信心分，其中高信心答错 0 条，占比 0%（分母只有 5 条，先当参考）。\n\n**清债出题**｜两题都只用已学过的结构，主谓或主系表都行，不用 to do、从句、介词短语。\n\n**题 1** 把这句中文装配成一句英文：我妈妈写得很慢。（妈妈 = mother）\n   - 附一问：为了决定动词要不要加 -s，你把「我妈妈」换成哪个代词？\n\n**题 2** 把这句中文装配成一句英文：她的决定很好。\n\n两题各带一个信心分（1–5，凭第一感觉，报低不扣分），和作答一并发来。",
    "verdict": "未验证",
    "reviewer": null,
-   "review_note": "非讲授轮版式地板（硬规则 11 + teaching/round-layout.md）的盲回放用例；负样例=2026-11-03 真实清债消息（裸段落、题 1　全角空格对齐、题干整句加粗三项命中），待真实学习任务中回放判定"
+   "review_note": "交付轮地板（硬规则 11 + teaching/round-layout.md「交付轮版式」）的盲回放用例；actual_output 为 2026-11-03 真实消息的脱敏文本（科目名词换占位），机器负样例见 evals/fixtures/round-layout/negative-real-2026-11-03.md；待真人回放与独立评分，不代填分数"
+  },
+  {
+   "id": "E35",
+   "scenario": "重发未作答题组（交付轮子形态）",
+   "kind": "human",
+   "prompt": "S4 已出过 2 题且学员未作答，再次进入 S4",
+   "fixture": "任一进行中任务 exercises/ 有本节未作答题组",
+   "pass_condition": "只复述原题面与提交格式；不写轮首句、不重报条数、不换题、不加题；题卡与提交格式同原题",
+   "verdict": "未验证",
+   "reviewer": null,
+   "review_note": "重发形态（generation.md「未作答题组优先」+ round-layout「重发交付」）的盲回放用例，待真实任务中回放判定"
   }
  ]
 }
