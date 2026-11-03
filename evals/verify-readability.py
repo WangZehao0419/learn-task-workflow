@@ -170,7 +170,7 @@ def main(argv=None) -> int:
     rc, out = run_mutation(root, mut_bad_encoding)
     c.check("2.y 非法 UTF-8 结构化失败", rc == 1 and "E-READ-FILE" in out, (rc, out[-300:]))
 
-    # 3. ltw_typography 直跑闸口（ops/layout.md E/W 级；独立于 --reader）
+    # 3. ltw_typography 直跑闸口（layout/doc-structure.md E/W 级；独立于 --reader）
     env = dict(os.environ)
     env["PYTHONIOENCODING"] = "utf-8"
     HARD_REL = "evals/fixtures/layout-hard/健康样板.md"

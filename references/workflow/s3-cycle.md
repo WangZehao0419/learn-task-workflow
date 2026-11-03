@@ -14,7 +14,7 @@
 |---|---|---|
 | ① | **收作业** | 上次有作业先收先批：练习在题组文件内标记对/错，输出任务的漏洞记入薄弱点；错题入错题本 |
 | ② | **热身** | 优先取 due-queue 的到期项，不足再从薄弱点/错题本补；题量与时长按 `teaching/lesson-flow.md`「单节课六拍」；**只抽已讲授内容**，未讲授条目不入热身（见 `assessment/generation.md`「出题范围与未讲授过滤」）。**后台记账（R51）**：到期项作答按判分口径定调度档，用 `scheduler.py next-interval` 更新该条 S/D/due——**对学员不显式报分、不追问、不写判分行**（热身不落 `exercises/`，不作判分证据）；Again 按保持条目「留区短间隔」既有口径处理，**不计入熔断条的连错计数**（见 `ops/composition.md`）；同一保持条目**累计 2 次热身答错** → 课程体系该目行加「需巩固」标注（触发与翻回口径见 `data/progress-schema.md`「保持复习区」） |
-| ③ | **讲授** | 按 `teaching/lesson-flow.md`「单节课六拍」执行：**先教后练**，单条讲解轮只含 1 个概念/1 个步骤；句数上限与版式按六拍与 `teaching/presentation.md`；讲义生成按 `handout/pipeline.md` |
+| ③ | **讲授** | 按 `teaching/lesson-flow.md`「单节课六拍」执行：**先教后练**，单条讲解轮只含 1 个概念/1 个步骤；句数上限与版式按六拍与 `layout/chat-presentation.md`；讲义生成按 `handout/pipeline.md` |
 | ④ | **练习** | 按 `assessment/generation.md` 的出题流水线与题量预算；自测≠题组；L3 例外见 `assessment/generation.md`「题量预算与自测≠题组」 |
 | ⑤ | **批改** | 按 `assessment/scoring.md` 判分四态/反馈时序/信心与 cw；按 `teaching/interaction.md` 组织反馈三问与八动作；判错同轮归因定级 |
 

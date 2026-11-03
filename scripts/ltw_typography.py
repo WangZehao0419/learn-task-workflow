@@ -5,7 +5,7 @@
 两种用法：
 1. 被 verify_explanation.py --reader 调用（run_checks，讲义读者版 W-READER-*，不阻断）；
 2. 独立闸口：`python -B scripts/ltw_typography.py <学员可读.md>... [--selftest]`
-   —— 按 ops/layout.md 对任意学员可读文件跑 E/W 级结构检查（E-LAYOUT-*/W-LAYOUT-*），
+   —— 按 layout/doc-structure.md 对任意学员可读文件跑 E/W 级结构检查（E-LAYOUT-*/W-LAYOUT-*），
    任一 E 级违规退出码 1。规则数值来自 contracts/rules.json 的 constants.layout。
 
 纯函数：不写盘、不联网、不读环境变量。语义上的"是否更易读"仍归人工读者验证。
@@ -383,7 +383,7 @@ def run_checks(lines, doc, vis, fence, base_dir, box_rows, add, cfg):
 
 
 # ═══════════════════════════════════════════════════════════════════
-# 文件结构可读性闸口（ops/layout.md；独立 CLI 用，constants.layout 驱动）
+# 文件结构可读性闸口（layout/doc-structure.md；独立 CLI 用，constants.layout 驱动）
 # ═══════════════════════════════════════════════════════════════════
 
 # 列表标记后无空格：`1.（题 1）`、`-要点`、`1、题面`——CommonMark 不认定为列表。
@@ -436,7 +436,7 @@ _COMPUTE_VISIBLE = None
 
 
 def check_layout(text, cfg=None):
-    """学员可读文件的结构可读性检查（ops/layout.md）。
+    """学员可读文件的结构可读性检查（layout/doc-structure.md）。
 
     返回 (sev, code, lineno_1based, msg) 列表；sev ∈ {"E", "W"}。
     只做可静态判定项；「是否更易读」的语义判断仍归人工读者。
@@ -606,7 +606,7 @@ def check_layout(text, cfg=None):
             "末节正文约 %d 字零加粗（强调清零）——关键判断/易错点至少标一处" % sec_chars)
 
     # W2b. 强调上限：成段正文整段加粗（E 级硬拦截）+ 全文加粗总量 / 装饰符号（W 级）
-    #     （补「强调只有下限没有上限」的机器盲区；判据与豁免见 ops/layout.md 硬禁令与 W 基线）
+    #     （补「强调只有下限没有上限」的机器盲区；判据与豁免见 layout/doc-structure.md 硬禁令与 W 基线）
     fp_ratio = float(cfg["emphasis_fullpara_ratio"])
     fp_min = int(cfg["emphasis_fullpara_min_chars"])
     tot_max = float(cfg["emphasis_total_ratio_max"])
@@ -672,7 +672,7 @@ def check_layout(text, cfg=None):
                 continue
             if LATEX_ARROW_RE.search(ln):
                 add("W", "W-LAYOUT-LATEX-ARROW", i,
-                    "非公式语境用 LaTeX 箭头——关系记号改 Unicode（→/⇒）；真公式按 ops/formulas.md")
+                    "非公式语境用 LaTeX 箭头——关系记号改 Unicode（→/⇒）；真公式按 layout/formulas.md")
 
     return findings
 
@@ -715,7 +715,7 @@ def _selftest():
 def main(argv=None):
     import argparse
     ap = argparse.ArgumentParser(
-        description="文件结构可读性闸口（ops/layout.md；E 级违规退出码 1；只读）")
+        description="文件结构可读性闸口（layout/doc-structure.md；E 级违规退出码 1；只读）")
     ap.add_argument("paths", nargs="*", help="学员可读 .md 文件（可多个）")
     ap.add_argument("--selftest", action="store_true", help="运行内置突变体自测")
     args = ap.parse_args(argv)

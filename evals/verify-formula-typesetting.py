@@ -66,14 +66,14 @@ def parse_json(raw):
 
 def group_skill(skill_md, c):
     body = skill_md or ""
-    c.check("1.1 SKILL.md 引用 references/ops/formulas.md", "references/ops/formulas.md" in body)
+    c.check("1.1 SKILL.md 引用 references/layout/formulas.md", "references/layout/formulas.md" in body)
     c.check("1.2 SKILL.md 不再引用旧文件名", ("formula-" + "typesetting.md") not in body)
 
 
 def group_formulas(formulas, subjects, c):
     body = formulas or ""
     subject_body = subjects or ""
-    c.check("2.1 references/ops/formulas.md 存在且可读", formulas is not None)
+    c.check("2.1 references/layout/formulas.md 存在且可读", formulas is not None)
     c.check("2.2 含「唯一事实源」（定位声明）", "唯一事实源" in body)
     c.check("2.3 含「不触发」（排除边界）", "不触发" in body)
     core_pos = -1
@@ -100,12 +100,13 @@ def group_formulas(formulas, subjects, c):
     c.check("2.16 含「mhchem」", "mhchem" in body)
 
 
-def group_crossrefs(teaching, handout, c):
+def group_crossrefs(teaching, handout, layout, c):
     t = teaching or ""
     h = handout or ""
-    c.check("3.1 teaching/ 分册引用 ops/formulas.md", "ops/formulas.md" in t)
+    lay = layout or ""
+    c.check("3.1 handout/ 分册引用 layout/formulas.md", "layout/formulas.md" in h)
     c.check("3.2 teaching/ 含「新记号/新操作讲透」", "## 新记号/新操作讲透" in t)
-    c.check("4.1 handout/ 含「## 图像可视化双轨」", "## 图像可视化双轨" in h)
+    c.check("4.1 layout/ 含「## 图像可视化双轨」", "## 图像可视化双轨" in lay)
     c.check("4.2 handout/ 含「③ 答案」", "③ 答案" in h)
     c.check("4.3 handout/ 含「完整示例」", "完整示例" in h)
 
@@ -167,8 +168,8 @@ def main(argv=None) -> int:
             else Path(__file__).resolve().parent.parent)
 
     skill_md = read_text(root / "SKILL.md")
-    formulas = read_text(root / "references" / "ops" / "formulas.md")
-    formula_subjects = read_text(root / "references" / "ops" / "formula-subjects.md")
+    formulas = read_text(root / "references" / "layout" / "formulas.md")
+    formula_subjects = read_text(root / "references" / "layout" / "formula-subjects.md")
 
     def read_dir(rel):
         d = root / rel
@@ -179,6 +180,7 @@ def main(argv=None) -> int:
 
     teaching = read_dir(root / "references" / "teaching")
     handout = read_dir(root / "references" / "handout")
+    layout = read_dir(root / "references" / "layout")
     evals_raw = read_text(root / "evals" / "evals.json")
 
     scope = [("SKILL.md", skill_md), ("evals/evals.json", evals_raw)]
@@ -191,7 +193,7 @@ def main(argv=None) -> int:
     c = Checker()
     group_skill(skill_md, c)
     group_formulas(formulas, formula_subjects, c)
-    group_crossrefs(teaching, handout, c)
+    group_crossrefs(teaching, handout, layout, c)
     group_evals(parse_json(evals_raw), c)
     group_residue(scope, c)
     total = c.ok + c.fail

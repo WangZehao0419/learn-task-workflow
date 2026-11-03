@@ -38,7 +38,7 @@
 | verify_explanation | `W-MARKER-CONTENT` / `W-STYLE-POINTER` / `W-UNICODE-CHAR` | 标记行带内容 / 头部复制规则正文 / Unicode denylist 字符；`W-UNICODE-CHAR` 定稿前必须清零 |
 | verify_explanation | `W-SELFTEST-MISSING` / `W-SELFTEST-EMPTY` | 自测/检验题面区缺同族答案区 / 答案区为空或占位 |
 | verify_explanation | `W-READER` / `W-READER-ALT` / `W-READER-CAPTION` / `W-READER-CONCLUSION` / `W-READER-DEEPNEST` / `W-READER-EMPHASIS` / `W-READER-HEADING` / `W-READER-HEADING-BODY` / `W-READER-INDEX` / `W-READER-LINKTEXT` / `W-READER-LONGLINE` / `W-READER-OVERVIEW` / `W-READER-SVG` / `W-READER-TABLE` / `W-READER-TABLE-ALIGN` | `--reader` 版式项：标题/表格/图注/alt/SVG/速览/索引/结论/强调/链接/长行/嵌套 |
-| ltw_typography（直跑） | `E-LAYOUT-LIST-SPACE` / `E-LAYOUT-LONGLINE` / `E-LAYOUT-MATH-UNPAIRED` / `E-LAYOUT-HEADING-SKIP` / `E-LAYOUT-TABLE-WIDE` / `E-LAYOUT-EMPHASIS-HEAVY` | 文件结构硬禁令：列表标记后无空格 / 单行可见正文超硬上限 / 行内 `$` 不成对 / 标题跳级 / 表格超宽或缺表头 / 整段几乎全部加粗，成段正文行、列表引导标签与短记录行豁免（阈值见 `ops/layout.md`） |
+| ltw_typography（直跑） | `E-LAYOUT-LIST-SPACE` / `E-LAYOUT-LONGLINE` / `E-LAYOUT-MATH-UNPAIRED` / `E-LAYOUT-HEADING-SKIP` / `E-LAYOUT-TABLE-WIDE` / `E-LAYOUT-EMPHASIS-HEAVY` | 文件结构硬禁令：列表标记后无空格 / 单行可见正文超硬上限 / 行内 `$` 不成对 / 标题跳级 / 表格超宽或缺表头 / 整段几乎全部加粗，成段正文行、列表引导标签与短记录行豁免（阈值见 `layout/doc-structure.md`） |
 | ltw_typography（直跑） | `W-LAYOUT-ANCHOR-GAP` / `W-LAYOUT-EMPHASIS-FLOOR` / `W-LAYOUT-PARA-LONG` / `W-LAYOUT-SEPARATOR` / `W-LAYOUT-LINE-ENDING` / `W-LAYOUT-LATEX-ARROW` / `W-LAYOUT-EMPHASIS-TOTAL` / `W-LAYOUT-DECOR` | 文件结构基线：连续正文无视觉锚点 / 整节零加粗（强调清零）/ 段落超长（>4 句或 >150 字，记录型区块豁免）/ 分隔线超量 / 行尾混用 / 非公式语境 LaTeX 箭头 / 全文加粗超三成 / emoji 或斜体下划线作强调 |
 | verify_explanation | `W-NO-TIER` | 讲义单元缺 tier 标签 |
 | rule_contract | `E-CONTRACT-MISSING` / `E-CONTRACT-INVALID` | 契约缺失 / 畸形 |

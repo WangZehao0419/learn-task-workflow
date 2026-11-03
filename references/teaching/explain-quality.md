@@ -1,6 +1,6 @@
 # 讲授质量：元方法、误区预判与检查理解
 
-<!-- owns: 元方法教学（T12/R44）、预判误区清单（R42）、每步检查理解（R45）、概念探测（R56）、依据句模板、示例设计红线；must-not-define: 目与闸口（workflow/s3-block.md）、判分四态与闸口比例（assessment/scoring.md）、出题流水线与智能变式（assessment/generation.md，本册只供其引用）、提示阶梯与反馈（teaching/interaction.md）、呈现版式与密度（teaching/presentation.md）、六拍节拍（teaching/lesson-flow.md） -->
+<!-- owns: 元方法教学（T12/R44）、预判误区清单（R42）、每步检查理解（R45）、概念探测（R56）、依据句模板、示例设计红线；must-not-define: 目与闸口（workflow/s3-block.md）、判分四态与闸口比例（assessment/scoring.md）、出题流水线与智能变式（assessment/generation.md，本册只供其引用）、提示阶梯与反馈（teaching/interaction.md）、呈现版式与密度（layout/chat-presentation.md）、六拍节拍（teaching/lesson-flow.md） -->
 
 本册回答「怎么把一个知识点讲透」：不只教「是什么」，还教「怎么想」。备课动作见 `teaching/lesson-prep.md`「备课短表」新增的预判误区与元方法两行；出题侧消费与智能变式结构判据见 `assessment/generation.md`（干扰项绑定、变式一次一维、术语对账）。
 
@@ -42,7 +42,7 @@
 
 - **I do 示范内部**：每完成一个关键步（判据：删掉这步后面就断），插 1 个 ≤10 秒的可判定检查——「这一步为什么先算它？」「这一步的输入是什么？下一步为什么要___？」学员答对才进下一步；答不出 → 当步停住，按 `teaching/interaction.md` 提示阶梯第②③梯处理，不跳步推进。
 - 与目级确认的关系：每步检查是讲授内动作，**不落盘、不计分母、不写判分行**；目级正式/轻量确认照旧（`workflow/s3-block.md`「逐目循环」）。每步检查是 Rosenshine「高频检查理解」在对话教学里的落法：检查密度从目级一次提升到步级。
-- 压缩出口内可省略每步检查（本就只保留 1 句可判定确认，见 `teaching/presentation.md`「对话讲授契约」），但不得既压缩讲授又省目级确认。
+- 压缩出口内可省略每步检查（本就只保留 1 句可判定确认，见 `layout/chat-presentation.md`「对话讲授契约」），但不得既压缩讲授又省目级确认。
 
 ## 示例设计红线
 

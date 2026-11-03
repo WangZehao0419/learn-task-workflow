@@ -354,14 +354,14 @@ def check_mirror(declared: set, ops_text: str) -> list:
 
 
 def check_lead_words(contract_words: list, text: str) -> list:
-    """ops/typography.md canonical 集合与契约 headings.lead_words 双写一致。"""
+    """layout/char-typography.md canonical 集合与契约 headings.lead_words 双写一致。"""
     m = re.search(r"\*\*canonical 集合\*\*[^：]*：(.+)", text)
     if not m:
-        return ["E-TOPOLOGY-LEADWORDS: ops/typography.md 缺 canonical 集合行"]
+        return ["E-TOPOLOGY-LEADWORDS: layout/char-typography.md 缺 canonical 集合行"]
     doc_words = set(re.findall(r"`([^`]+)`", m.group(1)))
     cw = set(contract_words)
     issues = ["E-TOPOLOGY-LEADWORDS: 契约缺 lead_word %s" % w for w in sorted(doc_words - cw)]
-    issues += ["E-TOPOLOGY-LEADWORDS: ops/typography.md 缺 lead_word %s" % w for w in sorted(cw - doc_words)]
+    issues += ["E-TOPOLOGY-LEADWORDS: layout/char-typography.md 缺 lead_word %s" % w for w in sorted(cw - doc_words)]
     return issues
 
 
@@ -499,7 +499,7 @@ def _allowed_files(data: dict, expanded: dict, sid: str) -> set:
 
 ROUTE_FILE_RE = re.compile(
     r"(?:references/)?((?:routing|workflow|teaching|assessment|data|ops|handout|subjects|"
-    r"disciplines)/[A-Za-z0-9._{}-]+\.md)")
+    r"disciplines|layout)/[A-Za-z0-9._{}-]+\.md)")
 
 
 def check_route(data: dict, root: Path, expanded: dict) -> list:
@@ -786,12 +786,12 @@ def topology(path: Path | None = None) -> dict:
         issues.append("E-TOPOLOGY-MIRROR: ops/error-codes.md 不存在")
 
     # 9. lead_words 双写一致
-    handout_path = root / "references" / "ops" / "typography.md"
+    handout_path = root / "references" / "layout" / "char-typography.md"
     if handout_path.exists():
         issues += check_lead_words(data["constants"]["headings"]["lead_words"],
                                    handout_path.read_text(encoding="utf-8", errors="replace"))
     else:
-        issues.append("E-TOPOLOGY-LEADWORDS: ops/typography.md 不存在")
+        issues.append("E-TOPOLOGY-LEADWORDS: layout/char-typography.md 不存在")
 
     # 9.5 补读/supplement 小节必须存在（窄版；不扫散文 §）
     issues += check_section_refs(data, root)
@@ -980,7 +980,7 @@ def _selftest() -> int:
         issues = check_lead_words(["解", "证明"], t)
         assert any("证明" in i for i in issues) and any("答" in i for i in issues), issues
         assert check_lead_words(["解"], "无标记文本") == \
-            ["E-TOPOLOGY-LEADWORDS: ops/typography.md 缺 canonical 集合行"]
+            ["E-TOPOLOGY-LEADWORDS: layout/char-typography.md 缺 canonical 集合行"]
 
     chk("leadwords bidirectional", leadwords_both_ways)
 
@@ -1069,7 +1069,7 @@ def _selftest() -> int:
         d = load()
         _, expanded = check_scenes(d, root)
         text = (root / "SKILL.md").read_text(encoding="utf-8", errors="replace")
-        bad = text.replace("references/ops/formulas.md", "references/ops/formulasX.md", 1)
+        bad = text.replace("references/layout/formulas.md", "references/layout/formulasX.md", 1)
         before = (root / "SKILL.md").read_bytes()
         with tempfile.TemporaryDirectory() as td:
             (Path(td) / "SKILL.md").write_text(bad, encoding="utf-8")
@@ -1116,7 +1116,7 @@ def _selftest() -> int:
         d2 = json.loads(json.dumps(d))
         d2["intents"].append({
             "id": "I-TEST", "scope": "x",
-            "owner": "references/handout/figures.md#图像可视化双轨",
+            "owner": "references/layout/handout-figures.md#图像可视化双轨",
             "marker": "intent:I-TEST@x",
             "consumers": ["references/handout/quality.md"],
             "scenes": ["s5-close"],

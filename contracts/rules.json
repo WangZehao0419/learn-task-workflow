@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/2",
- "version": "9.15.2",
+ "version": "9.16.0",
  "retired_rule_ids": [
   "T02",
   "T07",
@@ -123,24 +123,24 @@
    "kind": "rule"
   },
   {
-   "id": "presentation",
-   "path": "references/teaching/presentation.md",
+   "id": "layout-chat-presentation",
+   "path": "references/layout/chat-presentation.md",
    "layer": 3,
    "owns": "对话轮型、讲授轮版式、结构预算、五段内容契约、压缩出口、讲授与反馈语气",
    "depends_on": [
     "lesson-flow",
     "interaction",
-    "ops-typography"
+    "layout-char-typography"
    ],
    "kind": "rule"
   },
   {
-   "id": "round-layout",
-   "path": "references/teaching/round-layout.md",
+   "id": "layout-chat-round",
+   "path": "references/layout/chat-round.md",
    "layer": 3,
    "owns": "交付轮（题组/小结/重发）的学员可见版式与轮首句",
    "depends_on": [
-    "presentation",
+    "layout-chat-presentation",
     "scheduling",
     "scoring"
    ],
@@ -176,18 +176,18 @@
    "depends_on": [
     "handout-pipeline",
     "handout-templates",
-    "presentation"
+    "layout-chat-presentation"
    ],
    "kind": "rule"
   },
   {
-   "id": "handout-typography",
-   "path": "references/handout/typography.md",
+   "id": "layout-handout-page",
+   "path": "references/layout/handout-page.md",
    "layer": 3,
    "owns": "讲义版面：设计原则、页面架构、字体系统、元素版面、教学例版面、元素预算",
    "depends_on": [
     "handout-templates",
-    "ops-typography"
+    "layout-char-typography"
    ],
    "kind": "rule"
   },
@@ -692,28 +692,28 @@
    "kind": "router"
   },
   {
-   "id": "formulas",
-   "path": "references/ops/formulas.md",
+   "id": "layout-formulas",
+   "path": "references/layout/formulas.md",
    "layer": 1,
    "owns": "公式通用呈现：行内/块级、结构、多步推导、代码边界、复制、窄屏、宿主验证",
    "depends_on": [],
    "kind": "rule"
   },
   {
-   "id": "ops-typography",
-   "path": "references/ops/typography.md",
+   "id": "layout-char-typography",
+   "path": "references/layout/char-typography.md",
    "layer": 1,
    "owns": "文字排印：标点、数字、单位、空格、字体语义、交付起笔/答案标识 canonical 集合",
    "depends_on": [],
    "kind": "rule"
   },
   {
-   "id": "ops-layout",
-   "path": "references/ops/layout.md",
+   "id": "layout-doc-structure",
+   "path": "references/layout/doc-structure.md",
    "layer": 1,
    "owns": "学员可读落盘文件的结构可读性：E 级硬禁令、W 级强制基线、结构模式选择树、机器闸口",
    "depends_on": [
-    "ops-typography"
+    "layout-char-typography"
    ],
    "kind": "rule"
   },
@@ -825,35 +825,35 @@
    "kind": "rule"
   },
   {
-   "id": "handout-print-a11y",
-   "path": "references/handout/print-a11y.md",
+   "id": "layout-handout-print-a11y",
+   "path": "references/layout/handout-print-a11y.md",
    "layer": 3,
    "owns": "打印/PDF 契约、中文印刷侧、无障碍",
    "depends_on": [
-    "handout-typography",
-    "ops-typography"
+    "layout-handout-page",
+    "layout-char-typography"
    ],
    "kind": "rule"
   },
   {
-   "id": "handout-reader-path",
-   "path": "references/handout/reader-path.md",
+   "id": "layout-handout-reader-path",
+   "path": "references/layout/handout-reader-path.md",
    "layer": 3,
    "owns": "读者路径 P1、速览/回看、章节层",
    "depends_on": [
-    "handout-typography",
+    "layout-handout-page",
     "handout-pipeline"
    ],
    "kind": "rule"
   },
   {
-   "id": "handout-figures",
-   "path": "references/handout/figures.md",
+   "id": "layout-handout-figures",
+   "path": "references/layout/handout-figures.md",
    "layer": 3,
    "owns": "图像双轨、落盘与死链、绘图前后核对、渲染阻断、视觉任务分界",
    "depends_on": [
     "handout-quality",
-    "handout-typography"
+    "layout-handout-page"
    ],
    "kind": "rule"
   },
@@ -864,7 +864,7 @@
    "owns": "出厂自检、读者验证、元素预算检查（派生）",
    "depends_on": [
     "handout-quality",
-    "handout-typography"
+    "layout-handout-page"
    ],
    "kind": "rule"
   },
@@ -875,7 +875,7 @@
    "owns": "P1 可选增强：文本结构、主张—证据表、设计量表、效用提示、质量回路、要点卡、MVP、停车位",
    "depends_on": [
     "handout-quality",
-    "handout-typography"
+    "layout-handout-page"
    ],
    "kind": "rule"
   },
@@ -941,12 +941,12 @@
    "kind": "rule"
   },
   {
-   "id": "ops-formula-subjects",
-   "path": "references/ops/formula-subjects.md",
+   "id": "layout-formula-subjects",
+   "path": "references/layout/formula-subjects.md",
    "layer": 1,
    "owns": "物理量/单位/向量、化学式/配平、统计符号",
    "depends_on": [
-    "formulas"
+    "layout-formulas"
    ],
    "kind": "rule"
   },
@@ -987,8 +987,8 @@
    "kind": "rule"
   },
   {
-   "id": "style-examples",
-   "path": "references/handout/style-examples.md",
+   "id": "layout-handout-examples",
+   "path": "references/layout/handout-examples.md",
    "layer": 1,
    "owns": "标准讲义成品范例参照（对照格式与密度，非讲义内容）",
    "depends_on": [],
@@ -1125,7 +1125,7 @@
   },
   {
    "id": "R13",
-   "owner": "references/ops/formulas.md#公式与科学符号排版",
+   "owner": "references/layout/formulas.md#公式与科学符号排版",
    "type": "definition",
    "scenes": [
     "formulas",
@@ -1155,7 +1155,7 @@
   },
   {
    "id": "R16",
-   "owner": "references/teaching/presentation.md#对话轮呈现标记（软默认，所有风格共用）",
+   "owner": "references/layout/chat-presentation.md#对话轮呈现标记（软默认，所有风格共用）",
    "type": "definition",
    "scenes": [
     "s3-teach",
@@ -1741,7 +1741,7 @@
   },
   {
    "id": "R57",
-   "owner": "references/teaching/round-layout.md#交付轮版式",
+   "owner": "references/layout/chat-round.md#交付轮版式",
    "type": "definition",
    "scenes": [
     "s3-grade",
@@ -1755,7 +1755,7 @@
   },
   {
    "id": "R58",
-   "owner": "references/teaching/round-layout.md#交付轮版式",
+   "owner": "references/layout/chat-round.md#交付轮版式",
    "type": "definition",
    "scenes": [
     "s3-grade",
@@ -1769,7 +1769,7 @@
   },
   {
    "id": "R59",
-   "owner": "references/teaching/round-layout.md#交付轮版式",
+   "owner": "references/layout/chat-round.md#交付轮版式",
    "type": "definition",
    "scenes": [
     "s3-grade",
@@ -2338,7 +2338,7 @@
      "intent": "I-CLOSE-RESUME@global"
     },
     {
-     "file": "references/teaching/round-layout.md",
+     "file": "references/layout/chat-round.md",
      "section": "交付轮版式",
      "when": "帮我复习/考考我/加练出题交付前",
      "intent": "I-ROUND-LAYOUT@global"
@@ -2407,12 +2407,12 @@
     "references/teaching/lesson-flow.md",
     "references/teaching/lesson-prep.md",
     "references/teaching/interaction.md",
-    "references/teaching/presentation.md",
+    "references/layout/chat-presentation.md",
     "references/teaching/explain-quality.md",
     "references/teaching/explanation-depth.md",
     "references/teaching/explanation-density.md",
     "references/teaching/content-types.md",
-    "references/ops/typography.md",
+    "references/layout/char-typography.md",
     "references/subjects/{group}-teach.md"
    ],
    "chars_max": 39700,
@@ -2479,7 +2479,7 @@
     "references/assessment/scoring.md",
     "references/teaching/interaction.md",
     "references/teaching/interaction-diagnosis.md",
-    "references/ops/typography.md",
+    "references/layout/char-typography.md",
     "references/assessment/scheduling.md"
    ],
    "chars_max": 25400,
@@ -2519,13 +2519,13 @@
      "intent": "I-EXERCISE-SCHEMA@global"
     },
     {
-     "file": "references/ops/layout.md",
+     "file": "references/layout/doc-structure.md",
      "section": "硬禁令",
      "when": "判分落盘前",
      "intent": "I-FILE-LAYOUT@global"
     },
     {
-     "file": "references/teaching/round-layout.md",
+     "file": "references/layout/chat-round.md",
      "section": "交付轮版式",
      "when": "热身出题交付前",
      "intent": "I-ROUND-LAYOUT@global"
@@ -2570,7 +2570,7 @@
      "intent": "I-REINFORCE@global"
     },
     {
-     "file": "references/teaching/round-layout.md",
+     "file": "references/layout/chat-round.md",
      "section": "交付轮版式",
      "when": "节末收尾轮输出前",
      "intent": "I-ROUND-LAYOUT@global"
@@ -2586,8 +2586,8 @@
     "references/handout/pipeline.md",
     "references/handout/templates.md",
     "references/handout/quality.md",
-    "references/handout/typography.md",
-    "references/ops/typography.md",
+    "references/layout/handout-page.md",
+    "references/layout/char-typography.md",
     "references/ops/scripts.md",
     "references/subjects/{group}-practice.md",
     "references/teaching/explanation-density.md",
@@ -2595,7 +2595,7 @@
     "references/handout/support-levels.md",
     "references/handout/styles.md",
     "references/handout/unit-schema.md",
-    "references/handout/figures.md",
+    "references/layout/handout-figures.md",
     "references/handout/self-check.md"
    ],
    "stack": [
@@ -2648,7 +2648,7 @@
      "intent": "I-SELF-TEST-VS-GROUP@handout"
     },
     {
-     "file": "references/handout/style-examples.md",
+     "file": "references/layout/handout-examples.md",
      "section": "标准讲义成品范例",
      "when": "首写某风格讲义前，先读该风格成品范例时",
      "intent": "I-STYLE-EXAMPLES@content"
@@ -2665,9 +2665,9 @@
     "references/handout/styles.md",
     "references/handout/unit-schema.md",
     "references/handout/quality.md",
-    "references/handout/typography.md",
+    "references/layout/handout-page.md",
     "references/handout/self-check.md",
-    "references/ops/typography.md",
+    "references/layout/char-typography.md",
     "references/ops/scripts.md",
     "references/subjects/{group}-practice.md"
    ],
@@ -2722,13 +2722,13 @@
      "intent": "I-SELF-TEST-VS-GROUP@handout"
     },
     {
-     "file": "references/handout/style-examples.md",
+     "file": "references/layout/handout-examples.md",
      "section": "标准讲义成品范例",
      "when": "换风格改稿前，先读目标风格成品范例时",
      "intent": "I-STYLE-EXAMPLES@content"
     },
     {
-     "file": "references/ops/layout.md",
+     "file": "references/layout/doc-structure.md",
      "section": "硬禁令",
      "when": "讲义修订落盘前",
      "intent": "I-FILE-LAYOUT@global"
@@ -2742,7 +2742,7 @@
     "references/assessment/generation.md",
     "references/assessment/scoring.md",
     "references/teaching/content-types.md",
-    "references/ops/typography.md",
+    "references/layout/char-typography.md",
     "references/subjects/common.md",
     "references/subjects/{group}-practice.md",
     "references/ops/scripts.md"
@@ -2784,13 +2784,13 @@
      "intent": "I-EXERCISE-SCHEMA@global"
     },
     {
-     "file": "references/ops/layout.md",
+     "file": "references/layout/doc-structure.md",
      "section": "硬禁令",
      "when": "题组/判分文件写盘前",
      "intent": "I-FILE-LAYOUT@global"
     },
     {
-     "file": "references/teaching/round-layout.md",
+     "file": "references/layout/chat-round.md",
      "section": "交付轮版式",
      "when": "题组出题交付前",
      "intent": "I-ROUND-LAYOUT@global"
@@ -2800,8 +2800,8 @@
   "s3-deep": {
    "label": "深讲概念 / 换风格重讲",
    "files": [
-    "references/teaching/presentation.md",
-    "references/ops/typography.md",
+    "references/layout/chat-presentation.md",
+    "references/layout/char-typography.md",
     "references/handout/styles.md",
     "references/teaching/explanation-depth.md",
     "references/teaching/explanation-density.md"
@@ -2843,13 +2843,13 @@
      "intent": "I-SUPPORT-LEVELS@handout"
     },
     {
-     "file": "references/handout/reader-path.md",
+     "file": "references/layout/handout-reader-path.md",
      "section": "8. 读者路径与导航（P1）",
      "when": "读者版重排时",
      "intent": "I-READER-PATH@handout"
     },
     {
-     "file": "references/handout/style-examples.md",
+     "file": "references/layout/handout-examples.md",
      "section": "标准讲义成品范例",
      "when": "换风格重讲前，先读目标风格成品范例时",
      "intent": "I-STYLE-EXAMPLES@content"
@@ -2863,7 +2863,7 @@
     "references/assessment/scheduling.md",
     "references/assessment/generation.md",
     "references/teaching/interaction.md",
-    "references/ops/typography.md",
+    "references/layout/char-typography.md",
     "references/data/progress-schema.md",
     "references/subjects/common.md",
     "references/subjects/{group}-review.md",
@@ -2900,13 +2900,13 @@
      "intent": "I-GRADING-STATES@global"
     },
     {
-     "file": "references/ops/layout.md",
+     "file": "references/layout/doc-structure.md",
      "section": "硬禁令",
      "when": "复习产物落盘前",
      "intent": "I-FILE-LAYOUT@global"
     },
     {
-     "file": "references/teaching/round-layout.md",
+     "file": "references/layout/chat-round.md",
      "section": "交付轮版式",
      "when": "清债开场与出题交付前",
      "intent": "I-ROUND-LAYOUT@global"
@@ -2921,7 +2921,7 @@
     "references/assessment/scoring.md",
     "references/assessment/generation.md",
     "references/handout/quality.md",
-    "references/ops/typography.md",
+    "references/layout/char-typography.md",
     "references/data/reconciliation.md",
     "references/subjects/common.md",
     "references/workflow/coverage-audit.md",
@@ -2959,13 +2959,13 @@
      "intent": "I-FINAL-TARGET@global"
     },
     {
-     "file": "references/ops/layout.md",
+     "file": "references/layout/doc-structure.md",
      "section": "硬禁令",
      "when": "结课产物落盘前",
      "intent": "I-FILE-LAYOUT@global"
     },
     {
-     "file": "references/teaching/round-layout.md",
+     "file": "references/layout/chat-round.md",
      "section": "交付轮版式",
      "when": "结课收尾与综合测验交付前",
      "intent": "I-ROUND-LAYOUT@global"
@@ -3000,8 +3000,8 @@
   "formulas": {
    "label": "公式/符号输出",
    "files": [
-    "references/ops/formulas.md",
-    "references/ops/formula-subjects.md"
+    "references/layout/formulas.md",
+    "references/layout/formula-subjects.md"
    ]
   },
   "evidence": {
@@ -3032,8 +3032,8 @@
   "handout-export": {
    "label": "讲义导出 / 打印 / 读者版",
    "files": [
-    "references/handout/print-a11y.md",
-    "references/handout/reader-path.md"
+    "references/layout/handout-print-a11y.md",
+    "references/layout/handout-reader-path.md"
    ],
    "chars_max": 10000
   },
@@ -3064,16 +3064,16 @@
   {
    "id": "I-BOLD-QUOTA",
    "scope": "global",
-   "owner": "references/ops/typography.md#字体语义",
+   "owner": "references/layout/char-typography.md#字体语义",
    "marker": "intent:I-BOLD-QUOTA@global",
    "consumers": [
     {
-     "path": "references/teaching/presentation.md",
+     "path": "references/layout/chat-presentation.md",
      "anchor": "对话呈现系统（软默认，所有风格共用）",
      "role": "application"
     },
     {
-     "path": "references/handout/typography.md",
+     "path": "references/layout/handout-page.md",
      "anchor": "3. 字体系统：标题、段落、列表",
      "role": "application"
     },
@@ -3095,16 +3095,16 @@
   {
    "id": "I-PARAGRAPH-UNITY",
    "scope": "global",
-   "owner": "references/ops/typography.md#断行与句子",
+   "owner": "references/layout/char-typography.md#断行与句子",
    "marker": "intent:I-PARAGRAPH-UNITY@global",
    "consumers": [
     {
-     "path": "references/teaching/presentation.md",
+     "path": "references/layout/chat-presentation.md",
      "anchor": "对话呈现系统（软默认，所有风格共用）",
      "role": "application"
     },
     {
-     "path": "references/handout/typography.md",
+     "path": "references/layout/handout-page.md",
      "anchor": "3. 字体系统：标题、段落、列表",
      "role": "application"
     }
@@ -3125,7 +3125,7 @@
    "marker": "intent:I-DENSITY@global",
    "consumers": [
     {
-     "path": "references/teaching/presentation.md",
+     "path": "references/layout/chat-presentation.md",
      "anchor": "对话呈现系统（软默认，所有风格共用）",
      "role": "application"
     },
@@ -3342,7 +3342,7 @@
   {
    "id": "I-ANSWER-BOX-VISUAL",
    "scope": "visual",
-   "owner": "references/handout/typography.md#4.5 答案框",
+   "owner": "references/layout/handout-page.md#4.5 答案框",
    "marker": "intent:I-ANSWER-BOX-VISUAL@visual",
    "consumers": [
     {
@@ -3466,7 +3466,7 @@
   {
    "id": "I-FIGURE-GEN",
    "scope": "handout",
-   "owner": "references/handout/figures.md#图像可视化双轨",
+   "owner": "references/layout/handout-figures.md#图像可视化双轨",
    "marker": "intent:I-FIGURE-GEN@handout",
    "consumers": [
     {
@@ -3480,7 +3480,7 @@
      "role": "application"
     },
     {
-     "path": "references/handout/typography.md",
+     "path": "references/layout/handout-page.md",
      "anchor": "4.2 图",
      "role": "application"
     }
@@ -3494,7 +3494,7 @@
   {
    "id": "I-READER-PATH",
    "scope": "handout",
-   "owner": "references/handout/reader-path.md#8. 读者路径与导航（P1）",
+   "owner": "references/layout/handout-reader-path.md#8. 读者路径与导航（P1）",
    "marker": "intent:I-READER-PATH@handout",
    "consumers": [
     {
@@ -3686,7 +3686,7 @@
    "marker": "intent:I-FEEDBACK@global",
    "consumers": [
     {
-     "path": "references/teaching/presentation.md",
+     "path": "references/layout/chat-presentation.md",
      "anchor": "讲授与反馈语气契约（学员可见输出）",
      "role": "application"
     }
@@ -4136,7 +4136,7 @@
    "id": "I-LEDGER-NOT-IN-TEXT",
    "scope": "global",
    "cluster": null,
-   "owner": "references/teaching/presentation.md#对话讲授契约（所有风格共用）",
+   "owner": "references/layout/chat-presentation.md#对话讲授契约（所有风格共用）",
    "marker": "intent:I-LEDGER-NOT-IN-TEXT@global",
    "consumers": [
     {
@@ -4218,7 +4218,7 @@
    "id": "I-STYLE-EXAMPLES",
    "scope": "content",
    "cluster": null,
-   "owner": "references/handout/style-examples.md#标准讲义成品范例",
+   "owner": "references/layout/handout-examples.md#标准讲义成品范例",
    "marker": "intent:I-STYLE-EXAMPLES@content",
    "consumers": [
     {
@@ -4283,7 +4283,7 @@
    "id": "I-FILE-LAYOUT",
    "scope": "global",
    "cluster": null,
-   "owner": "references/ops/layout.md#文件结构可读性：硬禁令与基线",
+   "owner": "references/layout/doc-structure.md#文件结构可读性：硬禁令与基线",
    "marker": "intent:I-FILE-LAYOUT@global",
    "consumers": [
     {
@@ -4330,7 +4330,7 @@
    "id": "I-ROUND-LAYOUT",
    "scope": "global",
    "cluster": null,
-   "owner": "references/teaching/round-layout.md#交付轮版式",
+   "owner": "references/layout/chat-round.md#交付轮版式",
    "marker": "intent:I-ROUND-LAYOUT@global",
    "consumers": [
     {

@@ -16,7 +16,7 @@
 | `kp_sort.py` | `<课程体系.md> [--selftest]` | 只读、零写盘 | 知识型/技能型排序子步 |
 | `check_environment.py` | `[--manifest <路径>] [--capability <名称>]... [--selftest]` | 只读诊断 | 脚本调用出现解释器/版本类失败时诊断一次 |
 | `verify_explanation.py` | `<材料目录或单文件> [--selftest] [--reader]` | 只读静态校验，不写盘 | 讲义定稿前；`--reader` 加跑读者版 W 级检查 |
-| `ltw_typography.py`（直跑） | `<学员可读.md>... [--selftest]` | 只读；按 `ops/layout.md` 查 E/W 级结构，有 E 违规退出 1 | 学员文件落盘前 |
+| `ltw_typography.py`（直跑） | `<学员可读.md>... [--selftest]` | 只读；按 `layout/doc-structure.md` 查 E/W 级结构，有 E 违规退出 1 | 学员文件落盘前 |
 | `prereq_check.py` | `--list <课程体系.md> --scan <题组或讲义.md>... [--extra-terms "…"] [--extra-file <文件>] [--scan-all] [--selftest]` | 只读对账，不写盘 | 判分题交付前（R46 出题前术语对账）；目行补登记 `引入` 列后跑 |
 | `rule_contract.py` | `--selftest \| --topology \| --coverage [--strict-pointers \| --no-strict-pointers] \| --audit \| --audit-strict` | 只读校验契约、拓扑、场景覆盖、intent 登记、补读小节与指针闭合；`--audit` 只读报告指针/孤儿/owner/补读/schema 问题，不改变闸口退出码；`--audit-strict` 把 pointer/contract/scene 问题作为失败（loadability 信息项不参与） | 修改契约/分册结构后、打包前；结构巡检时跑 `--audit`，CI/交付闸口跑 `--audit-strict` |
 
@@ -94,6 +94,6 @@ python -B evals/verify-round-layout.py --selftest
 
 ## 当前核验
 
-- 适用版本：9.15.2
-- 核验日期：2026-11-03
+- 适用版本：9.16.0
+- 核验日期：2026-11-04
 - 环境依赖：`skill-dependencies.json`（Python `min_version`）；只有 `check_environment.py` 输出 `ready` 才能继续。

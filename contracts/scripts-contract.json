@@ -84,7 +84,7 @@
   {
    "script": "ltw_typography.py",
    "usage": "<学员可读.md>... [--selftest]",
-   "default_behavior": "只读闸口：按 ops/layout.md 查学员可读落盘文件的 E/W 级结构违规（constants.layout 驱动）",
+   "default_behavior": "只读闸口：按 layout/doc-structure.md 查学员可读落盘文件的 E/W 级结构违规（constants.layout 驱动）",
    "exit_codes": {
     "0": "无 E 级违规（可有 W）",
     "1": "存在 E 级违规或文件读取失败",

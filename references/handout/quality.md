@@ -2,7 +2,7 @@
 
 <!-- owns: 讲义来源与评估真实性、覆盖行、深度分配、教学例/评估例真实性、材料型分流、证据边界；must-not-define: P1/P2（enhancements）、图像生成（figures）、出厂自检（self-check）、版式（typography）、流程（pipeline） -->
 
-> 相关正本：P1 质量与运营→`handout/enhancements.md`；P2 章节层→`handout/reader-path.md`；图像双轨→`handout/figures.md`；出厂自检→`handout/self-check.md`；分块呈现→`workflow/s3-block.md`。
+> 相关正本：P1 质量与运营→`handout/enhancements.md`；P2 章节层→`layout/handout-reader-path.md`；图像双轨→`layout/handout-figures.md`；出厂自检→`handout/self-check.md`；分块呈现→`workflow/s3-block.md`。
 
 ## 9. 来源、范围与评估真实性（阶段 3）
 
@@ -69,7 +69,7 @@
 
 - 类型模板与支持级是**设计决策**：参考 Merrill 的成分显示、Van Merriënboer 的 4C/ID、Anderson & Krathwohl 的知识分类、认知任务分析与专家盲点研究、专长反转/支架渐撤；不是“某篇实验证明这套模板一定有效”。
 - 来源四向对齐、覆盖行、深度分配、教学例/评估例真实性是**设计决策**：参考 constructive alignment、机会学习/覆盖度、真实性评估；不是单篇实验证明。
-- P1/P2 是**设计决策/方向支持**：文本结构参考 Pyle 等结构教学综述；效用价值参考 Hulleman & Harackiewicz；质量回路参考形成性评价；教材章节层参考课程设计与教材组织研究；不宣称单一实验验证。具体规则见 `handout/enhancements.md` 与 `handout/reader-path.md`。
+- P1/P2 是**设计决策/方向支持**：文本结构参考 Pyle 等结构教学综述；效用价值参考 Hulleman & Harackiewicz；质量回路参考形成性评价；教材章节层参考课程设计与教材组织研究；不宣称单一实验验证。具体规则见 `handout/enhancements.md` 与 `layout/handout-reader-path.md`。
 - 读者版可读性、图解语法与图表一致性的规则见 `handout/self-check.md`「自检与证据」；文献依据与边界见 `ops/literature.md`。本册不再重复，不宣称单一实验验证。
 - 类型/支持级/学习者状态/来源对齐/P1/P2 都是**生成指导**，不新增运行时闸口；S3 仍由判分、关键能力、复述把关。支持级见 `handout/support-levels.md`。
 - 四证/闭卷/二次定稿仍需真人冷读与延迟迁移验证；E44–E126 等人评未跑前不得宣称“已学会”（E108/E109/E116/E122 只是机器契约）。

@@ -3,7 +3,7 @@
 """交付轮版式行为测试（stdlib-only、只读、幂等）。
 
 对 `evals/fixtures/round-layout/*.md` 逐份检查学员可见文本是否命中
-`references/teaching/round-layout.md`「交付轮版式」与 SKILL.md 硬规则 11
+`references/layout/chat-round.md`「交付轮版式」与 SKILL.md 硬规则 11
 的地板：轮型名/状态锚点、轮首句段句上限与禁词、题卡与提交格式、重发形态、
 自造记号、编号裸用。夹具头部用
 
