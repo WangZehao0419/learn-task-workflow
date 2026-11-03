@@ -1,7 +1,7 @@
 ---
 name: learn-task-workflow
 description: 私人家教工作流：把系统学习需求跑成带硬闸口、进度落盘、跨会话可续学的任务流，含间隔重复与掌握后保持复习、判分四态与作废申诉、KP 分型验收与课程体系契约（章/节/目三级规划）、条件化出题四步流水线与讲义生成、错因归因纠偏、按内容类型与学科群分流教学（单节课六拍：先教后练，永不先测未讲内容），新手先看完整示例再做题、新记号当场讲透；支持独立生成学习用讲义/题组/试卷。以「系统学习」意图触发：「我要学X」「教我X」「带我学X」「带我读X」「精读X」「帮我啃X」「从零开始学X」「零基础学X」「备考X」「我要考研/考证」「家教模式」「开始上课」「继续学习」「接着上次继续学」「调整学习计划」「我的学习进度」「学到哪了」「学习简报」「学习周报」「考考我」「来点挑战」「加练」「给X写讲义」「给X出题」「组一套卷」。不触发：普通知识问答、单题解题求助（如「这道题怎么做」）、代写作业/文章/报告、单纯总结材料（归 summarize）、主题调研写文档（归 research）、课程仓库脚手架（归 scaffold-exercises）、只要学习建议或只要计划文档；「教我X」「帮我复习X」「考考我」等高频词必须指向系统学习意图或已有学习任务，否则先澄清。宿主另有独立教学工作区或正式文档排版能力时，用户显式调用则让位，二者勿同时启动。
-version: 9.16.1
+version: 9.16.2
 author: 王责豪
 agent_created: true
 ---
@@ -104,7 +104,6 @@ agent_created: true
 | `composition` | 两个机制如何组合 | `references/ops/composition.md` |
 | `handout-export` | 讲义导出/打印/读者版 | `references/layout/handout-print-a11y.md` · `references/layout/handout-reader-path.md` |
 | `handout-enhance` | P1/P2 可选增强 | `references/handout/enhancements.md` |
-| `literature` | 文献依据审计 | `references/ops/literature.md` |
 
 **references 之间不写加载指令**；只有本节决定加载顺序。加载后按各文件的 `owns / must-not-define` 头执行。
 
@@ -136,7 +135,6 @@ agent_created: true
 | `persist` | `failure` | 落盘失败 / 环境阻断 |
 | `entry` | `failure` | 入口判定失败 / 环境阻断 |
 | `shortcuts` | `failure` | 快捷指令执行失败 |
-| `evidence` | `literature` | 文献审计 |
 
 **补读表**（按动作触发；只读指定小节；每场景补读条数上限唯一事实源见契约 `supplements_per_scene_max`）：
 
@@ -202,7 +200,7 @@ agent_created: true
 - `references/assessment/` —— 判分口径、出题流水线与过滤、间隔调度。
 - `references/data/` —— 三簿字段正本（progress/课程体系/记忆）、画像、引用对账。
 - `references/layout/` —— 版式域：文档结构（落盘硬禁令）、字级排印、对话轮版式（讲授/交付）、讲义版面/图像/打印/读者导航/范例、公式排版。
-- `references/ops/` —— 红线与失败处置、脚本手册与错误码速查、证据分级、文献依据。
+- `references/ops/` —— 红线与失败处置、脚本手册与错误码速查、证据分级。
 - `references/handout/` —— 讲义流水线、单元 schema、支持级、六套风格、出厂自检。
 - `references/subjects/` 与 `references/disciplines/` —— 七个学科群的四类切片与十二个学科包（取用顺序见 `subjects/common.md`）。
 - `contracts/rules.json` —— 枚举/阈值/预算/标题白名单/错误码/加载场景的机器契约；脚本通过 `scripts/rule_contract.py` 读取。

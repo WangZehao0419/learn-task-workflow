@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/2",
- "version": "9.16.1",
+ "version": "9.16.2",
  "retired_rule_ids": [
   "T02",
   "T07",
@@ -917,16 +917,6 @@
    "owns": "S0 接料建档、S1 诊断摸底",
    "depends_on": [
     "gates"
-   ],
-   "kind": "rule"
-  },
-  {
-   "id": "ops-literature",
-   "path": "references/ops/literature.md",
-   "layer": 1,
-   "owns": "机制→文献→边界映射（只读，不进闸口）",
-   "depends_on": [
-    "evidence"
    ],
    "kind": "rule"
   },
@@ -2267,7 +2257,7 @@
     "W-VOIDED-ATTEMPT"
    ]
   },
-  "pointer_load_baseline": 211,
+  "pointer_load_baseline": 192,
   "scenes_budget": {
    "files_max": 17,
    "chars_max": 34000,
@@ -3009,12 +2999,6 @@
    "label": "溯源核验",
    "files": [
     "references/ops/evidence.md"
-   ],
-   "stack": [
-    {
-     "scene": "literature",
-     "when": "按能力触发"
-    }
    ]
   },
   "composition": {
@@ -3052,13 +3036,6 @@
      "intent": "I-SUPPORT-LEVELS@handout"
     }
    ]
-  },
-  "literature": {
-   "label": "文献依据审计",
-   "files": [
-    "references/ops/literature.md"
-   ],
-   "chars_max": 12000
   }
  },
  "intents": [
