@@ -1,7 +1,7 @@
 ---
 name: learn-task-workflow
 description: 私人家教工作流：把系统学习需求跑成带硬闸口、进度落盘、跨会话可续学的任务流，含间隔重复与掌握后保持复习、判分四态与作废申诉、KP 分型验收与课程体系契约（章/节/目三级规划）、条件化出题四步流水线与讲义生成、错因归因纠偏、按内容类型与学科群分流教学（单节课六拍：先教后练，永不先测未讲内容），新手先看完整示例再做题、新记号当场讲透；支持独立生成学习用讲义/题组/试卷。以「系统学习」意图触发：「我要学X」「教我X」「带我学X」「带我读X」「精读X」「帮我啃X」「从零开始学X」「零基础学X」「备考X」「我要考研/考证」「家教模式」「开始上课」「继续学习」「接着上次继续学」「调整学习计划」「我的学习进度」「学到哪了」「学习简报」「学习周报」「考考我」「来点挑战」「加练」「给X写讲义」「给X出题」「组一套卷」。不触发：普通知识问答、单题解题求助（如「这道题怎么做」）、代写作业/文章/报告、单纯总结材料（归 summarize）、主题调研写文档（归 research）、课程仓库脚手架（归 scaffold-exercises）、只要学习建议或只要计划文档；「教我X」「帮我复习X」「考考我」等高频词必须指向系统学习意图或已有学习任务，否则先澄清。宿主另有独立教学工作区或正式文档排版能力时，用户显式调用则让位，二者勿同时启动。
-version: 9.14.2
+version: 9.15.0
 author: 王责豪
 agent_created: true
 ---
@@ -45,6 +45,7 @@ agent_created: true
 8. **失败日零施压**：中断、逾期、未完成的日子，口径固定为「今天完成 X 就够，明天继续」，不表达失望或催促（`workflow/pacing.md`「最小可行日」）。
 9. **知识连贯性（术语账本）**：判分题不得出现学员尚未引入的术语/概念，族性术语首次触碰先给一页地图，讲授中判据只准用本节已教工具；术语对账动作与机器护栏命令唯一事实源见 `assessment/generation.md`「出题前术语对账（R46）」（红线 SR-10）。
 10. **呈现红线（所有学员可见输出，聊天轮与落盘文件同守）**：强调只用加粗（术语首现/关键判断/易错点），不整段加粗、不连续三行加粗；不用斜体/下划线/彩色/emoji/装饰符号作语义标记。细节唯一事实源见 `references/ops/typography.md`「字体语义」。
+11. **非讲授轮版式地板（出题轮、清债开场轮、续学恢复开场轮、节末收尾轮）**：这四类学员可见轮禁止裸段落——必须有**首行锚点**（轮次主题＋节/目名）与**结构承载**（题组一题一块、清单逐条一行）；清债/续学开场固定**双读两行**（今日清 N 条＋信心分布读数含分母，样本 <5 加注）；信心分提交格式固定一行（1–5，凭第一感觉，报低不扣分）。形态正本见 `references/teaching/round-layout.md`（按补读表触发读取）；讲授/反馈/提示/路线/状态五类轮不适用本条（各有 owner）。
 
 ## 阶段速查（S0–S5）
 
@@ -178,6 +179,12 @@ agent_created: true
 | `s3-close` | `assessment/generation.md`「可选加练（巩固与举一反三，R55）」 | 学员接受节末加练征询 | `I-REINFORCE@global` |
 | `s3-handout` | `handout/style-examples.md`「标准讲义成品范例」 | 首写某风格讲义前，先读该风格成品范例 | `I-STYLE-EXAMPLES@content` |
 | `s3-deep` | `handout/style-examples.md`「标准讲义成品范例」 | 换风格重讲前，先读目标风格成品范例 | `I-STYLE-EXAMPLES@content` |
+| `s3-grade` | `teaching/round-layout.md`「四类轮版式」 | 热身出题交付前 | `I-ROUND-LAYOUT@global` |
+| `s3-exercise` | `teaching/round-layout.md`「四类轮版式」 | 题组出题交付前 | `I-ROUND-LAYOUT@global` |
+| `s4-review` | `teaching/round-layout.md`「四类轮版式」 | 清债开场与出题交付前 | `I-ROUND-LAYOUT@global` |
+| `s3-close` | `teaching/round-layout.md`「四类轮版式」 | 节末收尾轮输出前 | `I-ROUND-LAYOUT@global` |
+| `s5-close` | `teaching/round-layout.md`「四类轮版式」 | 结课收尾与综合测验交付前 | `I-ROUND-LAYOUT@global` |
+| `shortcuts` | `teaching/round-layout.md`「四类轮版式」 | 帮我复习/考考我/加练出题交付前 | `I-ROUND-LAYOUT@global` |
 
 **补读失败**：目标缺失、不可读、anchor 不存在 → 停止当前运行，说明停止点/缺失条件/恢复条件；不用「我记得规则」继续，也不用低标准替代。
 

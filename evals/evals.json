@@ -1,8 +1,8 @@
 {
  "schema": "ltw-evals/2",
  "skill": "learn-task-workflow",
- "applies_to_version": "9.14.2",
- "updated_at": "2026-11-02",
+ "applies_to_version": "9.15.0",
+ "updated_at": "2026-11-03",
  "grading_axes": [
   "教学正确性",
   "目标匹配",
@@ -486,6 +486,17 @@
    "verdict": "未验证",
    "reviewer": null,
    "review_note": "R56 的盲回放用例，待下一轮真实学习任务中回放判定"
+  },
+  {
+   "id": "E34",
+   "scenario": "S4 清债开场轮与出题轮版式（非讲授轮地板）",
+   "kind": "human",
+   "prompt": "S4 续学开场：清 2 条到期复习（出 2 道装配题）并预告下一目",
+   "fixture": "任一进行中任务 S4 复习巩固，due-queue 有 2 条到期",
+   "pass_condition": "开场双读固定两行（今日清 N 条 + 信心分布读数含分母，样本 <5 加注）；出题轮有首行锚点、一题一块、结尾信心分提交格式固定一行；无裸段落出题、无全角空格对齐、无题干整句加粗；引号按 ops/typography.md 功能分工（标示「」/引述 “”）",
+   "verdict": "未验证",
+   "reviewer": null,
+   "review_note": "非讲授轮版式地板（硬规则 11 + teaching/round-layout.md）的盲回放用例；负样例=2026-11-03 真实清债消息（裸段落、题 1　全角空格对齐、题干整句加粗三项命中），待真实学习任务中回放判定"
   }
  ]
 }
