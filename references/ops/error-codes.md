@@ -44,10 +44,10 @@
 | rule_contract | `E-CONTRACT-MISSING` / `E-CONTRACT-INVALID` | 契约缺失 / 畸形 |
 | rule_contract | `E-TOPOLOGY-DAG` / `E-TOPOLOGY-DEADREF` / `E-TOPOLOGY-ERRORCODE` / `E-TOPOLOGY-FILE` / `E-TOPOLOGY-HEADER` / `E-TOPOLOGY-LEADWORDS` / `E-TOPOLOGY-LOAD` / `E-TOPOLOGY-MIRROR` / `E-TOPOLOGY-OWNER` / `E-TOPOLOGY-SCENES` / `E-TOPOLOGY-VERSION` | 依赖成环 / 引用未定义编号或补读小节 / 未声明错误码 / 文件缺失 / 职责头缺失 / lead_words 双写漂移 / 加载指令 / 速查表覆盖缺口 / owner 锚点失效或 intent 正本/marker 失效 / 场景覆盖缺口（含 stack/supplements/intent scene） / 版本不一致 |
 | rule_contract | `E-POINTER-ANCHOR` / `E-POINTER-FILE` / `E-POINTER-LOAD` | 指针目标文件/标题不存在，或 rule 文件在 core 场景引用了不可加载 owner |
-| rule_contract | `E-TOPOLOGY-INTENT` / `E-TOPOLOGY-ORPHAN` / `E-TOPOLOGY-OWNER-DUP` / `E-TOPOLOGY-SCHEMA` / `E-TOPOLOGY-SECTIONNUM` / `E-TOPOLOGY-SUPPLEMENT` / `E-TOPOLOGY-ROUTE` | 规则-intent 映射不闭合 / 磁盘孤儿 / owner 重复 / schema 镜像不一致 / §N 无对应标题 / 补读表漂移 / 场景判别表行内引用的文件在该行主场景不可达 |
+| rule_contract | `E-TOPOLOGY-DEBT` / `E-TOPOLOGY-INTENT` / `E-TOPOLOGY-ORPHAN` / `E-TOPOLOGY-OWNER-DUP` / `E-TOPOLOGY-SCHEMA` / `E-TOPOLOGY-SECTIONNUM` / `E-TOPOLOGY-SUPPLEMENT` / `E-TOPOLOGY-ROUTE` | 指针债务超基线（E-POINTER-LOAD 对数 > constants.pointer_load_baseline，只降不升）/ 规则-intent 映射不闭合 / 磁盘孤儿 / owner 重复 / schema 镜像不一致 / §N 无对应标题 / 补读表漂移 / 场景判别表行内引用的文件在该行主场景不可达 |
 | rule_contract | `W-TOPOLOGY-HEADING-DUP` / `W-TOPOLOGY-MARKER-SCOPE` | 同级标题重复 / marker 不在 owner 小节内 |
 | verify-round-layout | `E-ROUND-CARD` / `E-ROUND-CONST` / `E-ROUND-JARGON` / `E-ROUND-MARK` / `E-ROUND-OPENING` / `E-ROUND-RESEND` / `E-ROUND-TYPE-NAME` / `W-ROUND-PREAMBLE-LONG` | 交付轮夹具：题卡或提交格式缺失 / 常量缺键 / 轮首禁词 / 自造记号 / 轮首段句超限 / 重发重念开场 / 轮型名或状态锚点 / 铺垫超过首题块（W，不拦截） |
 | verify_load_budget | `E-LOAD-BUDGET` | 加载场景字符量/文件数超预算，或场景内文件缺失 |
-| prereq_check | `E-TERM-UNTAUGHT` / `E-LIST-MISSING` / `E-LIST-EMPTY` / `E-SCAN-MISSING` / `W-TERM-UNTAUGHT` | 术语对账违规（题面出现未引入术语）/ 清单缺失 / 清单零可用行 / 扫描文件缺失；`W-TERM-UNTAUGHT` 为逐条违规提示（stderr），exit 1 |
+| prereq_check | `E-LIST-MISSING` / `E-LIST-EMPTY` / `E-SCAN-MISSING` / `W-TERM-UNTAUGHT` | 清单缺失 / 清单零可用行 / 扫描文件缺失；`W-TERM-UNTAUGHT` 为术语对账逐条违规提示（stderr），exit 1 |
 
 > `check_environment.py` 用 `ready` / `needs_setup` / `unavailable` / `manifest_error`（exit 2）状态而不是 E/W 码；`kp_sort.py` 用 exit 1 表示畸形行、依赖环或解释器版本不足。两者详见 `scripts-contract.json`。

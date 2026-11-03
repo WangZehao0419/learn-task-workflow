@@ -298,8 +298,9 @@ def _skill_md_version(root: Path) -> str:
 
 
 def check_versions(skill_version: str, contract_version: str,
-                   deps_path: Path, evals_path: Path) -> list:
-    """版本四方一致：SKILL.md == rules.json == skill-dependencies == evals.json。"""
+                   deps_path: Path, evals_path: Path,
+                   scripts_md_path: Path | None = None) -> list:
+    """版本五方一致：SKILL.md == rules.json == skill-dependencies == evals.json == ops/scripts.md。"""
     issues = []
     if not skill_version:
         issues.append("E-TOPOLOGY-VERSION: SKILL.md frontmatter 缺 version")
@@ -321,6 +322,17 @@ def check_versions(skill_version: str, contract_version: str,
                           % (ev_ver, skill_version))
     except (OSError, ValueError, KeyError):
         issues.append("E-TOPOLOGY-VERSION: evals.json 缺 applies_to_version")
+    if scripts_md_path is not None:
+        try:
+            m = re.search(r"(?m)^-\s*适用版本：(\S+)\s*$",
+                          scripts_md_path.read_text(encoding="utf-8", errors="replace"))
+            if not m:
+                issues.append("E-TOPOLOGY-VERSION: ops/scripts.md 缺「适用版本」行")
+            elif m.group(1) != skill_version:
+                issues.append("E-TOPOLOGY-VERSION: ops/scripts.md 适用版本 %s ≠ SKILL.md %s"
+                              % (m.group(1), skill_version))
+        except OSError:
+            issues.append("E-TOPOLOGY-VERSION: ops/scripts.md 不可读")
     return issues
 
 
@@ -350,6 +362,26 @@ def check_mirror(declared: set, ops_text: str) -> list:
     for c in sorted(declared - ops_codes):
         if not any(o.startswith(c + "-") for o in ops_codes):
             issues.append("E-TOPOLOGY-MIRROR: error-codes.md 缺码 %s 条目" % c)
+    return issues
+
+
+def check_rule_tags(files: list, rules: list) -> list:
+    """files[].owns 中的（Rnn）标签必须指向以该文件为 owner 的规则。
+
+    防「契约 owns 与文件头/规则登记漂移」（v9.16.1，B1/B3 两案同类）；
+    合写标签（如 T12/R44）不在此列，编号存在性由 check_number_refs 覆盖。
+    """
+    owner_of = {}
+    for r in rules:
+        owner_of[r["id"]] = str(r.get("owner", "")).split("#", 1)[0]
+    issues = []
+    for f in files:
+        for tag in re.findall(r"（(R\d+)）", f.get("owns", "")):
+            if tag not in owner_of:
+                issues.append("E-TOPOLOGY-OWNER: %s owns 引用未定义规则 %s" % (f["path"], tag))
+            elif owner_of[tag] != f["path"]:
+                issues.append("E-TOPOLOGY-OWNER: %s owns 标注 %s，但规则 owner 是 %s（owns 双写漂移）"
+                              % (f["path"], tag, owner_of[tag]))
     return issues
 
 
@@ -761,16 +793,20 @@ def topology(path: Path | None = None) -> dict:
         elif not _heading_exists(root, rel, anchor):
             issues.append("E-TOPOLOGY-OWNER: %s owner 小节不存在 %s#%s" % (r["id"], rel, anchor))
 
+    # 3.5 owns 中（Rnn）标签归属（v9.16.1，防契约 owns 与规则 owner 漂移）
+    issues += check_rule_tags(files, data["rules"])
+
     # 5. 依赖无环
     ok, msg = _dag(files)
     if not ok:
         issues.append("E-TOPOLOGY-DAG: " + msg)
 
-    # 6. 版本四方一致
+    # 6. 版本五方一致（v9.16.1 起含 ops/scripts.md 适用版本）
     skill_version = _skill_md_version(root)
     issues += check_versions(skill_version, data.get("version", ""),
                              root / "skill-dependencies.json",
-                             root / "evals" / "evals.json")
+                             root / "evals" / "evals.json",
+                             root / "references" / "ops" / "scripts.md")
 
     # 7. 全仓错误码 ⊆ 契约声明
     errs = data["constants"]["errors"]
@@ -945,14 +981,16 @@ def _selftest() -> int:
     def ver_ok():
         root = skill_root()
         v = _skill_md_version(root)
-        assert not check_versions(v, v, root / "skill-dependencies.json", root / "evals" / "evals.json")
+        assert not check_versions(v, v, root / "skill-dependencies.json", root / "evals" / "evals.json",
+                                  root / "references" / "ops" / "scripts.md")
 
     chk("versions aligned", ver_ok)
 
     def ver_drift():
         root = skill_root()
         v = _skill_md_version(root)
-        issues = check_versions("9.9.9", v, root / "skill-dependencies.json", root / "evals" / "evals.json")
+        issues = check_versions("9.9.9", v, root / "skill-dependencies.json", root / "evals" / "evals.json",
+                                root / "references" / "ops" / "scripts.md")
         assert issues and all(i.startswith("E-TOPOLOGY-VERSION") for i in issues), issues
 
     chk("version drift detected", ver_drift)
@@ -1001,6 +1039,22 @@ def _selftest() -> int:
         assert issues[0].startswith("E-TOPOLOGY-DEADREF")
 
     chk("dead number ref detected", deadref_catch)
+
+    def rule_tags_ok():
+        d = load()
+        assert not check_rule_tags(d["files"], d["rules"]), "真实仓库 owns R 标签应全部归属正确"
+
+    chk("owns rule tags point to owners", rule_tags_ok)
+
+    def rule_tags_catch():
+        files = [{"path": "a.md", "owns": "分块呈现（R41）"}, {"path": "b.md", "owns": "无标签"}]
+        issues = check_rule_tags(files, [{"id": "R41", "owner": "b.md#某节"}])
+        assert len(issues) == 1 and "a.md" in issues[0], issues
+        undef = check_rule_tags(files, [])
+        assert len(undef) == 1 and "未定义" in undef[0], undef
+        assert check_rule_tags(files, [{"id": "R41", "owner": "a.md#某节"}]) == []
+
+    chk("owns rule tag drift detected", rule_tags_catch)
 
     def cov_ok():
         r = coverage()
@@ -1588,6 +1642,10 @@ def audit(data: dict, root: Path) -> dict:
     issues += check_schema_mirror(data, root)
     issues += check_section_number_refs(data, root)
     load = check_pointer_loadability(data, root, expanded)
+    baseline = data.get("constants", {}).get("pointer_load_baseline")
+    if baseline is not None and len(load) > baseline:
+        issues.append("E-TOPOLOGY-DEBT: E-POINTER-LOAD 对数 %d > pointer_load_baseline %s（只降不升）"
+                      % (len(load), baseline))
     # 报告模式：全部列出；调用方人工分诊
     return {
         "mode": "audit",
@@ -1595,6 +1653,7 @@ def audit(data: dict, root: Path) -> dict:
         "rules": len(data["rules"]),
         "scenes": len(data["scenes"]),
         "intents": len(data.get("intents", [])),
+        "pointer_debt": {"count": len(load), "baseline": baseline},
         "scene_issues": scene_issues,
         "pointer_issues": [i for i in issues if i.startswith("E-POINTER")],
         "contract_issues": [i for i in issues if not i.startswith("E-POINTER")],

@@ -7,7 +7,7 @@
 并计算轮级最坏加载（常驻 SKILL.md+triggers + 主场景 core + persist core
 + 补读全文件 + 单个最大叠加场景 core）与同轮叠加总和（stack_sum），
 对照 round_chars_max / stack_sum_chars_max（契约缺省键则跳过该项检查）。
-超预算 → E-LOAD-BUDGET，exit 1。
+超预算 → E-LOAD-BUDGET，exit 1；场景用量 ≥98% 打 TIGHT 预警（report-only，不改退出码）。
 """
 import argparse
 import json
@@ -70,6 +70,8 @@ def scene_stats(root: Path, data: dict) -> list:
         chars_max = sc.get("chars_max", budget.get("chars_max"))
         over_files = files_max is not None and n_files > files_max
         over_chars = chars_max is not None and chars > chars_max
+        tight = (chars_max is not None and not over_chars and chars_max > 0
+                 and chars >= 0.98 * chars_max)
         rows.append({
             "scene": sid,
             "files": n_files,
@@ -77,6 +79,7 @@ def scene_stats(root: Path, data: dict) -> list:
             "chars_max": chars_max,
             "over_files": over_files,
             "over_chars": over_chars,
+            "tight": tight,
             "missing": missing,
             "issues": issues,
         })
@@ -235,6 +238,23 @@ def _selftest() -> int:
 
     chk("stack sum detected", stack_sum_detected)
 
+    def tight_budget_warned():
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "a.md").write_text("x" * 99, encoding="utf-8")
+            data = {
+                "constants": {
+                    "scenes_budget": {"files_max": 17, "chars_max": 100},
+                    "group_slugs": {},
+                    "discipline_slugs": [],
+                },
+                "scenes": {"s": {"files": ["a.md"], "chars_max": 100}},
+            }
+            rows = scene_stats(root, data)
+            assert rows[0]["tight"] and not rows[0]["over_chars"], rows
+
+    chk("tight budget warned", tight_budget_warned)
+
     if failures:
         print("SELFTEST FAILED:", ", ".join(failures))
         return 1
@@ -269,6 +289,8 @@ def main(argv=None) -> int:
         if r["over_chars"]:
             issues.append("E-LOAD-BUDGET: 场景 %s 字符 %d > %s"
                           % (r["scene"], r["chars"], r["chars_max"]))
+    tight = ["场景 %s 用量 %d/%s（≥98%%，加规则先拆场景）" % (r["scene"], r["chars"], r["chars_max"])
+             for r in rows if r["tight"]]
     pointer_rows = pointer_stats(root, data) if args.pointers else []
     pointer_warnings = [w for r in pointer_rows for w in r["warnings"]]
     budget = data["constants"]["scenes_budget"]
@@ -289,11 +311,12 @@ def main(argv=None) -> int:
         "worst": max(rows, key=lambda r: r["chars"])["scene"] if rows else None,
         "round_worst": round_worst,
         "issues": issues,
+        "tight_warnings": tight,
         "pointers": pointer_rows,
         "pointer_warnings": pointer_warnings,
     }, ensure_ascii=False))
     for r in rows:
-        flag = "OVER" if (r["over_chars"] or r["over_files"] or r["missing"]) else "ok"
+        flag = "OVER" if (r["over_chars"] or r["over_files"] or r["missing"]) else ("TIGHT" if r["tight"] else "ok")
         print("  [%s] %-12s files=%d chars=%d (max %s)" % (flag, r["scene"], r["files"], r["chars"], r["chars_max"]))
     for r in pointer_rows:
         print("  [ptr] %-12s core=%d supp=%d/%d stack_max=%d/%d%s"

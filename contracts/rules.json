@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/2",
- "version": "9.16.0",
+ "version": "9.16.1",
  "retired_rule_ids": [
   "T02",
   "T07",
@@ -62,7 +62,7 @@
    "id": "s3-block",
    "path": "references/workflow/s3-block.md",
    "layer": 1,
-   "owns": "逐目推进（最细知识点）、S3 闸口、分块呈现（R41）",
+   "owns": "逐目推进（最细知识点）、S3 闸口",
    "depends_on": [
     "gates"
    ],
@@ -729,7 +729,7 @@
    "id": "explain-quality",
    "path": "references/teaching/explain-quality.md",
    "layer": 1,
-   "owns": "元方法教学（T12/R44）、预判误区清单（R42）、智能变式一次一维（R43）、每步检查理解（R45）、依据句模板、示例设计红线",
+   "owns": "元方法教学（T12/R44）、预判误区清单（R42）、每步检查理解（R45）、依据句模板、示例设计红线",
    "depends_on": [
     "lesson-flow"
    ],
@@ -2171,11 +2171,11 @@
     "E-ROUTE-UNDONE",
     "E-RUBRIC-SUM",
     "E-SCAN-MISSING",
-    "E-TERM-UNTAUGHT",
     "E-THIRD-CONFLICT",
     "E-THIRD-EXEMPT-MISUSE",
     "E-TOPOLOGY-DAG",
     "E-TOPOLOGY-DEADREF",
+    "E-TOPOLOGY-DEBT",
     "E-TOPOLOGY-ERRORCODE",
     "E-TOPOLOGY-FILE",
     "E-TOPOLOGY-HEADER",
@@ -2267,6 +2267,7 @@
     "W-VOIDED-ATTEMPT"
    ]
   },
+  "pointer_load_baseline": 211,
   "scenes_budget": {
    "files_max": 17,
    "chars_max": 34000,

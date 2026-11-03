@@ -1,8 +1,8 @@
 {
  "schema": "ltw-evals/2",
  "skill": "learn-task-workflow",
- "applies_to_version": "9.16.0",
- "updated_at": "2026-11-03",
+ "applies_to_version": "9.16.1",
+ "updated_at": "2026-11-04",
  "grading_axes": [
   "教学正确性",
   "目标匹配",
@@ -443,8 +443,8 @@
    "prompt": "对含缺陷样张运行 python -B scripts/ltw_typography.py <样张>",
    "fixture": "evals/fixtures/layout-hard/健康样板.md + verify-readability.py 第 3 组行为测试（3.a–3.m：列表无空格/巨行/$ 不成对/跳级/超宽表/分隔线超量/LaTeX 箭头/行尾混用/强调清零/非法编码/--selftest/无视觉锚点）",
    "pass_condition": "健康样板 E/W 双零；五类 E 缺陷各命中对应 E-LAYOUT-* 且退出 1；W 类命中但不拦截；ltw_typography --selftest 退出 0",
-   "actual_output": "verify-readability 31 checks, 31 OK, 0 FAIL（3.a–3.m 全过）；实战受损样张（.learning 场1/10-时态）命中 E-LAYOUT-LIST-SPACE×7、E-LAYOUT-LONGLINE×2、E-LAYOUT-MATH-UNPAIRED×1、W-LAYOUT-EMPHASIS-FLOOR×4、W-LAYOUT-ANCHOR-GAP、W-LAYOUT-LATEX-ARROW，退出码 1",
-   "run_id": "layout-v9.13.0-20261101-worktree",
+   "actual_output": "verify-readability 34 checks, 34 OK, 0 FAIL（3.a–3.p 全过；v9.16.1 复跑刷新，31 为 v9.13.0 时点数字，3.n–3.p 系 v9.14.0 新增）；实战受损样张（.learning 场1/10-时态）命中 E-LAYOUT-LIST-SPACE×7、E-LAYOUT-LONGLINE×2、E-LAYOUT-MATH-UNPAIRED×1、W-LAYOUT-EMPHASIS-FLOOR×4、W-LAYOUT-ANCHOR-GAP、W-LAYOUT-LATEX-ARROW，退出码 1",
+   "run_id": "layout-v9.16.1-20261104-worktree",
    "scores": {
     "教学正确性": 5,
     "目标匹配": 5,
@@ -454,7 +454,7 @@
    },
    "verdict": "通过",
    "reviewer": "主审（评审会话，与执行子代理分离）",
-   "review_note": "machine 类：脚本原始输出即证据；实战命中项与 v9.13.0 取证报告的缺陷一一对应"
+   "review_note": "machine 类：脚本原始输出即证据；实战命中项与 v9.13.0 取证报告的缺陷一一对应；证据数字于 v9.16.1 按实测刷新（refactor-proposal P1-2）"
   },
   {
    "id": "E32",

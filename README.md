@@ -38,4 +38,4 @@ python -B evals/verify-load-budget.py
 
 ## 发布流程要点
 
-版本号四方同步（`SKILL.md` / `contracts/rules.json` / `skill-dependencies.json` / `evals.json`），`references/ops/scripts.md` 的「适用版本」随版更新；每个版本先落基准文档（docs/review/）再动文件，交付按基准三态比对。版本历史见 `CHANGELOG.md`。
+版本号五方同步（`SKILL.md` / `contracts/rules.json` / `skill-dependencies.json` / `evals.json` / `ops/scripts.md`「适用版本」，由 `rule_contract.py --topology` 机检），自 v9.16.1 起 scripts.md 适用版本纳入机检；每个版本先落基准文档（docs/review/）再动文件，交付按基准三态比对。版本历史见 `CHANGELOG.md`。
