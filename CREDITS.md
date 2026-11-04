@@ -295,5 +295,7 @@
 
 **口径注记（E32）**：easedup/educator-skills、liulifeng8918/socratic-dialogue-skill、GarethManning/education-agent-skills 三个同类技能仓于 2026-10-31 缺口扫描时仅作**未审计结构参照**（未安装、未执行），按既定「未审计不入借鉴归因表」口径不入上方归因表。
 
+**版本注记（v9.17.0）**：本文件历史归因行中出现的 `layout/chat-presentation.md` 等版式册路径，是当时维护侧的归因位置；该册已于 v9.17.0 退役，不再运行时加载。历史行按「不改写历史」惯例保留。
+
 **许可**：本技能以 **MIT 许可证**发布（完整文本见包内 `LICENSE` 文件），版权归「王责豪」所有（Copyright © 2026），允许任何人免费使用、复制、修改与再分发，须随分发保留本声明、`LICENSE` 文件与上表来源归因。上表 16 个外部仓库来源均为思想层语义借鉴、未复制任何代码/正文/模板；其中 4 个上游未声明许可证或无法核验（uuta/dotfiles、spaced-repetition-teaching、Clawic study、skill-tutor），本技能未使用其任何受版权保护的表达，仅参考其公开描述的机制思想；roebi/agent-skills（CC BY-NC-SA 4.0）同样仅思想层参考、零复制，与本技能的 MIT 许可不构成冲突。上表许可证核验日期：2026-10-22（DeepTutor 为 Apache-2.0；其余沿用 2026-10-12 的 GitHub API 与上游页面逐项核实）。
 docs

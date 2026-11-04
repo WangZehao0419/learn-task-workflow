@@ -2,9 +2,9 @@
 
 <!-- intent:I-BOLD-QUOTA@global -->
 
-<!-- owns: 学习者可见文字的标点、中英文空格、数字、单位、范围、引号、破折号/省略号、书名号、术语/变量/代码的字体语义、交付起笔/答案标识 canonical 集合、手写断行禁令、文本级强调；must-not-define: 版式布局（handout/typography）、数学结构（formulas）、聊天轮型（presentation）、判分/闸口 -->
+<!-- owns: 学习者可见文字的标点、中英文空格、数字、单位、范围、引号、破折号/省略号、书名号、术语/变量/代码的字体语义、交付起笔/答案标识 canonical 集合、手写断行禁令、文本级强调；must-not-define: 版式布局（handout/typography）、数学结构（formulas）、讲课与交付形态（teaching/interaction.md）、判分/闸口 -->
 
-本册是学习者可见文字「字级排印」的唯一事实源：聊天讲授、讲义、题组、答案、反馈、来源行都按本册执行。版面结构（行长、字号、页边距、表格/图注、打印）见 `layout/handout-page.md`；公式与科学符号的结构见 `layout/formulas.md`；聊天轮型见 `layout/chat-presentation.md`。
+本册是学习者可见文字「字级排印」的唯一事实源：聊天讲授、讲义、题组、答案、反馈、来源行都按本册执行。版面结构（行长、字号、页边距、表格/图注、打印）见 `layout/handout-page.md`；公式与科学符号的结构见 `layout/formulas.md`；讲课与交付形式见 `teaching/interaction.md`「输出边界与交付形态」。
 
 ## 适用范围与边界
 
@@ -54,7 +54,7 @@
 - **变量/公式**：行内/块级选择与定界符的唯一事实源见 `layout/formulas.md`（定界符须经目标宿主实测选定，未实测前不得写死任何定界符）；不加粗、不用代码体。
 - **命令、文件名、路径、代码标识符**：用行内代码 `` `...` ``，不加粗。
 - **强调**：只用加粗；不用斜体、下划线、彩色、全大写、着重号；需要「划线」时用加粗或独立标签行。
-- **加粗配额**：术语首现、关键判断、易错点；不整段加粗、不连续三行加粗、加粗总量约正文三成以内。落盘文件的机器校验：`ltw_typography.py` 对成段正文行的整段加粗硬拦截（`E-LAYOUT-EMPHASIS-HEAVY`，判据与豁免见 `layout/doc-structure.md` 硬禁令）、全文加粗总量（`W-LAYOUT-EMPHASIS-TOTAL`）、emoji/斜体/下划线（`W-LAYOUT-DECOR`）；聊天轮由 SKILL.md 常驻「呈现红线」保底。
+- **加粗配额**：术语首现、关键判断、易错点；不整段加粗、不连续三行加粗、加粗总量约正文三成以内。`scripts/ltw_typography.py` 的读者检查只覆盖 `W-READER-*` 系列，不设结构闸口；聊天轮与落盘文件都按本册语义执行。
 - **不用装饰符号**：标题/标签不加上下文无关的符号；不用 emoji 作语义标记（状态徽章见 `routing/shortcuts.md`）。
 
 ## 交付起笔与答案标识

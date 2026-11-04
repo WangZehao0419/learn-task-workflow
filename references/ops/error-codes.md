@@ -38,15 +38,12 @@
 | verify_explanation | `W-MARKER-CONTENT` / `W-STYLE-POINTER` / `W-UNICODE-CHAR` | 标记行带内容 / 头部复制规则正文 / Unicode denylist 字符；`W-UNICODE-CHAR` 定稿前必须清零 |
 | verify_explanation | `W-SELFTEST-MISSING` / `W-SELFTEST-EMPTY` | 自测/检验题面区缺同族答案区 / 答案区为空或占位 |
 | verify_explanation | `W-READER` / `W-READER-ALT` / `W-READER-CAPTION` / `W-READER-CONCLUSION` / `W-READER-DEEPNEST` / `W-READER-EMPHASIS` / `W-READER-HEADING` / `W-READER-HEADING-BODY` / `W-READER-INDEX` / `W-READER-LINKTEXT` / `W-READER-LONGLINE` / `W-READER-OVERVIEW` / `W-READER-SVG` / `W-READER-TABLE` / `W-READER-TABLE-ALIGN` | `--reader` 版式项：标题/表格/图注/alt/SVG/速览/索引/结论/强调/链接/长行/嵌套 |
-| ltw_typography（直跑） | `E-LAYOUT-LIST-SPACE` / `E-LAYOUT-LONGLINE` / `E-LAYOUT-MATH-UNPAIRED` / `E-LAYOUT-HEADING-SKIP` / `E-LAYOUT-TABLE-WIDE` / `E-LAYOUT-EMPHASIS-HEAVY` | 文件结构硬禁令：列表标记后无空格 / 单行可见正文超硬上限 / 行内 `$` 不成对 / 标题跳级 / 表格超宽或缺表头 / 整段几乎全部加粗，成段正文行、列表引导标签与短记录行豁免（阈值见 `layout/doc-structure.md`） |
-| ltw_typography（直跑） | `W-LAYOUT-ANCHOR-GAP` / `W-LAYOUT-EMPHASIS-FLOOR` / `W-LAYOUT-PARA-LONG` / `W-LAYOUT-SEPARATOR` / `W-LAYOUT-LINE-ENDING` / `W-LAYOUT-LATEX-ARROW` / `W-LAYOUT-EMPHASIS-TOTAL` / `W-LAYOUT-DECOR` | 文件结构基线：连续正文无视觉锚点 / 整节零加粗（强调清零）/ 段落超长（>4 句或 >150 字，记录型区块豁免）/ 分隔线超量 / 行尾混用 / 非公式语境 LaTeX 箭头 / 全文加粗超三成 / emoji 或斜体下划线作强调 |
 | verify_explanation | `W-NO-TIER` | 讲义单元缺 tier 标签 |
 | rule_contract | `E-CONTRACT-MISSING` / `E-CONTRACT-INVALID` | 契约缺失 / 畸形 |
 | rule_contract | `E-TOPOLOGY-DAG` / `E-TOPOLOGY-DEADREF` / `E-TOPOLOGY-ERRORCODE` / `E-TOPOLOGY-FILE` / `E-TOPOLOGY-HEADER` / `E-TOPOLOGY-LEADWORDS` / `E-TOPOLOGY-LOAD` / `E-TOPOLOGY-MIRROR` / `E-TOPOLOGY-OWNER` / `E-TOPOLOGY-SCENES` / `E-TOPOLOGY-VERSION` | 依赖成环 / 引用未定义编号或补读小节 / 未声明错误码 / 文件缺失 / 职责头缺失 / lead_words 双写漂移 / 加载指令 / 速查表覆盖缺口 / owner 锚点失效或 intent 正本/marker 失效 / 场景覆盖缺口（含 stack/supplements/intent scene） / 版本不一致 |
 | rule_contract | `E-POINTER-ANCHOR` / `E-POINTER-FILE` / `E-POINTER-LOAD` | 指针目标文件/标题不存在，或 rule 文件在 core 场景引用了不可加载 owner |
 | rule_contract | `E-TOPOLOGY-DEBT` / `E-TOPOLOGY-INTENT` / `E-TOPOLOGY-ORPHAN` / `E-TOPOLOGY-OWNER-DUP` / `E-TOPOLOGY-SCHEMA` / `E-TOPOLOGY-SECTIONNUM` / `E-TOPOLOGY-SUPPLEMENT` / `E-TOPOLOGY-ROUTE` | 指针债务超基线（E-POINTER-LOAD 对数 > constants.pointer_load_baseline，只降不升）/ 规则-intent 映射不闭合 / 磁盘孤儿 / owner 重复 / schema 镜像不一致 / §N 无对应标题 / 补读表漂移 / 场景判别表行内引用的文件在该行主场景不可达 |
 | rule_contract | `W-TOPOLOGY-HEADING-DUP` / `W-TOPOLOGY-MARKER-SCOPE` | 同级标题重复 / marker 不在 owner 小节内 |
-| verify-round-layout | `E-ROUND-CARD` / `E-ROUND-CONST` / `E-ROUND-JARGON` / `E-ROUND-MARK` / `E-ROUND-OPENING` / `E-ROUND-RESEND` / `E-ROUND-TYPE-NAME` / `W-ROUND-PREAMBLE-LONG` | 交付轮夹具：题卡或提交格式缺失 / 常量缺键 / 轮首禁词 / 自造记号 / 轮首段句超限 / 重发重念开场 / 轮型名或状态锚点 / 铺垫超过首题块（W，不拦截） |
 | verify_load_budget | `E-LOAD-BUDGET` | 加载场景字符量/文件数超预算，或场景内文件缺失 |
 | prereq_check | `E-LIST-MISSING` / `E-LIST-EMPTY` / `E-SCAN-MISSING` / `W-TERM-UNTAUGHT` | 清单缺失 / 清单零可用行 / 扫描文件缺失；`W-TERM-UNTAUGHT` 为术语对账逐条违规提示（stderr），exit 1 |
 

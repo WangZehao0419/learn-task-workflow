@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/2",
- "version": "9.16.3",
+ "version": "9.17.0",
  "retired_rule_ids": [
   "T02",
   "T07",
@@ -8,7 +8,11 @@
   "F02",
   "F03",
   "F04",
-  "F07"
+  "F07",
+  "R16",
+  "R57",
+  "R58",
+  "R59"
  ],
  "files": [
   {
@@ -123,30 +127,6 @@
    "kind": "rule"
   },
   {
-   "id": "layout-chat-presentation",
-   "path": "references/layout/chat-presentation.md",
-   "layer": 3,
-   "owns": "对话轮型、讲授轮版式、结构预算、五段内容契约、压缩出口、讲授与反馈语气",
-   "depends_on": [
-    "lesson-flow",
-    "interaction",
-    "layout-char-typography"
-   ],
-   "kind": "rule"
-  },
-  {
-   "id": "layout-chat-round",
-   "path": "references/layout/chat-round.md",
-   "layer": 3,
-   "owns": "交付轮（题组/小结/重发）的学员可见版式与轮首句",
-   "depends_on": [
-    "layout-chat-presentation",
-    "scheduling",
-    "scoring"
-   ],
-   "kind": "rule"
-  },
-  {
    "id": "handout-pipeline",
    "path": "references/handout/pipeline.md",
    "layer": 3,
@@ -175,8 +155,7 @@
    "owns": "讲义来源与评估真实性、覆盖行、深度分配、教学例/评估例真实性、材料型分流、证据边界",
    "depends_on": [
     "handout-pipeline",
-    "handout-templates",
-    "layout-chat-presentation"
+    "handout-templates"
    ],
    "kind": "rule"
   },
@@ -708,16 +687,6 @@
    "kind": "rule"
   },
   {
-   "id": "layout-doc-structure",
-   "path": "references/layout/doc-structure.md",
-   "layer": 1,
-   "owns": "学员可读落盘文件的结构可读性：E 级硬禁令、W 级强制基线、结构模式选择树、机器闸口",
-   "depends_on": [
-    "layout-char-typography"
-   ],
-   "kind": "rule"
-  },
-  {
    "id": "evidence",
    "path": "references/ops/evidence.md",
    "layer": 1,
@@ -1140,16 +1109,6 @@
     "failure",
     "persist",
     "entry"
-   ],
-   "intent": "local"
-  },
-  {
-   "id": "R16",
-   "owner": "references/layout/chat-presentation.md#对话轮呈现标记（软默认，所有风格共用）",
-   "type": "definition",
-   "scenes": [
-    "s3-teach",
-    "s3-deep"
    ],
    "intent": "local"
   },
@@ -1728,48 +1687,6 @@
     "s3-teach"
    ],
    "intent": "I-CONCEPT-PROBE"
-  },
-  {
-   "id": "R57",
-   "owner": "references/layout/chat-round.md#交付轮版式",
-   "type": "definition",
-   "scenes": [
-    "s3-grade",
-    "s3-exercise",
-    "s4-review",
-    "s3-close",
-    "s5-close",
-    "shortcuts"
-   ],
-   "intent": "I-ROUND-LAYOUT"
-  },
-  {
-   "id": "R58",
-   "owner": "references/layout/chat-round.md#交付轮版式",
-   "type": "definition",
-   "scenes": [
-    "s3-grade",
-    "s3-exercise",
-    "s4-review",
-    "s3-close",
-    "s5-close",
-    "shortcuts"
-   ],
-   "intent": "I-ROUND-LAYOUT"
-  },
-  {
-   "id": "R59",
-   "owner": "references/layout/chat-round.md#交付轮版式",
-   "type": "definition",
-   "scenes": [
-    "s3-grade",
-    "s3-exercise",
-    "s4-review",
-    "s3-close",
-    "s5-close",
-    "shortcuts"
-   ],
-   "intent": "I-ROUND-LAYOUT"
   }
  ],
  "constants": {
@@ -1857,29 +1774,6 @@
    "l3_review_min": 3,
    "l3_review_max": 5,
    "reinforce_max": 3
-  },
-  "round_layout": {
-   "opening_blocks_max": 1,
-   "opening_sentences_max": 2,
-   "self_check_max": 4,
-   "ban_words_opening": [
-    "cw",
-    "台账",
-    "清债",
-    "顺延",
-    "问题记录",
-    "信心读数",
-    "高信心"
-   ],
-   "ban_words_body": [
-    "cw",
-    "台账",
-    "清债",
-    "顺延",
-    "问题记录",
-    "信心读数",
-    "高信心"
-   ]
   },
   "schemas": {
    "index": "learn-task-index/7",
@@ -2032,37 +1926,6 @@
    ],
    "table_align_min_numeric": 2
   },
-  "layout": {
-   "hard_line_max": 400,
-   "anchor_gap_max": 400,
-   "para_chars_max": 150,
-   "para_sentences_max": 4,
-   "hr_max": 3,
-   "section_bold_floor_chars": 300,
-   "table_cols_max_hard": 4,
-   "emphasis_fullpara_ratio": 0.8,
-   "emphasis_fullpara_min_chars": 30,
-   "emphasis_total_ratio_max": 0.3,
-   "emphasis_total_min_chars": 300,
-   "emphasis_floor_exempt": [
-    "题组",
-    "作答与判分",
-    "复述检查清单",
-    "操作作品验收",
-    "参考答案",
-    "答案",
-    "备注",
-    "来源",
-    "参考资料",
-    "自测",
-    "概念地图",
-    "总表",
-    "清单",
-    "检验",
-    "检验题",
-    "检验问题"
-   ]
-  },
   "scheduler": {
    "grade_base": {
     "hard": 1.4,
@@ -2123,12 +1986,6 @@
     "E-IMG-READ",
     "E-KEY-ABILITY-UNMET",
     "E-KP-TYPED-GATE",
-    "E-LAYOUT-EMPHASIS-HEAVY",
-    "E-LAYOUT-HEADING-SKIP",
-    "E-LAYOUT-LIST-SPACE",
-    "E-LAYOUT-LONGLINE",
-    "E-LAYOUT-MATH-UNPAIRED",
-    "E-LAYOUT-TABLE-WIDE",
     "E-LEDGER-RESIDUE",
     "E-LESSON-ID-DUP",
     "E-LESSON-ID-MISSING",
@@ -2150,13 +2007,6 @@
     "E-READ-FILE",
     "E-REQ-MISSING",
     "E-REVIEW-ORIGIN",
-    "E-ROUND-CARD",
-    "E-ROUND-CONST",
-    "E-ROUND-JARGON",
-    "E-ROUND-MARK",
-    "E-ROUND-OPENING",
-    "E-ROUND-RESEND",
-    "E-ROUND-TYPE-NAME",
     "E-ROUTE-NUMBER",
     "E-ROUTE-UNDONE",
     "E-RUBRIC-SUM",
@@ -2198,14 +2048,6 @@
     "W-KP-LIST-MISSING",
     "W-KP-STATE-MISMATCH",
     "W-KP-SUMMARY-MISMATCH",
-    "W-LAYOUT-ANCHOR-GAP",
-    "W-LAYOUT-DECOR",
-    "W-LAYOUT-EMPHASIS-FLOOR",
-    "W-LAYOUT-EMPHASIS-TOTAL",
-    "W-LAYOUT-LATEX-ARROW",
-    "W-LAYOUT-LINE-ENDING",
-    "W-LAYOUT-PARA-LONG",
-    "W-LAYOUT-SEPARATOR",
     "W-LEDGER-DRAFT",
     "W-MARKER-CONTENT",
     "W-MATERIAL-COVERAGE-GAP",
@@ -2237,7 +2079,6 @@
     "W-READER-SVG",
     "W-READER-TABLE",
     "W-READER-TABLE-ALIGN",
-    "W-ROUND-PREAMBLE-LONG",
     "W-RUBRIC-SOURCE",
     "W-SELFTEST-EMPTY",
     "W-SELFTEST-MISSING",
@@ -2302,7 +2143,8 @@
      "scene": "failure",
      "when": "按能力触发"
     }
-   ]
+   ],
+   "supplements": []
   },
   "shortcuts": {
    "label": "快捷指令",
@@ -2327,12 +2169,6 @@
      "section": "S5 结课",
      "when": "已完成后再学/再学选路",
      "intent": "I-CLOSE-RESUME@global"
-    },
-    {
-     "file": "references/layout/chat-round.md",
-     "section": "交付轮版式",
-     "when": "帮我复习/考考我/加练出题交付前",
-     "intent": "I-ROUND-LAYOUT@global"
     }
    ]
   },
@@ -2340,7 +2176,8 @@
    "label": "生态分工与优先级",
    "files": [
     "references/routing/ecosystem.md"
-   ]
+   ],
+   "supplements": []
   },
   "s0-s2": {
    "label": "S0–S2 建档/诊断/计划",
@@ -2398,7 +2235,6 @@
     "references/teaching/lesson-flow.md",
     "references/teaching/lesson-prep.md",
     "references/teaching/interaction.md",
-    "references/layout/chat-presentation.md",
     "references/teaching/explain-quality.md",
     "references/teaching/explanation-depth.md",
     "references/teaching/explanation-density.md",
@@ -2508,18 +2344,6 @@
      "section": "题组与判分文件（exercises/）",
      "when": "写判分落盘 attempt 字段",
      "intent": "I-EXERCISE-SCHEMA@global"
-    },
-    {
-     "file": "references/layout/doc-structure.md",
-     "section": "硬禁令",
-     "when": "判分落盘前",
-     "intent": "I-FILE-LAYOUT@global"
-    },
-    {
-     "file": "references/layout/chat-round.md",
-     "section": "交付轮版式",
-     "when": "热身出题交付前",
-     "intent": "I-ROUND-LAYOUT@global"
     }
    ]
   },
@@ -2559,12 +2383,6 @@
      "section": "可选加练（巩固与举一反三，R55）",
      "when": "学员接受节末加练征询",
      "intent": "I-REINFORCE@global"
-    },
-    {
-     "file": "references/layout/chat-round.md",
-     "section": "交付轮版式",
-     "when": "节末收尾轮输出前",
-     "intent": "I-ROUND-LAYOUT@global"
     }
    ]
   },
@@ -2717,12 +2535,6 @@
      "section": "标准讲义成品范例",
      "when": "换风格改稿前，先读目标风格成品范例时",
      "intent": "I-STYLE-EXAMPLES@content"
-    },
-    {
-     "file": "references/layout/doc-structure.md",
-     "section": "硬禁令",
-     "when": "讲义修订落盘前",
-     "intent": "I-FILE-LAYOUT@global"
     }
    ]
   },
@@ -2773,29 +2585,17 @@
      "section": "题组与判分文件（exercises/）",
      "when": "写题组/判分文件",
      "intent": "I-EXERCISE-SCHEMA@global"
-    },
-    {
-     "file": "references/layout/doc-structure.md",
-     "section": "硬禁令",
-     "when": "题组/判分文件写盘前",
-     "intent": "I-FILE-LAYOUT@global"
-    },
-    {
-     "file": "references/layout/chat-round.md",
-     "section": "交付轮版式",
-     "when": "题组出题交付前",
-     "intent": "I-ROUND-LAYOUT@global"
     }
    ]
   },
   "s3-deep": {
    "label": "深讲概念 / 换风格重讲",
    "files": [
-    "references/layout/chat-presentation.md",
     "references/layout/char-typography.md",
     "references/handout/styles.md",
     "references/teaching/explanation-depth.md",
-    "references/teaching/explanation-density.md"
+    "references/teaching/explanation-density.md",
+    "references/teaching/lesson-flow.md"
    ],
    "chars_max": 19600,
    "stack": [
@@ -2889,18 +2689,6 @@
      "section": "判分口径",
      "when": "复习判分/复述/定级时",
      "intent": "I-GRADING-STATES@global"
-    },
-    {
-     "file": "references/layout/doc-structure.md",
-     "section": "硬禁令",
-     "when": "复习产物落盘前",
-     "intent": "I-FILE-LAYOUT@global"
-    },
-    {
-     "file": "references/layout/chat-round.md",
-     "section": "交付轮版式",
-     "when": "清债开场与出题交付前",
-     "intent": "I-ROUND-LAYOUT@global"
     }
    ]
   },
@@ -2948,18 +2736,6 @@
      "section": "结课综合测验目标线（99-）",
      "when": "写结课综合测验目标线",
      "intent": "I-FINAL-TARGET@global"
-    },
-    {
-     "file": "references/layout/doc-structure.md",
-     "section": "硬禁令",
-     "when": "结课产物落盘前",
-     "intent": "I-FILE-LAYOUT@global"
-    },
-    {
-     "file": "references/layout/chat-round.md",
-     "section": "交付轮版式",
-     "when": "结课收尾与综合测验交付前",
-     "intent": "I-ROUND-LAYOUT@global"
     }
    ]
   },
@@ -2978,7 +2754,8 @@
      "scene": "failure",
      "when": "按能力触发"
     }
-   ]
+   ],
+   "supplements": []
   },
   "failure": {
    "label": "任何失败 / 环境阻断",
@@ -2986,33 +2763,38 @@
     "references/ops/failure.md",
     "references/ops/environment.md",
     "references/ops/error-codes.md"
-   ]
+   ],
+   "supplements": []
   },
   "formulas": {
    "label": "公式/符号输出",
    "files": [
     "references/layout/formulas.md",
     "references/layout/formula-subjects.md"
-   ]
+   ],
+   "supplements": []
   },
   "evidence": {
    "label": "溯源核验",
    "files": [
     "references/ops/evidence.md"
-   ]
+   ],
+   "supplements": []
   },
   "composition": {
    "label": "跨机制组合",
    "files": [
     "references/ops/composition.md"
-   ]
+   ],
+   "supplements": []
   },
   "discipline": {
    "label": "学科内容包（按学科叠加）",
    "chars_max": 6000,
    "files": [
     "references/disciplines/{discipline}.md"
-   ]
+   ],
+   "supplements": []
   },
   "handout-export": {
    "label": "讲义导出 / 打印 / 读者版",
@@ -3020,7 +2802,8 @@
     "references/layout/handout-print-a11y.md",
     "references/layout/handout-reader-path.md"
    ],
-   "chars_max": 10000
+   "chars_max": 10000,
+   "supplements": []
   },
   "handout-enhance": {
    "label": "P1/P2 可选增强",
@@ -3045,11 +2828,6 @@
    "owner": "references/layout/char-typography.md#字体语义",
    "marker": "intent:I-BOLD-QUOTA@global",
    "consumers": [
-    {
-     "path": "references/layout/chat-presentation.md",
-     "anchor": "对话呈现系统（软默认，所有风格共用）",
-     "role": "application"
-    },
     {
      "path": "references/layout/handout-page.md",
      "anchor": "3. 字体系统：标题、段落、列表",
@@ -3077,11 +2855,6 @@
    "marker": "intent:I-PARAGRAPH-UNITY@global",
    "consumers": [
     {
-     "path": "references/layout/chat-presentation.md",
-     "anchor": "对话呈现系统（软默认，所有风格共用）",
-     "role": "application"
-    },
-    {
      "path": "references/layout/handout-page.md",
      "anchor": "3. 字体系统：标题、段落、列表",
      "role": "application"
@@ -3102,11 +2875,6 @@
    "owner": "references/teaching/explanation-density.md#讲解文本密度原则",
    "marker": "intent:I-DENSITY@global",
    "consumers": [
-    {
-     "path": "references/layout/chat-presentation.md",
-     "anchor": "对话呈现系统（软默认，所有风格共用）",
-     "role": "application"
-    },
     {
      "path": "references/handout/pipeline.md",
      "anchor": "1. 一页合同（目标态，11 条）",
@@ -3664,8 +3432,8 @@
    "marker": "intent:I-FEEDBACK@global",
    "consumers": [
     {
-     "path": "references/layout/chat-presentation.md",
-     "anchor": "讲授与反馈语气契约（学员可见输出）",
+     "path": "references/workflow/s3-cycle.md",
+     "anchor": "每轮小步（五步）",
      "role": "application"
     }
    ],
@@ -4114,7 +3882,7 @@
    "id": "I-LEDGER-NOT-IN-TEXT",
    "scope": "global",
    "cluster": null,
-   "owner": "references/layout/chat-presentation.md#对话讲授契约（所有风格共用）",
+   "owner": "references/teaching/interaction.md#输出边界与交付形态",
    "marker": "intent:I-LEDGER-NOT-IN-TEXT@global",
    "consumers": [
     {
@@ -4258,28 +4026,6 @@
    "rule_ids": []
   },
   {
-   "id": "I-FILE-LAYOUT",
-   "scope": "global",
-   "cluster": null,
-   "owner": "references/layout/doc-structure.md#文件结构可读性：硬禁令与基线",
-   "marker": "intent:I-FILE-LAYOUT@global",
-   "consumers": [
-    {
-     "path": "references/assessment/exercise-files.md",
-     "anchor": "题组与判分文件（exercises/）",
-     "role": "application"
-    }
-   ],
-   "scenes": [
-    "s3-exercise",
-    "s3-grade",
-    "s3-handout-revise",
-    "s4-review",
-    "s5-close"
-   ],
-   "rule_ids": []
-  },
-  {
    "id": "I-CONCEPT-PROBE",
    "scope": "global",
    "cluster": null,
@@ -4302,48 +4048,6 @@
    ],
    "rule_ids": [
     "R56"
-   ]
-  },
-  {
-   "id": "I-ROUND-LAYOUT",
-   "scope": "global",
-   "cluster": null,
-   "owner": "references/layout/chat-round.md#交付轮版式",
-   "marker": "intent:I-ROUND-LAYOUT@global",
-   "consumers": [
-    {
-     "path": "SKILL.md",
-     "anchor": "全场景必载硬规则（SKILL.md 层，任何场景都生效）",
-     "role": "application"
-    },
-    {
-     "path": "references/assessment/generation.md",
-     "anchor": "出题流水线（四步）",
-     "role": "application"
-    },
-    {
-     "path": "references/workflow/s4-review.md",
-     "anchor": "S4 复习巩固（可从逐节学习或结课随时插入）",
-     "role": "application"
-    },
-    {
-     "path": "references/workflow/gates.md",
-     "anchor": "入场自检（每次续学/新建前逐项过）",
-     "role": "application"
-    }
-   ],
-   "scenes": [
-    "s3-grade",
-    "s3-exercise",
-    "s4-review",
-    "s3-close",
-    "s5-close",
-    "shortcuts"
-   ],
-   "rule_ids": [
-    "R57",
-    "R58",
-    "R59"
    ]
   }
  ]

@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 """verify-readability.py - 读者版可读性行为测试（stdlib-only、只读）。
 
-只验证 `verify_explanation.py --reader` 在夹具与典型回退上的行为，不再另写一套
-版面规则，也不再扫描文档措辞。语义效果仍由真人冷读与延迟迁移验证。
+只验证 `verify_explanation.py --reader` 在夹具与典型回退上的行为（含 E-READ-FILE
+结构化失败），不再另写一套版面规则，也不再扫描文档措辞。语义效果仍由真人冷读与
+延迟迁移验证。
 """
 import argparse
 import os
@@ -169,98 +170,6 @@ def main(argv=None) -> int:
 
     rc, out = run_mutation(root, mut_bad_encoding)
     c.check("2.y 非法 UTF-8 结构化失败", rc == 1 and "E-READ-FILE" in out, (rc, out[-300:]))
-
-    # 3. ltw_typography 直跑闸口（layout/doc-structure.md E/W 级；独立于 --reader）
-    env = dict(os.environ)
-    env["PYTHONIOENCODING"] = "utf-8"
-    HARD_REL = "evals/fixtures/layout-hard/健康样板.md"
-
-    def run_layout_cli(mutate=None, raw_bytes=None):
-        src = root / HARD_REL
-        with tempfile.TemporaryDirectory() as td:
-            dst = Path(td) / "sample.md"
-            if raw_bytes is not None:
-                dst.write_bytes(raw_bytes)
-            else:
-                text = read(src)
-                if mutate:
-                    text = mutate(text)
-                dst.write_text(text, encoding="utf-8")
-            cmd = [sys.executable, "-B", str(root / "scripts" / "ltw_typography.py"),
-                   str(dst)]
-            proc = subprocess.run(cmd, cwd=str(root), capture_output=True, text=True,
-                                  encoding="utf-8", env=env)
-            return proc.returncode, (proc.stdout or "") + (proc.stderr or "")
-
-    rc, out = run_layout_cli()
-    c.check("3.a 健康样板零 E/W", rc == 0 and "LAYOUT" not in out, (rc, out[-300:]))
-
-    rc, out = run_layout_cli(lambda t: t.replace("1. 写出", "1.（题 1）写出"))
-    c.check("3.b 抓到：列表标记后无空格",
-            rc == 1 and "E-LAYOUT-LIST-SPACE" in out, (rc, out[-300:]))
-
-    rc, out = run_layout_cli(lambda t: t + "台" * 401 + "\n")
-    c.check("3.c 抓到：单行超硬上限",
-            rc == 1 and "E-LAYOUT-LONGLINE" in out, (rc, out[-300:]))
-
-    rc, out = run_layout_cli(lambda t: t + "残行 ightarrow$ v2.0\n")
-    c.check("3.d 抓到：行内 $ 不成对",
-            rc == 1 and "E-LAYOUT-MATH-UNPAIRED" in out, (rc, out[-300:]))
-
-    rc, out = run_layout_cli(lambda t: t.replace("### 题 1", "#### 题 1"))
-    c.check("3.e 抓到：标题跳级",
-            rc == 1 and "E-LAYOUT-HEADING-SKIP" in out, (rc, out[-300:]))
-
-    rc, out = run_layout_cli(lambda t: t + "| a | b | c | d | e |\n|---|---|---|---|---|\n| 1 | 2 | 3 | 4 | 5 |\n")
-    c.check("3.f 抓到：表格超宽",
-            rc == 1 and "E-LAYOUT-TABLE-WIDE" in out, (rc, out[-300:]))
-
-    rc, out = run_layout_cli(lambda t: t + "---\n" * 4)
-    c.check("3.g 抓到：分隔线超量（W 不拦截）",
-            rc == 0 and "W-LAYOUT-SEPARATOR" in out, (rc, out[-300:]))
-
-    rc, out = run_layout_cli(lambda t: t + "主语 $\\rightarrow$ 直接宾语\n")
-    c.check("3.h 抓到：非公式语境 LaTeX 箭头（W 不拦截）",
-            rc == 0 and "W-LAYOUT-LATEX-ARROW" in out, (rc, out[-300:]))
-
-    rc, out = run_layout_cli(raw_bytes="# 题\r\n\r\n正文一句。\n".encode("utf-8"))
-    c.check("3.i 抓到：行尾混用（W 不拦截）",
-            rc == 0 and "W-LAYOUT-LINE-ENDING" in out, (rc, out[-300:]))
-
-    rc, out = run_layout_cli(lambda t: t + "## 使用注意\n\n" + "注" * 350 + "\n")
-    c.check("3.j 抓到：整节零加粗（强调清零）",
-            rc == 0 and "W-LAYOUT-EMPHASIS-FLOOR" in out, (rc, out[-300:]))
-
-    rc, out = run_layout_cli(raw_bytes=b"\xff\xfe\xfa")
-    c.check("3.k 非法 UTF-8 结构化失败", rc == 1 and "E-READ-FILE" in out, (rc, out[-300:]))
-
-    cmd = [sys.executable, "-B", str(root / "scripts" / "ltw_typography.py"), "--selftest"]
-    proc = subprocess.run(cmd, cwd=str(root), capture_output=True, text=True,
-                          encoding="utf-8", env=env)
-    c.check("3.l ltw_typography --selftest 通过",
-            proc.returncode == 0 and "0 FAIL" in (proc.stdout or ""), (proc.returncode, (proc.stdout or "")[-200:]))
-
-    rc, out = run_layout_cli(lambda t: t + "\n" + "词" * 210 + "，**关键判断**在此。\n\n" + "词" * 210 + "，收束一句。\n")
-    c.check("3.m 抓到：连续正文无视觉锚点（W 不拦截）",
-            rc == 0 and "W-LAYOUT-ANCHOR-GAP" in out, (rc, out[-300:]))
-
-    rc, out = run_layout_cli(lambda t: t
-                             + "**这一整段话全部加粗了，没有任何重点层级可言，学员扫读时信号完全丢失。**\n" * 3
-                             + "本节很容易错 🔥 请把 *斜体强调* 的写法改掉。\n")
-    c.check("3.n 抓到：整段加粗（E 拦截）与装饰符号（W）",
-            rc == 1 and "E-LAYOUT-EMPHASIS-HEAVY" in out and "W-LAYOUT-DECOR" in out,
-            (rc, out[-300:]))
-
-    rc, out = run_layout_cli()
-    c.check("3.o 健康样板无强调上限/装饰违规",
-            rc == 0 and "E-LAYOUT-EMPHASIS-HEAVY" not in out
-            and "W-LAYOUT-EMPHASIS-TOTAL" not in out and "W-LAYOUT-DECOR" not in out,
-            (rc, out[-300:]))
-
-    rc, out = run_layout_cli(lambda t: "- 状态：草稿（撰写中）\n" + t
-                             + "**这一整段话全部加粗了，没有任何重点层级可言，学员扫读时信号完全丢失。**\n" * 3)
-    c.check("3.p 草稿态不豁免整段加粗闸口",
-            rc == 1 and "E-LAYOUT-EMPHASIS-HEAVY" in out, (rc, out[-300:]))
 
     total = c.ok + c.fail
     print(f"verify-readability: {total} checks, {c.ok} OK, {c.fail} FAIL")

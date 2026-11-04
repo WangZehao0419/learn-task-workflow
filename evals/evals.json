@@ -1,7 +1,7 @@
 {
  "schema": "ltw-evals/2",
  "skill": "learn-task-workflow",
- "applies_to_version": "9.16.3",
+ "applies_to_version": "9.17.0",
  "updated_at": "2026-11-04",
  "grading_axes": [
   "教学正确性",
@@ -58,31 +58,7 @@
   },
   "阻断规则": "阻断型用例的学科内容/结构渲染/边界必须为 2，其他适用项不得低于 1。"
  },
- "layout_checks_rubric": {
-  "声明": "LAYOUT 系列用例的附加检查字段，按 0–2 记分；仅作附加证据，不替代五轴主评分。",
-  "结构合规": {
-   "0": "列表/标题/表格硬禁令命中",
-   "1": "局部违规",
-   "2": "E 级五项全清"
-  },
-  "行与密度": {
-   "0": "巨行或无锚点文字墙",
-   "1": "个别超限",
-   "2": "行长/锚点/段落全达标"
-  },
-  "强调与记号": {
-   "0": "强调清零或滥用、非公式语境 LaTeX 记号",
-   "1": "局部欠当",
-   "2": "上下限内、记号规范"
-  },
-  "判分可读性": {
-   "0": "台账流水账",
-   "1": "可读但欠结构",
-   "2": "每题卡片+机器行/讲评行分离"
-  },
-  "阻断规则": "machine 类以 ltw_typography 退出码为准；human 类结构合规/判分可读性必须为 2 才算通过。"
- },
- "machine_evidence_ref": "包内九个模块 --selftest（task_index / progress_check / scheduler / kp_sort / prereq_check / check_environment / verify_explanation / rule_contract / ltw_typography）与 rule_contract --topology 退出 0；evals/ 五个 verify-*.py 行为/结构测试退出 0（含 verify-round-layout.py 的 7 份夹具与 6 项变异自测）。以上均为静态/行为级证据，不是真人教学回放。读者版/排版检查：ltw_typography 模块（W-READER-* 系列）随 verify_explanation --selftest 与 evals/verify-readability.py 回归；文件结构闸口（E/W-LAYOUT-*）随 ltw_typography --selftest 与 verify-readability.py 第 3 组回归。",
+ "machine_evidence_ref": "包内八个命令模块 --selftest（task_index / progress_check / scheduler / kp_sort / prereq_check / check_environment / verify_explanation / rule_contract）与 rule_contract --topology 退出 0；evals/ 四个 verify-*.py 行为/结构测试退出 0（verify-formula-typesetting、verify-load-budget、verify-marker-rules、verify-readability）。以上均为静态/行为级证据，不是真人教学回放。读者版检查：ltw_typography 模块（W-READER-* 系列）随 verify_explanation --selftest 与 evals/verify-readability.py 回归；v9.17.0 起不再提供文件结构闸口。",
  "cases": [
   {
    "id": "E01",
@@ -280,10 +256,22 @@
    "pass_condition": "宿主已实测 → 分母、根号覆盖范围和 x≠1/根式内非负条件清楚；窄屏不横向溢出。宿主未实测 → 按规则停机：报告停止点与两条恢复路径（纯文本豁免/七项样例实测），不得冒充渲染或擅自纯文本顶替",
    "actual_output": "渲染态完整作答（$...$/$$...$$）：定义域先行（x≤−1 或 x>1，含分子为 0）→ 右边非负允许平方 → 9(x+1)=4(x−1) → x=−13/5 → 验根 (−8/5)/(−18/5)=4/9→√=2/3 成立且回代定义域；增根易错点+检验题。全文见 evals/replay-2026-11-01-v9.13.1-formula-render.md",
    "run_id": "replay-v9.13.1-render-20261101-ce74e8d",
-   "scores": {"教学正确性": 5, "目标匹配": 5, "证据真实性": 5, "对话负担": 4, "工具成本": 5},
+   "scores": {
+    "教学正确性": 5,
+    "目标匹配": 5,
+    "证据真实性": 5,
+    "对话负担": 4,
+    "工具成本": 5
+   },
    "verdict": "通过",
    "reviewer": "主审（评审会话，与执行子代理分离）",
-   "formula_checks": {"学科内容": 2, "结构渲染": 2, "教学解释": 2, "复制保真": 2, "边界": 2},
+   "formula_checks": {
+    "学科内容": 2,
+    "结构渲染": 2,
+    "教学解释": 2,
+    "复制保真": 2,
+    "边界": 2
+   },
    "review_note": "渲染分支盲回放（run_id replay-v9.13.1-render-20261101-ce74e8d，执行子代理只读规范分册不读验收标准）主审逐项核对：定义域/验根/易错全对，阻断型三维全 2；首轮回放（纯文本分支）记录见 evals/replay-2026-11-01-v9.12.2.md"
   },
   {
@@ -295,10 +283,22 @@
    "pass_condition": "宿主已实测 → 变量先定义；数值和单位分开；单位换算/量纲一致；每步保留所用定律或近似；推导与结论可复制。宿主未实测 → 按规则停机：报告停止点与两条恢复路径，不得冒充渲染或擅自纯文本顶替",
    "actual_output": "渲染态完整作答（$...$/$$...$$）：Δs/Δt/v 逐个定义（位移非路程）；3000 m/60 s=50 m/s；两步推导 Δv/Δt=(10−2)/4=2 m/s² → F=ma=2×2=4 N，量纲核对 kg·m/s²=N。全文见 evals/replay-2026-11-01-v9.13.1-formula-render.md",
    "run_id": "replay-v9.13.1-render-20261101-ce74e8d",
-   "scores": {"教学正确性": 5, "目标匹配": 5, "证据真实性": 5, "对话负担": 4, "工具成本": 5},
+   "scores": {
+    "教学正确性": 5,
+    "目标匹配": 5,
+    "证据真实性": 5,
+    "对话负担": 4,
+    "工具成本": 5
+   },
    "verdict": "通过",
    "reviewer": "主审（评审会话，与执行子代理分离）",
-   "formula_checks": {"学科内容": 2, "结构渲染": 2, "教学解释": 2, "复制保真": 2, "边界": 2},
+   "formula_checks": {
+    "学科内容": 2,
+    "结构渲染": 2,
+    "教学解释": 2,
+    "复制保真": 2,
+    "边界": 2
+   },
    "review_note": "渲染分支盲回放（replay-v9.13.1-render-20261101-ce74e8d）主审逐项核对：变量定义/数值单位分离/量纲/定律保留全落点，50 m/s、2 m/s²、4 N 复核正确，阻断型三维全 2；首轮回放（纯文本分支）记录见 evals/replay-2026-11-01-v9.12.2.md"
   },
   {
@@ -310,10 +310,22 @@
    "pass_condition": "系数与下标不混；电荷、箭头、状态、条件保留；配平结果可从左右原子数核对；扩展未验证或渲染失败时立即停止，不以纯文本冒充已渲染交付",
    "actual_output": "渲染态完整作答（行内/块级定界符规范，点燃条件写箭头上方、(g)/(l) 物态标注）：观察法配平+左右原子数核对；系数/下标语义（2 H₂O≠H₄O₂）；SO₄²⁻ 下标/电荷/省略 1/系数四位置语义+检验题。全文见 evals/replay-2026-11-01-v9.13.1-formula-render.md",
    "run_id": "replay-v9.13.1-render-20261101-ce74e8d",
-   "scores": {"教学正确性": 5, "目标匹配": 5, "证据真实性": 5, "对话负担": 4, "工具成本": 5},
+   "scores": {
+    "教学正确性": 5,
+    "目标匹配": 5,
+    "证据真实性": 5,
+    "对话负担": 4,
+    "工具成本": 5
+   },
    "verdict": "通过",
    "reviewer": "主审（评审会话，与执行子代理分离）",
-   "formula_checks": {"学科内容": 2, "结构渲染": 2, "教学解释": 2, "复制保真": 2, "边界": 2},
+   "formula_checks": {
+    "学科内容": 2,
+    "结构渲染": 2,
+    "教学解释": 2,
+    "复制保真": 2,
+    "边界": 2
+   },
    "review_note": "渲染分支盲回放（replay-v9.13.1-render-20261101-ce74e8d）主审逐项核对：配平左右原子数核对/点燃+物态标注/SO₄²⁻ 四位置语义全对，阻断型三维全 2；首轮回放（纯文本分支）记录见 evals/replay-2026-11-01-v9.12.2.md"
   },
   {
@@ -437,33 +449,13 @@
    "review_note": "一轮一小步；实测加载 88,306 字符/22 文件（最坏 96,693≤137,800）"
   },
   {
-   "id": "E31",
-   "scenario": "文件结构闸口对七类排版缺陷的拦截（machine）",
-   "kind": "machine",
-   "prompt": "对含缺陷样张运行 python -B scripts/ltw_typography.py <样张>",
-   "fixture": "evals/fixtures/layout-hard/健康样板.md + verify-readability.py 第 3 组行为测试（3.a–3.m：列表无空格/巨行/$ 不成对/跳级/超宽表/分隔线超量/LaTeX 箭头/行尾混用/强调清零/非法编码/--selftest/无视觉锚点）",
-   "pass_condition": "健康样板 E/W 双零；五类 E 缺陷各命中对应 E-LAYOUT-* 且退出 1；W 类命中但不拦截；ltw_typography --selftest 退出 0",
-   "actual_output": "verify-readability 34 checks, 34 OK, 0 FAIL（3.a–3.p 全过；v9.16.1 复跑刷新，31 为 v9.13.0 时点数字，3.n–3.p 系 v9.14.0 新增）；实战受损样张（.learning 场1/10-时态）命中 E-LAYOUT-LIST-SPACE×7、E-LAYOUT-LONGLINE×2、E-LAYOUT-MATH-UNPAIRED×1、W-LAYOUT-EMPHASIS-FLOOR×4、W-LAYOUT-ANCHOR-GAP、W-LAYOUT-LATEX-ARROW，退出码 1",
-   "run_id": "layout-v9.16.1-20261104-worktree",
-   "scores": {
-    "教学正确性": 5,
-    "目标匹配": 5,
-    "证据真实性": 5,
-    "对话负担": 5,
-    "工具成本": 5
-   },
-   "verdict": "通过",
-   "reviewer": "主审（评审会话，与执行子代理分离）",
-   "review_note": "machine 类：脚本原始输出即证据；实战命中项与 v9.13.0 取证报告的缺陷一一对应；证据数字于 v9.16.1 按实测刷新（refactor-proposal P1-2）"
-  },
-  {
    "id": "E32",
-   "scenario": "题组判分落盘（v2 卡片版式盲回放）",
+   "scenario": "题组判分落盘（v2 卡片版式历史回放）",
    "kind": "human",
    "prompt": "判分并落盘",
    "fixture": "S3 学习任务进行中（英语·节 1 场 3）：题 1 判定题（He can to swim 语法纠错，学员独立答对）；题 2 程序题（改一般疑问句，学员首答 Do I have finished... 经提示②后改对）；执行子代理按 SKILL 调度协议真实路由+加载+跑只读脚本，未读 evals/",
-   "pass_condition": "题组有序列表标记后空格；每题 h3 卡片+一条机器行（作答/正确性/独立性/调度档 token 同线）+缩进讲评行；无巨行；ltw_typography E 清零；判分语义符合 scoring（提示后对不入独立通过、错题本入账）",
-   "actual_output": "执行子代理产出 v2 卡片文件：题组列表带空格、两题各一张 h3 卡片+机器行+讲评行；初稿 lint 报 2 处 E-LAYOUT-LIST-SPACE+1W，自修后 0E/0W exit 0；未编造 KP（目行未讲，按规则写 目=<知识点名> 并留域对账注记）；progress_check 日常模式 ok=true",
+   "pass_condition": "题组列表标记后空格；每题 h3 卡片 + 一条机器行（作答/正确性/独立性/调度档 token 同线）+ 缩进讲评行；无巨行；判分语义符合 scoring（提示后对不入独立通过、错题本入账）。v9.17.0 起结构闸口已退役，此条按当时人工检查口径留存。",
+   "actual_output": "执行子代理产出 v2 卡片文件：题组列表带空格、两题各一张 h3 卡片+机器行+讲评行；当时人工格式检查通过（该记录来自 v9.13.0 的 ltw 结构闸口，脚本于 v9.17.0 退役）；未编造 KP（目行未讲，按规则写 目=<知识点名> 并留域对账注记）；progress_check 日常模式 ok=true",
    "run_id": "layout-v9.13.0-20261101-e32-blind",
    "scores": {
     "教学正确性": 5,
@@ -474,7 +466,7 @@
    },
    "verdict": "通过",
    "reviewer": "主审（评审会话，与执行子代理分离）",
-   "review_note": "layout_checks_rubric：结构合规 2 / 行与密度 2 / 强调与记号 2 / 判分可读性 2；伺服行偏长（约 140 字，未超限）扣对话负担 1 分；闸口在生成回路中真实拦截列表空格缺陷，为本版核心验收信号"
+   "review_note": "历史回放：当时按四维版面评分记结构合规 2 / 行与密度 2 / 强调与记号 2 / 判分可读性 2；伺服行偏长（约 140 字）扣对话负担 1 分。v9.17.0 起版式轴与 ltw 结构闸口退役，本案例保留为历史证据，不再作为格式闸口必过项。"
   },
   {
    "id": "E33",
@@ -486,29 +478,6 @@
    "verdict": "未验证",
    "reviewer": null,
    "review_note": "R56 的盲回放用例，待下一轮真实学习任务中回放判定"
-  },
-  {
-   "id": "E34",
-   "scenario": "S4 交付轮版式（轮首句与题组）",
-   "kind": "human",
-   "prompt": "S4 续学：清 2 条到期复习（出 2 道装配题），并说明清完讲哪一目",
-   "fixture": "任一进行中任务 S4 复习巩固，due-queue 有 2 条到期",
-   "pass_condition": "轮首句至多两句、一段，含「清几条」与「其中有没有很有把握却答错的」，不出现 cw/占比/分母/问题记录/信心读数；只说有几条不说哪条；题组以 `**题 N**` 起块、一题一块，提交格式独立一行（信心分 1–5，报低不扣分）；无轮型名、无 `**续学**｜` 状态锚点、无 `｜` 或台账式 `=`、无全角空格对齐、无题干整句加粗；「已讲到第 N/M 目「…」」这类编号对合法",
-   "actual_output": "**续学**｜第 1 节「第一节」，已讲到第 22 目「表语与主语补足语的区分」，下一个目是第 23 目「定语」。当前处在复习插入轮，先清两条到期复习，再开讲「定语」。\n\n- 今日清债 2 条：一条测「名词主语先换成代词，再决定动词要不要加 -s」，一条测 decide 的名词写法。另有几条到期日更早的，今天清完这 2 条就够，剩下的按原日期顺延。\n- 信心读数：16 条问题记录里有 5 条带信心分，其中高信心答错 0 条，占比 0%（分母只有 5 条，先当参考）。\n\n**清债出题**｜两题都只用已学过的结构，主谓或主系表都行，不用 to do、从句、介词短语。\n\n**题 1** 把这句中文装配成一句英文：我妈妈写得很慢。（妈妈 = mother）\n   - 附一问：为了决定动词要不要加 -s，你把「我妈妈」换成哪个代词？\n\n**题 2** 把这句中文装配成一句英文：她的决定很好。\n\n两题各带一个信心分（1–5，凭第一感觉，报低不扣分），和作答一并发来。",
-   "verdict": "未验证",
-   "reviewer": null,
-   "review_note": "交付轮地板（硬规则 11 + layout/chat-round.md「交付轮版式」）的盲回放用例；actual_output 为 2026-11-03 真实消息的脱敏文本（科目名词换占位），机器负样例见 evals/fixtures/round-layout/negative-real-2026-11-03.md；待真人回放与独立评分，不代填分数"
-  },
-  {
-   "id": "E35",
-   "scenario": "重发未作答题组（交付轮子形态）",
-   "kind": "human",
-   "prompt": "S4 已出过 2 题且学员未作答，再次进入 S4",
-   "fixture": "任一进行中任务 exercises/ 有本节未作答题组",
-   "pass_condition": "只复述原题面与提交格式；不写轮首句、不重报条数、不换题、不加题；题卡与提交格式同原题",
-   "verdict": "未验证",
-   "reviewer": null,
-   "review_note": "重发形态（generation.md「未作答题组优先」+ round-layout「重发交付」）的盲回放用例，待真实任务中回放判定"
   }
  ]
 }
