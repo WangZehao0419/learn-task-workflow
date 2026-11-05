@@ -1661,7 +1661,7 @@ def main(argv=None) -> int:
     g.add_argument("--coverage", action="store_true")
     g.add_argument("--audit", action="store_true")
     g.add_argument("--audit-strict", action="store_true")
-    g.add_argument("--get", metavar="DOTTED")
+    g.add_argument("--get", metavar="DOTTED", help="调试用：按键路径读取契约值")
     ap.add_argument("--strict-pointers", action="store_true",
                     help="显式开启指针闭合检查（当前默认开启）")
     ap.add_argument("--no-strict-pointers", action="store_true",

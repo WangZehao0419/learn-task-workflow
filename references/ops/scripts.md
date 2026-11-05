@@ -83,7 +83,7 @@ python -B evals/verify-readability.py
 
 ## 打包与验证
 
-- `skill_ops preflight` 记录脚本只读/无网络/无子进程；`skill_ops validate` 检查 frontmatter、引用、占位符、链接、绝对路径与 Python 语法。
+- `skill_ops` 是发布侧的外部工具，不在本仓库内；其 `preflight` 记录脚本只读/无网络/无子进程，`validate` 检查 frontmatter、引用、占位符、链接、绝对路径与 Python 语法。
 - `skill_ops package` 生成 ZIP，必须包含 `contracts/rules.json` 与 `scripts/rule_contract.py`。
 - 打包前删除 `scripts/__pycache__`；`.trae`/`.workbuddy`/`.codex` 是本地 IDE/记忆目录，打包时用干净副本排除。
 - `task_index.py` 的 `tmp.unlink()` 只清理 `index.json.tmp`；人工复核后可带 `--risk-ack` 打包。
@@ -91,6 +91,6 @@ python -B evals/verify-readability.py
 
 ## 当前核验
 
-- 适用版本：9.17.0
-- 核验日期：2026-11-04
+- 适用版本：9.17.1
+- 核验日期：2026-11-05
 - 环境依赖：`skill-dependencies.json`（Python `min_version`）；只有 `check_environment.py` 输出 `ready` 才能继续。
