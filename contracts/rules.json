@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/2",
- "version": "9.18.0",
+ "version": "9.19.0",
  "retired_rule_ids": [
   "T02",
   "T07",
@@ -830,7 +830,7 @@
    "id": "layout-handout-figures",
    "path": "references/layout/handout-figures.md",
    "layer": 3,
-   "owns": "图像双轨、落盘与死链、绘图前后核对、渲染阻断、视觉任务分界、图表选型与渲染边界",
+   "owns": "图像双轨、源文件存档与死链、绘图前后核对、渲染阻断、视觉任务分界、图表选型与渲染边界",
    "depends_on": [
     "handout-quality",
     "layout-handout-page"
