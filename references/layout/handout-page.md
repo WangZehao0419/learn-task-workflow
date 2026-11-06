@@ -1,16 +1,16 @@
 # 讲义版面：页面、字体与元素
 
-<!-- owns: 讲义版面：设计原则、页面架构、字体系统、教学例版面、元素预算；must-not-define: 打印/无障碍（print-a11y）、读者路径（reader-path）、自检（self-check）、内容 schema（unit-schema）、文字标点（ops/typography）、元素版面细则（handout-elements） -->
+<!-- owns: 讲义版面：设计原则、页面架构、字体系统、教学例版面、元素预算；must-not-define: 打印/无障碍（print-a11y）、读者路径（reader-path）、自检（self-check）、内容 schema（unit-schema）、文字标点（ops/typography）、元素版面细则（handout-elements）、块级形态选择与最小形态（block-structure） -->
 
-> 相关正本：元素版面（表格、图、代码、公式、答案框）→`references/layout/handout-elements.md`；打印/PDF、中文印刷、无障碍→`references/layout/handout-print-a11y.md`；读者路径→`references/layout/reader-path.md`「8. 读者路径与导航（P1）」；出厂自检→`references/handout/self-check.md`。
+> 相关正本：元素版面（表格、图、代码、公式、答案框）→`references/layout/handout-elements.md`；打印/PDF、中文印刷、无障碍→`references/layout/handout-print-a11y.md`；读者路径→`references/layout/reader-path.md`「8. 读者路径与导航（P1）」；出厂自检→`references/handout/self-check.md`；标题、列表与表格、留白折叠的形态选择→`references/layout/block-structure.md`。
 
-本册管「读者拿到讲义后怎么读、怎么排版」，不改变五要素、答案框与密度规则；质量取舍优先级链与「不为版面删内容」见 `references/teaching/explanation-density.md`「讲解文本密度原则」。文字标点/数字/单位/字体语义见 `references/layout/char-typography.md`；内容槽位见 `references/handout/unit-schema.md`「讲义概念单元 schema」；来源与评估真实性见 `references/handout/quality.md`；打印/PDF 与无障碍见 `references/layout/handout-print-a11y.md`；读者路径见 `references/layout/reader-path.md`「8. 读者路径与导航（P1）」。
+本册管「读者拿到讲义后怎么读、怎么排版」，不改变五要素、答案框与密度规则；质量取舍优先级链与「不为版面删内容」见 `references/teaching/explanation-density.md`「讲解文本密度原则」。文字标点/数字/单位/字体语义见 `references/layout/char-typography.md`；标题层级、列表与表格的形态取舍、留白与折叠的选材见 `references/layout/block-structure.md`；内容槽位见 `references/handout/unit-schema.md`「讲义概念单元 schema」；来源与评估真实性见 `references/handout/quality.md`；打印/PDF 与无障碍见 `references/layout/handout-print-a11y.md`；读者路径见 `references/layout/reader-path.md`「8. 读者路径与导航（P1）」。
 
 ## 目录
 
 - 1. 设计原则与边界
 - 2. 页面架构与版式基线
-- 3. 字体系统：标题、段落、列表
+- 3. 字体系统：尺度、间距与列表版面
 - 9. 教学例版面
 - 10. 元素预算与视觉一致性
 
@@ -45,19 +45,17 @@
 - **格式底线自检**：写盘前按 Markdown 基本格式人工核对（列表空格、行内 `$` 成对、标题不跳级、表头齐全）；不设机器闸口，也不以版面阈值阻断交付。
 - **一屏一个视觉焦点**：本节速览、一个主图或一个答案框，不并列争抢。
 
-## 3. 字体系统：标题、段落、列表
+## 3. 字体系统：尺度、间距与列表版面
 
-- **标题即导航**：`## 概念 N · <一句话主张>`；主张写「解决什么/判别什么」，不写「概念 2」「其他」「补充」；三级标题只在单元内部确实超过一屏时使用；层级 H2→H3，不跳级。
-- **标题不裸奔**：每个标题下先有一段正文，再允许子标题；标题下直接甩列表或子标题，扫读者会失去落点。结构区例外：`## 本节速览`、`## 概念地图`、`## 回看索引`、`## 本节自测`、`## 本章回看` 可按各自固定形态直接跟表/列表。
-- **标题带信息**：标题写结论或问题，不写「补充」「说明」「其他」；同一节标题句式一致。
+- **标题**：标题即导航、标题不裸奔、标题带信息三条见 `references/layout/block-structure.md`「标题」。
 - **字体尺度**：正文 1.0；H1 约 1.8×、H2 约 1.4×、H3 约 1.15×；图注/表注/代码/表格 0.85–0.9×；标题权重大于正文但不用全大写/彩色。
 - **段落**：一段一义、首句结论、约 5 行拆段判据与「推导不切断」见 `references/layout/char-typography.md`「断行与句子」；句级规则（一句一判断、实义动词、指代、条件先于指令）同见。
 - **段距与缩进**：Web 用段距 0.75–1×行距，不首行缩进；打印用段间距或首行缩进 2 字符，二选一，全文统一；不两者并用。
-- **列表与表格**：先判承载——因果、机制、论证用正文，不硬拆成项目符号；有先后顺序用编号列表；**同一层级 ≥3 项且需逐项按同一组属性对照（如类别、例词、用法）→ 必须用表（版面见 §4.1），不得写成行内列举或纯文字段**；仅名称或例句并列、无共同对照维度→用列表；只有一项不列表；列表项句式平行；项距 0.25–0.5×行距；缩进 2 字符；≤3 层，不用嵌入式列表（「包括 a、b、c」塞在行内的，拆成独立列表）。
+- **列表与表格**：正文、编号列表、表格、列表之间的取舍与列表项句式平行见 `references/layout/block-structure.md`「判承载：先选形态，再谈排布」；本册只管版面——项距 0.25–0.5×行距；缩进 2 字符；≤3 层，不用嵌入式列表（「包括 a、b、c」塞在行内的，拆成独立列表）。
 - **强调配额**：加粗只给术语首现、关键判断、易错点；配额阈值与禁用写法（斜体/彩色/全大写/装饰符号）见 `references/layout/char-typography.md`「字体语义」。
 - **引用块**：只用于原文、完整答案或外部引用；不用于强调；一单元最多一个答案框；引用块不嵌套。
-- **留白是结构信号**：标题、列表、表格、代码块、图片前后留空行；不写「文字墙」；同一屏只留一个视觉焦点。
-- **折叠是逃生舱不是衣柜**：`<details>` 只装低频内容——备用解法、排查路径、术语补充、「卡在这一步再看」的细节；主线推理与核心步骤永不折叠；全文最多 1 层，折叠内不再嵌套折叠；`summary` 写清「什么情况下看」。
+- **留白**：标题、列表、表格、代码块、图片前后留空行；同一屏只留一个视觉焦点。留白为什么是结构信号见 `references/layout/block-structure.md`「留白与折叠」。
+- **折叠**：`<details>` 的选材与层数上限见 `references/layout/block-structure.md`「留白与折叠」；本册补充版面侧——折叠框与正文同宽、summary 样式与其他段落一致。
 - **术语一致**：同一概念全节同名；缩写首现给全称；中文标点、中英文空格、数字与单位按 `references/layout/char-typography.md`。
 
 ## 9. 教学例版面

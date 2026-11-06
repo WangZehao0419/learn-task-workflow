@@ -18,7 +18,7 @@ python scripts/check_environment.py
 ## 架构
 
 - `SKILL.md` —— 路由与加载调度：21 个场景按轮次取用，叠加与补读另计；场景核心集见其中的加载场景表。
-- `references/`（126 册）—— 规则正本，每册头部有 `owns / must-not-define` 职责声明。
+- `references/`（127 册）—— 规则正本，每册头部有 `owns / must-not-define` 职责声明。
 - `contracts/rules.json` —— 机器契约：枚举 / 阈值 / 错误码 / 45 条跨文件意图。
 - `scripts/`（10 个，stdlib-only、幂等只读）—— 进度校验、判分证据验证、间隔调度、契约校验。
 - `evals/` —— 行为级验收脚本与夹具。

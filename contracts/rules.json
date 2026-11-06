@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/2",
- "version": "9.19.0",
+ "version": "9.19.1",
  "retired_rule_ids": [
   "T02",
   "T07",
@@ -694,6 +694,14 @@
    "path": "references/layout/char-typography.md",
    "layer": 1,
    "owns": "学习者可见文字的标点、中英文空格、数字、单位、范围、引号、破折号/省略号、书名号、术语/变量/代码的字体语义、交付起笔/答案标识 canonical 集合、手写断行禁令、文本级强调",
+   "depends_on": [],
+   "kind": "rule"
+  },
+  {
+   "id": "layout-block-structure",
+   "path": "references/layout/block-structure.md",
+   "layer": 1,
+   "owns": "标题、段落、列表、表格与步骤序列的选择与最小形态；留白与折叠的选材判据；块级形态之间的取舍",
    "depends_on": [],
    "kind": "rule"
   },
@@ -2583,6 +2591,7 @@
     "references/teaching/explanation-density.md",
     "references/teaching/content-types.md",
     "references/layout/char-typography.md",
+    "references/layout/block-structure.md",
     "references/subjects/{group}-teach.md",
     "references/workflow/s3-gate.md"
    ],
@@ -2674,6 +2683,7 @@
     "references/teaching/interaction.md",
     "references/teaching/interaction-diagnosis.md",
     "references/layout/char-typography.md",
+    "references/layout/block-structure.md",
     "references/assessment/scheduling.md",
     "references/assessment/grading-states.md",
     "references/teaching/feedback.md",
@@ -2785,6 +2795,7 @@
     "references/layout/handout-page.md",
     "references/layout/handout-elements.md",
     "references/layout/char-typography.md",
+    "references/layout/block-structure.md",
     "references/ops/scripts.md",
     "references/subjects/{group}-practice.md",
     "references/teaching/explanation-density.md",
@@ -2920,6 +2931,7 @@
     "references/layout/handout-elements.md",
     "references/handout/self-check.md",
     "references/layout/char-typography.md",
+    "references/layout/block-structure.md",
     "references/ops/scripts.md",
     "references/subjects/{group}-practice.md"
    ],
@@ -3030,6 +3042,7 @@
     "references/assessment/scoring.md",
     "references/teaching/content-types.md",
     "references/layout/char-typography.md",
+    "references/layout/block-structure.md",
     "references/subjects/common.md",
     "references/subjects/{group}-practice.md",
     "references/ops/scripts.md",
@@ -3103,6 +3116,7 @@
    "label": "深讲概念 / 换风格重讲",
    "files": [
     "references/layout/char-typography.md",
+    "references/layout/block-structure.md",
     "references/handout/styles.md",
     "references/teaching/explanation-depth.md",
     "references/teaching/explanation-density.md",
@@ -3202,6 +3216,7 @@
     "references/assessment/generation.md",
     "references/teaching/interaction.md",
     "references/layout/char-typography.md",
+    "references/layout/block-structure.md",
     "references/data/progress-schema.md",
     "references/subjects/common.md",
     "references/subjects/{group}-review.md",
@@ -3281,6 +3296,7 @@
     "references/assessment/generation.md",
     "references/handout/quality.md",
     "references/layout/char-typography.md",
+    "references/layout/block-structure.md",
     "references/data/reconciliation.md",
     "references/subjects/common.md",
     "references/workflow/coverage-audit.md",
@@ -3464,7 +3480,7 @@
    "consumers": [
     {
      "path": "references/layout/handout-page.md",
-     "anchor": "3. 字体系统：标题、段落、列表",
+     "anchor": "3. 字体系统：尺度、间距与列表版面",
      "role": "application"
     },
     {
@@ -3490,7 +3506,7 @@
    "consumers": [
     {
      "path": "references/layout/handout-page.md",
-     "anchor": "3. 字体系统：标题、段落、列表",
+     "anchor": "3. 字体系统：尺度、间距与列表版面",
      "role": "application"
     }
    ],
