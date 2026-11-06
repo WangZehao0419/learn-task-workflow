@@ -40,11 +40,11 @@
 | verify_explanation | `W-READER` / `W-READER-ALT` / `W-READER-CAPTION` / `W-READER-CONCLUSION` / `W-READER-DEEPNEST` / `W-READER-EMPHASIS` / `W-READER-HEADING` / `W-READER-HEADING-BODY` / `W-READER-INDEX` / `W-READER-LINKTEXT` / `W-READER-LONGLINE` / `W-READER-OVERVIEW` / `W-READER-SVG` / `W-READER-TABLE` / `W-READER-TABLE-ALIGN` | `--reader` 版式项：标题/表格/图注/alt/SVG/速览/索引/结论/强调/链接/长行/嵌套 |
 | verify_explanation | `W-NO-TIER` | 讲义单元缺 tier 标签 |
 | rule_contract | `E-CONTRACT-MISSING` / `E-CONTRACT-INVALID` | 契约缺失 / 畸形 |
-| rule_contract | `E-TOPOLOGY-DAG` / `E-TOPOLOGY-DEADREF` / `E-TOPOLOGY-ERRORCODE` / `E-TOPOLOGY-FILE` / `E-TOPOLOGY-HEADER` / `E-TOPOLOGY-LEADWORDS` / `E-TOPOLOGY-LOAD` / `E-TOPOLOGY-MIRROR` / `E-TOPOLOGY-OWNER` / `E-TOPOLOGY-SCENES` / `E-TOPOLOGY-VERSION` | 依赖成环 / 引用未定义编号或补读小节 / 未声明错误码 / 文件缺失 / 职责头缺失 / lead_words 双写漂移 / 加载指令 / 速查表覆盖缺口 / owner 锚点失效或 intent 正本/marker 失效 / 场景覆盖缺口（含 stack/supplements/intent scene） / 版本不一致 |
+| rule_contract | `E-TOPOLOGY-DAG` / `E-TOPOLOGY-DEADREF` / `E-TOPOLOGY-DESCRIPTION` / `E-TOPOLOGY-ERRORCODE` / `E-TOPOLOGY-FILE` / `E-TOPOLOGY-HEADER` / `E-TOPOLOGY-LEADWORDS` / `E-TOPOLOGY-LOAD` / `E-TOPOLOGY-MIRROR` / `E-TOPOLOGY-OWNER` / `E-TOPOLOGY-POINTER` / `E-TOPOLOGY-SCENES` / `E-TOPOLOGY-TOC` / `E-TOPOLOGY-VERSION` | 依赖成环 / 引用未定义编号或补读小节 / 未声明错误码 / 文件缺失 / 职责头缺失 / lead_words 双写漂移 / 加载指令 / 速查表覆盖缺口 / owner 锚点失效或 intent 正本/marker 失效、契约 owns 与文件头不一致 / 场景覆盖缺口（含 stack/supplements/intent scene） / description 超宿主可见窗口 / 缺指针解析约定或残留裸指针 / 超 100 行缺目录 / 版本不一致 |
 | rule_contract | `E-POINTER-ANCHOR` / `E-POINTER-FILE` / `E-POINTER-LOAD` | 指针目标文件/标题不存在，或 rule 文件在 core 场景引用了不可加载 owner |
-| rule_contract | `E-TOPOLOGY-DEBT` / `E-TOPOLOGY-INTENT` / `E-TOPOLOGY-ORPHAN` / `E-TOPOLOGY-OWNER-DUP` / `E-TOPOLOGY-SCHEMA` / `E-TOPOLOGY-SECTIONNUM` / `E-TOPOLOGY-SUPPLEMENT` / `E-TOPOLOGY-ROUTE` | 指针债务超基线（E-POINTER-LOAD 对数 > constants.pointer_load_baseline，只降不升）/ 规则-intent 映射不闭合 / 磁盘孤儿 / owner 重复 / schema 镜像不一致 / §N 无对应标题 / 补读表漂移 / 场景判别表行内引用的文件在该行主场景不可达 |
+| rule_contract | `E-TOPOLOGY-INTENT` / `E-TOPOLOGY-ORPHAN` / `E-TOPOLOGY-OWNER-DUP` / `E-TOPOLOGY-SCHEMA` / `E-TOPOLOGY-SECTIONNUM` / `E-TOPOLOGY-SUPPLEMENT` / `E-TOPOLOGY-ROUTE` / `E-TOPOLOGY-TABLES` | 规则-intent 映射不闭合 / 磁盘孤儿 / owner 重复 / schema 镜像不一致 / §N 无对应标题 / 补读表漂移、补读目标同时是场景 core / 场景判别表行内引用的文件在该行主场景不可达 / 三张派生表与契约不一致 |
 | rule_contract | `W-TOPOLOGY-HEADING-DUP` / `W-TOPOLOGY-MARKER-SCOPE` | 同级标题重复 / marker 不在 owner 小节内 |
-| verify_load_budget | `E-LOAD-BUDGET` | 加载场景字符量/文件数超预算，或场景内文件缺失 |
+| report_load_footprint | `E-LOAD-STRUCT` | 加载结构不成立：场景文件缺失、同一场景混用多个令牌、补读小节不存在 |
 | prereq_check | `E-LIST-MISSING` / `E-LIST-EMPTY` / `E-SCAN-MISSING` / `W-TERM-UNTAUGHT` | 清单缺失 / 清单零可用行 / 扫描文件缺失；`W-TERM-UNTAUGHT` 为术语对账逐条违规提示（stderr），exit 1 |
 
 > `check_environment.py` 用 `ready` / `needs_setup` / `unavailable` / `manifest_error`（exit 2）状态而不是 E/W 码；`kp_sort.py` 用 exit 1 表示畸形行、依赖环或解释器版本不足。两者详见 `scripts-contract.json`。

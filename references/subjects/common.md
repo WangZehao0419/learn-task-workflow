@@ -4,7 +4,7 @@
 
 ## 三轴与取用顺序
 
-内容类型定策略（`teaching/content-types.md`），学科群定表征与共享策略（本目录 `<群>-*.md`，按场景各取一片），学科包定内容与误区（`disciplines/<学科>.md`）。次序：先群、后包；冲突时群规则优先，学科包只补素材与验收形态，不改流程。
+内容类型定策略（`references/teaching/content-types.md`），学科群定表征与共享策略（本目录 `<群>-*.md`，按场景各取一片），学科包定内容与误区（`disciplines/<学科>.md`）。次序：先群、后包；冲突时群规则优先，学科包只补素材与验收形态，不改流程。
 
 ## 学科 → 学科群
 
@@ -42,11 +42,11 @@
 
 ## 类比与视觉
 
-类比优先级、锚点确证与「不拿类比替代定义」的唯一事实源见 `teaching/explanation-craft.md`「类比纪律」。视觉任务只用原始图／表并记录页码、图号或数据位置；替代禁令与证据资格见 `assessment/scoring.md`「视觉任务证据」。
+类比优先级、锚点确证与「不拿类比替代定义」的唯一事实源见 `references/teaching/explanation-craft.md`「类比纪律」。视觉任务只用原始图／表并记录页码、图号或数据位置；替代禁令与证据资格见 `references/assessment/scoring.md`「视觉任务证据」。
 
 ## 对照源
 
-选源与核验方法见 `workflow/s0-s2-setup.md` 步骤 3。本层不存考纲、分值、题型与合格线数据。
+选源与核验方法见 `references/workflow/s0-s2-setup.md` 步骤 3。本层不存考纲、分值、题型与合格线数据。
 
 ## 应试技巧包（备考型·冲刺期启用）
 

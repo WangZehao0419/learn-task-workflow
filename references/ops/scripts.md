@@ -2,7 +2,7 @@
 
 <!-- owns: 脚本 CLI、退出码、错误码入口、selftest、路径约定、只读/原子写、打包验证；must-not-define: 教学/判分/数据语义（指向 owner） -->
 
-本册是脚本的**操作手册**：怎么调、退出码怎么看、什么时候跑。业务语义在各自 owner：判分见 `assessment/scoring.md`、调度见 `assessment/scheduling.md`，阶段闸口见 `workflow/gates.md`，数据字段见 `data/progress-schema.md`，失败处置见 `ops/failure.md`。
+本册是脚本的**操作手册**：怎么调、退出码怎么看、什么时候跑。业务语义在各自 owner：判分见 `references/assessment/scoring.md`、调度见 `references/assessment/scheduling.md`，阶段闸口见 `references/workflow/gates.md`，数据字段见 `references/data/progress-schema.md`，失败处置见 `references/ops/failure.md`。
 
 ## 脚本清单
 
@@ -42,10 +42,10 @@
 
 **错误码入口**：
 
-- 完整码表与 notes：`contracts/rules.json.errors`（机器名单）+ `contracts/scripts-contract.json`（脚本参数/退出码/notes）；脚本 docstring 只列常用码与实现说明；触发条件速查（人读投影）见 `ops/error-codes.md`「错误码速查」。
+- 完整码表与 notes：`contracts/rules.json.errors`（机器名单）+ `contracts/scripts-contract.json`（脚本参数/退出码/notes）；脚本 docstring 只列常用码与实现说明；触发条件速查（人读投影）见 `references/ops/error-codes.md`「错误码速查」。
 - `progress_check` 的新增码：`E-GATE-RATIO-INVALID`（`节目标线` 非法）、`E-FINAL-INVALID-TARGET`（结课目标线非法，不得回退默认线）。
 - 契约缺失/畸形：`E-CONTRACT-MISSING` / `E-CONTRACT-INVALID`。
-- 业务语义：`assessment/scoring.md` 判分、`assessment/scheduling.md` 调度；`workflow/gates.md` 闸口；`data/progress-schema.md` 字段；`ops/failure.md` 处置。
+- 业务语义：`references/assessment/scoring.md` 判分、`references/assessment/scheduling.md` 调度；`references/workflow/gates.md` 闸口；`references/data/progress-schema.md` 字段；`references/ops/failure.md` 处置。
 
 **读失败与坏数据**：Markdown/SVG 非法 UTF-8、文件不可读 → 结构化 E 码，继续扫描其余文件并最终 exit 1；单条坏数据降级为 W（不拖垮整队列），整体 `scan_status=failed` 必须停止，不得按部分结果继续。
 
@@ -70,16 +70,18 @@ python -B scripts/rule_contract.py --selftest
 python -B scripts/rule_contract.py --topology
 python -B scripts/rule_contract.py --coverage --strict-pointers
 python -B scripts/rule_contract.py --audit
+python -B scripts/rule_contract.py --emit-tables   # 用契约重建 SKILL.md 三张派生表
+python -B scripts/rule_contract.py --check-tables  # 只校验三张表与契约一致
 python -B scripts/rule_contract.py --audit-strict
 python -B evals/verify-formula-typesetting.py
-python -B evals/verify-load-budget.py
-python -B evals/verify-load-budget.py --selftest
-python -B evals/verify-load-budget.py --pointers
+python -B evals/report-load-footprint.py
+python -B evals/report-load-footprint.py --selftest
+python -B evals/report-load-footprint.py --check
 python -B evals/verify-marker-rules.py
 python -B evals/verify-readability.py
 ```
 
-`rule_contract --selftest` 覆盖契约缺失/空文件/非法 JSON/缺键/枚举重复；`--topology` 覆盖无加载指令、职责头齐全、指针可解析、声明依赖无环；`--coverage` 在拓扑之上加场景覆盖（文件/规则挂场景、规则 owner ∈ 场景可加载集 core/叠加/补读、SKILL.md 场景表一致）、intent 正本/marker/consumer 指针与指针闭合（默认开启，`--no-strict-pointers` 可临时关闭）。`verify-load-budget --pointers` 只读报告每场景补读文件数、补读字符与叠加场景最坏字符，补读软上限只 warning。
+`rule_contract --selftest` 覆盖契约缺失/空文件/非法 JSON/缺键/枚举重复；`--topology` 覆盖无加载指令、职责头齐全、契约 owns 与文件头同源、指针可解析、声明依赖无环；`--coverage` 在拓扑之上加场景覆盖（文件/规则挂场景、规则 owner ∈ 场景可加载集 core/叠加/补读、补读目标不得同时是该场景 core、SKILL.md 三张派生表与契约逐字一致）、intent 正本/marker/consumer 指针与指针闭合（默认开启，`--no-strict-pointers` 可临时关闭）、description 落在宿主 catalog 窗口内、SKILL.md 无裸 doc 指针且写明指针解析约定、>100 行的分册带目录。`report-load-footprint` 只读报告每场景 core/补读字符、叠加最坏字符与轮级加载量；`--check` 只校验结构（场景文件存在、单令牌、补读小节可解析），数值一律不参与闸口。
 
 ## 打包与验证
 
@@ -91,6 +93,6 @@ python -B evals/verify-readability.py
 
 ## 当前核验
 
-- 适用版本：9.17.1
-- 核验日期：2026-11-05
+- 适用版本：9.18.0
+- 核验日期：2026-11-06
 - 环境依赖：`skill-dependencies.json`（Python `min_version`）；只有 `check_environment.py` 输出 `ready` 才能继续。

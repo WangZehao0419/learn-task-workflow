@@ -1,8 +1,12 @@
 # 数据根与目录布局
 
-<!-- owns: 数据根（F11）、续学匹配（R28）、目录布局、slug 规则、版本号体系；must-not-define: progress 字段（progress-schema）、稳定引用与对账（reconciliation）、教学流程、判分、exercises/ 文件结构（assessment/exercise-files.md） -->
+<!-- owns: 数据根（F11）、目录布局、slug 规则与冲突处理、版本号体系、三簿分工（数据布局总纲）；must-not-define: progress 字段（progress-schema）、稳定引用与对账（reconciliation）、教学流程、判分、exercises/ 文件结构（assessment/exercise-files.md） -->
 
-题组与判分文件（exercises/）的结构与字段正本：`assessment/exercise-files.md`。
+> 相关正本：`references/data/resume-match.md`「续学匹配（多任务与科目别名）」；`references/data/final-target.md`「结课综合测验目标线（99-）」。
+
+> 何时读：需定位数据根、确认落盘位置时。
+
+题组与判分文件（exercises/）的结构与字段正本：`references/assessment/exercise-files.md`。
 
 ## 数据根（稳定根）
 
@@ -27,20 +31,12 @@
 
 > 冒烟自检：两个不同 cwd 的会话访问同一主题，必须定位到同一 `<数据根>/<slug>/progress.md`（以「数据根」字段与 slug 为准）。
 
-### 续学匹配（多任务与科目别名）
-
-- 命中同名任务 → 续学：只读其 progress.md「当前阶段」，不得覆盖既有文件。
-- 命中多个任务且用户未指名科目 → **列出候选**（科目名 + 当前阶段 + 最近学习日期），请用户选择；不猜、不默认最近一个。
-- 用户指名科目 → 按科目与任务 slug/主题模糊匹配（含别名，如「高数」↔ shaanxi-gaoshu），命中单个即续学。
-- 未命中 → 新任务，从 S0 开始。
-- 枚举异常或为空但怀疑有数据 → 先用 `task_index.py --root` 兜底；`scan_status=partial/failed` 时任务集合不完整，不得当「无任务」处理，停止枚举/续学并修复后重跑。
-
 ## 目录布局
 
 ```
 <数据根>/                          # = <工作区根>/.learning/
 ├── index.json                     # 派生索引（由脚本重建，禁止手改）
-├── profile.md                     # 学习者画像（可选全局文件，跨任务共享；见 `data/profile.md`「学习者画像」）
+├── profile.md                     # 学习者画像（可选全局文件，跨任务共享；见 `references/data/profile.md`「学习者画像」）
 └── <slug>/                        # 每个主题一个目录，单属主免冲突
     ├── progress.md                # 状态簿：状态字段、调度队列、暂缓、交接与续学游标
     ├── 课程体系.md                # 规划簿：章/节/目三级规划 + 目行账本（任务目录第一层，与 progress.md 平级）
@@ -54,14 +50,7 @@
 - `<数据根>/index.json` 是**派生缓存**，由 `<技能根>/scripts/task_index.py` 从各任务的 `progress.md` + `课程体系.md` 重建，**绝不手工编辑**（单一事实源是这两份文件，索引只是它们的物化视图）。**默认不物化**——`task_index.py` 默认只读、不写缓存；需物化时显式加 `--write-index`（写时**原子替换**：同目录临时文件 + `os.replace`，区分「未变化/写入失败」，失败保留原缓存、不产生半截 JSON）；`scan_status=failed` 时**绝不覆盖**既有缓存。
 - 枚举**只扫数据根下第一层**：任务目录 = `<数据根>/<slug>/progress.md`；更深的嵌套目录（如 `<数据根>/a/b/progress.md`）**不在扫描范围**，请勿手动制造深层任务。
 - **编号契约**：`materials/`、`exercises/` 的文件名编号**推荐两位补零**（`01-`、`02-`…）；脚本对「已掌握↔判分记录」的比对**同时接受 `1-` 与 `01-` 两种写法**（宽容匹配），但为一致性仍建议两位补零。文件名中的节名须为**文件系统安全字符**（去除 `/ \ : * ? " < > |` 与首尾空格，含全角标点的节名以连字符替换后落文件名）。
-- **题组与判分文件（exercises/）**：文件结构与字段正本见 `assessment/exercise-files.md`「题组与判分文件（exercises/）」。
-
-### 结课综合测验目标线（99-）
-
-<!-- intent:I-FINAL-TARGET@global -->
-
-- **结课综合测验（`99-`）额外一行**：文件头写 `目标线：a/b`（如 `目标线：4/5`，可写 `目标线：7/10` 这类非 5 题卷）。这是 `progress_check.py` 判达标线的机器可读入口：**不写按契约 `gates.final_ratio` 判**，写了按该值判（`1 ≤ a ≤ b`；`a=0` 视为非法）；**非法值 → `E-FINAL-INVALID-TARGET` 拦停，不得回退默认线**。普通节题组不需要这一行；收紧/放宽达标线却没写这行，脚本仍按契约默认拦停。
-- 判分记录的字段与体例（attempt 行、正式/轻量确认、分型字段）正本见 `assessment/exercise-files.md`「正式/轻量确认（推进确认）」；判分四态、独立性、作废改判、幂等去重与闸口计分口径正本见 `assessment/scoring.md`「判分口径」；目行 KP 编号与「1 目 = 1 KP」正本见 `data/curriculum.md`「课程体系文件」层级口径。
+- **题组与判分文件（exercises/）**：文件结构与字段正本见 `references/assessment/exercise-files.md`「题组与判分文件（exercises/）」。
 
 ## slug 规则与冲突处理
 
@@ -87,5 +76,4 @@
 | 叙事簿 | `<slug>/记忆.md` | 学习日志（事件时间线）、学习记录（任务级洞察）、讲授证据 | 状态字段、规划 |
 | 画像 | `<数据根>/profile.md` | 跨任务学习者画像（见下「学习者画像」） | 任务内洞察（进记忆.md） |
 
-**读写纪律**：续学开场读状态簿恢复游标；开节/重排读规划簿对应章/节；复盘与画像读取读叙事簿。同一信息出现两处 = 结构违规，以本册定义的簿为准并当场去重。判分记录仍在 `exercises/`（单一判分证据源，见 `assessment/exercise-files.md`「题组与判分文件（exercises/）」）。
-
+**读写纪律**：续学开场读状态簿恢复游标；开节/重排读规划簿对应章/节；复盘与画像读取读叙事簿。同一信息出现两处 = 结构违规，以本册定义的簿为准并当场去重。判分记录仍在 `exercises/`（单一判分证据源，见 `references/assessment/exercise-files.md`「题组与判分文件（exercises/）」）。

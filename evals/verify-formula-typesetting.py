@@ -105,7 +105,7 @@ def group_crossrefs(teaching, handout, layout, c):
     h = handout or ""
     lay = layout or ""
     c.check("3.1 handout/ 分册引用 layout/formulas.md", "layout/formulas.md" in h)
-    c.check("3.2 teaching/ 含「新记号/新操作讲透」", "## 新记号/新操作讲透" in t)
+    c.check("3.2 teaching/ 含「新记号/新操作讲透」正本", "新记号/新操作讲透" in t)
     c.check("4.1 layout/ 含「## 图像可视化双轨」", "## 图像可视化双轨" in lay)
     c.check("4.2 handout/ 含「③ 答案」", "③ 答案" in h)
     c.check("4.3 handout/ 含「完整示例」", "完整示例" in h)

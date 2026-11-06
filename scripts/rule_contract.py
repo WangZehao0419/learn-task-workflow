@@ -33,7 +33,7 @@ NUM_REF_RE = re.compile(r"\b([TF]\d{2}|R\d{1,2})\b")
 # 错误码扫描范围：任何提到 E-/W- 码的文件都必须只提契约声明过的码
 SCAN_GLOBS = (
     "scripts/*.py",
-    "evals/verify-*.py",
+    "evals/*.py",
     "references/**/*.md",
     "contracts/scripts-contract.json",
     "SKILL.md",
@@ -385,6 +385,42 @@ def check_rule_tags(files: list, rules: list) -> list:
     return issues
 
 
+OWN_HEAD_RE = re.compile(r"<!--\s*owns:\s*(.*?)-->", re.S)
+
+
+def _owns_header_owns(text: str) -> str | None:
+    """取文件头 `<!-- owns: …；must-not-define: … -->` 里的 owns 段。"""
+    m = OWN_HEAD_RE.search(text)
+    if not m:
+        return None
+    body = m.group(1).split("must-not-define:", 1)[0]
+    return re.sub(r"\s+", " ", body).strip().rstrip("；;").strip()
+
+
+def check_owns_mirror(files: list, root: Path) -> list:
+    """契约 files[].owns 必须与文件头 owns 逐字一致（文件头是唯一事实源）。
+
+    同一份职责声明写两处又无人对账，就必然一边改了、另一边留在原地：v9.18.0 拆册后
+    16 个父册的 owns 头仍宣告已搬走的职责，模型据此判断该读哪册就会读错。契约字段
+    由文件头派生，本检查把漂移变成机器可拦的错误。
+    """
+    issues = []
+    for f in files:
+        rel = f["path"]
+        if not rel.endswith(".md"):
+            continue
+        p = root / rel
+        if not p.exists():
+            continue
+        head = _owns_header_owns(p.read_text(encoding="utf-8", errors="replace"))
+        if head is None:
+            continue  # 缺头由 E-TOPOLOGY-HEADER 报
+        if head != re.sub(r"\s+", " ", str(f.get("owns", ""))).strip():
+            issues.append("E-TOPOLOGY-OWNER: %s 契约 owns 与文件头不一致（契约须由文件头派生）"
+                          % rel)
+    return issues
+
+
 def check_lead_words(contract_words: list, text: str) -> list:
     """layout/char-typography.md canonical 集合与契约 headings.lead_words 双写一致。"""
     m = re.search(r"\*\*canonical 集合\*\*[^：]*：(.+)", text)
@@ -434,6 +470,9 @@ def _expand_files(files_list: list, token_names: dict) -> list:
             continue
         out.extend(f.replace(toks[0], n) for n in token_names[toks[0]])
     return out
+
+
+INTENT_LOCAL = "local"  # 补读小节无跨文件意图时的占位值
 
 
 def check_scenes(data: dict, root: Path) -> tuple[list, dict]:
@@ -487,9 +526,13 @@ def check_scenes(data: dict, root: Path) -> tuple[list, dict]:
             target = item.get("file")
             if not target or not (root / target).exists():
                 issues.append("E-TOPOLOGY-SCENES: 场景 %s supplement 文件不存在 %s" % (sid, target))
-            if item.get("intent") not in intent_keys:
+            if item.get("intent") not in intent_keys and item.get("intent") != INTENT_LOCAL:
                 issues.append("E-TOPOLOGY-SCENES: 场景 %s supplement intent 未定义 %s"
                               % (sid, item.get("intent")))
+            # 补读目标不得同时是该场景 core：整册已读还补读=自相矛盾（拆册时最容易误留）
+            if target and target in expanded.get(sid, set()):
+                issues.append("E-TOPOLOGY-SUPPLEMENT: 场景 %s 补读目标同时是 core %s"
+                              % (sid, target))
 
     def _stack_cycle(start):
         pending = [(start, [start])]
@@ -631,31 +674,167 @@ def check_intent_pointers(data: dict, root: Path, expanded: dict) -> list:
     return issues
 
 
-def check_load_table(root: Path, data: dict, expanded: dict) -> list:
-    """SKILL.md 加载场景表与契约 scenes 一致（E-TOPOLOGY-SCENES）。"""
+TABLE_HEAD_LOAD = "| 场景 | 动作 | 加载 |"
+TABLE_HEAD_STACK = "| 基础场景 | 可叠加场景 | 触发 |"
+TABLE_HEAD_SUPP = "| 场景 | 补读 | 触发 | 正本 intent |"
+SEP_LOAD = "|---|---|---|"
+SEP_STACK = "|---|---|---|"
+SEP_SUPP = "|---|---|---|---|"
+
+NL = chr(10)
+
+
+def render_load_table(data: dict) -> str:
+    """从 scenes 渲染加载场景表（含表头与分隔行）。"""
+    rows = []
+    for sid, sc in data["scenes"].items():
+        files = " · ".join("`%s`" % f for f in sc["files"])
+        rows.append("| `%s` | %s | %s |" % (sid, sc.get("label", ""), files))
+    return NL.join([TABLE_HEAD_LOAD, SEP_LOAD] + rows)
+
+
+def render_stack_table(data: dict) -> str:
+    """从 scenes[].stack 渲染场景叠加表（含表头与分隔行）。"""
+    rows = []
+    for sid, sc in data["scenes"].items():
+        stack = sc.get("stack") or []
+        if not stack:
+            continue
+        scenes = " · ".join("`%s`" % x["scene"] for x in stack)
+        whens = []
+        for x in stack:
+            if x.get("when") and x["when"] not in whens:
+                whens.append(x["when"])
+        rows.append("| `%s` | %s | %s |" % (sid, scenes, " / ".join(whens)))
+    return NL.join([TABLE_HEAD_STACK, SEP_STACK] + rows)
+
+
+def render_supp_table(data: dict) -> str:
+    """从 scenes[].supplements 渲染补读表（含表头与分隔行）。"""
+    rows = []
+    for sid, sc in data["scenes"].items():
+        for item in sc.get("supplements") or []:
+            rows.append("| `%s` | `%s`「%s」 | %s | `%s` |"
+                        % (sid, item["file"], item["section"], item["when"],
+                           item["intent"]))
+    return NL.join([TABLE_HEAD_SUPP, SEP_SUPP] + rows)
+
+
+def _table_span(text: str, head: str) -> tuple:
+    """返回 SKILL.md 中该表的 [start, end) 区间；表以空行结束。"""
+    i = text.find(head)
+    if i == -1:
+        return (-1, -1)
+    j = text.find(NL + NL, i)
+    return (i, j if j != -1 else len(text))
+
+
+def emit_tables(root: Path, data: dict) -> str:
+    """就地重写 SKILL.md 三张派生表，返回改后全文。"""
+    path = root / "SKILL.md"
+    text = path.read_text(encoding="utf-8")
+    for render in (render_load_table, render_stack_table, render_supp_table):
+        head = render(data).split(NL, 1)[0]
+        start, end = _table_span(text, head)
+        if start == -1:
+            continue
+        text = text[:start] + render(data) + text[end:]
+    path.write_text(text, encoding="utf-8")
+    return text
+
+
+def check_tables(root: Path, data: dict) -> list:
+    """三张派生表必须与契约逐字一致（E-TOPOLOGY-TABLES）。"""
     issues = []
-    token_names = _token_names(data)
     text = (root / "SKILL.md").read_text(encoding="utf-8", errors="replace")
-    start = text.find("## 加载场景表")
-    end = text.find("## 场景叠加与补读")
-    if start != -1 and end > start:
-        text = text[start:end]
-    rows = {}
-    for ln in text.splitlines():
-        m = re.match(r"^\|\s*`([a-z0-9-]+)`\s*\|", ln)
-        if not m:
+    for name, render in (("load", render_load_table),
+                         ("stack", render_stack_table),
+                         ("supp", render_supp_table)):
+        want = render(data)
+        start, end = _table_span(text, want.split(NL, 1)[0])
+        if start == -1:
+            issues.append("E-TOPOLOGY-TABLES: SKILL.md 缺表 %s" % name)
+        elif text[start:end] != want:
+            issues.append("E-TOPOLOGY-TABLES: SKILL.md 表 %s 与契约不一致（用 --emit-tables 重建）" % name)
+    return issues
+
+
+DESCRIPTION_MAX = 497  # 宿主 catalog 只喂前 497 字符（DEFAULT_CATALOG_DESCRIPTION_MAX_LENGTH=500）
+TOC_MIN_LINES = 100
+
+PTR_ANY_RE = re.compile(r"`([^`]+\.md)(#[^`]+)?`")
+
+
+def _frontmatter_description(text: str) -> str | None:
+    m = re.search(r"(?m)^description:\s*(.+?)\s*$", text)
+    return m.group(1) if m else None
+
+
+def check_description(root: Path) -> list:
+    """frontmatter description 必须落在宿主可见窗口内（E-TOPOLOGY-DESCRIPTION）。"""
+    issues = []
+    path = root / "SKILL.md"
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ["E-TOPOLOGY-DESCRIPTION: SKILL.md 不可读"]
+    desc = _frontmatter_description(text)
+    if desc is None:
+        return ["E-TOPOLOGY-DESCRIPTION: SKILL.md frontmatter 缺 description"]
+    n = len(desc)
+    if n > DESCRIPTION_MAX:
+        issues.append("E-TOPOLOGY-DESCRIPTION: description %d 字符 > %d，超出宿主 catalog 可见窗口"
+                      % (n, DESCRIPTION_MAX))
+    return issues
+
+
+def _bare_pointer_targets(root: Path, text: str) -> list:
+    """返回既不在技能根、也不带 references/ 前缀的 doc 指针（说明它不是数据文件名）。"""
+    out = []
+    for tok in PTR_ANY_RE.findall(text):
+        rel = tok[0] if isinstance(tok, tuple) else tok
+        if rel.startswith(("references/", "scripts/", "evals/", "contracts/",
+                           "docs/", "materials/", "exercises/", "outputs/", "SKILL.md")):
             continue
-        rows[m.group(1)] = set(_expand_files(
-            re.findall(r"`(references/[^`]+)`", ln), token_names))
-    for sid in data["scenes"]:
-        if sid not in rows:
-            issues.append("E-TOPOLOGY-SCENES: SKILL.md 场景表缺行 %s" % sid)
+        if "{" in rel or "*" in rel or "<" in rel or rel.startswith("..."):
             continue
-        want = expanded.get(sid, set())
-        got = rows[sid]
-        if got != want:
-            issues.append("E-TOPOLOGY-SCENES: SKILL.md 场景 %s 文件不符（缺 %s 多 %s）"
-                          % (sid, sorted(want - got), sorted(got - want)))
+        if (root / rel).exists():
+            continue
+        if (root / "references" / rel).exists():
+            out.append(rel)
+    return out
+
+
+def check_pointer_convention(root: Path) -> list:
+    """SKILL.md 必须写明指针解析约定，且自身不残留裸 doc 指针（E-TOPOLOGY-POINTER）。"""
+    issues = []
+    path = root / "SKILL.md"
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ["E-TOPOLOGY-POINTER: SKILL.md 不可读"]
+    if "指针解析约定" not in text:
+        issues.append("E-TOPOLOGY-POINTER: SKILL.md 缺「指针解析约定」小节")
+    bare = _bare_pointer_targets(root, text)
+    if bare:
+        issues.append("E-TOPOLOGY-POINTER: SKILL.md 残留裸 doc 指针 %s"
+                      % ", ".join(sorted(set(bare))[:5]))
+    return issues
+
+
+def check_reference_toc(data: dict, root: Path) -> list:
+    """> 100 行的 reference 必须给目录，否则模型预览读不全（E-TOPOLOGY-TOC）。"""
+    issues = []
+    for f in data.get("files", []):
+        rel = f["path"]
+        p = root / rel
+        if not p.exists():
+            continue
+        lines = p.read_text(encoding="utf-8", errors="replace").splitlines()
+        if len(lines) <= TOC_MIN_LINES:
+            continue
+        if not any(x.strip() in ("## 目录", "## 本册目录", "## TOC") for x in lines):
+            issues.append("E-TOPOLOGY-TOC: %s 有 %d 行但缺「## 目录」" % (rel, len(lines)))
     return issues
 
 
@@ -706,8 +885,12 @@ def coverage(path: Path | None = None, strict: bool = True) -> dict:
     issues = list(base["issues"])
     scene_issues, expanded = check_scenes(data, root)
     issues += scene_issues
-    issues += check_load_table(root, data, expanded)
+    issues += check_tables(root, data)
+    issues += check_description(root)
+    issues += check_pointer_convention(root)
+    issues += check_reference_toc(data, root)
     issues += check_intents(data, root, expanded)
+    issues += check_owns_mirror(data["files"], root)
     if strict:
         issues += check_intent_pointers(data, root, expanded)
     return {
@@ -782,6 +965,9 @@ def topology(path: Path | None = None) -> dict:
 
     # 3.5 owns 中（Rnn）标签归属（v9.16.1，防契约 owns 与规则 owner 漂移）
     issues += check_rule_tags(files, data["rules"])
+
+    # 3.6 契约 owns 与文件头 owns 同源（文件头是唯一事实源）
+    issues += check_owns_mirror(files, root)
 
     # 5. 依赖无环
     ok, msg = _dag(files)
@@ -1043,6 +1229,21 @@ def _selftest() -> int:
 
     chk("owns rule tag drift detected", rule_tags_catch)
 
+    def owns_mirror_ok():
+        d = load()
+        assert not check_owns_mirror(d["files"], skill_root()), "契约 owns 应与文件头一致"
+
+    chk("owns mirror to file header", owns_mirror_ok)
+
+    def owns_mirror_catch(tmp=None):
+        root = skill_root()
+        f = next(f for f in load()["files"] if f["path"].endswith(".md"))
+        bad = [dict(f, owns="另一个职责")]
+        issues = check_owns_mirror(bad, root)
+        assert len(issues) == 1 and issues[0].startswith("E-TOPOLOGY-OWNER"), issues
+
+    chk("owns mirror drift detected", owns_mirror_catch)
+
     def cov_ok():
         r = coverage()
         assert r["ok"], r["issues"]
@@ -1105,21 +1306,20 @@ def _selftest() -> int:
 
     chk("token expansion", token_expand)
 
-    def loadtable_drift():
+    def tables_drift():
         root = skill_root()
         d = load()
-        _, expanded = check_scenes(d, root)
         text = (root / "SKILL.md").read_text(encoding="utf-8", errors="replace")
-        bad = text.replace("references/layout/formulas.md", "references/layout/formulasX.md", 1)
+        bad = text.replace("| `s3-teach` |", "| `s3-teach` | 手改 |", 1)
         before = (root / "SKILL.md").read_bytes()
         with tempfile.TemporaryDirectory() as td:
             (Path(td) / "SKILL.md").write_text(bad, encoding="utf-8")
-            issues = check_load_table(Path(td), d, expanded)
+            issues = check_tables(Path(td), d)
         after = (root / "SKILL.md").read_bytes()
         assert before == after, "selftest must not modify real SKILL.md"
-        assert issues and all(i.startswith("E-TOPOLOGY-SCENES") for i in issues), issues
+        assert any("表 load" in i for i in issues), issues
 
-    chk("load table drift detected", loadtable_drift)
+    chk("derived tables drift detected", tables_drift)
 
     def intent_dup():
         d = json.loads(default_path().read_text(encoding="utf-8"))
@@ -1210,6 +1410,20 @@ def _selftest() -> int:
 
     chk("supplement section missing detected", supplement_section_missing)
 
+    def supplement_target_is_core():
+        d = json.loads(default_path().read_text(encoding="utf-8"))
+        core_file = d["scenes"]["s3-teach"]["files"][0]
+        d["scenes"]["s3-teach"]["supplements"].append({
+            "file": core_file,
+            "section": "任意",
+            "when": "selftest",
+            "intent": INTENT_LOCAL,
+        })
+        issues, _ = check_scenes(d, skill_root())
+        assert any("补读目标同时是 core" in i for i in issues), issues
+
+    chk("supplement target equal to core detected", supplement_target_is_core)
+
     def skill_supplement_drift():
         root = skill_root()
         text = (root / "SKILL.md").read_text(encoding="utf-8", errors="replace")
@@ -1264,6 +1478,66 @@ def _selftest() -> int:
             assert not check_route(data, root, expanded), "补读命中后不应再报"
 
     chk("route unreachable detected", route_unreachable_detected)
+
+    def description_over_budget():
+        root = skill_root()
+        text = (root / "SKILL.md").read_text(encoding="utf-8", errors="replace")
+        desc = _frontmatter_description(text) or ""
+        bad = text.replace("description: " + desc,
+                           "description: " + "长" * (DESCRIPTION_MAX + 1), 1)
+        with tempfile.TemporaryDirectory() as td:
+            (Path(td) / "SKILL.md").write_text(bad, encoding="utf-8")
+            issues = check_description(Path(td))
+        assert any("E-TOPOLOGY-DESCRIPTION" in i for i in issues), issues
+        ok = text.replace("description: " + desc, "description: 短说明", 1)
+        with tempfile.TemporaryDirectory() as td:
+            (Path(td) / "SKILL.md").write_text(ok, encoding="utf-8")
+            assert check_description(Path(td)) == [], "短 description 不应报"
+
+    chk("description over host window detected", description_over_budget)
+
+    def bare_pointer_detected():
+        root = skill_root()
+        text = (root / "SKILL.md").read_text(encoding="utf-8", errors="replace")
+        bad = text.replace("指针解析约定", "指针说明", 1) + NL + NL + "见 `teaching/lesson-flow.md`。" + NL
+        with tempfile.TemporaryDirectory() as td:
+            tdp = Path(td)
+            (tdp / "SKILL.md").write_text(bad, encoding="utf-8")
+            (tdp / "references" / "teaching").mkdir(parents=True, exist_ok=True)
+            (tdp / "references" / "teaching" / "lesson-flow.md").write_text("# x", encoding="utf-8")
+            issues = check_pointer_convention(tdp)
+        assert any("缺「指针解析约定」" in i for i in issues), issues
+        assert any("裸 doc 指针" in i for i in issues), issues
+
+    chk("bare pointer / missing convention detected", bare_pointer_detected)
+
+    def toc_missing_detected():
+        with tempfile.TemporaryDirectory() as td:
+            tdp = Path(td)
+            (tdp / "references").mkdir()
+            big = tdp / "references" / "big.md"
+            big.write_text("# t" + NL + NL + NL.join("行 %d" % i for i in range(120)),
+                           encoding="utf-8")
+            d = {"files": [{"path": "references/big.md"}]}
+            issues = check_reference_toc(d, tdp)
+            assert any("E-TOPOLOGY-TOC" in i for i in issues), issues
+            big.write_text("# t" + NL + NL + "## 目录" + NL + NL + "- a", encoding="utf-8")
+            assert check_reference_toc(d, tdp) == []
+
+    chk("reference without TOC detected", toc_missing_detected)
+
+    def supplement_local_allowed():
+        d = load()
+        root = skill_root()
+        d2 = json.loads(json.dumps(d))
+        for sc in d2["scenes"].values():
+            for item in sc.get("supplements", []):
+                item["intent"] = INTENT_LOCAL
+        issues, _ = check_scenes(d2, root)
+        assert not [i for i in issues if "supplement intent 未定义" in i], issues
+
+    chk("supplement intent=local allowed", supplement_local_allowed)
+
 
     if failures:
         print("SELFTEST FAILED:", ", ".join(failures))
@@ -1530,22 +1804,20 @@ def _parse_skill_supplements(text: str, root: Path) -> set:
         files = re.findall(r"`([^`]+\.md)`", ln)
         sections = re.findall(r"「([^」]+)」", ln)
         intents = re.findall(r"`(I-[A-Z0-9-]+@[a-z]+)`", ln)
-        if len(files) == 1 and len(sections) == 1 and len(intents) == 1:
+        local = "`%s`" % INTENT_LOCAL in ln
+        if len(files) == 1 and len(sections) == 1 and (len(intents) == 1 or local):
             f = files[0]
             f = _normalize_target(root, f)
             if f:
-                out.add((sid, f, sections[0], intents[0]))
+                out.add((sid, f, sections[0], intents[0] if intents else INTENT_LOCAL))
     return out
 
 
 def check_supplement_audit(data: dict, root: Path) -> list:
     issues = []
-    max_per = data["constants"]["scenes_budget"].get("supplements_per_scene_max")
     declared = set()
     for sid, sc in data["scenes"].items():
         items = sc.get("supplements", [])
-        if max_per is not None and len(items) > max_per:
-            issues.append("E-TOPOLOGY-SUPPLEMENT: 场景 %s 补读 %d > %d" % (sid, len(items), max_per))
         for s in items:
             declared.add((sid, s["file"], s["section"], s.get("intent", "")))
     text = (root / "SKILL.md").read_text(encoding="utf-8", errors="replace")
@@ -1555,20 +1827,6 @@ def check_supplement_audit(data: dict, root: Path) -> list:
     for row in sorted(actual - declared):
         issues.append("E-TOPOLOGY-SUPPLEMENT: SKILL 补读表多 %s" % (row,))
     return issues
-
-
-def check_load_table_extra(data: dict, root: Path) -> list:
-    text = (root / "SKILL.md").read_text(encoding="utf-8", errors="replace")
-    start = text.find("## 加载场景表")
-    end = text.find("## 场景叠加与补读")
-    block = text[start:end if end > start else len(text)]
-    rows = set()
-    for ln in block.splitlines():
-        m = re.match(r"^\|\s*`([a-z0-9-]+)`\s*\|", ln)
-        if m:
-            rows.add(m.group(1))
-    extra = rows - set(data["scenes"])
-    return ["E-TOPOLOGY-SCENES: SKILL 场景表多余行 %s" % s for s in sorted(extra)]
 
 
 def check_schema_mirror(data: dict, root: Path) -> list:
@@ -1625,14 +1883,9 @@ def audit(data: dict, root: Path) -> dict:
     issues += check_heading_unique(data, root)
     issues += check_marker_scope(data, root)
     issues += check_supplement_audit(data, root)
-    issues += check_load_table_extra(data, root)
     issues += check_schema_mirror(data, root)
     issues += check_section_number_refs(data, root)
     load = check_pointer_loadability(data, root, expanded)
-    baseline = data.get("constants", {}).get("pointer_load_baseline")
-    if baseline is not None and len(load) > baseline:
-        issues.append("E-TOPOLOGY-DEBT: E-POINTER-LOAD 对数 %d > pointer_load_baseline %s（只降不升）"
-                      % (len(load), baseline))
     # 报告模式：全部列出；调用方人工分诊
     return {
         "mode": "audit",
@@ -1640,7 +1893,6 @@ def audit(data: dict, root: Path) -> dict:
         "rules": len(data["rules"]),
         "scenes": len(data["scenes"]),
         "intents": len(data.get("intents", [])),
-        "pointer_debt": {"count": len(load), "baseline": baseline},
         "scene_issues": scene_issues,
         "pointer_issues": [i for i in issues if i.startswith("E-POINTER")],
         "contract_issues": [i for i in issues if not i.startswith("E-POINTER")],
@@ -1661,6 +1913,10 @@ def main(argv=None) -> int:
     g.add_argument("--coverage", action="store_true")
     g.add_argument("--audit", action="store_true")
     g.add_argument("--audit-strict", action="store_true")
+    g.add_argument("--emit-tables", action="store_true",
+                   help="用契约重建 SKILL.md 的加载/叠加/补读三张表")
+    g.add_argument("--check-tables", action="store_true",
+                   help="只校验三张表与契约一致（不一致 rc=1）")
     g.add_argument("--get", metavar="DOTTED", help="调试用：按键路径读取契约值")
     ap.add_argument("--strict-pointers", action="store_true",
                     help="显式开启指针闭合检查（当前默认开启）")
@@ -1674,6 +1930,17 @@ def main(argv=None) -> int:
             r = topology()
             print(json.dumps(r, ensure_ascii=False, indent=1))
             return 0 if r["ok"] else 1
+        if args.emit_tables:
+            d = load()
+            emit_tables(skill_root(), d)
+            print(json.dumps({"ok": True, "emitted": ["load", "stack", "supp"]},
+                             ensure_ascii=False))
+            return 0
+        if args.check_tables:
+            d = load()
+            issues = check_tables(skill_root(), d)
+            print(json.dumps({"ok": not issues, "issues": issues}, ensure_ascii=False, indent=1))
+            return 0 if not issues else 1
         if args.audit or args.audit_strict:
             d = load()
             r = audit(d, skill_root())

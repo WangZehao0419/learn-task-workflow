@@ -2,7 +2,7 @@
 
 <!-- owns: 类型判定与四类矩阵（①–⑤ 输出面）；must-not-define: 支持级/状态层（support-levels）、六套风格（styles）、单元 schema（unit-schema）、版式（typography）、来源（quality） -->
 
-> 已迁出：支持级/状态层→`handout/support-levels.md`；六套风格→`handout/styles.md`；单元 schema→`handout/unit-schema.md`。
+> 已迁出：支持级→`references/handout/support-levels-core.md`「6. L1/L2/L3 支持级」、状态层→`references/handout/support-levels.md`「7. 学习者状态层」；六套风格→`references/handout/styles.md`「六套风格选型」（默认骨架见 `references/handout/style-standard.md`「标准讲义（默认）」）；单元 schema→`references/handout/unit-schema.md`。
 
 ## 4. 类型模板（阶段 2）
 
@@ -26,9 +26,9 @@
 | 设计 | 设计/评估什么，约束是什么 | 权衡、备选、评价标准 | `方案：`/`设计说明：`+权衡+标准 | 忽略约束/单一指标/过早定案 | 权衡句（目标/约束/取舍） | 案例分析（改一个约束）/ 新约束或替代方案 |
 
 - **类型决定证据形态，风格决定呈现，学科提供素材**。六套风格不扩；类型模板不是第七套风格。
-- 类型化自测：配对 = 同构；迁移 = 只换一个维度；四证动词按 `handout/pipeline.md` §3.1 调整。
+- 类型化自测：配对 = 同构；迁移 = 只换一个维度；四证动词按 `references/handout/pipeline.md` §3.1 调整。
 - 类型化误区（预判）：记忆=线索混淆/干扰；概念=过度泛化/假类比/相邻概念混装；程序=步骤遗漏/顺序/条件/单位；设计=忽略约束/单一指标/过早定案。
-- 类型化误区是**预判清单**；实际错因仍按 `teaching/interaction-diagnosis.md`「错因分类与补救（T10）」六类（未教/遗忘/误解/方法选择/执行偏差/过度泛化）诊断，不替代错因分类。
-- 单元数按 `handout/pipeline.md` §2.8 执行，本册不复述数值。
-- ③ 形态与标识按 `handout/pipeline.md` §2.3/§2.2：设计用 `方案：`/`设计说明：`，接受多解+标准；概念用 `答：`/`参考答案：`+例/非例；程序用 `解：`/`步骤：`/`代码：`；记忆用 `答案：`/`答：` 或纯记忆豁免。
+- 类型化误区是**预判清单**；实际错因仍按 `references/teaching/interaction-diagnosis.md`「错因分类与补救（T10）」六类（未教/遗忘/误解/方法选择/执行偏差/过度泛化）诊断，不替代错因分类。
+- 单元数按 `references/handout/pipeline.md` §2.8 执行，本册不复述数值。
+- ③ 形态与标识按 `references/handout/pipeline.md` §2.3/§2.2：设计用 `方案：`/`设计说明：`，接受多解+标准；概念用 `答：`/`参考答案：`+例/非例；程序用 `解：`/`步骤：`/`代码：`；记忆用 `答案：`/`答：` 或纯记忆豁免。
 - 类型标签可选；tier 标签仍必须有；两者不要混成同一个标签。

@@ -6,7 +6,7 @@
 
 归 **数学与统计群**。默认内容类型分布：程序型（求导、积分、解方程）约六成，概念型（极限、连续、可导）约三成，记忆型（导数表、积分表、常见展开）与设计型（建模、应用题）各少量。
 
-本包只承载**微积分特有**的内容与误区；符号操作、变式设计、答案形态等通用规则见 `subjects/math-practice.md` 与 `subjects/math-teach.md`。
+本包只承载**微积分特有**的内容与误区；符号操作、变式设计、答案形态等通用规则见 `references/subjects/math-practice.md` 与 `references/subjects/math-teach.md`。
 
 ## 内容结构与前置链
 
@@ -63,6 +63,6 @@
 
 ## 与群切片的接口
 
-- 群级误区库（等号当光标、分数分子分母各加、去括号只乘首项等）与本包误区库**都取**，消费优先级按 `subjects/common.md`「误区库消费纪律」（本学员历史错因 ＞ 学科包 ＞ 群级 ＞ 通识）——代数变形错误占失误大头，两边都要备。
-- CRA 序（`teaching/explanation-craft.md`「新记号/新操作讲透」）与群级的解后验算、变式、交错规则（`subjects/math-teach.md`、`subjects/math-practice.md`）全部适用，本包不重复。
+- 群级误区库（等号当光标、分数分子分母各加、去括号只乘首项等）与本包误区库**都取**，消费优先级按 `references/subjects/common.md`「误区库消费纪律」（本学员历史错因 ＞ 学科包 ＞ 群级 ＞ 通识）——代数变形错误占失误大头，两边都要备。
+- CRA 序（`references/teaching/notation.md`「新记号/新操作讲透（所有风格共用，硬规则）」）与群级的解后验算、变式、交错规则（`references/subjects/math-teach.md`、`references/subjects/math-practice.md`）全部适用，本包不重复。
 - 本包独有的「导数两条路」「APOS 阶段」「级数收敛判据」在群切片里没有对应条目，讲授时必须补。

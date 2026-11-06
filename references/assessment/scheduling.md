@@ -1,6 +1,8 @@
-# 间隔调度与复习预算
+# 间隔调度与调度数据语义
 
-<!-- owns: 间隔调度、调用速查、due-queue 与复习预算、校准画像、调度数据语义；must-not-define: S4 流程与复习债治理（s4-review）、判分口径、出题流水线 -->
+<!-- owns: 间隔调度、调用速查、校准画像、调度数据语义；must-not-define: S4 流程与复习债治理（s4-review）、判分口径、出题流水线 -->
+
+> 相关正本：`references/assessment/question-scope.md`「出题范围与未讲授过滤（R35）」；`references/assessment/due-queue.md`「due-queue 与复习预算」。
 
 ## 间隔调度
 
@@ -12,20 +14,10 @@
 
 - **新条目首次调度**（S3 新产生的薄弱点 / 错题 / 保持复习）：
   `python "<技能根>/scripts/scheduler.py" next-interval --grade <判分档> --new-card --last <今天> --today <今天> [--init-shift {-1|0|1}]`
-  —— grade 取该条判分档（判错=again）；保持复习初始条目用 `--grade good`（例外：学员要求加速的同日清除按 `--grade hard` 档入保持，见 `workflow/s4-review.md`「S4 复习巩固」闸口）；`--init-shift` 影响初始 D：顺向检索 -1（默认 0），反向问 / 迁移 +1；返回 stability_new / difficulty_new / due。
+  —— grade 取该条判分档（判错=again）；保持复习初始条目用 `--grade good`（例外：学员要求加速的同日清除按 `--grade hard` 档入保持，见 `references/workflow/s4-review.md`「S4 复习巩固」闸口）；`--init-shift` 影响初始 D：顺向检索 -1（默认 0），反向问 / 迁移 +1；返回 stability_new / difficulty_new / due。
 - **既有条目复习判分**（S4）：
   `python "<技能根>/scripts/scheduler.py" next-interval --grade <grade> --stability <S> --difficulty <D> --last <last> --today <今天> [--current-due <原due>]`。
   **同会话重复答对**（`--last` 与 `--today` 同日）：必须同时传 `--current-due <原due>`；脚本返回 `same_session=true` 并原样返回该 due，S/D 不变——只刷新召回，不把一天内反复刷题记成长期保持。非同日复习不传 `--current-due`。保持复习按同一命令更新；`partial` 用 `again`，`未判/作废` 不写 S/D。前提：`due` 由脚本生成、不要手改；手改 due 的条目先按当前 S 与手工 due 对齐后再复习。
-
-### due-queue 与复习预算
-
-<!-- intent:I-DUE-QUEUE@global -->
-
-- `due-queue` 同时读取「薄弱点」「错题本」「保持复习」三区，输出 `kind` 与 `reason`，schema 以契约为准；刚入库/当日的条目不重复入队。
-- **未讲授过滤（R35 前置）**：未讲授条目不入队、转安排对应讲授（先教后练）；口径唯一事实源见 `assessment/generation.md`「出题范围与未讲授过滤」。
-- 进入新节前按本次可用时间设预算（复习不超过约 1/3 课时，其余留给新内容）；队列非空 → 优先清「关键先修 + 高影响错误（cw / 顽固）+ 到期的保持复习」，其余显式顺延（保留原到期日并在进度对账中可见）；队列长（>5 条）→ 明示队列长度与顺延方案，默认按预算顺延并继续新内容、不空等批准。
-- 排序契约：cw → 最逾期 → due 早 → 稳定序；`顽固` 条目标 `teach:true`（排序不豁免），由模型据文本规则改走重教。
-- 缺日期/坏条目的口径见 `data/layout.md`：缺日期不入队、`W-UNPARSED-ITEM`；不得以当日或猜值补造。
 
 ### 校准画像
 
@@ -43,6 +35,6 @@
 
 ## 调度数据语义
 
-字段格式、默认值与解析器口径以 `data/layout.md` 为准；本册只保留评估侧语义：
+字段格式、默认值与解析器口径以 `references/data/layout.md` 为准；本册只保留评估侧语义：
 
 - **错因是语义属性**：缺省值只是脚本输出侧的占位回显（`meta_default:true`），模型侧必须按当下归因判断写入真实值；不得盲目补「知识性」把技巧性失误误导到重学。

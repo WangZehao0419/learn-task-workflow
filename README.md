@@ -18,18 +18,18 @@ python scripts/check_environment.py
 ## 架构
 
 - `SKILL.md` —— 路由与加载调度：21 个场景按轮次取用，叠加与补读另计；场景核心集见其中的加载场景表。
-- `references/`（95 册）—— 规则正本，每册头部有 `owns / must-not-define` 职责声明。
-- `contracts/rules.json` —— 机器契约：枚举 / 阈值 / 预算 / 错误码 / 44 条跨文件意图。
+- `references/`（126 册）—— 规则正本，每册头部有 `owns / must-not-define` 职责声明。
+- `contracts/rules.json` —— 机器契约：枚举 / 阈值 / 错误码 / 45 条跨文件意图。
 - `scripts/`（10 个，stdlib-only、幂等只读）—— 进度校验、判分证据验证、间隔调度、契约校验。
 - `evals/` —— 行为级验收脚本与夹具。
 
-分册职责的唯一事实源是文件头声明与 `contracts/rules.json` 的 `files[]`；目录级导航见 `SKILL.md`「参考文件（按需加载）」。
+分册职责的唯一事实源是文件头声明；`contracts/rules.json` 的 `files[].owns` 由文件头派生并经 `rule_contract.py` 逐字核对。目录级导航见 `SKILL.md`「参考文件（按需加载）」。
 
 ## 自检
 
 ```bash
 python -B scripts/rule_contract.py --selftest
-python -B evals/verify-load-budget.py
+python -B evals/report-load-footprint.py --check
 ```
 
 全部脚本命令、退出码与 selftest 清单见 `references/ops/scripts.md`。

@@ -1,7 +1,7 @@
 {
  "schema": "ltw-evals/2",
  "skill": "learn-task-workflow",
- "applies_to_version": "9.17.1",
+ "applies_to_version": "9.18.0",
  "updated_at": "2026-11-04",
  "grading_axes": [
   "教学正确性",
@@ -58,7 +58,7 @@
   },
   "阻断规则": "阻断型用例的学科内容/结构渲染/边界必须为 2，其他适用项不得低于 1。"
  },
- "machine_evidence_ref": "包内八个命令模块 --selftest（task_index / progress_check / scheduler / kp_sort / prereq_check / check_environment / verify_explanation / rule_contract）与 rule_contract --topology 退出 0；evals/ 四个 verify-*.py 行为/结构测试退出 0（verify-formula-typesetting、verify-load-budget、verify-marker-rules、verify-readability）。以上均为静态/行为级证据，不是真人教学回放。读者版检查：ltw_typography 模块（W-READER-* 系列）随 verify_explanation --selftest 与 evals/verify-readability.py 回归；v9.17.0 起不再提供文件结构闸口。",
+ "machine_evidence_ref": "包内八个命令模块 --selftest（task_index / progress_check / scheduler / kp_sort / prereq_check / check_environment / verify_explanation / rule_contract）与 rule_contract --topology 退出 0；evals/ 三个 verify-*.py 行为/结构测试退出 0（verify-formula-typesetting、verify-marker-rules、verify-readability）与 report-load-footprint.py --check 退出 0。以上均为静态/行为级证据，不是真人教学回放。读者版检查：ltw_typography 模块（W-READER-* 系列）随 verify_explanation --selftest 与 evals/verify-readability.py 回归；v9.17.0 起不再提供文件结构闸口。",
  "cases": [
   {
    "id": "E01",
@@ -168,7 +168,7 @@
    "scenario": "等差数列通项新记号",
    "kind": "human",
    "prompt": "解释等差数列通项公式 a_n=a_1+(n-1)d 中每个符号的含义，并给一个正确代入的例子。",
-   "fixture": "无脚本任务：新记号首次引入场景（三件套归 teaching/explanation-craft.md「新记号/新操作讲透」，本例只验呈现）",
+   "fixture": "无脚本任务：新记号首次引入场景（三件套归 teaching/notation.md「新记号/新操作讲透」，本例只验呈现）",
    "pass_condition": "宿主已实测 → 满足：先定义符号再给正确代入例子；上下标可辨。宿主未实测 → 按规则停机：报告停止点与两条恢复路径，不得冒充渲染或擅自纯文本顶替",
    "actual_output": "渲染态完整作答（$...$/$$...$$，宿主实测记录 review_inputs/learning/formula-host-verification.md 已解除停机）：四符号首现即释义（含 n 正整数、d 实数范围），代入 a₁=2,d=3,n=10→29 主审核实，(n−1)d 结构核对句到位。全文见 evals/replay-2026-11-01-v9.12.2.md 渲染分支节",
    "run_id": "replay-v9.12.2-render-20261101-1aa21e7",
@@ -434,7 +434,7 @@
    "kind": "human",
    "prompt": "继续学习，讲完这一节",
    "fixture": "S3 学习任务（进行中任务上下文）",
-   "pass_condition": "s3-teach 核心 12 文件；场景级 ≤39,700 字符；轮级最坏 ≤137,800（round_chars_max）；以 evals/verify-load-budget.py 输出为准；补读按动作触发",
+   "pass_condition": "s3-teach 场景表列出的全部 core 文件均已加载（清单以 contracts/rules.json 的 scenes.s3-teach.files 为准，不写死数量）；补读按动作触发且只读指定小节；进场景先自报已加载清单并与场景表对账一致（以 evals/report-load-footprint.py 输出为参考）；场景文件缺失或补读小节不可解析即失败",
    "actual_output": "开节公示 5 目（只报名）+讲目 1「函数的定义」（饮料机类比+多对一易错+检验题），停轮等作答；加载 88,306 字符/22 文件",
    "run_id": "replay-v9.12.2-20261101-1aa21e7",
    "scores": {
@@ -446,7 +446,7 @@
    },
    "verdict": "通过",
    "reviewer": "主审（评审会话，与执行子代理分离）",
-   "review_note": "一轮一小步；实测加载 88,306 字符/22 文件（最坏 96,693≤137,800）"
+   "review_note": "一轮一小步；加载量与文件数以 report-load-footprint 报告记录（已取消预算上限，数值不作通过条件）"
   },
   {
    "id": "E32",

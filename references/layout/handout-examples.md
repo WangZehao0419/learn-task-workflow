@@ -2,11 +2,13 @@
 
 <!-- owns: 标准讲义成品范例（供导师对照格式与密度，非讲义内容）; must-not-define: 风格规则正本（handout/styles.md）、单元 schema（handout/unit-schema.md） -->
 
+> 何时读：首写某风格讲义前，先读该风格成品范例时。
+
 ## 标准讲义成品范例
 
 <!-- intent:I-STYLE-EXAMPLES@content -->
 
-- 成品范例（供导师对照格式与密度，非讲义内容；本例为【本节最小必需】级；其余族的段结构见 `handout/unit-schema.md`「其余族的最小形态」）：
+- 成品范例（供导师对照格式与密度，非讲义内容；本例为【本节最小必需】级；其余族的段结构见 `references/handout/answer-box.md`「其余族的最小形态」）：
   > **概念：解一元二次不等式（图像法）【本节最小必需】**
   >
   > - 概念：解 ax^2+bx+c>0，本质是找「抛物线在 x 轴上方」的那段 x 范围。
