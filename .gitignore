@@ -15,3 +15,12 @@ outputs/
 # 个人学习数据与临时脚本，不入库（含学员隐私，仓库在 GitHub 公开）
 review_inputs/
 .tmp_*.py
+
+# 调研/审计/决议等过程文档，只留本地，不提交
+# docs/agents/ 是仓库协作约定，仍然入库，不受下面规则影响
+docs/research/
+docs/specs/
+docs/adr/
+docs/audit-*.md
+docs/design-*.md
+docs/resolution-*.md
