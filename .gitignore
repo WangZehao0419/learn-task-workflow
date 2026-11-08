@@ -20,7 +20,8 @@ review_inputs/
 # docs/agents/ 是仓库协作约定，仍然入库，不受下面规则影响
 docs/research/
 docs/specs/
-docs/adr/
+# docs/adr/ 例外：ADR 是长期决策记录，要跟着代码走（见 ADR-0001/0002）
+# docs/adr/
 docs/audit-*.md
 docs/design-*.md
 docs/resolution-*.md

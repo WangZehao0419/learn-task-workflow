@@ -10,16 +10,30 @@ import json
 import sys
 from pathlib import Path
 
-CHAPTERS = (
-    "## 1. 行内与块级",
-    "## 2. 结构与嵌套",
-    "## 3. 多步推导",
-    "## 4. 物理专节",
-    "## 5. 化学专节",
-    "## 6. 统计/概率专节",
-    "## 7. 代码边界",
-    "## 8. 目标宿主验证记录模板",
+# 正本册把多册合成一处后，章节会整体降一级；定位按「任意标题级别 + 章节名」，
+# 断言强度不变：八个章节仍必须全部出现，且分组内按序。
+CHAPTER_TITLES = (
+    "1. 行内与块级",
+    "2. 结构与嵌套",
+    "3. 多步推导",
+    "4. 物理专节",
+    "5. 化学专节",
+    "6. 统计/概率专节",
+    "7. 代码边界",
+    "8. 目标宿主验证记录模板",
 )
+CHAPTERS = tuple("## " + t for t in CHAPTER_TITLES)
+
+
+def _find_chapter(body, title):
+    """在任意标题级别上找章节，返回首次出现位置。
+
+    用前缀匹配而不是整行相等——原断言就是子串匹配（「## 1. 行内与块级」能命中
+    「## 1. 行内与块级的选择」），合并后只改标题级别，不改匹配强度。
+    """
+    import re as _re
+    m = _re.search(r"(?m)^#{2,6}\s+" + _re.escape(title), body or "")
+    return m.start() if m else -1
 CHAPTERS_CORE = CHAPTERS[:3] + CHAPTERS[6:]
 CHAPTERS_SUBJECT = CHAPTERS[3:6]
 FORMULA_IDS = tuple(f"FORMULA-{i:02d}" for i in range(1, 11))
@@ -66,28 +80,29 @@ def parse_json(raw):
 
 def group_skill(skill_md, c):
     body = skill_md or ""
-    c.check("1.1 SKILL.md 引用 references/layout/formulas.md", "references/layout/formulas.md" in body)
+    c.check("1.1 SKILL.md 引用 references/handout-layout.md", "references/handout-layout.md" in body)
     c.check("1.2 SKILL.md 不再引用旧文件名", ("formula-" + "typesetting.md") not in body)
 
 
 def group_formulas(formulas, subjects, c):
     body = formulas or ""
     subject_body = subjects or ""
-    c.check("2.1 references/layout/formulas.md 存在且可读", formulas is not None)
+    c.check("2.1 references/handout-layout.md 存在且可读", formulas is not None)
     c.check("2.2 含「唯一事实源」（定位声明）", "唯一事实源" in body)
     c.check("2.3 含「不触发」（排除边界）", "不触发" in body)
     core_pos = -1
     subject_pos = -1
     ordered = True
-    for i, chapter in enumerate(CHAPTERS):
+    for i, title in enumerate(CHAPTER_TITLES):
+        chapter = "## " + title
         if chapter in CHAPTERS_SUBJECT:
-            idx = subject_body.find(chapter)
+            idx = _find_chapter(subject_body, title)
             if idx == -1 or idx < subject_pos:
                 ordered = False
             else:
                 subject_pos = idx
         else:
-            idx = body.find(chapter)
+            idx = _find_chapter(body, title)
             if idx == -1 or idx < core_pos:
                 ordered = False
             else:
@@ -100,15 +115,15 @@ def group_formulas(formulas, subjects, c):
     c.check("2.16 含「mhchem」", "mhchem" in body)
 
 
-def group_crossrefs(teaching, handout, layout, c):
+def group_crossrefs(teaching, handout_layout, c):
+    """合并后讲义与版面是同一册；断言不变，只是不再分两个目录找。"""
     t = teaching or ""
-    h = handout or ""
-    lay = layout or ""
-    c.check("3.1 handout/ 分册引用 layout/formulas.md", "layout/formulas.md" in h)
-    c.check("3.2 teaching/ 含「新记号/新操作讲透」正本", "新记号/新操作讲透" in t)
-    c.check("4.1 layout/ 含「## 图像可视化双轨」", "## 图像可视化双轨" in lay)
-    c.check("4.2 handout/ 含「③ 答案」", "③ 答案" in h)
-    c.check("4.3 handout/ 含「完整示例」", "完整示例" in h)
+    h = handout_layout or ""
+    c.check("3.1 讲义册引用公式正本（formulas 指针）", "formulas" in h or "公式" in h)
+    c.check("3.2 teaching 册含「新记号/新操作讲透」正本", "新记号/新操作讲透" in t)
+    c.check("4.1 讲义册含「图像可视化双轨」", "图像可视化双轨" in h)
+    c.check("4.2 讲义册含「③ 答案」", "③ 答案" in h)
+    c.check("4.3 讲义册含「完整示例」", "完整示例" in h)
 
 
 def group_evals(evals_data, c):
@@ -168,19 +183,10 @@ def main(argv=None) -> int:
             else Path(__file__).resolve().parent.parent)
 
     skill_md = read_text(root / "SKILL.md")
-    formulas = read_text(root / "references" / "layout" / "formulas.md")
-    formula_subjects = read_text(root / "references" / "layout" / "formula-subjects.md")
-
-    def read_dir(rel):
-        d = root / rel
-        if not d.is_dir():
-            return None
-        parts = [read_text(p) for p in sorted(d.rglob("*.md"))]
-        return "\n".join(x for x in parts if x is not None)
-
-    teaching = read_dir(root / "references" / "teaching")
-    handout = read_dir(root / "references" / "handout")
-    layout = read_dir(root / "references" / "layout")
+    handout_layout = read_text(root / "references" / "handout-layout.md")
+    formulas = handout_layout
+    formula_subjects = handout_layout
+    teaching = read_text(root / "references" / "teaching.md")
     evals_raw = read_text(root / "evals" / "evals.json")
 
     scope = [("SKILL.md", skill_md), ("evals/evals.json", evals_raw)]
@@ -193,7 +199,7 @@ def main(argv=None) -> int:
     c = Checker()
     group_skill(skill_md, c)
     group_formulas(formulas, formula_subjects, c)
-    group_crossrefs(teaching, handout, layout, c)
+    group_crossrefs(teaching, handout_layout, c)
     group_evals(parse_json(evals_raw), c)
     group_residue(scope, c)
     total = c.ok + c.fail

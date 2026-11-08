@@ -174,8 +174,9 @@ QNUM_RE = re.compile(r"题\s*(\d+)")
 DATE_IN_NAME_RE = re.compile(r"(\d{4}-\d{2}-\d{2})")
 EVIDENCE_REF_RE = re.compile(r"本次证据[：:]\s*(\S+)")
 # 正确性/独立性均按**精确枚举**解析：`正确性=不对` 不得被子串 `对` 误判为正确；
-# 正确性四态唯一来源 = 契约 grading.values（对/部分/错/未判），无别名——其他写法
-# 一律非法（放行模式报 E-ENUM-GRADE）。独立性缺失或 `未测` 均**不得推为独立**。
+# 正确性四态在本文件硬编码（对/部分/错/未判），无别名——其他写法一律非法
+# （放行模式报 E-ENUM-GRADE）。契约 grading.values 与本处同值，但本脚本不读它；
+# 改四态须两处同改。独立性缺失或 `未测` 均**不得推为独立**。
 # 调度档位词 Good/Easy/Hard/Again 不属四态，保持本地常量。
 CORRECT_TRUE_EXACT = ("对",)
 CORRECT_FALSE_EXACT = ("错",)
@@ -1184,7 +1185,7 @@ def check(task_dir, release=False, proposed=None):
                                             "」判 " + (a["result"] or "部分入账") + "（" +
                                             (a["kp"] or key or "无 KP 映射") +
                                             "）未入薄弱点/错题本——判错同轮归因定级并入账"
-                                            "（`workflow/s3-cycle.md` 每轮小步⑤）；若已口头处理请补记条目"
+                                            "（`workflow.md` 每轮小步⑤）；若已口头处理请补记条目"
                                             "（warning，不拦截）"})
 
     # 未解析勾选行：出现勾选语法却未被识别（不得静默）

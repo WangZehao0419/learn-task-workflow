@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 """kp_sort.py - 课程体系目行 KP 依赖拓扑排序与检环（确定性，stdlib-only）。
 
-用途：知识型/技能型任务在 S2「排序」子步调用（判据见 references/workflow/s0-s2-setup.md），
-对课程体系文件（行式六字段 + 可选类型/视觉任务，格式见 references/data/curriculum.md
+用途：知识型/技能型任务在 S2「排序」子步调用（判据见 references/workflow.md），
+对课程体系文件（行式六字段 + 可选类型/视觉任务，格式见 references/data.md
 「课程体系文件」）按各行「前置」声明的依赖边计算合法拓扑序。判断归模型（依赖边真实性、
 该不该有边），排序与检环归本脚本；只读零写盘。可选分型字段由 progress_check 校验，
 本脚本只读前六段并忽略附加段。
