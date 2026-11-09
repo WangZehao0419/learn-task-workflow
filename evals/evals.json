@@ -1,7 +1,7 @@
 {
  "schema": "ltw-evals/2",
  "skill": "learn-task-workflow",
- "applies_to_version": "9.20.1",
+ "applies_to_version": "9.20.2",
  "updated_at": "2026-11-04",
  "grading_axes": [
   "教学正确性",
@@ -58,7 +58,7 @@
   },
   "阻断规则": "阻断型用例的学科内容/结构渲染/边界必须为 2，其他适用项不得低于 1。"
  },
- "machine_evidence_ref": "包内八个命令模块 --selftest（task_index / progress_check / scheduler / kp_sort / prereq_check / check_environment / verify_explanation / rule_contract）与 rule_contract --topology 退出 0；evals/ 三个 verify-*.py 行为/结构测试退出 0（verify-formula-typesetting、verify-marker-rules、verify-readability）与 report-load-footprint.py --check 退出 0。以上均为静态/行为级证据，不是真人教学回放。读者版检查：ltw_typography 模块（W-READER-* 系列）随 verify_explanation --selftest 与 evals/verify-readability.py 回归；v9.17.0 起不再提供文件结构闸口。",
+ "machine_evidence_ref": "包内九个命令模块 --selftest（task_index / progress_check / scheduler / kp_sort / prereq_check / check_environment / verify_explanation / rule_contract / verify-doc-pointers）退出 0，且 verify-doc-pointers 无 E 级问题；evals/ 三个 verify-*.py 行为/结构测试退出 0（verify-formula-typesetting、verify-marker-rules、verify-readability）与 report-load-footprint.py --check 退出 0。以上均为静态/行为级证据，不是真人教学回放。读者版检查：ltw_typography 模块（W-READER-* 系列）随 verify_explanation --selftest 与 evals/verify-readability.py 回归；v9.17.0 起不再提供文件结构闸口。",
  "cases": [
   {
    "id": "E01",
