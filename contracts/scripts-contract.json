@@ -22,7 +22,7 @@
     "1": "不通过",
     "2": "用法错误"
    },
-   "notes": "--release 放行模式：判分四态 correct/partial/incorrect/ungraded；partial 入分母不入分子，ungraded 与作废行不入分母（W-VOIDED-ATTEMPT / W-UNGRADED-ATTEMPT）；参考答案/标准答案/正确答案不构成学员作答；节号和 changed-lessons 仅接受正整数；目行 KP 查重与前置统一别名归一（课程体系.md 为目清单唯一来源）；同 attempt 的结果/独立性/KP 冲突报 E-ATTEMPT-CONFLICT；非法显式目标线报 E-FINAL-INVALID-TARGET；KP 类型/视觉任务声明后分型验收（E-KP-TYPED-GATE）；章规划/材料覆盖结构提示（W-MODULE-CONTRACT-INCOMPLETE / W-UNPARSED-MODULE / W-UNPARSED-MATERIAL / W-MATERIAL-COVERAGE-GAP）；空/模板证据 E-EMPTY-EVIDENCE；结课/已完成未完成路线 E-ROUTE-UNDONE；复习来源阶段枚举 {逐节学习, 结课, 已完成}；起点自进入 S2 起必填；节目标线可选字段缺省取 gates.min_ratio，非法报 E-GATE-RATIO-INVALID；复述门要求关键点 ≥ restatement.keypoints 且「无事实性错误」已勾"
+   "notes": "--release 放行模式：判分四态 correct/partial/incorrect/ungraded；partial 入分母不入分子，ungraded 与作废行不入分母（W-VOIDED-ATTEMPT / W-UNGRADED-ATTEMPT）；参考答案/标准答案/正确答案不构成学员作答；节号和 changed-lessons 仅接受正整数；目行 KP 查重与前置统一别名归一（课程体系.md 为目清单唯一来源）；同 attempt 的结果/独立性/KP 冲突报 E-ATTEMPT-CONFLICT；非法显式目标线报 E-FINAL-INVALID-TARGET；KP 类型/视觉任务声明后分型验收（E-KP-TYPED-GATE）；章规划/材料覆盖结构提示（W-MODULE-CONTRACT-INCOMPLETE / W-UNPARSED-MODULE / W-UNPARSED-MATERIAL / W-MATERIAL-COVERAGE-GAP）；空/模板证据 E-EMPTY-EVIDENCE；结课蓝图覆盖按机器行「KP=<id>｜评分点=<…>」同行映射判（仅题面提编号不算映射，缺口分「未出现 / 出现但未挂评分点」两类报 E-FINAL-BLUEPRINT-GAP）；结课/已完成未完成路线 E-ROUTE-UNDONE；复习来源阶段枚举 {逐节学习, 结课, 已完成}；起点自进入 S2 起必填；节目标线可选字段缺省取 gates.min_ratio，非法报 E-GATE-RATIO-INVALID；复述门要求关键点 ≥ restatement.keypoints 且「无事实性错误」已勾"
   },
   {
    "script": "scheduler.py",

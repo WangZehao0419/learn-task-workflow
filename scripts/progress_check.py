@@ -52,6 +52,8 @@
     · **阶段证据按内容而非文件名**：S2 须有**可用**的 00 摸底（E-NO-DIAGNOSTIC）；
       结课/已完成须有**可用**的 99 综合测验（缺文件 E-NO-FINAL-EXAM、空文件 E-FINAL-NO-EVIDENCE、
       未达目标线 E-FINAL-BELOW-TARGET、纳入 KP 未覆盖 E-FINAL-BLUEPRINT-GAP）；
+      蓝图覆盖按「作答与判分」机器行上的 `KP=<id>｜评分点=<…>` **同行映射**判，
+      不按 KP 编号是否出现在文本里判（仅题面提到该 KP 不算映射，R5）；
       空或不可解析（含混合不可解析）路线 → E-NO-ROUTE-STRICT；未勾选节 → E-ROUTE-UNDONE；
       纳入口径下仍有「未讲」关键能力目行 → E-CORE-UNLEARNED。
     · **候选差分覆盖**：给 `--staged` 时由**磁盘原状态与候选状态的真实差集**推导新增掌握；
@@ -167,6 +169,9 @@ ATTEMPT_KP_RE = re.compile(r"(?:^|[｜|，,；;\s])(?:KP|kp)\s*[=＝]\s*(KP-\d+-
 AIM_RE = re.compile(r"目\s*[=＝]\s*([^｜|，,]+)")          # 无目行任务的确认题对象（目=<目名>）
 WEAK_TAG_RE = re.compile(r"→\s*入薄弱点")                  # 判分行显式标注入薄弱点
 VISUAL_TAG_RE = re.compile(r"(?:^|[｜|，,；;\s])(?:视觉|visual)\s*[=＝]\s*([^｜|，,；;\s]+)")
+# S5 蓝图映射（R5）：机器行另带 评分点=<可独立判 0/1 的步骤或断言>。
+# 只有 KP= 没有评分点不算映射——「题面提到该 KP」不是映射（旧判据只看子串，会被一句编号骗过）。
+SCOREPOINT_TAG_RE = re.compile(r"(?:^|[｜|，,；;\s])评分点\s*[=＝]\s*([^｜|，,；;]+)")
 KEY_ABILITY_HEAD_RE = re.compile(r"关键能力")
 KEY_ABILITY_ROW_RE = re.compile(r"^\s*-\s*([Cc]\d+)\s*[：:]\s*(.+?)\s*$")
 KEY_ITEM_FLAG = "关键项"
@@ -389,6 +394,7 @@ def parse_attempts(text):
         kp_tag = ATTEMPT_KP_RE.search(body)
         aim_m = AIM_RE.search(body)
         vis_tag = VISUAL_TAG_RE.search(body)
+        sp_tag = SCOREPOINT_TAG_RE.search(body)
         qm = QNUM_RE.search(body)
         if not (has_answer or result is not None or indep is not None or aid or ab
                 or kp_tag or vis_tag or voided):
@@ -405,6 +411,7 @@ def parse_attempts(text):
             "aim": aim_m.group(1).strip() if aim_m else "",
             "to_weak": bool(WEAK_TAG_RE.search(body)),
             "visual": vis_tag.group(1).strip() if vis_tag else "",
+            "scorepoint": sp_tag.group(1).strip() if sp_tag else "",
             "has_answer": has_answer, "result": result, "correct": correct,
             "indep": indep, "graded": graded, "voided": voided,
         })
@@ -545,6 +552,38 @@ def restated_kp_ids(text):
 
 def _visual_base(token):
     return (token or "").strip()
+
+
+def blueprint_scorepoint_map(ev_text):
+    """结课综合测验的「KP → 评分点」映射（R5）。
+
+    只有**同一条机器行**同时带 `KP=<id>` 与 `评分点=<非空>`，才算该 KP 的映射：
+    题面提一句编号、或 KP= 与 评分点= 拆在两条行里，都不算（旧判据只看 KP 编号
+    是否作为子串出现在文件里，一句编号即可过闸）。返回归一化后的 KP 集合。
+    """
+    ids = set()
+    for a in parse_attempts(ev_text)["attempts"]:
+        if a["kp"] and a["scorepoint"]:
+            ids.add(normalize_kp_id(a["kp"]))
+    return ids
+
+
+def blueprint_gap(ev_text, included_ids):
+    """返回 (缺评分点映射的 KP, 仅出现在题面未挂评分点的 KP)，均为原始书写形态。
+
+    两类缺口分开报：**缺 KP** 说明这张卷根本没考到该目；**缺评分点**说明编号出现过
+    （题面/讲评/复述里提了一句），但没挂到一个可独立判 0/1 的评分点上——后者正是
+    R5 点名「仅题面提到该 KP 不算映射」的形态，报错信息必须指到评分点。
+    """
+    mapped = blueprint_scorepoint_map(ev_text)
+    seen_in_text = {normalize_kp_id(x) for x in KP_ID_IN_TEXT_RE.findall(ev_text)}
+    missing, unmapped = [], []
+    for kid in included_ids:
+        nk = normalize_kp_id(kid)
+        if nk in mapped:
+            continue
+        (unmapped if nk in seen_in_text else missing).append(kid)
+    return missing, unmapped
 
 
 def typed_gate_errors(ev_text, kp_rows):
@@ -1492,12 +1531,23 @@ def check(task_dir, release=False, proposed=None):
                     seen_codes.add(e["code"])
                     dedup_final.append(e)
                 errors.extend(reversed(dedup_final))
-                gap = [k for k in included_kp_ids if k not in ftext]
-                if gap:
+                # 蓝图覆盖按**评分点映射**判，不按 KP 编号是否出现在文本里（R5）：
+                # 题面写一句「KP-03-08」不算映射，须有同一条机器行挂 KP= 与 评分点=。
+                missing_kp, unmapped_kp = blueprint_gap(ftext, included_kp_ids)
+                if missing_kp or unmapped_kp:
+                    parts = []
+                    if missing_kp:
+                        parts.append("未出现："
+                                     + "、".join(missing_kp))
+                    if unmapped_kp:
+                        parts.append("出现但未挂评分点："
+                                     + "、".join(unmapped_kp))
                     errors.append({"code": "E-FINAL-BLUEPRINT-GAP",
                                    "message": "结课综合测验 " + fin +
-                                              " 未覆盖全部纳入 KP（蓝图覆盖缺口）：" + "、".join(gap) +
-                                              "——须按能力—任务—评分点蓝图逐项对应"})
+                                              " 未覆盖全部纳入 KP（蓝图覆盖缺口）：" + "；".join(parts) +
+                                              "——须按能力—任务—评分点蓝图逐项对应：每个纳入 KP 须在"
+                                              "「作答与判分」的机器行上同时写 KP=<id> 与 评分点=<可独立判 0/1 的步骤>，"
+                                              "仅题面提到该 KP 不算映射"})
             if mandatory_unlearned_ids:
                 errors.append({"code": "E-CORE-UNLEARNED",
                                "message": "阶段为「" + phase + "」但课程体系仍有关键能力目行状态「未讲」：" +
@@ -2431,6 +2481,65 @@ def selftest():
         r40e = check(d40e, release=True)
         below = [e for e in r40e["errors"] if e["code"] == "E-FINAL-BELOW-TARGET"]
         ok = ok and (not r40e["ok"]) and len(below) == 1 and "正确率 0/1" in below[0]["message"]
+
+        # ㊵d 蓝图覆盖按**评分点映射**判，不按「KP 编号是否出现在文本里」（票 60 / R5）。
+        # 旧判据：题面提一句 KP-01-01 就过闸（漏报）；现在只有同行 KP= + 评分点= 才算映射。
+        def _mk_final(name, kp_rows, final_text):
+            d = _mk2(name, DONE_HEAD + "## 学习路线\n- [x] 1. 变量\n- [x] 2. 循环\n",
+                     {"exercises/01-变量-2026-01-01.md": EV_OK,
+                      "exercises/02-循环-2026-01-02.md": EV_OK,
+                      "exercises/99-结课综合测验-2026-01-01.md": final_text})
+            (d / "progress.md").write_text(
+                (d / "progress.md").read_text(encoding="utf-8")
+                .replace("- 起点：零基础\n", "- 起点：零基础\n- 课程体系：课程体系.md\n"),
+                encoding="utf-8")
+            (d / "课程体系.md").write_text(_fixture_text_ids(
+                "# 课程体系：示例\n- 版本：1\n- 对照源：自拟总纲\n- 排序规则：拓扑序\n"
+                "- 覆盖范围：全量\n- 最近更新：2026-01-01\n"
+                "- 覆盖摘要：总 2 ｜ 未讲 0 ｜ 已讲 2 ｜ 暂缓 0 ｜ 排除 0\n\n"
+                "## 学习路线\n### 章1 ｜ 基础\n- [x] 1. 变量\n" + kp_rows[0] +
+                "\n- [x] 2. 循环\n" + kp_rows[1] + "\n"), encoding="utf-8")
+            return check(d, release=True)
+
+        _kp_rows = ("- KP-01-01 ｜ 变量命名 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 ｜ 状态：已讲",
+                    "- KP-02-01 ｜ 循环 ｜ 节 2 ｜ 前置：KP-01-01 ｜ 来源：总纲 ｜ 状态：已讲")
+        _five = "".join("- 题%d：作答「%d」｜正确性=对｜独立性=独立｜调度档=Good\n" % (i, i)
+                        for i in range(1, 6))
+
+        # ① 题面提编号、无评分点 → 必须红（旧判据这里绿）且报错点明「评分点」
+        _r = _mk_final("r01-blueprint-stem", _kp_rows,
+                       "## 作答与判分\n- 题1（KP-01-01）：变量命名问答\n"
+                       "- 题2（KP-02-01）：循环问答\n" + _five)
+        _gap = [e for e in _r["errors"] if e["code"] == "E-FINAL-BLUEPRINT-GAP"]
+        ok = ok and (not _r["ok"]) and len(_gap) == 1
+        ok = ok and "评分点" in _gap[0]["message"] and "KP-01-01" in _gap[0]["message"]
+        # ② 只写 KP= 不写评分点 → 红；③ 拆成两行 → 红（KP 与评分点须同一条机器行）
+        _r = _mk_final("r01-blueprint-kponly", _kp_rows,
+                       "## 作答与判分\n"
+                       "- 题1：作答「3」｜正确性=对｜独立性=独立｜调度档=Good｜KP=KP-01-01\n"
+                       "- 题2：作答「4」｜正确性=对｜独立性=独立｜调度档=Good｜KP=KP-02-01\n" + _five)
+        ok = ok and any(e["code"] == "E-FINAL-BLUEPRINT-GAP" for e in _r["errors"])
+        _r = _mk_final("r01-blueprint-split", _kp_rows,
+                       "## 作答与判分\n"
+                       "- 题1：作答「3」｜正确性=对｜独立性=独立｜调度档=Good｜KP=KP-01-01\n"
+                       "- 题1：评分点=说出命名规则\n"
+                       "- 题2：作答「4」｜正确性=对｜独立性=独立｜调度档=Good｜KP=KP-02-01\n"
+                       "- 题2：评分点=写出循环体\n" + _five)
+        ok = ok and any(e["code"] == "E-FINAL-BLUEPRINT-GAP" for e in _r["errors"])
+        # ④ 同行 KP= + 评分点= → 绿（含补零别名 KP-1-1 ≡ KP-01-01）
+        _r = _mk_final("r01-blueprint-ok", _kp_rows,
+                       "## 作答与判分\n"
+                       "- 题1：作答「3」｜正确性=对｜独立性=独立｜调度档=Good｜KP=KP-1-1｜评分点=说出命名规则\n"
+                       "- 题2：作答「4」｜正确性=对｜独立性=独立｜调度档=Good｜KP=KP-02-01｜评分点=写出循环体\n"
+                       + _five)
+        ok = ok and _r["ok"]
+        # ⑤ 评分点空值不算映射
+        _r = _mk_final("r01-blueprint-empty", _kp_rows,
+                       "## 作答与判分\n"
+                       "- 题1：作答「3」｜正确性=对｜独立性=独立｜调度档=Good｜KP=KP-01-01｜评分点=\n"
+                       "- 题2：作答「4」｜正确性=对｜独立性=独立｜调度档=Good｜KP=KP-02-01｜评分点=写出循环体\n"
+                       + _five)
+        ok = ok and any(e["code"] == "E-FINAL-BLUEPRINT-GAP" for e in _r["errors"])
         # ㊶ 已完成但清单纳入口径下仍有「未讲」关键能力 KP → E-CORE-UNLEARNED
         KPLIST_CORE = ("# 课程体系：示例\n- 版本：1\n- 对照源：自拟总纲\n"
                        "- 排序规则：拓扑序\n- 覆盖范围：全量\n- 最近更新：2026-01-01\n"

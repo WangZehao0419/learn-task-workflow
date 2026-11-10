@@ -118,7 +118,7 @@
 | progress_check | `E-KP-TYPED-GATE` | 声明了 KP 类型/视觉任务但缺对应分型证据 |
 | progress_check | `E-REVIEW-ORIGIN` | S4「复习来源阶段」缺失或不在合法返回枚举 |
 | progress_check | `E-ROUTE-UNDONE` / `E-NO-ROUTE-STRICT` / `E-ROUTE-NUMBER` | 结课/已完成但路线未完成 / 路线不可解析 / 路线编号非法 |
-| progress_check | `E-NO-FINAL-EXAM` / `E-FINAL-NO-EVIDENCE` / `E-FINAL-BELOW-TARGET` / `E-FINAL-BLUEPRINT-GAP` / `E-FINAL-INVALID-TARGET` / `E-FINAL-ATTEMPT-CONFLICT` | 结课综合测验缺失 / 空文件 / 未达目标线 / 蓝图未覆盖 / 目标线非法 / 同 attempt 结果冲突 |
+| progress_check | `E-NO-FINAL-EXAM` / `E-FINAL-NO-EVIDENCE` / `E-FINAL-BELOW-TARGET` / `E-FINAL-BLUEPRINT-GAP` / `E-FINAL-INVALID-TARGET` / `E-FINAL-ATTEMPT-CONFLICT` | 结课综合测验缺失 / 空文件 / 未达目标线 / 纳入 KP 缺**评分点映射**（同行 `KP=<id>｜评分点=<…>`；仅题面提编号不算）/ 目标线非法 / 同 attempt 结果冲突 |
 | progress_check | `E-CORE-UNLEARNED` / `E-NO-DIAGNOSTIC` | 关键能力未讲 / 缺 S1 摸底证据 |
 | progress_check | `E-ATTEMPT-CONFLICT` | 同 attempt 结果冲突 |
 | progress_check | `E-CURSOR-DANGLING` / `E-EVIDENCE-REF-MISSING` | 动作游标悬空 / 候选证据不存在 |
