@@ -60,26 +60,225 @@ def table_blocks(lines, fence):
     return blocks
 
 
+# 相对字号换算基准：1em/1rem 缺省 = 16px（CSS 初始值）。写成模块常量而不是裸数字，
+# 是为了让 contracts/rules.json 的 reader.svg_relative_font_base 成为唯一事实源——
+# 两条口径一旦分叉，就是「文档说 16、代码按 12 判」这类静默漂移。
+SVG_RELATIVE_FONT_BASE_DEFAULT = 16.0
+# CSS 绝对长度单位换算（仅这些单位能确定 px 值）；其余相对单位一律跳过不判。
+SVG_ABS_UNITS = {
+    "px": 1.0, "pt": 96.0 / 72.0, "pc": 16.0, "in": 96.0,
+    "cm": 96.0 / 2.54, "mm": 96.0 / 25.4, "q": 96.0 / 101.6,
+}
+# 无法换算为 px 的单位（相对容器/视口）：判不了就不判，跳过。
+SVG_REL_UNITS = {"em", "rem", "ex", "ch", "vw", "vh", "vmin", "vmax", "%"}
+# CSS 关键字字号：绝对值可判，相对关键字跳过（与 em 同理，取决于父级）。
+SVG_ABS_KEYWORDS = {
+    "xx-small": 9.0, "x-small": 10.0, "small": 13.0,
+    "medium": 16.0, "large": 18.0, "x-large": 24.0, "xx-large": 32.0,
+}
+SVG_REL_KEYWORDS = {"smaller", "larger", "inherit", "initial", "unset", "revert"}
+# SVG 呈现属性缺省值（未声明时的实际渲染基线）。font-size 缺省 medium=16，
+# stroke-width 缺省 1——两者都低于本仓下限，故「未声明」本身就是缺陷。
+SVG_DEFAULT_FONT_SIZE = 16.0
+SVG_DEFAULT_STROKE_WIDTH = 1.0
+# 中文字宽估算系数（v2 §5.1 实测校准，msyh.ttc unitsPerEm=2048，6 万条实测最坏低估 0.000%）
+SVG_CHAR_WIDTH = {
+    "space": 0.30, "digit": 0.60, "upper": 1.05, "lower": 0.95,
+    "ascii_other": 0.90, "wide": 1.00,
+}
+
+
+def _svg_width_em(s):
+    """按字符分类累加字宽（em）。CJK/全角 >= U+2E80 记 1.00。"""
+    total = 0.0
+    for ch in s:
+        o = ord(ch)
+        if ch in " \t\n":
+            total += SVG_CHAR_WIDTH["space"]
+        elif o >= 0x2E80:
+            total += SVG_CHAR_WIDTH["wide"]
+        elif "0" <= ch <= "9":
+            total += SVG_CHAR_WIDTH["digit"]
+        elif "A" <= ch <= "Z":
+            total += SVG_CHAR_WIDTH["upper"]
+        elif "a" <= ch <= "z":
+            total += SVG_CHAR_WIDTH["lower"]
+        else:
+            total += SVG_CHAR_WIDTH["ascii_other"]
+    return total
+
+
+def _svg_style_decls(text):
+    """扫 style="" 与 <style> 内的 CSS 声明，产出 {属性: [原始值]}。
+
+    合并两个来源是刻意的：票 53 之前只扫 presentational attribute，
+    style 内联与 <style> 类声明都是绕过点，二者必须走同一条判定路径。
+    """
+    decls = {}
+    chunks = re.findall(r"""style\s*=\s*"([^"]*)\"""", text, re.I)
+    chunks += re.findall(r"style\s*=\s*'([^']*)'", text, re.I)
+    for body in re.findall(r"<style\b[^>]*>(.*?)</style>", text, re.I | re.S):
+        chunks.append(body)
+    for chunk in chunks:
+        for prop, val in re.findall(r"([a-z-]+)\s*:\s*([^;}]*)", chunk, re.I):
+            decls.setdefault(prop.lower().strip(), []).append(val.strip())
+    return decls
+
+
+def _svg_font_px(raw, base, in_font_shorthand=False):
+    """把一个 font-size 值换算成 px；判不了返回 None。
+
+    「判不了返回 None」是这条判据的核心：相对单位 em/rem/% 若按字面数字判，
+    1.2em 会被当成 1.2px（误报），8em 会被当成 8px 而漏掉真溢出。两者都错，
+    所以必须先换算、换算不了就不判。
+    """
+    if raw is None:
+        return None
+    v = raw.strip()
+    if v.lower().endswith("!important"):
+        v = v[: -len("!important")].strip()
+    if not v:
+        return None
+    low = v.lower()
+    if low in SVG_REL_KEYWORDS:
+        return None
+    if low in SVG_ABS_KEYWORDS:
+        return SVG_ABS_KEYWORDS[low]
+    m = re.match(r"^(-?[0-9]*\.?[0-9]+)\s*([a-z%]*)$", low)
+    if not m:
+        return None
+    try:
+        num = float(m.group(1))
+    except ValueError:
+        return None
+    unit = m.group(2)
+    if unit == "":
+        # 无单位在 font-size 里非法、在 font 简写里是 px
+        return num if in_font_shorthand else None
+    if unit in SVG_ABS_UNITS:
+        return num * SVG_ABS_UNITS[unit]
+    if unit == "em" or unit == "rem":
+        # em/rem 以父级字号为基准；SVG 根继承 medium=16。基准写进
+        # rules.json 的 svg_relative_font_base，故这是有依据的近似而非猜。
+        return num * base
+    if unit == "%":
+        return num / 100.0 * base
+    if unit in SVG_REL_UNITS:
+        return None
+    return None
+
+
+def _svg_length_px(raw, base):
+    """把长度值换算成 px；无单位在 SVG 里就是用户单位（=px），故与字号规则不同。
+
+    与 _svg_font_px 分开是必要的：font-size 的无单位值非法，stroke-width 的无单位值
+    合法（0.5 就是 0.5 用户单位）。共用一个函数会把合法线宽判成「判不了」而漏检。
+    """
+    if raw is None:
+        return None
+    v = raw.strip()
+    if v.lower().endswith("!important"):
+        v = v[: -len("!important")].strip()
+    if not v:
+        return None
+    m = re.match(r"^(-?[0-9]*\.?[0-9]+)\s*([a-z%]*)$", v.lower())
+    if not m:
+        return None
+    try:
+        num = float(m.group(1))
+    except ValueError:
+        return None
+    unit = m.group(2)
+    if unit == "":
+        return num
+    if unit in SVG_ABS_UNITS:
+        return num * SVG_ABS_UNITS[unit]
+    if unit == "em" or unit == "rem":
+        return num * base
+    if unit == "%":
+        return num / 100.0 * base
+    return None
+
+
+def _svg_font_decls(text):
+    """收集 font-size 的全部声明来源：呈现属性、font 简写、style/CSS。
+
+    返回 [(原始值, 是否来自 font 简写)]，交给 _svg_font_px 统一换算。
+    """
+    out = []
+    for raw in re.findall(r"font-size\s*=\s*[\"']([^\"']*)", text, re.I):
+        out.append((raw, False))
+    for raw in re.findall(r"font\s*=\s*[\"']([^\"']*)", text, re.I):
+        out.append((_svg_font_from_shorthand(raw), True))
+    decls = _svg_style_decls(text)
+    for raw in decls.get("font-size", []):
+        out.append((raw, False))
+    for raw in decls.get("font", []):
+        out.append((_svg_font_from_shorthand(raw), True))
+    return out
+
+
+def _svg_font_from_shorthand(raw):
+    """从 font 简写里取字号分量；无字号返回 None。
+
+    简写形如 8px/1.5 sans-serif、italic bold 8px serif。跳过 style/weight 前缀词，
+    取第一个带单位或纯数字的尺寸分量。
+    """
+    if not raw:
+        return None
+    tokens = re.split(r"[\s,]+", raw.strip())
+    for tok in tokens:
+        if not tok:
+            continue
+        head = tok.split("/")[0]
+        if re.match(r"^-?[0-9]*\.?[0-9]+(?:px|pt|pc|in|cm|mm|q|em|rem|ex|ch|vw|vh|vmin|vmax|%)?$",
+                    head, re.I):
+            return head
+        if head.lower() in SVG_ABS_KEYWORDS or head.lower() in SVG_REL_KEYWORDS:
+            return head
+    return None
+
+
 def _svg_problems(path, cfg):
-    """读者版 SVG 技术项：根元素 viewBox/role、title/desc、字号/线宽、无脚本/外链。"""
+    """读者版 SVG 技术项：根元素 viewBox/role/xmlns、title/desc、字号/线宽、无脚本/外链。"""
     try:
         text = Path(path).read_text(encoding="utf-8")
     except (OSError, UnicodeError):
         return ["SVG 读取失败"]
     problems = []
+    base = float(cfg.get("svg_relative_font_base") or SVG_RELATIVE_FONT_BASE_DEFAULT)
+    font_min = cfg["svg_font_min"]
+    line_min = cfg["svg_line_min"]
+    forbidden = tuple(cfg.get("svg_forbidden_tags") or ("foreignObject",))
+    require_light_bg = cfg.get("svg_canvas_light_bg_required", True)
     root = re.search(r"<svg\b[^>]*>", text, re.I)
-    if not root or "viewBox=" not in root.group(0):
+    root_tag = root.group(0) if root else ""
+    if not root or "viewBox=" not in root_tag:
         problems.append("根元素缺 viewBox")
-    if not root or not re.search(r"role\s*=\s*[\"']img[\"']", root.group(0)):
+    if not root or not re.search(r"role\s*=\s*[\"']img[\"']", root_tag):
         problems.append("根元素缺 role=\"img\"")
-    for tag, label in (("<title", "title"), ("<desc", "desc")):
-        if tag not in text:
+    if not root or not re.search(r"\bxmlns\s*=", root_tag):
+        problems.append("根元素缺 xmlns")
+    for tag, label in (("title", "title"), ("desc", "desc")):
+        m = re.search(r"<{0}\b[^>]*>(.*?)</{0}>".format(tag), text, re.I | re.S)
+        if not m:
             problems.append("缺 <{}>".format(label))
-    if "<script" in text.lower():
+        elif not re.sub(r"<[^>]+>", "", m.group(1)).strip():
+            # 只查存在性会放过 <title></title>：读屏软件读不到任何内容，
+            # 与完全没写等价。故判据是「内容非空」，不是「标签出现」。
+            problems.append("<{}> 内容为空".format(label))
+    low_text = text.lower()
+    if "<script" in low_text:
         problems.append("含 script")
+    for tag in forbidden:
+        if re.search(r"<{}\b".format(re.escape(tag)), text, re.I):
+            problems.append("含禁用的 <{}>（可嵌 HTML 绕过字体/无障碍检查）".format(tag))
+    if re.search(r"\son[a-z]+\s*=", text, re.I):
+        # 事件属性可执行脚本，等价于 <script>；用 \son 避免误伤 <only> 这类标签名
+        problems.append("含事件属性 on*=")
     if re.search(r"(?:href|xlink:href)\s*=\s*[\"']https?://", text, re.I):
         problems.append("含外部引用")
-    # 外链判据（第一性）：`handout-layout.md` 「SVG 为纯静态图形——不含 script 与外部引用」
+    # 外链判据（第一性）：handout-layout.md「SVG 为纯静态图形——不含 script 与外部引用」
     # = 文档必须**自包含**。故判据不是「枚举外网协议」，而是「除文档内锚点 #id 外，一切引用皆外链」：
     # 相对路径同样指向仓外文件，正是绕过点（旧实现只看 https?:// 与 //）。
     if re.search(r"@import\b", text, re.I):
@@ -95,27 +294,189 @@ def _svg_problems(path, cfg):
             problems.append("含外部图片/引用 href({})".format(target[:40]))
             break
 
-    # 字号与线宽：presentational attribute、style="" 内联、<style> 内 CSS 声明三处都要扫。
-    def _min_num(chunk, floor, label):
-        m = re.search(r"([0-9]+(?:\.[0-9]+)?)\s*(?:px)?", chunk)
-        if not m:
-            return
-        val = float(m.group(1))
-        if val < floor:
-            problems.append("{} {} < {}".format(label, m.group(1), floor))
+    # SVG-16：url(#id) 必须指向文档内真实存在的 id。悬空引用会渲染成空白，
+    # 是「图看起来画了、实际什么都没显示」的静默失败，只能靠 id 集合比对抓。
+    ids = set(re.findall(r"\bid\s*=\s*[\"']([^\"']+)[\"']", text))
+    dangling = []
+    for m in re.finditer(r"url\(\s*[\"']?#([^)\"'\s]+)", text, re.I):
+        ref_id = m.group(1)
+        if ref_id not in ids and ref_id not in dangling:
+            dangling.append(ref_id)
+    if dangling:
+        problems.append("url(#id) 指向文档内不存在的 id：{}".format(
+            "、".join(dangling[:3])))
 
-    for raw in re.findall(r"font-size\s*=\s*[\"']([0-9.]+)", text):
-        if float(raw) < cfg["svg_font_min"]:
-            problems.append("字号 {} < {}".format(raw, cfg["svg_font_min"]))
-    for raw in re.findall(r"stroke-width\s*=\s*[\"']([0-9.]+)", text):
-        if float(raw) < cfg["svg_line_min"]:
-            problems.append("线宽 {} < {}".format(raw, cfg["svg_line_min"]))
-    # style="font-size: 8px" 与 <style> 内的 font-size 声明（含 CSS 类）
-    for decl in re.findall(r"font-size\s*:\s*([^;\"'<}]+)", text, re.I):
-        _min_num(decl, cfg["svg_font_min"], "style 字号")
-    for decl in re.findall(r"stroke-width\s*:\s*([^;\"'<}]+)", text, re.I):
-        _min_num(decl, cfg["svg_line_min"], "style 线宽")
+    # SVG-17：自带浅色底（handout-layout.md:1116「SVG 自带浅色底（不依赖透明背景）」）。
+    # 判据是「根级有一个铺满 viewBox 的浅色 rect」，不是「文本里出现 #fff」——
+    # 后者会被任意元素的描边颜色蒙混过关。
+    if require_light_bg and not _svg_has_light_canvas(text, root_tag):
+        problems.append("缺自带浅色底 <rect>（不依赖透明背景）")
+
+    # SVG-10 / SVG-11 / SVG-20：字号与线宽。呈现属性、style 内联、<style> CSS 三处
+    # 走同一条换算路径；相对单位先换算再判，换算不了就跳过（见 _svg_font_px）。
+    for raw, is_shorthand in _svg_font_decls(text):
+        px = _svg_font_px(raw, base, in_font_shorthand=is_shorthand)
+        if px is None:
+            continue
+        if px < font_min:
+            label = "font 简写字号" if is_shorthand else "字号"
+            problems.append("{} {} < {}".format(label, raw.strip()[:20], font_min))
+            break
+    line_decls = list(re.findall(r"stroke-width\s*=\s*[\"']([^\"']*)", text, re.I))
+    line_decls += _svg_style_decls(text).get("stroke-width", [])
+    for raw in line_decls:
+        px = _svg_length_px(raw, base)
+        if px is None:
+            continue
+        if px < line_min:
+            problems.append("线宽 {} < {}".format(raw.strip()[:20], line_min))
+            break
+
+    # 无默认基线：完全未声明 font-size 的 <text> / stroke-width 的 <line>。
+    # SVG 缺省 font-size=medium=16px、stroke-width=1，故「没写」不是「无约束」，
+    # 而是落到一个低于下限的值——这正是旧实现的结构性盲区。
+    font_declared = bool(re.search(r"font-size\s*[:=]", text, re.I)
+                         or re.search(r"\bfont\s*[:=]", text, re.I))
+    if not font_declared and re.search(r"<text\b", text, re.I):
+        problems.append("<text> 未声明 font-size（缺省 {} < {}）".format(
+            int(SVG_DEFAULT_FONT_SIZE), font_min))
+    line_declared = bool(re.search(r"stroke-width\s*[:=]", text, re.I))
+    if not line_declared and re.search(r"<(?:line|polyline|path)\b", text, re.I):
+        problems.append("<line> 未声明 stroke-width（缺省 {} < {}）".format(
+            SVG_DEFAULT_STROKE_WIDTH, line_min))
+
+    # SVG-18（近似机检）：viewBox 缩放后实际字号。宿主显示宽未知，只能按
+    # 「viewBox 宽 == 目标显示宽」这一设计约束反推：viewBox 明显宽于常见显示宽时，
+    # 图必然被缩小，声明的 14px 实际渲染更小。判不了的场合不假装精确。
+    if root:
+        vb = re.search(r"viewBox\s*=\s*[\"']([^\"']+)[\"']", root_tag, re.I)
+        if vb:
+            nums = [float(x) for x in re.findall(r"-?[0-9]*\.?[0-9]+", vb.group(1))]
+            if len(nums) == 4 and nums[2] > SVG_VIEWBOX_WARN_WIDTH:
+                problems.append(
+                    "viewBox 宽 {} 超过设计宽 {}（缩放到常见显示宽后字号会小于 {}，"
+                    "按 1:1 设计）".format(int(nums[2]), int(SVG_VIEWBOX_WARN_WIDTH), font_min))
+
+    # SVG-19（近似机检）：文本估算宽度超出 viewBox。公式见 v2 §5.1；
+    # 只报近似值、不阻断——实际宽度取决于读者机器命中的字体。
+    if root:
+        vb = re.search(r"viewBox\s*=\s*[\"']([^\"']+)[\"']", root_tag, re.I)
+        if vb:
+            nums = [float(x) for x in re.findall(r"-?[0-9]*\.?[0-9]+", vb.group(1))]
+            if len(nums) == 4:
+                overflow = _svg_text_overflow(text, nums[2], base, font_min)
+                if overflow:
+                    problems.append(overflow)
     return problems
+
+
+# viewBox 宽超过此值即视为「大图缩小」：handout-layout.md 要求按目标显示宽 1:1 设计，
+# 640–720 是正文栏的常见宽度；再宽就必然被缩放，14px 声明值随之缩水。
+SVG_VIEWBOX_WARN_WIDTH = 720.0
+# 文本宽度判定的左右内边距（按 24px 估，与仓内样板 SVG 的 x=24 起点一致）
+SVG_TEXT_PADDING = 24.0
+
+
+def _svg_has_light_canvas(text, root_tag):
+    """根级是否存在铺满 viewBox 的浅色底 rect。
+
+    判据是「位置+尺寸覆盖画布」且「填充色亮度足够高」，不是「文本里出现 #fff」——
+    后者会被任意描边色蒙混过关。填充色支持 #rgb/#rrggbb/rgb()/white 与常见命名色。
+    """
+    vb = re.search(r"viewBox\s*=\s*[\"']([^\"']+)[\"']", root_tag or "", re.I)
+    if not vb:
+        return False
+    nums = [float(x) for x in re.findall(r"-?[0-9]*\.?[0-9]+", vb.group(1))]
+    if len(nums) != 4:
+        return False
+    vx, vy, vw, vh = nums
+    for m in re.finditer(r"<rect\b([^>]*)>", text, re.I):
+        attrs = m.group(1)
+
+        def attr(name):
+            mm = re.search(r"\b{}\s*=\s*[\"']([^\"']*)[\"']".format(name), attrs, re.I)
+            return mm.group(1).strip() if mm else None
+
+        try:
+            x = float(attr("x") or 0)
+            y = float(attr("y") or 0)
+            w = float(attr("width") or 0)
+            h = float(attr("height") or 0)
+        except ValueError:
+            continue
+        # 必须覆盖整块画布（允许 2px 误差），局部色块不算底
+        if not (x <= vx + 2 and y <= vy + 2 and w >= vw - 2 and h >= vh - 2):
+            continue
+        fill = attr("fill") or _svg_css_fill(text, attr("class"))
+        if fill and _svg_is_light_color(fill):
+            return True
+    return False
+
+
+def _svg_css_fill(text, class_name):
+    """从 <style> 里按 class 查 fill（浅色底写成 CSS 类的场合）。"""
+    if not class_name:
+        return None
+    for cls in class_name.split():
+        m = re.search(r"\.{}\b[^{{}}]*\{{([^}}]*)\}}".format(re.escape(cls)), text, re.I)
+        if m:
+            fm = re.search(r"fill\s*:\s*([^;}}]+)", m.group(1), re.I)
+            if fm:
+                return fm.group(1).strip()
+    return None
+
+
+def _svg_is_light_color(color):
+    """颜色亮度是否达到「浅色底」标准（相对亮度 > 0.6）。"""
+    c = (color or "").strip().lower()
+    named = {"white": (255, 255, 255), "ivory": (255, 255, 240),
+             "snow": (255, 250, 250), "whitesmoke": (245, 245, 245),
+             "ghostwhite": (248, 248, 255)}
+    rgb = named.get(c)
+    if rgb is None:
+        m = re.fullmatch(r"#([0-9a-f]{3})", c)
+        if m:
+            rgb = tuple(int(ch * 2, 16) for ch in m.group(1))
+        else:
+            m = re.fullmatch(r"#([0-9a-f]{6})", c)
+            if m:
+                rgb = tuple(int(m.group(1)[i:i + 2], 16) for i in (0, 2, 4))
+            else:
+                m = re.fullmatch(r"rgba?\(\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9]+).*", c)
+                if m:
+                    rgb = tuple(int(m.group(i)) for i in (1, 2, 3))
+    if rgb is None:
+        return False
+    r, g, b = rgb
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255.0 > 0.6
+
+
+def _svg_text_overflow(text, vb_width, base, font_min):
+    """SVG-19 近似机检：估算文本宽度是否超出 viewBox 宽。超了返回描述，否则 None。
+
+    公式见 v2 §5.1（分类系数，6 万条实测最坏低估 0.000%）。只报近似——实际宽度
+    取决于读者机器命中的字体，SVG 不嵌字体，所以这条只能报 W 不能阻断。
+    """
+    avail = vb_width - 2 * SVG_TEXT_PADDING
+    if avail <= 0:
+        return None
+    for m in re.finditer(r"<text\b([^>]*)>(.*?)</text>", text, re.I | re.S):
+        attrs, content = m.group(1), m.group(2)
+        label = re.sub(r"<[^>]+>", "", content).strip()
+        if not label:
+            continue
+        fm = re.search(r"font-size\s*=\s*[\"']([^\"']*)", attrs, re.I)
+        size = _svg_font_px(fm.group(1), base) if fm else None
+        if size is None:
+            sm = re.search(r"font-size\s*:\s*([^;\"']+)", attrs, re.I)
+            size = _svg_font_px(sm.group(1), base) if sm else None
+        if size is None:
+            size = SVG_DEFAULT_FONT_SIZE
+        width = _svg_width_em(label) * size
+        if width > avail:
+            return ("文本估算宽 {}px 超出 viewBox 可用宽 {}px（近似值，见 v2 §5.1）："
+                    "{}".format(int(width), int(avail), label[:16]))
+    return None
 
 
 def _first_body_line(lines, i, fence):
@@ -284,7 +645,10 @@ def run_checks(lines, doc, vis, fence, base_dir, box_rows, add, cfg):
                 elif probs:
                     add("W", "W-READER-SVG", i,
                         "SVG 读者版技术项不合格:" + "、".join(probs) +
-                        "——补 viewBox/role/title/desc,字号 ≥14、线宽 ≥1.5,去脚本/外链")
+                        "——补 viewBox/role/xmlns、非空 title/desc、自带浅色底;"
+                        "字号 ≥14、线宽 ≥1.5(相对单位按基准换算);"
+                        "去 script/事件属性/foreignObject/外部引用;"
+                        "url(#id) 须指向文档内真实 id")
 
     # 4. 本节速览:位置 + 3 列、1–3 行数据
     if "## 本节速览" in lines:

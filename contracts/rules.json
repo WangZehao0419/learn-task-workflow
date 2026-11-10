@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/3",
- "version": "9.20.6",
+ "version": "9.20.7",
  "constants": {
   "phases": [
    "接料建档",
@@ -383,7 +383,12 @@
     "link",
     "read more"
    ],
-   "table_align_min_numeric": 2
+   "table_align_min_numeric": 2,
+   "svg_relative_font_base": 16,
+   "svg_canvas_light_bg_required": true,
+   "svg_forbidden_tags": [
+    "foreignObject"
+   ]
   }
  }
 }
