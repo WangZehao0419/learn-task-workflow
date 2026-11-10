@@ -17,8 +17,37 @@ import rule_contract
 
 _C = rule_contract.load_or_exit()["constants"]
 
+# ── 行内注释剥离（唯一实现，全仓共用）──
+# 模板与人工书写常在字段行尾用「两个以上空格 + #」挂解说（见 references/data.md 各模板）。
+# 该解说属于文档层，**不是字段值的一部分**；不剥离会让「节目标线」等字段拿到脏值，
+# 且在未被枚举/格式校验覆盖的字段（当前节、目标）上**静默通过闸口**。
+# 只认「2 个以上空格 + #」这一个形态：
+#   - 单空格 + #（如「学完 # 标记」）不剥离，保留为值的一部分；
+#   - 值内嵌的 #（C#、第#3章）前面没有空格，天然不受影响。
+INLINE_COMMENT_RE = re.compile(r"\s{2,}#.*$")
+
+
+def strip_inline_comment(text):
+    """去掉字段行尾「2 个以上空格 + #…」的解说注释；不影响值内嵌的 #。"""
+    return INLINE_COMMENT_RE.sub("", text or "")
+
+
 # progress.md 字段行 / 课程体系节路线勾选行 / 「下次续学」目位置行
 FIELD_RE = re.compile(r"^-\s*([^：:]+)[：:]\s*(.*)$")
+
+
+def parse_field_line(line):
+    """FIELD_RE 匹配 + 行尾注释剥离，返回 (键, 值) 或 None。
+
+    三个消费者（progress_check / task_index / scheduler）统一走这里，
+    避免「谁来剥离注释」在各脚本间分叉。
+    """
+    m = FIELD_RE.match(line)
+    if not m:
+        return None
+    return m.group(1).strip(), strip_inline_comment(m.group(2)).strip()
+
+
 ROUTE_RE = re.compile(r"^-\s*\[([xX ])\]\s*(\d+)\.\s*(.*)$")
 BLOCK_RE = re.compile(r"(?:已讲到第\s*)?(\d+)\s*/\s*(\d+)\s*目(?!\s*[标录])")
 # 「暂缓与范围外」条目应含的三段（自由文本 + 竖线分段，不做枚举硬校验）

@@ -41,7 +41,7 @@ import tempfile
 from pathlib import Path
 
 import rule_contract
-from ltw_parse import (BLOCK_RE, FIELD_RE, ROUTE_RE, hold_disposition_excluded,
+from ltw_parse import (BLOCK_RE, FIELD_RE, ROUTE_RE, hold_disposition_excluded, parse_field_line,
                        hold_entry_malformed)
 
 # 枚举唯一来源：contracts/rules.json（缺失/畸形即结构化失败）。
@@ -98,10 +98,9 @@ def parse_progress(text):
                 block_done = int(m.group(1))
                 block_total = int(m.group(2))
             continue
-        m = FIELD_RE.match(line.strip())
-        if m and section is None:
-            key = m.group(1).strip()
-            val = m.group(2).strip()
+        fv = parse_field_line(line.strip())
+        if fv and section is None:
+            key, val = fv
             if key not in fields:
                 fields[key] = val
     malformed = [b for b in hold_entries if hold_entry_malformed(b)]

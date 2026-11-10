@@ -87,7 +87,7 @@ import tempfile
 from pathlib import Path
 
 import rule_contract
-from ltw_parse import (ENUM_KP_TYPE, ENUM_KP_VISUAL, FIELD_RE, HOLD_KEYS,
+from ltw_parse import (ENUM_KP_TYPE, ENUM_KP_VISUAL, FIELD_RE, HOLD_KEYS, parse_field_line, strip_inline_comment,
                        KP_ID_ANY_RE, KP_ID_RE,
                        ROUTE_RE, hold_disposition_excluded, hold_entry_malformed,
                        kp_status_base, normalize_kp_id, parse_kp_optional, parse_kp_row)
@@ -724,7 +724,7 @@ def parse_kp_list(path):
             version = int(m.group()) if m else None
             continue
         if re.match(r"^-\s*覆盖范围[：:]", line):
-            coverage_range = re.split(r"[：:]", line, maxsplit=1)[1].strip()
+            coverage_range = strip_inline_comment(re.split(r"[：:]", line, maxsplit=1)[1]).strip()
             continue
         if re.match(r"^-\s*覆盖摘要[：:]", line):
             summary_present = True
@@ -839,11 +839,11 @@ def parse(text):
                 if body not in ("无", "无。"):
                     hold_entries.append(body)
             continue
-        m = FIELD_RE.match(line.strip())
-        if m and section is None:
-            key = m.group(1).strip()
+        fv = parse_field_line(line.strip())
+        if fv and section is None:
+            key, val = fv
             if key not in fields:
-                fields[key] = m.group(2).strip()
+                fields[key] = val
     return fields, sections, hold_entries
 
 
@@ -1872,6 +1872,26 @@ def selftest():
         (d_ratio_zero / "progress.md").write_text(GOOD.replace("- 复习来源阶段：无\n", "- 复习来源阶段：无\n- 节目标线：0/5\n"), encoding="utf-8")
         r_ratio_zero = check(d_ratio_zero)
         ok = ok and any(e["code"] == "E-GATE-RATIO-INVALID" for e in r_ratio_zero["errors"])
+        # 行内注释剥离（ltw_parse.parse_field_line）：模板行尾「2+空格 + #」是解说，不是字段值；
+        # 值内嵌的 # 与单空格 +# 必须原样保留（C# / 第#3章 / 「学完 # 标记」不误伤）。
+        _fc = [
+            ("- 当前节：<N>                            # 阶段「已完成」时写末节序号", "<N>"),
+            ("- 复习来源阶段：逐节学习   # 进入 S4 前记录", "逐节学习"),
+            ("- 目标：学会 C# 异步编程", "学会 C# 异步编程"),
+            ("- 目标：攻克第#3章", "攻克第#3章"),
+            ("- 目标：学完 # 标记", "学完 # 标记"),
+        ]
+        for _src, _want in _fc:
+            _got = parse_field_line(_src)
+            ok = ok and _got is not None and _got[1] == _want
+        # 注释剥离后「节目标线」应可解析为合法值，而不是被判非法
+        d_ratio_cmt = Path(td) / "ratio-comment"
+        d_ratio_cmt.mkdir()
+        (d_ratio_cmt / "progress.md").write_text(
+            GOOD.replace("- 复习来源阶段：无\n", "- 复习来源阶段：无\n- 节目标线：3/4   # 缺省取契约默认线\n"),
+            encoding="utf-8")
+        r_ratio_cmt = check(d_ratio_cmt)
+        ok = ok and not any(e["code"] == "E-GATE-RATIO-INVALID" for e in r_ratio_cmt["errors"])
         # ① 规范态：小写 [x] + 判分记录 → 通过
         d = Path(td) / "good"
         (d / "exercises").mkdir(parents=True)

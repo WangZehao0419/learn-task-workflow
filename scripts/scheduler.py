@@ -80,7 +80,7 @@ from datetime import date
 from pathlib import Path
 
 import rule_contract
-from ltw_parse import FIELD_RE
+from ltw_parse import FIELD_RE, parse_field_line
 
 
 class ScheduleError(ValueError):
@@ -332,9 +332,9 @@ def parse_progress_sections(text):
             section = line[3:].strip()
             continue
         if section is None:
-            m = FIELD_RE.match(line.strip())
-            if m and m.group(1).strip() == "最近更新":
-                recent_update = m.group(2).strip()
+            fv = parse_field_line(line.strip())
+            if fv and fv[0] == "最近更新":
+                recent_update = fv[1]
             continue
         if section == "薄弱点" and line.strip().startswith("- "):
             weak_lines.append(line.strip()[2:].strip())

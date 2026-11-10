@@ -32,7 +32,7 @@ import re
 import sys
 from pathlib import Path
 
-from ltw_parse import KP_ID_RE, normalize_kp_id, parse_kp_row
+from ltw_parse import KP_ID_RE, normalize_kp_id, parse_kp_row, strip_inline_comment
 
 VALID = """# 课程体系：格式演示（示例仅为格式演示，KP 取舍与依赖声明规则领域无关）
 - 版本：2
@@ -117,7 +117,7 @@ def parse_kp_list(text):
             version = int(m.group()) if m else None
             continue
         if re.match(r"^-\s*排序规则[：:]", line):
-            sort_rule = re.split(r"[：:]", line, maxsplit=1)[1].strip()
+            sort_rule = strip_inline_comment(re.split(r"[：:]", line, maxsplit=1)[1]).strip()
             continue
         if line.startswith("- ") and ("｜" in line or "|" in line):
             body = line[2:].strip()
