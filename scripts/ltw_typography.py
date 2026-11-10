@@ -79,12 +79,42 @@ def _svg_problems(path, cfg):
         problems.append("含 script")
     if re.search(r"(?:href|xlink:href)\s*=\s*[\"']https?://", text, re.I):
         problems.append("含外部引用")
+    # 外链判据（第一性）：`handout-layout.md` 「SVG 为纯静态图形——不含 script 与外部引用」
+    # = 文档必须**自包含**。故判据不是「枚举外网协议」，而是「除文档内锚点 #id 外，一切引用皆外链」：
+    # 相对路径同样指向仓外文件，正是绕过点（旧实现只看 https?:// 与 //）。
+    if re.search(r"@import\b", text, re.I):
+        problems.append("含 @import 外部样式表")
+    for raw_ref in re.findall(r"url\(\s*([\"']?)([^)\"']+)\1\s*\)", text, re.I):
+        target = raw_ref[1].strip()
+        if not target.startswith("#"):
+            problems.append("含外部资源引用 url({})".format(target[:40]))
+            break
+    for m in re.finditer(r"<(?:image|use)\b[^>]*?\b(?:xlink:)?href\s*=\s*([\"'])(.*?)\1", text, re.I | re.S):
+        target = m.group(2).strip()
+        if not target.startswith("#"):
+            problems.append("含外部图片/引用 href({})".format(target[:40]))
+            break
+
+    # 字号与线宽：presentational attribute、style="" 内联、<style> 内 CSS 声明三处都要扫。
+    def _min_num(chunk, floor, label):
+        m = re.search(r"([0-9]+(?:\.[0-9]+)?)\s*(?:px)?", chunk)
+        if not m:
+            return
+        val = float(m.group(1))
+        if val < floor:
+            problems.append("{} {} < {}".format(label, m.group(1), floor))
+
     for raw in re.findall(r"font-size\s*=\s*[\"']([0-9.]+)", text):
         if float(raw) < cfg["svg_font_min"]:
             problems.append("字号 {} < {}".format(raw, cfg["svg_font_min"]))
     for raw in re.findall(r"stroke-width\s*=\s*[\"']([0-9.]+)", text):
         if float(raw) < cfg["svg_line_min"]:
             problems.append("线宽 {} < {}".format(raw, cfg["svg_line_min"]))
+    # style="font-size: 8px" 与 <style> 内的 font-size 声明（含 CSS 类）
+    for decl in re.findall(r"font-size\s*:\s*([^;\"'<}]+)", text, re.I):
+        _min_num(decl, cfg["svg_font_min"], "style 字号")
+    for decl in re.findall(r"stroke-width\s*:\s*([^;\"'<}]+)", text, re.I):
+        _min_num(decl, cfg["svg_line_min"], "style 线宽")
     return problems
 
 

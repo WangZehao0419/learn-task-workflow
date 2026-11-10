@@ -340,6 +340,7 @@ python -B evals/report-load-footprint.py --selftest
 python -B evals/report-load-footprint.py --check
 python -B evals/verify-marker-rules.py
 python -B evals/verify-readability.py
+python -B evals/verify-svg-checker.py
 ```
 
 `rule_contract --selftest` 覆盖 11 个用例：真实契约可加载、缺文件、空文件、非法 JSON、缺顶层键、schema 版本不符、枚举重复、比例非法、group_slugs 与学科族不一致、discipline_slugs 重复、缺业务常量键。**契约里已没有场景注册表、意图登记、文件清单或规则编号登记**——那些只服务索引的编译关系随编译层一起退役，因此也没有对应的校验子命令。`report-load-footprint` 只读报告每场景 core/补读字符与轮级加载量；`--check` 只校验结构（分册存在、补读小节可解析），数值一律不参与闸口。
@@ -354,7 +355,7 @@ python -B evals/verify-readability.py
 
 ### 当前核验
 
-- 适用版本：9.20.3
+- 适用版本：9.20.4
 - 核验日期：2026-11-09
 - 环境依赖：`skill-dependencies.json`（Python `min_version`）；只有 `check_environment.py` 输出 `ready` 才能继续。
 
