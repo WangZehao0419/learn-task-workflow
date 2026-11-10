@@ -269,7 +269,7 @@
 
 ### 脚本清单
 
-八个命令行脚本 + 两个内部模块（`ltw_typography.py` 读者检查、`ltw_parse.py` 解析原语），均 stdlib-only、幂等可重跑，基础 Python 版本以 `skill-dependencies.json` 的 `min_version` 为准。
+九个命令行脚本 + 两个内部模块（`ltw_typography.py` 读者检查、`ltw_parse.py` 解析原语），均 stdlib-only、幂等可重跑，基础 Python 版本以 `skill-dependencies.json` 的 `min_version` 为准。
 
 | 脚本 | 用法 | 默认行为 | 何时跑 |
 |---|---|---|---|
@@ -355,7 +355,7 @@ python -B evals/verify-svg-checker.py
 
 ### 当前核验
 
-- 适用版本：9.20.4
+- 适用版本：9.20.5
 - 核验日期：2026-11-09
 - 环境依赖：`skill-dependencies.json`（Python `min_version`）；只有 `check_environment.py` 输出 `ready` 才能继续。
 

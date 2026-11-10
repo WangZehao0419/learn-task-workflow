@@ -42,7 +42,7 @@
     "verify": "python --version 显示 ≥ 3.10；python -B scripts/check_environment.py 输出 status=ready；九个命令模块逐一以 --selftest 运行并退出 0（task_index / progress_check / scheduler / kp_sort / check_environment / verify_explanation / prereq_check / rule_contract / verify-doc-pointers）；python -B scripts/verify-doc-pointers.py 无 E 级问题；读者版检查：python -B scripts/verify_explanation.py --reader <材料目录或单文件>；evals/verify-readability.py 与 evals/report-load-footprint.py --check 退出 0。",
     "security": "无需登录与凭据；不安装、不修改系统配置；检查器只读，不发起网络请求与子进程。",
     "verified_at": "2026-11-04",
-    "applies_to_version": "9.20.4"
+    "applies_to_version": "9.20.5"
    }
   }
  ]

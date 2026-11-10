@@ -18,9 +18,9 @@ python scripts/check_environment.py
 ## 架构
 
 - `SKILL.md`（145 行）—— 激活即读的指令正文：调度协议、**十一条教学红线的完整判据**、阶段速查、数据三簿、按动作与按能力的分册指针。
-- `references/`（**27 册**）—— 15 本按能力域合并的**正本册** + 12 个学科 **variant 包**。
+- `references/`（**27 册**）—— 15 本按能力域合并的**正本册** + 12 个学科 **variant 包**（在 `references/disciplines/`）。
 - `contracts/rules.json`（7 KB）—— **只存业务常量与结构版本**：枚举 / 阈值 / 标题白名单 / 错误码。不含场景注册表、意图登记或文件清单。
-- `scripts/`（10 个，stdlib-only、幂等只读）—— 进度校验、判分证据验证、间隔调度、纯常量加载。
+- `scripts/`（**11 个文件** = 9 个命令行脚本 + 2 个内部模块，stdlib-only、幂等只读）—— 进度校验、判分证据验证、间隔调度、纯常量加载。
 - `evals/` —— 行为级验收脚本、红线回归与触发率用例、夹具。
 - `GLOSSARY.md` —— 五个 canonical 词（索引机检 / 行为机检 / 正本册 / variant 包 / 教学红线）。
 - `docs/adr/` —— 长期决策记录（ADR-0001 验收轴改判；ADR-0002 编译层退役）。
@@ -37,8 +37,8 @@ python scripts/check_environment.py
 
 - 没有**场景注册表**，没有**意图登记**，没有**文件清单**，没有**派生表**
 - 没有「索引机检」——结构自洽不再是闸口
-- 保留的是**业务常量加载**（七个确定性脚本仍从 `rule_contract.py` 读判分四态、调度参数等）
-- 兜底改用**逐文件内容保真比对** + 七个脚本的 `--selftest` import 不变量 + 行为机检
+- 保留的是**业务常量加载**（5 个模块仍从 `rule_contract.py` 读判分四态、调度参数等：`ltw_parse` / `progress_check` / `scheduler` / `task_index` / `verify_explanation`）
+- 兜底改用**逐文件内容保真比对** + 9 个命令行脚本的 `--selftest` import 不变量 + 行为机检
 
 ## 自检
 
@@ -46,7 +46,7 @@ python scripts/check_environment.py
 # 常量加载器
 python -B scripts/rule_contract.py --selftest
 
-# 七个确定性脚本
+# 9 个命令行脚本
 for s in scripts/*.py; do python -B "$s" --selftest; done
 
 # 行为机检
@@ -68,19 +68,20 @@ python -B evals/compare-baseline.py --selftest
 
 | 层级 | 内容 |
 |---|---|
-| **P0 主证据** | 教学红线盲回放 11/11 零违规；真人冷读通过 |
+| **P0 主证据** | 教学红线盲回放零违规；真人冷读通过（**两项目前都没有可复核的执行记录**，见下） |
 | **前置门槛** | 行为机检全绿；触发率 eval 达阈值；旧版快照 baseline 对照跑通 |
 | **报告项** | 官方 Agent Skills 规范符合度（**只报告，不设闸**） |
 | **明确不作闸口** | 索引机检（已退役）、分册数量、契约是否存在 |
 
-> 红线回归与冷读的**资产已就绪，执行与评分尚未进行**（见 `evals/evals.json` 的
-> `redline_regression` / `human_cold_read`，`verdict` 一律为 `未验证`）。
-> 按 `evidence_policy`：未跑的条目不得标「通过」。
+> **红线回归与冷读的执行记录目前都不可复核。** `evals/evals.json` 的
+> `human_cold_read` 为 `未验证`；`redline_regression` 的 11 条 `verdict` 是历史评分留下的底层记录，
+> 其对应的执行记录（第七轮 v7）已按 [票 43](https://github.com/WangZehao0419/learn-task-workflow/issues/43) 退役——
+> 原件与 git 证据冲突，矛盾消除前不计入 P0。按 `evidence_policy`：没有可复核证据的条目不得算「通过」。
 
 ## 维护
 
 - **版本**：`SKILL.md` frontmatter 的 `metadata.version` 与 `contracts/rules.json` 各登记一处；
-  两者不一致由 `rule_contract.py` 加载时暴露。本次发布升版到 **9.20.4**（SKILL.md 与契约一致）。
+  两者不一致由 `rule_contract.py` 加载时暴露。本次发布升版到 **9.20.5**（SKILL.md 与契约一致）。
 - **加一门学科**：只在 `references/disciplines/` 加一个 variant 包，不牵动其他文档。
 - **改一条规则**：改它在**正本册**里的那一处；要引用就写指针，不复制条文。
 - **文献与借鉴出处**：见 `CREDITS.md`（维护侧档案，不进运行时上下文）。

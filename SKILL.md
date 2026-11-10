@@ -2,7 +2,7 @@
 name: learn-task-workflow
 description: 当学员要把某个主题系统学下去、而不是问一道题时，用本技能带他跑完整个学习流程：问清目标与现状 → 诊断摸底 → 确认学习计划 → 逐节讲授与练习 → 判分验收 → 复习保持 → 结课。适合「我要学X」「教我X」「从零学X」「备考X／考研／考证」「继续上次学」「问进度」「学习简报」「考考我」「加练」，也适合独立写讲义、出题、组一套卷。不要用于：普通知识问答、单题求助（「这道题怎么做」）、代写作业、单纯总结或调研、搭课程脚手架。学员说「教我X」「帮我复习X」「考考我」这类高频词时，先确认它指的是系统学习还是只想问一下；指向不清就澄清一句再动手。宿主另有独立教学工作区或排版能力时，用户显式调用则让位，二者勿同时启动。
 metadata:
-  version: 9.20.4
+  version: 9.20.5
   author: 王责豪
   agent_created: true
 ---
@@ -142,4 +142,4 @@ metadata:
 - `references/handout-layout.md` —— 讲义流水线与版面排印合一册：单元 schema、支持级、六套风格、出厂自检、块级结构、字级排印、讲义版面/图像/打印/读者导航/公式排版。
 - `references/ops.md` —— 红线与失败处置、脚本手册与错误码速查、证据分级、环境与组合。
 - `references/subjects-*.md` 与 `references/disciplines/` —— 七本学科群正本册（每本含 plan / teach / practice / review 四类切片）+ 学科总则 + 十二个学科 variant 包（取用顺序见 `references/subjects-common.md`）。
-- `contracts/rules.json` —— 业务常量（枚举 / 阈值 / 标题白名单 / 错误码）与结构版本；七个确定性脚本通过 `scripts/rule_contract.py` 读取。**它只存常量，不存结构索引。**
+- `contracts/rules.json` —— 业务常量（枚举 / 阈值 / 标题白名单 / 错误码）与结构版本；5 个模块（`ltw_parse` / `progress_check` / `scheduler` / `task_index` / `verify_explanation`）通过 `scripts/rule_contract.py` 读取。**它只存常量，不存结构索引。**
