@@ -80,9 +80,10 @@
 
 11. 图引用死链(仅当校验入口能确定讲义所在目录时执行):框内 `图：<相对路径>` 与
    Markdown 图片语法 `![](<相对路径>)` 须指向真实文件,缺失报 E-IMG-DEADLINK;
-   http(s)/data: 等外部地址与锚点不查。两种写法作用域不重叠:Markdown 图片的
-   alt 是显示文字,先抹白再认正文 `图：`,故 `![流程图:先删再排](x.svg)` 只查
-   `x.svg`——W-READER-ALT 要求的「图型:一句话结论」不会反被判成死链。
+   http(s)/data: 等外部地址与锚点不查。两种写法作用域不重叠:`图：` 的命中位置
+   落在图片语法区间内即判为 alt、丢弃(残缺与引用式同样按区间排除),故
+   `![流程图:先删再排](x.svg)` 只查 `x.svg`——W-READER-ALT 要求的
+   「图型:一句话结论」不会反被判成死链。
 
 【规则表(13 类检查 / 36 个规则码;末组 W-READER-* 仅 --reader 启用)】
 | 规则码           | 级 | 触发条件                                                            |
@@ -254,8 +255,8 @@ def answer_covers(q_line, a_line):
 # 图引用:框内「图:assets/x.svg(示意)」与 Markdown 图片语法;外部地址不查
 IMG_LABEL_RE = re.compile(r"图\s*[：:]\s*([^\s（()）]+)")
 IMG_MD_RE = re.compile(r"!\[[^\]]*\]\(([^)\s]+)")
-# 图片语法的 alt 区:alt 是给读者的显示文字,不是路径;抹白之后才查正文「图:路径」(票 67)
-IMG_ALT_RE = re.compile(r"!\[[^\]]*\]")
+# 一整段图片语法(含 path 或引用式)的字符区间:落在区间内的「图:」是 alt,不是路径(票 67)
+IMG_SPAN_RE = re.compile(r"!\[[^\]]*\](?:\([^)]*\)|\[[^\]]*\])?")
 BOX_ANNOT_RE = re.compile(r"^\s*>\s*[（(]?\s*(?:注意?|验证|说明|批注)\s*[:：]")
 # 占位答案:结构上像答案、实际不可复现;限 20 字内,避免误伤含「略」的正常表述
 PLACEHOLDER_RE = re.compile(
@@ -285,18 +286,18 @@ RUBRIC_SOURCE_RE = re.compile(r"训练量表|官方")
 def image_refs(vis_line):
     """取一行里的全部图引用路径:Markdown 图片的路径 + 正文「图:路径」写法。
 
-    alt 是给读者的显示文字、路径是资源目标,两种语法的作用域不重叠:先把
-    Markdown 图片的 alt 区按字符抹白,再在剩下的正文里认「图:路径」,于是
-    `![流程图:一句话结论](x.svg)` 的 alt 不会被当成路径(票 67)。抹白保长度,
-    正文写法拿到的捕获文本与原文逐字一致。返回按出现位置排序。
+    alt 是给读者的显示文字、路径是资源目标,两种语法的作用域不重叠:「图:」的
+    命中位置一旦落在图片语法区间内,它就是 alt,不是路径,丢弃(票 67)。按位置
+    判定而非抹白重扫,残缺形态(无 path、引用式)同样归入图片语法区间,不会被
+    当成正文写法而漏掉,也不会在其内部误报。path 一侧仍由 IMG_MD_RE 独立取出。
     """
-    chars = list(vis_line)
-    for m in IMG_ALT_RE.finditer(vis_line):
-        chars[m.start():m.end()] = " " * (m.end() - m.start())
-    prose = "".join(chars)
-    hits = [(m.start(), m.group(1)) for m in IMG_MD_RE.finditer(vis_line)]
-    hits += [(m.start(), m.group(1)) for m in IMG_LABEL_RE.finditer(prose)]
-    return [ref for _, ref in sorted(hits)]
+    spans = [m.span() for m in IMG_SPAN_RE.finditer(vis_line)]
+    refs = [m.group(1) for m in IMG_MD_RE.finditer(vis_line)]
+    for m in IMG_LABEL_RE.finditer(vis_line):
+        if any(start <= m.start() < end for start, end in spans):
+            continue
+        refs.append(m.group(1))
+    return refs
 
 
 def compute_visible(lines):
@@ -1832,6 +1833,19 @@ def selftest():
         r_both = codes(check_text(md_both, "both.md", base_dir=d2), "E-IMG-DEADLINK")
         chk("同行两种写法各归各:只报正文那条死链",
             len(r_both) == 1 and "assets/missing.svg" in r_both[0][4])
+        # 反向边界(Standards 轴 P1):图片语法区间必须整段排除,但正文写法不能因此被吞
+        md_bare = FIX_BOX_OKSEG + "![图：assets/missing.svg]\n"
+        chk("残缺图片语法(无 path)里的图:不报,也不把 alt 当路径",
+            len(codes(check_text(md_bare, "bare.md", base_dir=d2),
+                      "E-IMG-DEADLINK")) == 0)
+        md_ref = FIX_BOX_OKSEG + "![图：assets/missing.svg][r]\n"
+        chk("引用式图片语法里的图:不报,也不把 alt 当路径",
+            len(codes(check_text(md_ref, "ref.md", base_dir=d2),
+                      "E-IMG-DEADLINK")) == 0)
+        md_after = FIX_BOX_OKSEG + "![图:结论](assets/ok.svg) 之后正文 图：assets/missing.svg\n"
+        chk("图片语法之后的正文写法仍生效(排除只限区间内)",
+            len(codes(check_text(md_after, "after.md", base_dir=d2),
+                      "E-IMG-DEADLINK")) == 1)
         (d2 / "dead.md").write_text(md_dead, encoding="utf-8")
         chk("入口目录校验能命中图死链(退出码 1)", main([str(d2)]) == 1)
         (d2 / "assets" / "bad.svg").write_bytes(b"\xff\xfe\xfa")
