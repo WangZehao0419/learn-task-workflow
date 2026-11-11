@@ -107,7 +107,7 @@
  "internal_modules": [
   {
    "script": "ltw_parse.py",
-   "note": "共享解析原语（清单行/目行/attempt 行），无 CLI；selftest 经 task_index/progress_check/kp_sort/prereq_check 间接覆盖"
+   "note": "共享解析原语（清单行/目行/attempt 行），无 CLI；覆盖由四个消费者脚本的 --selftest 承担：task_index / progress_check / scheduler / kp_sort"
   },
   {
    "script": "ltw_typography.py",
