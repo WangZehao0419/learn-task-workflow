@@ -363,7 +363,10 @@ python -B evals/report-load-footprint.py --check
 python -B evals/verify-marker-rules.py
 python -B evals/verify-readability.py
 python -B evals/verify-svg-checker.py
+python -B evals/verify-gate-registry.py
 ```
+
+`verify-gate-registry` 是**登记表本身的闸口**（票 65）：上面这份自测清单若与 `scripts/` 实际文件对不上，它先红。四条判据——G1 分区完备（`scripts_contract` 与 `internal_modules` 不重、不漏、无幽灵）、G2 分类自证（命令行脚本喂 `--this-flag-does-not-exist` 必须 rc≠0；内部模块喂同一参数必须 rc=0）、G3 清单可执行、G4 清单与契约同源。**「有没有 CLI」不靠声称，靠实测**：`ltw_parse.py` / `ltw_typography.py` 这类无 `__main__` 的模块对任何参数都 rc=0，它们进不了任何命令清单，只能登记为内部模块并说明覆盖由谁承担。
 
 `rule_contract --selftest` 覆盖 11 个用例：真实契约可加载、缺文件、空文件、非法 JSON、缺顶层键、schema 版本不符、枚举重复、比例非法、group_slugs 与学科族不一致、discipline_slugs 重复、缺业务常量键。**契约里已没有场景注册表、意图登记、文件清单或规则编号登记**——那些只服务索引的编译关系随编译层一起退役，因此也没有对应的校验子命令。`report-load-footprint` 只读报告每场景 core/补读字符与轮级加载量；`--check` 只校验结构（分册存在、补读小节可解析），数值一律不参与闸口。
 
@@ -377,7 +380,7 @@ python -B evals/verify-svg-checker.py
 
 ### 当前核验
 
-- 适用版本：9.20.9
+- 适用版本：9.20.10
 - 核验日期：2026-11-11
 - 环境依赖：`skill-dependencies.json`（核心层 Python `min_version`；增强层 `mmdc` 缺席不阻断）；只有 `check_environment.py` 输出 `ready` 才能继续，`degraded` 按上一节「核心层与增强层」说明一句。
 

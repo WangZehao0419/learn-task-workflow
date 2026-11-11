@@ -39,15 +39,25 @@ python scripts/check_environment.py
 - 没有「索引机检」——结构自洽不再是闸口
 - 保留的是**业务常量加载**（5 个模块仍从 `rule_contract.py` 读判分四态、调度参数等：`ltw_parse` / `progress_check` / `scheduler` / `task_index` / `verify_explanation`）
 - 兜底改用**逐文件内容保真比对** + 9 个命令行脚本的 `--selftest` import 不变量 + 行为机检
+- 两个**内部模块**（`ltw_parse.py` / `ltw_typography.py`）无 CLI，不在 `--selftest` 名单里；覆盖由四个消费者脚本与 `evals/verify-svg-checker.py` 承担，登记关系见 `contracts/scripts-contract.json` 的 `internal_modules`，由 `evals/verify-gate-registry.py` 机检
 
 ## 自检
 
 ```bash
-# 常量加载器
+# 9 个命令行脚本（显式名单，与 contracts/scripts-contract.json 的 verification.selftest 逐条对应）
+# 其中 rule_contract.py 是常量加载器，加载契约并校验其完整性
+python -B scripts/task_index.py --selftest
+python -B scripts/progress_check.py --selftest
+python -B scripts/scheduler.py --selftest
+python -B scripts/kp_sort.py --selftest
+python -B scripts/check_environment.py --selftest
+python -B scripts/verify_explanation.py --selftest
+python -B scripts/prereq_check.py --selftest
 python -B scripts/rule_contract.py --selftest
+python -B scripts/verify-doc-pointers.py --selftest
 
-# 9 个命令行脚本
-for s in scripts/*.py; do python -B "$s" --selftest; done
+# 登记表自检：上面这份名单与 scripts/ 实际文件对得上吗
+python -B evals/verify-gate-registry.py
 
 # 行为机检
 python -B evals/verify-formula-typesetting.py
