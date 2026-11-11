@@ -10,6 +10,8 @@ from pathlib import Path
 
 H2_RE = re.compile(r"^##\s")
 MD_IMAGE_ALT_RE = re.compile(r"!\[([^\]]*)\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
+# 正文「图:路径」写法(与 verify_explanation.IMG_LABEL_RE 同义),仅用于判断"要不要跑图检查"
+IMG_LABEL_PROBE_RE = re.compile(r"图\s*[：:]\s*[^\s（()）]+")
 GENERIC_ALT = {"图", "图片", "示意图", "图像", "figure", "image", "diagram"}
 THIRD_EXEMPT_RE = re.compile(
     r"^\s*(?:[-*+]\s+|\d+[.、)]\s*)?(?:\*\*)?\s*③\s*不适用|纯概念[·・]?\s*无\s*③", re.M)
@@ -528,6 +530,61 @@ def check_heading_body(lines, fence, add, cfg):
                 "标题后直接跟子标题——标题下先写一段正文，再分子标题")
 
 
+IMAGE_RULE_CODES = ("E-IMG-READ", "W-READER-ALT", "W-READER-CAPTION", "W-READER-SVG")
+# 受「像不像讲义」gate 约束的文案/结构类规则;图检查不在其中(见 check_image_rules)
+TEXT_RULE_CODES = (
+    "W-READER-HEADING", "W-READER-TABLE", "W-READER-OVERVIEW", "W-READER-INDEX",
+    "W-READER-CONCLUSION", "W-READER-EMPHASIS", "W-READER-LONGLINE",
+    "W-READER-DEEPNEST", "W-READER-HEADING-BODY", "W-READER-LINKTEXT",
+    "W-READER-TABLE-ALIGN",
+)
+
+
+def has_image_ref(lines, fence):
+    """文本里是否有图片引用(Markdown 图片语法或「图:路径」正文写法)。
+
+    只回答「要不要跑图检查」,不回答「像不像讲义」——两件事被本票拆开。
+    """
+    for i, ln in enumerate(lines):
+        if fence[i]:
+            continue
+        if MD_IMAGE_ALT_RE.search(ln) or IMG_LABEL_PROBE_RE.search(ln):
+            return True
+    return False
+
+
+def check_image_rules(lines, vis, fence, base_dir, add, cfg):
+    """图相关检查(alt / 图注 / SVG 技术项 / SVG 读取失败)。
+
+    纯函数:不读盘以外的状态、不写盘、不联网、不读环境变量。
+    与 run_checks 分开,因为图检查对任何含图文本都成立,不该被
+    「像不像讲义」的 gate 挡住——结构不全的讲义恰恰最需要查图。
+    """
+    for i, ln in enumerate(lines):
+        if fence[i]:
+            continue
+        for m in MD_IMAGE_ALT_RE.finditer(vis[i]):
+            alt, target = m.group(1).strip(), m.group(2).strip()
+            if not alt or alt.lower() in GENERIC_ALT:
+                add("W", "W-READER-ALT", i,
+                    "图片 alt 为空或过于笼统——写「图型:一句话结论」,不写「示意图/图片」")
+            if base_dir is None or re.match(r"(?:https?:|data:|mailto:)", target, re.I):
+                continue
+            path = Path(target) if Path(target).is_absolute() else Path(base_dir) / target
+            if path.suffix.lower() == ".svg" and path.exists():
+                probs = _svg_problems(path, cfg)
+                if "SVG 读取失败" in probs:
+                    add("E", "E-IMG-READ", i, "SVG 读取失败或编码不是 UTF-8")
+                elif probs:
+                    add("W", "W-READER-SVG", i,
+                        "SVG 读者版技术项不合格:" + "、".join(probs) +
+                        "——补 viewBox/role/xmlns、非空 title/desc、自带浅色底;"
+                        "字号 ≥14、线宽 ≥1.5(相对单位按基准换算);"
+                        "去 script/事件属性/foreignObject/外部引用;"
+                        "url(#id) 须指向文档内真实 id")
+    check_caption(lines, fence, add, cfg)
+
+
 def check_caption(lines, fence, add, cfg):
     """图片后应有图注（图注：… 或 图 N：…），表格内图片豁免。"""
     prefixes = tuple(cfg.get("figure_caption_prefixes")
@@ -595,8 +652,11 @@ def check_table_align(lines, fence, add, cfg):
                     "数值列未右对齐——表头写单位，分隔行用 ---: 让数字右对齐")
 
 
-def run_checks(lines, doc, vis, fence, base_dir, box_rows, add, cfg):
-    """读者版/排版检查（W 级，只在 --reader 显式启用时执行，不拦截）。"""
+def run_checks(lines, doc, vis, fence, base_dir, box_rows, add, cfg, image=True):
+    """读者版/排版检查（W 级，只在 --reader 显式启用时执行，不拦截）。
+
+    image=False 时跳过图检查——调用方已单独跑过 check_image_rules，避免重复。
+    """
     # 1. 标题层级不跳级
     prev = 0
     for i, ln in enumerate(lines):
@@ -626,29 +686,9 @@ def run_checks(lines, doc, vis, fence, base_dir, box_rows, add, cfg):
             add("W", "W-READER-TABLE", block[0],
                 "表头存在空列名——每列写清名称,单位放表头")
 
-    # 3. 图片 alt 与 SVG 技术项
-    for i, ln in enumerate(lines):
-        if fence[i]:
-            continue
-        for m in MD_IMAGE_ALT_RE.finditer(vis[i]):
-            alt, target = m.group(1).strip(), m.group(2).strip()
-            if not alt or alt.lower() in GENERIC_ALT:
-                add("W", "W-READER-ALT", i,
-                    "图片 alt 为空或过于笼统——写「图型:一句话结论」,不写「示意图/图片」")
-            if base_dir is None or re.match(r"(?:https?:|data:|mailto:)", target, re.I):
-                continue
-            path = Path(target) if Path(target).is_absolute() else Path(base_dir) / target
-            if path.suffix.lower() == ".svg" and path.exists():
-                probs = _svg_problems(path, cfg)
-                if "SVG 读取失败" in probs:
-                    add("E", "E-IMG-READ", i, "SVG 读取失败或编码不是 UTF-8")
-                elif probs:
-                    add("W", "W-READER-SVG", i,
-                        "SVG 读者版技术项不合格:" + "、".join(probs) +
-                        "——补 viewBox/role/xmlns、非空 title/desc、自带浅色底;"
-                        "字号 ≥14、线宽 ≥1.5(相对单位按基准换算);"
-                        "去 script/事件属性/foreignObject/外部引用;"
-                        "url(#id) 须指向文档内真实 id")
+    # 3. 图片 alt 与 SVG 技术项(可由 check_image_rules 独立调用,见该函数)
+    if image:
+        check_image_rules(lines, vis, fence, base_dir, add, cfg)
 
     # 4. 本节速览:位置 + 3 列、1–3 行数据
     if "## 本节速览" in lines:
@@ -763,8 +803,9 @@ def run_checks(lines, doc, vis, fence, base_dir, box_rows, add, cfg):
                 "列表嵌套 {} 层——超过 {} 层扫读困难;提升层级或拆成小节".format(
                     depth, depth_max))
 
-    # 10–13. 新版式检查
+    # 10–13. 新版式检查(图注归图检查组,由 check_image_rules 负责,不在此重复)
     check_heading_body(lines, fence, add, cfg)
-    check_caption(lines, fence, add, cfg)
+    if image:
+        check_caption(lines, fence, add, cfg)
     check_linktext(lines, fence, add, cfg)
     check_table_align(lines, fence, add, cfg)

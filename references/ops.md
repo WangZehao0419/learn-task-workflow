@@ -159,7 +159,7 @@
 | verify_explanation | `E-THIRD-CONFLICT` / `E-THIRD-EXEMPT-MISUSE` / `E-LEDGER-RESIDUE` / `W-LEDGER-DRAFT` / `W-RUBRIC-SOURCE` | ③ 不适用与 ③ 答案并存 / 豁免被滥用 / 定稿判分记账残留 / 草稿内台账状态行（学员会读草稿） / 给分点量表缺「官方/训练量表」声明 |
 | verify_explanation | `W-MARKER-CONTENT` / `W-STYLE-POINTER` / `W-UNICODE-CHAR` | 标记行带内容 / 头部复制规则正文 / Unicode denylist 字符；`W-UNICODE-CHAR` 定稿前必须清零 |
 | verify_explanation | `W-SELFTEST-MISSING` / `W-SELFTEST-EMPTY` | 自测/检验题面区缺同族答案区 / 答案区为空或占位 |
-| verify_explanation | `W-READER` / `W-READER-ALT` / `W-READER-CAPTION` / `W-READER-CONCLUSION` / `W-READER-DEEPNEST` / `W-READER-EMPHASIS` / `W-READER-HEADING` / `W-READER-HEADING-BODY` / `W-READER-INDEX` / `W-READER-LINKTEXT` / `W-READER-LONGLINE` / `W-READER-OVERVIEW` / `W-READER-SVG` / `W-READER-TABLE` / `W-READER-TABLE-ALIGN` | `--reader` 版式项：标题/表格/图注/alt/SVG/速览/索引/结论/强调/链接/长行/嵌套 |
+| verify_explanation | `W-READER` / `W-READER-ALT` / `W-READER-CAPTION` / `W-READER-CONCLUSION` / `W-READER-DEEPNEST` / `W-READER-EMPHASIS` / `W-READER-HEADING` / `W-READER-HEADING-BODY` / `W-READER-INDEX` / `W-READER-LINKTEXT` / `W-READER-LONGLINE` / `W-READER-OVERVIEW` / `W-READER-SVG` / `W-READER-TABLE` / `W-READER-TABLE-ALIGN` | `--reader` 版式项：标题/表格/图注/alt/SVG/速览/索引/结论/强调/链接/长行/嵌套。图检查（`E-IMG-READ`/`W-READER-SVG`/`W-READER-ALT`/`W-READER-CAPTION`）对任何含图文本生效，不受「像不像讲义」的 gate 约束；gate 关闭时摘要打印「已跳过 N 项读者版检查（未校验）」，不再输出「通过：无违规项」 |
 | verify_explanation | `W-NO-TIER` | 讲义单元缺 tier 标签 |
 | rule_contract | `E-CONTRACT-MISSING` / `E-CONTRACT-INVALID` | 契约缺失 / 畸形 |
 | report_load_footprint | `E-LOAD-STRUCT` | 加载结构不成立：场景文件缺失、同一场景混用多个令牌、补读小节不存在 |

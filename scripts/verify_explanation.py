@@ -108,11 +108,12 @@
 | E-HEADER-BRIEF   | E  | 定稿文件头部缺「本节目标」「前置」「预计」任一(草稿不查)             |
 | E-IMG-DEADLINK   | E  | `图：<相对路径>` 或 `![](<相对路径>)` 指向的文件不存在(死链)        |
 | E-READ-FILE      | E  | Markdown 读取失败或编码不是 UTF-8；继续扫描其他文件，最终 exit 1    |
-| E-IMG-READ       | E  | `--reader` 下 SVG 读取失败或编码不是 UTF-8                         |
+| E-IMG-READ       | E  | `--reader` 下 SVG 读取失败或编码不是 UTF-8(不受「像不像讲义」约束) |
+| W-READER-SKIP    | —  | 非规则码:gate 关闭时打印「已跳过 N 项…(未校验)」,不与「通过」混用    |
 | W-READER-HEADING | W  | 读者版标题层级跳级(H1→H3 等);仅 `--reader`                       |
 | W-READER-TABLE   | W  | 读者版表格缺表头分隔行、列数不在 2–4、表头有空列名;仅 `--reader`     |
-| W-READER-ALT     | W  | 读者版图片 alt 为空或只写「示意图/图片」;仅 `--reader`               |
-| W-READER-SVG     | W  | 读者版 SVG 根元素缺 viewBox/role、缺 title/desc、字号 <14/线宽 <1.5、含脚本/外链;仅 `--reader` |
+| W-READER-ALT     | W  | 读者版图片 alt 为空或只写「示意图/图片」;仅 `--reader`(不受 gate 约束) |
+| W-READER-SVG     | W  | 读者版 SVG 根元素缺 viewBox/role、缺 title/desc、字号 <14/线宽 <1.5、含脚本/外链;仅 `--reader`(不受 gate 约束) |
 | W-READER-OVERVIEW | W | 读者版 `## 本节速览` 缺失、非 3 列或数据行不在 1–3;仅 `--reader`      |
 | W-READER-INDEX   | W  | 读者版 `## 回看索引` 缺「核心一句话/最容易错/下一步」;仅 `--reader`    |
 | W-READER-CONCLUSION | W | 启用 `## 本节速览` 时概念单元首行缺「一句话结论:」;纯概念/参照/L3 豁免;仅 `--reader` |
@@ -120,7 +121,7 @@
 | W-READER-LONGLINE | W | 读者版单条可见正文行超 200 字(公式/代码剥除后计长;标题/表格/引用/答案框/答案区豁免);仅 `--reader` |
 | W-READER-DEEPNEST | W | 读者版列表嵌套超过 3 层;仅 `--reader` |
 | W-READER-HEADING-BODY | W | 读者版标题后直接跟列表/表格/图片/子标题(结构区与概念单元「一句话结论」豁免);仅 `--reader` |
-| W-READER-CAPTION | W | 读者版图片后缺图注(图注:… 或 图 N:…;表格内图片豁免);仅 `--reader` |
+| W-READER-CAPTION | W | 读者版图片后缺图注(图注:… 或 图 N:…;表格内图片豁免);仅 `--reader`(不受 gate 约束) |
 | W-READER-LINKTEXT | W | 读者版链接文字为空或泛称(点击这里/这里/链接等);仅 `--reader` |
 | W-READER-TABLE-ALIGN | W | 读者版数值列(≥2 个纯数值单元格)未右对齐;仅 `--reader` |
 
@@ -500,11 +501,14 @@ def collect_boxes(lines, units):
     return boxes
 
 
-def check_text(text, rel, base_dir=None, reader=False):
+def check_text(text, rel, base_dir=None, reader=False, skips=None):
     """校验单份讲义文本,返回 findings 列表(已按 文件→行号→规则码 排序)。
 
     base_dir 给定时才做图引用死链检查(相对路径按讲义所在目录解析);
     selftest 等内存校验不传,避免把宿主目录当成讲义目录。
+
+    reader=True 且 skips 给定时,把「没能执行的读者版规则码」追加进 skips——
+    跳过必须可判定,不得与通过混为一谈(票 66)。
     """
     lines = text.splitlines()
     doc = parse_doc(lines)
@@ -797,23 +801,48 @@ def check_text(text, rel, base_dir=None, reader=False):
                         "先写 SVG 再引用,或删掉该行改文字描述")
 
     # ── 规则 11:读者版 P1 可读性(W;仅 --reader 显式启用)──
-    # 只对像讲义的文本生效(有概念单元或读者版导航块),避免把冷读记录/台账当讲义报噪声
-    if reader and (doc["units"] or "## 本节速览" in lines or "## 回看索引" in lines):
-        ltw_typography.run_checks(lines, doc, vis, fence, base_dir, box_rows, add, READER)
+    # 拆成两个开关(票 66):
+    #   ① 图检查:对任何含图文本都成立 → 不受「像不像讲义」约束。
+    #      gate 想挡的是冷读记录/台账的文案噪声,图检查在 docs/references/evals
+    #      实测零命中,没有理由跟着一起被挡。
+    #   ② 文案/结构检查:动机真实(别把台账当讲义),保持 gate。
+    # 两者曾绑在同一个 if 上,导致「结构越不全,查得越少」,还把 E-IMG-READ 吞成通过。
+    if reader:
+        if ltw_typography.has_image_ref(lines, fence):
+            ltw_typography.check_image_rules(lines, vis, fence, base_dir, add, READER)
+        looks_like_handout = (doc["units"] or "## 本节速览" in lines
+                              or "## 回看索引" in lines)
+        if looks_like_handout:
+            ltw_typography.run_checks(lines, doc, vis, fence, base_dir, box_rows, add,
+                                      READER, image=False)
+        elif skips is not None:
+            skips.extend(ltw_typography.TEXT_RULE_CODES)
 
     findings.sort(key=lambda f: (f[2], f[3], f[1], f[4]))
     return findings
 
 
-def report(findings):
-    """打印逐条结果与摘要行,返回退出码(0=无 E,1=有 E)。"""
+def report(findings, skips=None):
+    """打印逐条结果与摘要行,返回退出码(0=无 E,1=有 E)。
+
+    skips 非空时额外打印「已跳过」行:跳过与通过是两回事,跳过时不得出现
+    「通过:无违规项」——那会把「没查」伪装成「查过且没问题」(票 66)。
+    跳过不改变退出码语义(0=无 E,1=有 E,2=用法/路径错误)。
+    """
     for level, code, rel, lineno, msg in findings:
         print("[{}] {} {}:{} {}".format(level, code, rel, lineno, msg))
+    skipped = sorted(set(skips or ()))
     if findings:
         e_count = sum(1 for f in findings if f[0] == "E")
         w_count = len(findings) - e_count
         print("共 {} 项:E {} 项,W {} 项".format(len(findings), e_count, w_count))
-        return 1 if e_count else 0
+    if skipped:
+        print("已跳过 {} 项读者版检查(本文不像讲义,未校验):{}".format(
+            len(skipped), "/".join(skipped)))
+    if findings:
+        return 1 if any(f[0] == "E" for f in findings) else 0
+    if skipped:
+        return 0
     print("通过:无违规项(结构通过;内容准确性、来源可信度与教学体验未校验,须人工/领域复核)")
     return 0
 
@@ -854,6 +883,7 @@ def main(argv=None):
         print("[learn-task-workflow] 路径不存在或不可访问:" + str(p), file=sys.stderr)
         return 2
     findings = []
+    skips = []
     for f in files:
         rel = f.relative_to(p).as_posix() if p.is_dir() else f.name
         try:
@@ -863,8 +893,9 @@ def main(argv=None):
             findings.append(("E", "E-READ-FILE", rel, 1,
                              "文件读取失败或编码不是 UTF-8:" + str(exc)))
             continue
-        findings.extend(check_text(text, rel, base_dir=f.parent, reader=args.reader))
-    return report(findings)
+        findings.extend(check_text(text, rel, base_dir=f.parent, reader=args.reader,
+                                   skips=skips))
+    return report(findings, skips)
 
 
 # ═══════════════════ selftest 内嵌样例(运行于临时目录,不写盘被校验目录) ═══════════════════
@@ -1851,6 +1882,51 @@ def selftest():
         (d2 / "assets" / "bad.svg").write_bytes(b"\xff\xfe\xfa")
         (d2 / "bad-svg.md").write_text(FIX_BOX_OKSEG + "![](assets/bad.svg)\n", encoding="utf-8")
         chk("SVG 非法 UTF-8 结构化失败", main([str(d2 / "bad-svg.md"), "--reader"]) == 1)
+
+        # ── 票 66:图检查不得被「像不像讲义」的 gate 挡住 ──
+        # 结构不全的讲义最需要查图;gate 的正当动机(别把冷读记录/台账当讲义)只该挡文案类规则。
+        d3 = Path(td) / "gate-outside"
+        (d3 / "assets").mkdir(parents=True)
+        (d3 / "assets" / "bad.svg").write_text(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20">'
+            '<text x="1" y="9" font-size="8px">x</text></svg>', encoding="utf-8")
+        gate_out = ("# 第 1 节 · 示例\n\n正文一句。\n\n"
+                    "![流程图:先删不可行项,再排序](assets/bad.svg)\n")
+        r_out = codes(check_text(gate_out, "gate-outside.md", base_dir=d3, reader=True),
+                      "W-READER-SVG")
+        chk("gate 外侧(无概念单元/速览/回看索引)的坏图仍报 W-READER-SVG",
+            len(r_out) == 1)
+        gate_in = gate_out + ("\n## 本节速览\n\n| 要解决的问题 | 一句话结论 | 用在哪 |\n"
+                              "|---|---|---|\n| 甲 | 乙 | 丙 |\n")
+        r_in = codes(check_text(gate_in, "gate-inside.md", base_dir=d3, reader=True),
+                     "W-READER-SVG")
+        chk("A/B 断言组:仅多一个 ## 本节速览 时图检查结论一致",
+            len(r_out) == 1 and len(r_in) == 1 and r_out[0][4] == r_in[0][4])
+        (d3 / "assets" / "bad-read.svg").write_bytes(b"\xff\xfe\xfa")
+        (d3 / "read.md").write_text(gate_out.replace("assets/bad.svg", "assets/bad-read.svg"),
+                                    encoding="utf-8")
+        chk("gate 外侧的非 UTF-8 SVG 必须报 E-IMG-READ",
+            len(codes(check_text((d3 / "read.md").read_text(encoding="utf-8"), "read.md",
+                                 base_dir=d3, reader=True), "E-IMG-READ")) == 1)
+        chk("E-IMG-READ 不被 gate 吞掉(端到端 rc=1)",
+            main([str(d3 / "read.md"), "--reader"]) == 1)
+
+        # 「跳过」必须以可判定形式说出来,不得输出「通过:无违规项」。
+        d4 = Path(td) / "ledger"
+        d4.mkdir()
+        (d4 / "ledger.md").write_text("# 台账\n\n今天学了甲。\n", encoding="utf-8")
+        skip_probe = []
+        findings_skip = check_text("# 台账\n\n今天学了甲。\n", "ledger.md",
+                                   base_dir=d4, reader=True, skips=skip_probe)
+        chk("gate 关闭时登记被跳过的规则码(非图检查)",
+            bool(skip_probe) and not any("IMG" in c or "SVG" in c or "ALT" in c
+                                         or "CAPTION" in c for c in skip_probe))
+        chk("gate 关闭时不报任何 reader 图检查/文案检查",
+            not [f for f in findings_skip if f[1].startswith(("W-READER", "E-IMG-READ"))])
+        skip_probe2 = []
+        check_text(gate_out, "gate-outside.md", base_dir=d3, reader=True, skips=skip_probe2)
+        chk("gate 关闭但有图时,非图规则仍登记跳过",
+            bool(skip_probe2) and len(skip_probe2) == len(skip_probe))
 
     print(("OK " if ok else "FAIL ") + "verify_explanation --selftest")
     return 0 if ok else 1

@@ -71,15 +71,28 @@ def main(argv=None) -> int:
             else Path(__file__).resolve().parent.parent)
     c = Checker()
 
-    # 1. 合格样板：--reader 通过且无 W-READER
+    # 1. 合格样板：--reader 通过且无 W-READER 发现
+    #    (只认发现行:跳过行会列出被跳过的规则码,用子串判会把它误当问题)
+    def reader_findings(out):
+        return [ln for ln in out.splitlines()
+                if ln.startswith(("[W] W-READER", "[E] E-IMG-READ"))]
+
     for label, rel in (("读者版样板", SAMPLE_REL), ("程序型样板", PROCEDURE_REL),
                        ("设计型样板", DESIGN_REL)):
         rc, out = run_reader(root, root / rel)
-        c.check("1.x " + label + "通过 --reader", rc == 0 and "W-READER" not in out, (rc, out[-300:]))
+        c.check("1.x " + label + "通过 --reader",
+                rc == 0 and not reader_findings(out), (rc, out[-300:]))
 
+    # 1.y L3 检索卡在 gate 外侧:今天「无 W-READER」曾经是因为什么都没跑(空断言)。
+    # 票 66 之后必须断言诚实结果——跳过要以可判定形式说出来,且不得伪装成通过。
     l3 = root / "evals" / "fixtures" / "handout-l1-l3" / "L3-机会成本-检索版要点卡.md"
     rc, out = run_reader(root, l3)
-    c.check("1.y L3 检索卡无 W-READER", rc == 0 and "W-READER" not in out, (rc, out[-300:]))
+    # 注意:跳过行会列出被跳过的规则码,所以不能再用 "W-READER not in out" 判——
+    # 那会把「声明跳过」误判成「报出问题」。只认发现行(以 [W]/[E] 开头的行)。
+    findings_lines = [ln for ln in out.splitlines()
+                      if ln.startswith(("[W] W-READER", "[E] E-IMG-READ"))]
+    c.check("1.y L3 检索卡无 W-READER 发现且明示已跳过",
+            rc == 0 and not findings_lines and "已跳过" in out, (rc, out[-300:]))
 
     l1 = root / "evals" / "fixtures" / "handout-l1-l3" / "L1-机会成本.md"
     rc, out = run_reader(root, l1)
