@@ -80,7 +80,9 @@
 
 11. 图引用死链(仅当校验入口能确定讲义所在目录时执行):框内 `图：<相对路径>` 与
    Markdown 图片语法 `![](<相对路径>)` 须指向真实文件,缺失报 E-IMG-DEADLINK;
-   http(s)/data: 等外部地址与锚点不查。
+   http(s)/data: 等外部地址与锚点不查。两种写法作用域不重叠:Markdown 图片的
+   alt 是显示文字,先抹白再认正文 `图：`,故 `![流程图:先删再排](x.svg)` 只查
+   `x.svg`——W-READER-ALT 要求的「图型:一句话结论」不会反被判成死链。
 
 【规则表(13 类检查 / 36 个规则码;末组 W-READER-* 仅 --reader 启用)】
 | 规则码           | 级 | 触发条件                                                            |
@@ -252,6 +254,8 @@ def answer_covers(q_line, a_line):
 # 图引用:框内「图:assets/x.svg(示意)」与 Markdown 图片语法;外部地址不查
 IMG_LABEL_RE = re.compile(r"图\s*[：:]\s*([^\s（()）]+)")
 IMG_MD_RE = re.compile(r"!\[[^\]]*\]\(([^)\s]+)")
+# 图片语法的 alt 区:alt 是给读者的显示文字,不是路径;抹白之后才查正文「图:路径」(票 67)
+IMG_ALT_RE = re.compile(r"!\[[^\]]*\]")
 BOX_ANNOT_RE = re.compile(r"^\s*>\s*[（(]?\s*(?:注意?|验证|说明|批注)\s*[:：]")
 # 占位答案:结构上像答案、实际不可复现;限 20 字内,避免误伤含「略」的正常表述
 PLACEHOLDER_RE = re.compile(
@@ -276,6 +280,23 @@ RUBRIC_RE = re.compile(r"给分点量表")
 SCORE_RE = re.compile(r"[（(]\s*(\d+(?:\.\d+)?)\s*分\s*[)）]")
 TOTAL_RE = re.compile(r"合计\s*(\d+(?:\.\d+)?)\s*分")
 RUBRIC_SOURCE_RE = re.compile(r"训练量表|官方")
+
+
+def image_refs(vis_line):
+    """取一行里的全部图引用路径:Markdown 图片的路径 + 正文「图:路径」写法。
+
+    alt 是给读者的显示文字、路径是资源目标,两种语法的作用域不重叠:先把
+    Markdown 图片的 alt 区按字符抹白,再在剩下的正文里认「图:路径」,于是
+    `![流程图:一句话结论](x.svg)` 的 alt 不会被当成路径(票 67)。抹白保长度,
+    正文写法拿到的捕获文本与原文逐字一致。返回按出现位置排序。
+    """
+    chars = list(vis_line)
+    for m in IMG_ALT_RE.finditer(vis_line):
+        chars[m.start():m.end()] = " " * (m.end() - m.start())
+    prose = "".join(chars)
+    hits = [(m.start(), m.group(1)) for m in IMG_MD_RE.finditer(vis_line)]
+    hits += [(m.start(), m.group(1)) for m in IMG_LABEL_RE.finditer(prose)]
+    return [ref for _, ref in sorted(hits)]
 
 
 def compute_visible(lines):
@@ -764,8 +785,8 @@ def check_text(text, rel, base_dir=None, reader=False):
             if fence[i]:
                 continue
             # 用可见正文匹配:行内 code span / $…$ 中引述的写法示例不算图引用
-            for m in list(IMG_LABEL_RE.finditer(vis[i])) + list(IMG_MD_RE.finditer(vis[i])):
-                ref = m.group(1).strip().strip("<>").split("#")[0]
+            for ref in image_refs(vis[i]):
+                ref = ref.strip().strip("<>").split("#")[0]
                 if not ref or re.match(r"(?:https?:|data:|mailto:)", ref, re.I):
                     continue
                 target = (Path(base_dir) / ref) if not Path(ref).is_absolute() else Path(ref)
@@ -1790,6 +1811,27 @@ def selftest():
         md_code = FIX_BOX_OKSEG + "示例：`图：assets/missing.svg` 这样写\n"
         chk("行内 code span 里的图示例不误报死链",
             len(codes(check_text(md_code, "code.md", base_dir=d2), "E-IMG-DEADLINK")) == 0)
+
+        # 票 67:Markdown 图片 alt 里的「图：」是结论文字,不是图引用路径。
+        # W-READER-ALT 恰恰要求 alt 写成「图型:一句话结论」,流程图/结构图 100% 命中。
+        md_alt_ok = FIX_BOX_OKSEG + "![流程图:先删不可行项,再排序](assets/ok.svg)\n"
+        chk("alt 含「图：」且图存在时不报死链",
+            len(codes(check_text(md_alt_ok, "altok.md", base_dir=d2),
+                      "E-IMG-DEADLINK")) == 0)
+        md_alt_dead = FIX_BOX_OKSEG + "![流程图:先删不可行项,再排序](assets/missing.svg)\n"
+        r_alt_dead = codes(check_text(md_alt_dead, "altdead.md", base_dir=d2),
+                           "E-IMG-DEADLINK")
+        chk("alt 含「图：」且图真缺失时仍报 1 条,消息指向路径不指向 alt",
+            len(r_alt_dead) == 1 and "assets/missing.svg" in r_alt_dead[0][4]
+            and "先删不可行项" not in r_alt_dead[0][4])
+        md_prose_missing = FIX_BOX_OKSEG + "图：assets/missing.svg\n"
+        chk("正文「图：路径」死链照报(修复不得靠删正则)",
+            len(codes(check_text(md_prose_missing, "prose.md", base_dir=d2),
+                      "E-IMG-DEADLINK")) == 1)
+        md_both = FIX_BOX_OKSEG + "图：assets/missing.svg 与 ![流程图:结论](assets/ok.svg)\n"
+        r_both = codes(check_text(md_both, "both.md", base_dir=d2), "E-IMG-DEADLINK")
+        chk("同行两种写法各归各:只报正文那条死链",
+            len(r_both) == 1 and "assets/missing.svg" in r_both[0][4])
         (d2 / "dead.md").write_text(md_dead, encoding="utf-8")
         chk("入口目录校验能命中图死链(退出码 1)", main([str(d2)]) == 1)
         (d2 / "assets" / "bad.svg").write_bytes(b"\xff\xfe\xfa")

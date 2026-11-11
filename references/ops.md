@@ -381,7 +381,7 @@ python -B evals/verify-gate-registry.py
 
 ### 当前核验
 
-- 适用版本：9.20.12
+- 适用版本：9.20.13
 - 核验日期：2026-11-11
 - 环境依赖：`skill-dependencies.json`（核心层 Python `min_version`；增强层 `mmdc` 缺席不阻断）；只有 `check_environment.py` 输出 `ready` 才能继续，`degraded` 按上一节「核心层与增强层」说明一句。
 
