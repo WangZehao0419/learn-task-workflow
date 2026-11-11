@@ -2,8 +2,11 @@
 # -*- coding: utf-8 -*-
 """ltw_typography - 讲义读者版检查模块。
 
-被 verify_explanation.py --reader 调用（run_checks，讲义读者版 W-READER-*，不阻断）。
-纯函数：不写盘、不联网、不读环境变量。语义上的"是否更易读"仍归人工读者验证。
+被 verify_explanation.py --reader 调用（run_checks 文案/结构类 + check_image_rules 图类，
+讲义读者版 W-READER-*，不阻断）。两个入口分开：图检查不该被「像不像讲义」的门挡住，
+合在一起还会让同一张图被两处各查一遍。
+不写盘、不联网、不读环境变量；只读被校验材料所在目录内的 SVG。
+语义上的"是否更易读"仍归人工读者验证。
 """
 import re
 from pathlib import Path
@@ -575,15 +578,17 @@ def _check_svg_target(i, target, base_dir, add, cfg):
             "url(#id) 须指向文档内真实 id")
 
 
-def has_image_ref(lines, fence):
+def has_image_ref(lines, vis, fence):
     """文本里是否有图片引用(Markdown 图片语法或「图:路径」正文写法)。
 
     只回答「要不要跑图检查」,不回答「像不像讲义」——两件事被本票拆开。
+    读 vis 而不是原始行:与 check_image_rules 同一坐标系,否则 code span 里
+    引述的写法示例会让它判「有图」,白跑一遍全套图检查。
     """
     for i, ln in enumerate(lines):
         if fence[i]:
             continue
-        if MD_IMAGE_ALT_RE.search(ln) or IMG_LABEL_PROBE_RE.search(ln):
+        if MD_IMAGE_ALT_RE.search(vis[i]) or IMG_LABEL_PROBE_RE.search(vis[i]):
             return True
     return False
 
@@ -591,7 +596,7 @@ def has_image_ref(lines, fence):
 def check_image_rules(lines, vis, fence, base_dir, add, cfg):
     """图相关检查(alt / 图注 / SVG 技术项 / SVG 读取失败)。
 
-    纯函数:不读盘以外的状态、不写盘、不联网、不读环境变量。
+    只读校验材料所在目录内的 SVG;不写盘、不联网、不读环境变量。
     与 run_checks 分开,因为图检查对任何含图文本都成立,不该被
     「像不像讲义」的 gate 挡住——结构不全的讲义恰恰最需要查图。
     """
@@ -684,10 +689,11 @@ def check_table_align(lines, fence, add, cfg):
                     "数值列未右对齐——表头写单位，分隔行用 ---: 让数字右对齐")
 
 
-def run_checks(lines, doc, vis, fence, base_dir, box_rows, add, cfg, image=True):
+def run_checks(lines, doc, vis, fence, base_dir, box_rows, add, cfg):
     """读者版/排版检查（W 级，只在 --reader 显式启用时执行，不拦截）。
 
-    image=False 时跳过图检查——调用方已单独跑过 check_image_rules，避免重复。
+    只做文案/结构类规则。图检查由 check_image_rules 单独承担——两者曾经共用一个
+    布尔开关,结果同一张图会被两处各查一遍(重复报码)。拆成两个入口,调用方组合。
     """
     # 1. 标题层级不跳级
     prev = 0
@@ -718,9 +724,7 @@ def run_checks(lines, doc, vis, fence, base_dir, box_rows, add, cfg, image=True)
             add("W", "W-READER-TABLE", block[0],
                 "表头存在空列名——每列写清名称,单位放表头")
 
-    # 3. 图片 alt 与 SVG 技术项(可由 check_image_rules 独立调用,见该函数)
-    if image:
-        check_image_rules(lines, vis, fence, base_dir, add, cfg)
+    # 3. 图片 alt / SVG / 图注不在本函数内——由 check_image_rules 独立承担。
 
     # 4. 本节速览:位置 + 3 列、1–3 行数据
     if "## 本节速览" in lines:
@@ -837,7 +841,5 @@ def run_checks(lines, doc, vis, fence, base_dir, box_rows, add, cfg, image=True)
 
     # 10–13. 新版式检查(图注归图检查组,由 check_image_rules 负责,不在此重复)
     check_heading_body(lines, fence, add, cfg)
-    if image:
-        check_caption(lines, vis, fence, add, cfg)
     check_linktext(lines, fence, add, cfg)
     check_table_align(lines, fence, add, cfg)

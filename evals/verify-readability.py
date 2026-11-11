@@ -52,6 +52,15 @@ def run_reader(root: Path, target: Path):
     return proc.returncode, (proc.stdout or "") + (proc.stderr or "")
 
 
+def finding_codes(out):
+    """从 --reader 输出里取「发现行」的规则码集合。
+
+    必须只认 [W]/[E] 开头的发现行:跳过行会列出被跳过的规则码,
+    用子串判会把「声明跳过」误判成「报出问题」——那正是票 66 要消灭的假通过。
+    """
+    return {m.group(1) for m in re.finditer(r"^\[(?:W|E)\] (\S+)", out, re.M)}
+
+
 def run_mutation(root: Path, mutate):
     src = root / "evals" / "fixtures" / "reader-layout"
     if not src.is_dir():
@@ -73,15 +82,12 @@ def main(argv=None) -> int:
 
     # 1. 合格样板：--reader 通过且无 W-READER 发现
     #    (只认发现行:跳过行会列出被跳过的规则码,用子串判会把它误当问题)
-    def reader_findings(out):
-        return [ln for ln in out.splitlines()
-                if ln.startswith(("[W] W-READER", "[E] E-IMG-READ"))]
-
     for label, rel in (("读者版样板", SAMPLE_REL), ("程序型样板", PROCEDURE_REL),
                        ("设计型样板", DESIGN_REL)):
         rc, out = run_reader(root, root / rel)
+        codes = {c for c in finding_codes(out) if c.startswith(("W-READER", "E-IMG"))}
         c.check("1.x " + label + "通过 --reader",
-                rc == 0 and not reader_findings(out), (rc, out[-300:]))
+                rc == 0 and not codes, (rc, out[-300:]))
 
     # 1.y L3 检索卡在 gate 外侧:今天「无 W-READER」曾经是因为什么都没跑(空断言)。
     # 票 66 之后必须断言诚实结果——跳过要以可判定形式说出来,且不得伪装成通过。
@@ -89,10 +95,8 @@ def main(argv=None) -> int:
     rc, out = run_reader(root, l3)
     # 注意:跳过行会列出被跳过的规则码,所以不能再用 "W-READER not in out" 判——
     # 那会把「声明跳过」误判成「报出问题」。只认发现行(以 [W]/[E] 开头的行)。
-    findings_lines = [ln for ln in out.splitlines()
-                      if ln.startswith(("[W] W-READER", "[E] E-IMG-READ"))]
     c.check("1.y L3 检索卡无 W-READER 发现且明示已跳过",
-            rc == 0 and not findings_lines and "已跳过" in out, (rc, out[-300:]))
+            rc == 0 and not finding_codes(out) and "已跳过" in out, (rc, out[-300:]))
 
     l1 = root / "evals" / "fixtures" / "handout-l1-l3" / "L1-机会成本.md"
     rc, out = run_reader(root, l1)
@@ -179,7 +183,10 @@ def main(argv=None) -> int:
     )
     for name, fn, code in mutations:
         rc, out = run_mutation(root, fn)
-        c.check("2.x --reader 抓到：" + name, code in out, (rc, out[-300:]))
+        # 只认发现行:夹具若落到 gate 外侧,跳过行会列出该码,子串判就会假绿。
+        # 变异测试要钉的是「这条规则真的执行并报出来了」,不是「这个词在输出里出现过」。
+        got = code in finding_codes(out)
+        c.check("2.x --reader 抓到：" + name, got, (rc, out[-300:]))
 
     rc, out = run_mutation(root, mut_bad_encoding)
     c.check("2.y 非法 UTF-8 结构化失败", rc == 1 and "E-READ-FILE" in out, (rc, out[-300:]))

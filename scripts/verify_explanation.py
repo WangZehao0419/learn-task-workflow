@@ -109,7 +109,6 @@
 | E-IMG-DEADLINK   | E  | `图：<相对路径>` 或 `![](<相对路径>)` 指向的文件不存在(死链)        |
 | E-READ-FILE      | E  | Markdown 读取失败或编码不是 UTF-8；继续扫描其他文件，最终 exit 1    |
 | E-IMG-READ       | E  | `--reader` 下 SVG 读取失败或编码不是 UTF-8(不受「像不像讲义」约束) |
-| W-READER-SKIP    | —  | 非规则码:gate 关闭时打印「已跳过 N 项…(未校验)」,不与「通过」混用    |
 | W-READER-HEADING | W  | 读者版标题层级跳级(H1→H3 等);仅 `--reader`                       |
 | W-READER-TABLE   | W  | 读者版表格缺表头分隔行、列数不在 2–4、表头有空列名;仅 `--reader`     |
 | W-READER-ALT     | W  | 读者版图片 alt 为空或只写「示意图/图片」;仅 `--reader`(不受 gate 约束) |
@@ -808,13 +807,13 @@ def check_text(text, rel, base_dir=None, reader=False, skips=None):
     #   ② 文案/结构检查:动机真实(别把台账当讲义),保持 gate。
     # 两者曾绑在同一个 if 上,导致「结构越不全,查得越少」,还把 E-IMG-READ 吞成通过。
     if reader:
-        if ltw_typography.has_image_ref(lines, fence):
+        if ltw_typography.has_image_ref(lines, vis, fence):
             ltw_typography.check_image_rules(lines, vis, fence, base_dir, add, READER)
         looks_like_handout = (doc["units"] or "## 本节速览" in lines
                               or "## 回看索引" in lines)
         if looks_like_handout:
             ltw_typography.run_checks(lines, doc, vis, fence, base_dir, box_rows, add,
-                                      READER, image=False)
+                                      READER)
         elif skips is not None:
             skips.extend(ltw_typography.TEXT_RULE_CODES)
 
@@ -841,9 +840,8 @@ def report(findings, skips=None):
             len(skipped), "/".join(skipped)))
     if findings:
         return 1 if any(f[0] == "E" for f in findings) else 0
-    if skipped:
-        return 0
-    print("通过:无违规项(结构通过;内容准确性、来源可信度与教学体验未校验,须人工/领域复核)")
+    if not skipped:
+        print("通过:无违规项(结构通过;内容准确性、来源可信度与教学体验未校验,须人工/领域复核)")
     return 0
 
 
@@ -1926,7 +1924,7 @@ def selftest():
         skip_probe2 = []
         check_text(gate_out, "gate-outside.md", base_dir=d3, reader=True, skips=skip_probe2)
         chk("gate 关闭但有图时,非图规则仍登记跳过",
-            bool(skip_probe2) and len(skip_probe2) == len(skip_probe))
+            set(skip_probe2) == set(skip_probe))
 
         # ── 图引用两种写法都要查(Spec 轴 P1-1)──
         # has_image_ref 认得出「图:路径」,check_image_rules 也必须查它,
