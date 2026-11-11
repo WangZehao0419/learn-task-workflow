@@ -1928,6 +1928,30 @@ def selftest():
         chk("gate 关闭但有图时,非图规则仍登记跳过",
             bool(skip_probe2) and len(skip_probe2) == len(skip_probe))
 
+        # ── 图引用两种写法都要查(Spec 轴 P1-1)──
+        # has_image_ref 认得出「图:路径」,check_image_rules 也必须查它,
+        # 否则探针与检查脱节:认得出图、却不查那张图。
+        (d3 / "assets" / "bad-read2.svg").write_bytes(b"\xff\xfe\xfa")
+        prose_md = "# 第 1 节 · 示例\n\n正文一句。\n\n图：assets/bad-read2.svg\n"
+        (d3 / "prose.md").write_text(prose_md, encoding="utf-8")
+        chk("gate 外侧的「图：路径」非 UTF-8 也报 E-IMG-READ",
+            len(codes(check_text(prose_md, "prose.md", base_dir=d3, reader=True),
+                      "E-IMG-READ")) == 1)
+        chk("「图：路径」的 E-IMG-READ 不被 gate 吞掉(端到端 rc=1)",
+            main([str(d3 / "prose.md"), "--reader"]) == 1)
+        prose_bad = "# 第 1 节 · 示例\n\n正文一句。\n\n图：assets/bad.svg\n"
+        chk("gate 外侧的「图：路径」坏 SVG 也报 W-READER-SVG",
+            len(codes(check_text(prose_bad, "prosebad.md", base_dir=d3, reader=True),
+                      "W-READER-SVG")) == 1)
+
+        # ── code span 里引述的写法示例不是真图片(Spec 轴 P1-3)──
+        # 文档自己会写「`![](x.svg)` 这样引用」。ALT/SVG 走 vis 已豁免,
+        # 图注若仍走原始行就会漏出来——两处必须同一坐标系。
+        span_md = ("# 第 1 节 · 示例\n\n写法示例：`![](assets/bad.svg)` 这样引用。\n")
+        r_span = codes(check_text(span_md, "span.md", base_dir=d3, reader=True),
+                       "W-READER-CAPTION")
+        chk("code span 里引述的图片语法不报 W-READER-CAPTION", len(r_span) == 0)
+
     print(("OK " if ok else "FAIL ") + "verify_explanation --selftest")
     return 0 if ok else 1
 

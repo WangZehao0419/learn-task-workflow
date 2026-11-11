@@ -388,12 +388,6 @@
    "svg_canvas_light_bg_required": true,
    "svg_forbidden_tags": [
     "foreignObject"
-   ],
-   "image_rule_codes": [
-    "E-IMG-READ",
-    "W-READER-ALT",
-    "W-READER-CAPTION",
-    "W-READER-SVG"
    ]
   }
  }

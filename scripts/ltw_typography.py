@@ -11,7 +11,7 @@ from pathlib import Path
 H2_RE = re.compile(r"^##\s")
 MD_IMAGE_ALT_RE = re.compile(r"!\[([^\]]*)\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
 # 正文「图:路径」写法(与 verify_explanation.IMG_LABEL_RE 同义),仅用于判断"要不要跑图检查"
-IMG_LABEL_PROBE_RE = re.compile(r"图\s*[：:]\s*[^\s（()）]+")
+IMG_LABEL_PROBE_RE = re.compile(r"图\s*[：:]\s*([^\s（()）]+)")
 GENERIC_ALT = {"图", "图片", "示意图", "图像", "figure", "image", "diagram"}
 THIRD_EXEMPT_RE = re.compile(
     r"^\s*(?:[-*+]\s+|\d+[.、)]\s*)?(?:\*\*)?\s*③\s*不适用|纯概念[·・]?\s*无\s*③", re.M)
@@ -530,14 +530,49 @@ def check_heading_body(lines, fence, add, cfg):
                 "标题后直接跟子标题——标题下先写一段正文，再分子标题")
 
 
-IMAGE_RULE_CODES = ("E-IMG-READ", "W-READER-ALT", "W-READER-CAPTION", "W-READER-SVG")
-# 受「像不像讲义」gate 约束的文案/结构类规则;图检查不在其中(见 check_image_rules)
+# 受「像不像讲义」gate 约束的文案/结构类规则;图检查不在其中(见 check_image_rules)。
+# 这份清单只用于「跳过要可判定」的登记,规则码本身以 contracts/rules.json 的
+# errors 段为准——不在此重复登记图检查那四个码。
 TEXT_RULE_CODES = (
     "W-READER-HEADING", "W-READER-TABLE", "W-READER-OVERVIEW", "W-READER-INDEX",
     "W-READER-CONCLUSION", "W-READER-EMPHASIS", "W-READER-LONGLINE",
     "W-READER-DEEPNEST", "W-READER-HEADING-BODY", "W-READER-LINKTEXT",
     "W-READER-TABLE-ALIGN",
 )
+
+
+def _prose_image_targets(vis_line):
+    """取正文「图:路径」写法里的路径(排除落在图片语法区间内的 alt)。
+
+    与 verify_explanation.image_refs 同义但更窄:只认正文写法,Markdown 图片语法
+    那条由 MD_IMAGE_ALT_RE 单独处理,避免同一目标被查两遍。
+    """
+    spans = [m.span() for m in MD_IMAGE_ALT_RE.finditer(vis_line)]
+    out = []
+    for m in IMG_LABEL_PROBE_RE.finditer(vis_line):
+        if any(s <= m.start() < e for s, e in spans):
+            continue
+        out.append(m.group(1))
+    return out
+
+
+def _check_svg_target(i, target, base_dir, add, cfg):
+    """单个 SVG 目标的读者版技术项检查(两种图引用写法共用)。"""
+    if base_dir is None or re.match(r"(?:https?:|data:|mailto:)", target, re.I):
+        return
+    path = Path(target) if Path(target).is_absolute() else Path(base_dir) / target
+    if path.suffix.lower() != ".svg" or not path.exists():
+        return
+    probs = _svg_problems(path, cfg)
+    if "SVG 读取失败" in probs:
+        add("E", "E-IMG-READ", i, "SVG 读取失败或编码不是 UTF-8")
+    elif probs:
+        add("W", "W-READER-SVG", i,
+            "SVG 读者版技术项不合格:" + "、".join(probs) +
+            "——补 viewBox/role/xmlns、非空 title/desc、自带浅色底;"
+            "字号 ≥14、线宽 ≥1.5(相对单位按基准换算);"
+            "去 script/事件属性/foreignObject/外部引用;"
+            "url(#id) 须指向文档内真实 id")
 
 
 def has_image_ref(lines, fence):
@@ -563,36 +598,33 @@ def check_image_rules(lines, vis, fence, base_dir, add, cfg):
     for i, ln in enumerate(lines):
         if fence[i]:
             continue
+        # alt 与「图:路径」两种写法都要查:W-READER-ALT 的建议写法就是
+        # 「图型:一句话结论」,照规范写只出现在 alt 里,正文写法另有一套。
+        # 一律以 vis(剥掉 code span/公式后的可见正文)为准——反引号里引述的
+        # 示例不是真图片,不查(与 E-IMG-DEADLINK 同一坐标系)。
         for m in MD_IMAGE_ALT_RE.finditer(vis[i]):
             alt, target = m.group(1).strip(), m.group(2).strip()
             if not alt or alt.lower() in GENERIC_ALT:
                 add("W", "W-READER-ALT", i,
                     "图片 alt 为空或过于笼统——写「图型:一句话结论」,不写「示意图/图片」")
-            if base_dir is None or re.match(r"(?:https?:|data:|mailto:)", target, re.I):
-                continue
-            path = Path(target) if Path(target).is_absolute() else Path(base_dir) / target
-            if path.suffix.lower() == ".svg" and path.exists():
-                probs = _svg_problems(path, cfg)
-                if "SVG 读取失败" in probs:
-                    add("E", "E-IMG-READ", i, "SVG 读取失败或编码不是 UTF-8")
-                elif probs:
-                    add("W", "W-READER-SVG", i,
-                        "SVG 读者版技术项不合格:" + "、".join(probs) +
-                        "——补 viewBox/role/xmlns、非空 title/desc、自带浅色底;"
-                        "字号 ≥14、线宽 ≥1.5(相对单位按基准换算);"
-                        "去 script/事件属性/foreignObject/外部引用;"
-                        "url(#id) 须指向文档内真实 id")
-    check_caption(lines, fence, add, cfg)
+            _check_svg_target(i, target, base_dir, add, cfg)
+        for target in _prose_image_targets(vis[i]):
+            _check_svg_target(i, target, base_dir, add, cfg)
+    check_caption(lines, vis, fence, add, cfg)
 
 
-def check_caption(lines, fence, add, cfg):
-    """图片后应有图注（图注：… 或 图 N：…），表格内图片豁免。"""
+def check_caption(lines, vis, fence, add, cfg):
+    """图片后应有图注（图注：… 或 图 N：…），表格内图片豁免。
+
+    与 alt/SVG 检查同一坐标系:只认 vis(剥掉 code span/公式后的可见正文),
+    反引号里引述的「写法示例」不是真图片,不要求配图注。
+    """
     prefixes = tuple(cfg.get("figure_caption_prefixes")
                      or ("图注：", "图注:", "图 "))
     for i, ln in enumerate(lines):
         if fence[i] or ln.lstrip().startswith("|"):
             continue
-        matches = list(MD_IMAGE_ALT_RE.finditer(ln))
+        matches = list(MD_IMAGE_ALT_RE.finditer(vis[i]))
         if not matches:
             continue
         for m in matches:
@@ -806,6 +838,6 @@ def run_checks(lines, doc, vis, fence, base_dir, box_rows, add, cfg, image=True)
     # 10–13. 新版式检查(图注归图检查组,由 check_image_rules 负责,不在此重复)
     check_heading_body(lines, fence, add, cfg)
     if image:
-        check_caption(lines, fence, add, cfg)
+        check_caption(lines, vis, fence, add, cfg)
     check_linktext(lines, fence, add, cfg)
     check_table_align(lines, fence, add, cfg)
