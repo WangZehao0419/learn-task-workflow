@@ -111,7 +111,7 @@
   },
   {
    "script": "ltw_typography.py",
-   "note": "读者版检查模块，由 verify_explanation.py --reader 导入，无 CLI；W-READER-* 系列，不设结构闸口"
+   "note": "读者版检查模块，由 verify_explanation.py --reader 导入，无 CLI；W-READER-* 系列，不设结构闸口；覆盖由 verify_explanation.py 与 evals/verify-svg-checker.py 承担"
   }
  ],
  "verification": {
@@ -126,6 +126,6 @@
    "python -B scripts/rule_contract.py --selftest",
    "python -B scripts/verify-doc-pointers.py --selftest"
   ],
-  "note": "九个命令行脚本自测覆盖确定性计算、结构校验、契约完整性与术语对账；真实教学回归与故障夹具见 evals；verify-doc-pointers 校验 doc 指针四项（路径/锚点/编号/自指）。本分区（scripts_contract vs internal_modules）不是人读声明，由 evals/verify-gate-registry.py 的 G1-G4 机检：G1 分区完备（不重不漏无幽灵）、G2 分类自证（命令行喂必败参数必须 rc≠0，内部模块喂同一参数必须 rc=0）、G3 清单可执行、G4 清单与契约同源。"
+  "note": "九个命令行脚本自测覆盖确定性计算、结构校验、契约完整性与术语对账；真实教学回归与故障夹具见 evals；verify-doc-pointers 校验 doc 指针四项（路径/锚点/编号/自指）。本分区（scripts_contract vs internal_modules）不是人读声明，由 evals/verify-gate-registry.py 的 G1-G5 机检：G1 分区完备（不重不漏无幽灵）、G2 分类自证（命令行喂必败参数必须 rc≠0，内部模块喂同一参数必须 rc=0）、G3 清单可执行、G4 清单与契约同源、G5 覆盖去向（internal_modules 的 note 点名的每个覆盖者必须真的 import 该内部模块）。"
  }
 }

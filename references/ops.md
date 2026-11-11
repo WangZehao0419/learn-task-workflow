@@ -366,7 +366,7 @@ python -B evals/verify-svg-checker.py
 python -B evals/verify-gate-registry.py
 ```
 
-`verify-gate-registry` 是**登记表本身的闸口**（票 65）：上面这份自测清单若与 `scripts/` 实际文件对不上，它先红。四条判据——G1 分区完备（`scripts_contract` 与 `internal_modules` 不重、不漏、无幽灵）、G2 分类自证（命令行脚本喂 `--this-flag-does-not-exist` 必须 rc≠0；内部模块喂同一参数必须 rc=0）、G3 清单可执行、G4 清单与契约同源。**「有没有 CLI」不靠声称，靠实测**：`ltw_parse.py` / `ltw_typography.py` 这类无 `__main__` 的模块对任何参数都 rc=0，它们进不了任何命令清单，只能登记为内部模块并说明覆盖由谁承担。
+`verify-gate-registry` 是**登记表本身的闸口**（票 65、票 54）：上面这份自测清单若与 `scripts/` 实际文件对不上，它先红。五条判据——G1 分区完备（`scripts_contract` 与 `internal_modules` 不重、不漏、无幽灵）、G2 分类自证（命令行脚本喂 `--this-flag-does-not-exist` 必须 rc≠0；内部模块喂同一参数必须 rc=0）、G3 清单可执行、G4 清单与契约同源、G5 覆盖去向（`internal_modules` 的 note 点名的每个覆盖者都必须真的 `import` 该内部模块；note 只能写肯定式，不能写「某某不覆盖」）。**「有没有 CLI」不靠声称，靠实测**：`ltw_parse.py` / `ltw_typography.py` 这类无 `__main__` 的模块对任何参数都 rc=0，它们进不了任何命令清单，只能登记为内部模块并说明覆盖由谁承担。
 
 `rule_contract --selftest` 覆盖 11 个用例：真实契约可加载、缺文件、空文件、非法 JSON、缺顶层键、schema 版本不符、枚举重复、比例非法、group_slugs 与学科族不一致、discipline_slugs 重复、缺业务常量键。**契约里已没有场景注册表、意图登记、文件清单或规则编号登记**——那些只服务索引的编译关系随编译层一起退役，因此也没有对应的校验子命令。`report-load-footprint` 只读报告每场景 core/补读字符与轮级加载量；`--check` 只校验结构（分册存在、补读小节可解析），数值一律不参与闸口。
 
@@ -377,10 +377,11 @@ python -B evals/verify-gate-registry.py
 - 打包前删除 `scripts/__pycache__`；`.trae`/`.workbuddy`/`.codex` 是本地 IDE/记忆目录，打包时用干净副本排除。
 - `task_index.py` 的 `tmp.unlink()` 只清理 `index.json.tmp`；人工复核后可带 `--risk-ack` 打包。
 - `git diff --check` → 0。
+- **发版锚点四处齐改**（没有机检兜底，人工逐条核对）：`SKILL.md` frontmatter `metadata.version`、`contracts/rules.json` 的 `version`、`references/ops.md`「当前核验 · 适用版本」、`README.md`「维护 · 版本」那行。四处必须同值；`rule_contract.py` **只**校验 `rules.json` 的 `version` 是非空字符串，**不会**发现与 `SKILL.md` 不一致——别把一致性寄托在它身上。
 
 ### 当前核验
 
-- 适用版本：9.20.11
+- 适用版本：9.20.12
 - 核验日期：2026-11-11
 - 环境依赖：`skill-dependencies.json`（核心层 Python `min_version`；增强层 `mmdc` 缺席不阻断）；只有 `check_environment.py` 输出 `ready` 才能继续，`degraded` 按上一节「核心层与增强层」说明一句。
 
