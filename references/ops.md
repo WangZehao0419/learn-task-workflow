@@ -377,7 +377,7 @@ python -B evals/verify-gate-registry.py
 - 打包前删除 `scripts/__pycache__`；`.trae`/`.workbuddy`/`.codex` 是本地 IDE/记忆目录，打包时用干净副本排除。
 - `task_index.py` 的 `tmp.unlink()` 只清理 `index.json.tmp`；人工复核后可带 `--risk-ack` 打包。
 - `git diff --check` → 0。
-- **发版锚点四处齐改**（没有机检兜底，人工逐条核对）：`SKILL.md` frontmatter `metadata.version`、`contracts/rules.json` 的 `version`、`references/ops.md`「当前核验 · 适用版本」、`README.md`「维护 · 版本」那行。四处必须同值；`rule_contract.py` **只**校验 `rules.json` 的 `version` 是非空字符串，**不会**发现与 `SKILL.md` 不一致——别把一致性寄托在它身上。
+- **发版锚点四处齐改**（没有机检兜底，人工逐条核对）：`SKILL.md` frontmatter `metadata.version`、`contracts/rules.json` 的 `version`、「当前核验 · 适用版本」本节、`../README.md`「维护 · 版本」那行。四处必须同值；`rule_contract.py` **只**校验 `rules.json` 的 `version` 是非空字符串，**不会**发现与 `SKILL.md` 不一致——别把一致性寄托在它身上。
 
 ### 当前核验
 
