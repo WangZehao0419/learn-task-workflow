@@ -6,7 +6,8 @@
   "间隔调度与校准计算",
   "KP 拓扑排序与检环",
   "环境就绪检查",
-  "讲义结构校验"
+  "讲义结构校验",
+  "SVG 图示工具链"
  ],
  "dependencies": [
   {
@@ -43,6 +44,44 @@
     "security": "无需登录与凭据；不安装、不修改系统配置；检查器只读，不发起网络请求与子进程。",
     "verified_at": "2026-11-04",
     "applies_to_version": "9.20.6"
+   }
+  },
+  {
+   "id": "svg-toolchain",
+   "type": "toolchain",
+   "required": false,
+   "auth_type": "none",
+   "capabilities": [
+    "SVG 图示工具链"
+   ],
+   "checks": [
+    {
+     "id": "mermaid-cli",
+     "type": "command",
+     "required": true,
+     "command": "mmdc",
+     "capabilities": [
+      "SVG 图示工具链"
+     ]
+    }
+   ],
+   "degraded": {
+    "fallback": "手写 SVG 直接落 materials/assets/NN-<图名>.svg，并用 Markdown 图片语法引用",
+    "standard": "同一套产物与校验：仍是 SVG 双轨（先存档后引用、无死链），仍须过 references/handout-layout.md「图像可视化双轨」的全部要求与 verify_explanation.py --reader 的 W-READER-SVG 检查",
+    "recovery": "装上 mermaid-cli（mmdc 进 PATH）后重跑 python -B scripts/check_environment.py，degraded 消失即回到增强路径"
+   },
+   "setup": {
+    "official_home_url": "https://github.com/mermaid-js/mermaid-cli",
+    "official_docs_url": "https://github.com/mermaid-js/mermaid-cli#usage",
+    "steps": [
+     "本依赖是增强层，装不上也能继续：缺 mmdc 时按 degraded.fallback 手写 SVG，产物标准不变。",
+     "要装：按官方 README 安装 mermaid-cli，确认 mmdc --version 可运行。",
+     "装好后运行 python -B scripts/check_environment.py 复核；输出不再含 degraded 即已回到增强路径。"
+    ],
+    "verify": "mmdc --version 可运行；python -B scripts/check_environment.py 输出 degraded 键缺席。",
+    "security": "检查器只探测 PATH 上是否存在 mmdc，不执行它、不联网、不安装；安装由用户在宿主自行完成。",
+    "verified_at": "2026-11-11",
+    "applies_to_version": "9.20.8"
    }
   }
  ]

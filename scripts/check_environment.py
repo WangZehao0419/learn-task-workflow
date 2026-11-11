@@ -4,7 +4,12 @@
 读取包内 skill-dependencies.json 依赖清单，逐项执行检查并输出
 ready / needs_setup / unavailable。只有 ready 可以继续；其他状态必须停止，
 处理缺失项后重新检查。文件写入与来源检索在实际动作边界验证，不属于本机器清单。
-检查器全程只读：不写盘、不安装、不发起网络请求。
+检查器全程只读：不写盘、不安装、不发起网络请求、不发起子进程。
+
+增强层（capability 带确定性降级实现，清单里在依赖上声明 degraded）缺失时
+**不阻断**：该依赖不进 dependencies[]、不参与 status 汇总，改记进顶层可选的
+degraded[]，status 仍为 ready。降级只在「产物与验收标准不变」时成立，见
+references/ops.md「环境就绪与阻断」。
 """
 
 from __future__ import annotations
@@ -12,6 +17,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shutil
 import sys
 from pathlib import Path
 from typing import Any
@@ -20,8 +26,12 @@ from typing import Any
 # 用 fullmatch 整体匹配，拒绝前后缀垃圾（"3.8.9999999garbage"、"garbage3.8"）与
 # 非字符串强转（数字 3、布尔 False）——不得再用 re.search + str() 宽松放行。
 VERSION_RE = re.compile(r"\d+(?:\.\d+)*\Z")
-VALID_TYPES = {"python"}
-DEPENDENCY_TYPES = {"runtime"}
+# command 检查只做 PATH 名字探测：必须是裸命令名，不接受路径/空白（防拿它当执行入口）
+COMMAND_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._+-]*\Z")
+VALID_TYPES = {"python", "command"}
+DEPENDENCY_TYPES = {"runtime", "toolchain"}
+# 增强层降级声明：三字段恰好齐全，多一个少一个都拒（防填字段凑数）
+DEGRADED_FIELDS = {"fallback", "standard", "recovery"}
 SETUP_OUTPUT_FIELDS = {
     "official_home_url", "official_docs_url", "download_url", "login_url",
     "credential_url", "console_path", "scopes", "credential_storage", "steps",
@@ -59,10 +69,31 @@ def filtered_setup(setup: Any) -> dict[str, Any]:
     return {key: setup[key] for key in SETUP_OUTPUT_FIELDS if key in setup}
 
 
+def _validate_degraded(*, dependency_id: str, degraded: Any, dependency: dict[str, Any]) -> None:
+    """增强层降级声明：三字段恰好齐全，且只许挂在非必需依赖上。
+
+    「正当降级 = 换一个仍然确定性的实现、产物与验收标准不变」（references/ops.md）。
+    三个字段就是这条纪律的机检容器——缺 standard 说不清产物标准有没有降，
+    缺 recovery 说不清会一直降级到什么时候。
+    """
+    if dependency.get("required") is not False:
+        raise ValueError(f"依赖 {dependency_id} 声明了 degraded，但 required 不是 false——"
+                         "增强层不得是必需依赖，必需依赖缺失只能停")
+    if not isinstance(degraded, dict):
+        raise ValueError(f"依赖 {dependency_id} 的 degraded 必须是对象")
+    if set(degraded) != DEGRADED_FIELDS:
+        raise ValueError(f"依赖 {dependency_id} 的 degraded 必须恰好含 {sorted(DEGRADED_FIELDS)}，"
+                         f"实际 {sorted(degraded)}")
+    for field in sorted(DEGRADED_FIELDS):
+        value = degraded[field]
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"依赖 {dependency_id} 的 degraded.{field} 必须是非空字符串")
+
+
 def validate_manifest(manifest: dict[str, Any]) -> None:
     top_allowed = {"schema_version", "capabilities", "dependencies"}
-    dependency_allowed = {"id", "type", "required", "auth_type", "capabilities", "checks", "setup"}
-    check_allowed = {"id", "type", "required", "min_version", "capabilities"}
+    dependency_allowed = {"id", "type", "required", "auth_type", "capabilities", "checks", "setup", "degraded"}
+    check_allowed = {"id", "type", "required", "min_version", "capabilities", "command"}
     setup_allowed = {"official_home_url", "official_docs_url", "download_url", "login_url", "credential_url", "console_path", "scopes", "credential_storage", "steps", "verify", "rotate_or_revoke", "security", "verified_at", "applies_to_version"}
     if set(manifest) - top_allowed:
         raise ValueError(f"清单包含未知顶层字段：{sorted(set(manifest) - top_allowed)}")
@@ -88,6 +119,11 @@ def validate_manifest(manifest: dict[str, Any]) -> None:
         seen.add(dependency_id)
         if dependency.get("type") not in DEPENDENCY_TYPES:
             raise ValueError(f"dependencies[{index}].type 无效")
+        # 增强层必须自带降级声明：required=false 却没有任何「产物标准不变」的替代实现，
+        # 就是拿"可选"当遮羞布——缺了它只能停，不是降级。
+        if "degraded" in dependency:
+            _validate_degraded(dependency_id=dependency.get("id") or f"dependencies[{index}]",
+                               degraded=dependency["degraded"], dependency=dependency)
         # E01：required 必须是布尔——字符串 "false" 不得被 bool() 误当 true，键缺失也必须拒绝
         if not isinstance(dependency.get("required"), bool):
             raise ValueError(f"dependencies[{index}].required 必须是布尔值")
@@ -132,6 +168,15 @@ def validate_manifest(manifest: dict[str, Any]) -> None:
                 min_version = check["min_version"]
                 if not isinstance(min_version, str) or parse_version(min_version) is None:
                     raise ValueError(f"依赖 {dependency_id} 的检查 {check_id} 的 min_version 无效：{min_version!r}")
+            # command 检查：只认裸命令名，探测 PATH；不接受路径以免被当成执行入口
+            if "command" in check:
+                command = check["command"]
+                if check["type"] != "command":
+                    raise ValueError(f"依赖 {dependency_id} 的检查 {check_id} 只能在 type=command 时声明 command")
+                if not isinstance(command, str) or COMMAND_RE.fullmatch(command) is None:
+                    raise ValueError(f"依赖 {dependency_id} 的检查 {check_id} 的 command 必须是裸命令名：{command!r}")
+            elif check["type"] == "command":
+                raise ValueError(f"依赖 {dependency_id} 的检查 {check_id} 缺 command")
             if any(field in check for field in ("auth_env", "auth_header", "auth_scheme")):
                 raise ValueError(f"依赖 {dependency_id} 的检查项不得携带凭据字段")
         if len(checks) > 1:
@@ -174,12 +219,27 @@ def check_item(item: dict[str, Any]) -> dict[str, Any]:
         "reason_code": "configuration_invalid",
         "detail": "检查定义无效",
     }
+    if item.get("type") == "command":
+        result["command"] = item.get("command")
 
     if check_type == "python":
         minimum = parse_version(item.get("min_version"))
         current = sys.version_info[:3]
         ready = minimum is None or current >= minimum
         result.update(status="ready" if ready else "needs_setup", reason_code="ok" if ready else "version_incompatible", detail=f"Python {current[0]}.{current[1]}.{current[2]}；最低要求 {item.get('min_version', '未指定')}")
+        return result
+
+    if check_type == "command":
+        # 只探测 PATH 上有没有这个名字：不执行它、不读它的输出（检查器全程不发起子进程）
+        command = item.get("command")
+        if not isinstance(command, str) or COMMAND_RE.fullmatch(command) is None:
+            return result
+        found = shutil.which(command)
+        result.update(
+            status="ready" if found else "missing",
+            reason_code="ok" if found else "command_not_found",
+            detail=f"{command} 在 PATH {'可用' if found else '不可用'}",
+        )
         return result
 
     return result
@@ -218,6 +278,71 @@ def dependency_status(check_results: list[dict[str, Any]], scope: set[str]) -> s
     if any(item["status"] != "ready" for item in optional):
         return "needs_setup" if any(item["status"] == "needs_setup" for item in optional) else "unavailable"
     return "ready"
+
+
+def aggregate(dependencies: list[dict[str, Any]], scope: set[str]) -> tuple[str, list[dict[str, Any]], list[dict[str, Any]]]:
+    """把依赖检查结果汇总成 (status, dependencies[], degraded[])。
+
+    两处分层是这张票的根：**增强层的缺席不参与 status 汇总**。
+    """
+    results: list[dict[str, Any]] = []
+    degradations: list[dict[str, Any]] = []
+    has_missing = False
+    has_unavailable = False
+    for dependency in dependencies:
+        check_results = [check_item(item) for item in dependency["checks"]]
+        dependency_state = dependency_status(check_results, scope)
+        dep_capabilities = [cap for cap in dependency["capabilities"] if cap in scope]
+        # 增强层：自带降级实现（degraded 声明）的非必需依赖。它缺席不阻断核心层——
+        # 不进 dependencies[]、不参与 status 汇总，改记进 degraded[]。
+        # 前提由 validate_manifest 保证：degraded 只许挂在 required=false 上。
+        if "degraded" in dependency:
+            failures = [item for item in check_results
+                        if check_in_scope(item, scope) and item["status"] != "ready"]
+            if dependency_state != "ready":
+                degradations.append({
+                    "id": dependency["id"],
+                    "capabilities": dep_capabilities,
+                    "status": dependency_state,
+                    "checks": failures,
+                    "degraded": dict(dependency["degraded"]),
+                })
+            else:
+                results.append({
+                    "id": dependency["id"],
+                    "type": dependency["type"],
+                    "required": False,
+                    "capabilities": dep_capabilities,
+                    "status": "ready",
+                    "checks": [{"id": item["id"], "status": "ready", "reason_code": "ok"}
+                               for item in check_results if check_in_scope(item, scope)],
+                })
+            continue
+        if dependency_state in ("missing", "needs_setup"):
+            has_missing = True
+        elif dependency_state != "ready":
+            has_unavailable = True
+        scoped_checks = [item for item in check_results if check_in_scope(item, scope)]
+        failures = [item for item in scoped_checks if item["status"] != "ready"]
+        item = {
+            "id": dependency["id"],
+            "type": dependency["type"],
+            "required": bool(dependency["required"]),
+            "capabilities": dep_capabilities,
+            "status": dependency_state,
+            "checks": failures if failures else [{"id": check["id"], "status": "ready", "reason_code": "ok"} for check in scoped_checks],
+        }
+        if dependency_state != "ready":
+            item["setup"] = filtered_setup(dependency.get("setup"))
+        results.append(item)
+
+    if has_unavailable:
+        status = "unavailable"
+    elif has_missing:
+        status = "needs_setup"
+    else:
+        status = "ready"
+    return status, results, degradations
 
 
 def selftest() -> int:
@@ -287,6 +412,108 @@ def selftest() -> int:
         validate_manifest(m)
     except ValueError:
         ok = False
+
+    # --- 增强层契约（票 62）：degraded 声明 + command 检查 + 不阻断核心层 ---
+    def enh(required=False, degraded=None, command="definitely-not-a-real-command-xyz"):
+        m = base()
+        m["capabilities"] = ["功能甲", "增强能力"]
+        m["dependencies"][0]["capabilities"] = ["功能甲"]
+        m["dependencies"].append({
+            "id": "enh", "type": "toolchain", "required": required, "auth_type": "none",
+            "capabilities": ["增强能力"],
+            "checks": [{"id": "e1", "type": "command", "required": True,
+                        "command": command, "capabilities": ["增强能力"]}],
+            "setup": {"official_home_url": "https://x", "official_docs_url": "https://y",
+                      "steps": ["s"], "verify": "v", "security": "sec",
+                      "verified_at": "2026-10-15", "applies_to_version": "5.2.1"},
+        })
+        if degraded is not None:
+            m["dependencies"][1]["degraded"] = degraded
+        return m
+
+    # 每个用例必须拿一份**独立**的 degraded：共享同一个 dict 时，前一个用例的 pop
+    # 会污染后面所有用例，让它们因别的原因被拒——变异测试当场证明那是假绿。
+    def _fresh_degraded() -> dict[str, str]:
+        return {"fallback": "手写 SVG，产物落 materials/assets/ 不变",
+                "standard": "同一套 SVG 校验（verify_explanation --reader）",
+                "recovery": "装上工具链后重跑 check_environment"}
+
+    def _expect_valid(build, label: str) -> None:
+        nonlocal ok
+        try:
+            validate_manifest(build())
+        except ValueError as exc:
+            ok = False
+            print(f"  [FAIL] 应放行却被拒：{label} :: {exc}")
+
+    def _expect_reject(mutate, label: str) -> None:
+        """即时校验：不攒批，避免用例之间互相污染。任何异常都算「被拒」，但只认 ValueError 之外的漏网要显式暴露。"""
+        nonlocal ok
+        case = enh(degraded=_fresh_degraded())
+        mutate(case)
+        try:
+            validate_manifest(case)
+        except ValueError:
+            return
+        except Exception as exc:   # noqa: BLE001 - 非 ValueError 说明校验器裸崩而非判定，同样算失败
+            ok = False
+            print(f"  [FAIL] {label}：校验器裸崩 {type(exc).__name__}: {exc}")
+            return
+        ok = False
+        print(f"  [FAIL] 应拒却被放行：{label}")
+
+    _expect_valid(lambda: enh(degraded=_fresh_degraded()), "合规增强层")
+
+    def _set_required(c):
+        c["dependencies"][1]["required"] = True
+
+    _expect_reject(_set_required, "增强层不得声明为必需依赖")
+    for field in sorted(DEGRADED_FIELDS):
+        _expect_reject(lambda c, f=field: c["dependencies"][1]["degraded"].pop(f), f"degraded 缺 {field}")
+        _expect_reject(lambda c, f=field: c["dependencies"][1]["degraded"].__setitem__(f, "  "),
+                       f"degraded.{field} 空白值凑数")
+    _expect_reject(lambda c: c["dependencies"][1]["degraded"].__setitem__("extra", "x"), "degraded 多余字段")
+
+    def _deg_str(c):
+        c["dependencies"][1]["degraded"] = "手写"
+
+    _expect_reject(_deg_str, "degraded 非对象")
+
+    def _cmd_path(c):
+        c["dependencies"][1]["checks"][0]["command"] = "../evil.sh"
+
+    def _cmd_space(c):
+        c["dependencies"][1]["checks"][0]["command"] = "a b"
+
+    def _cmd_wrong_type(c):
+        c["dependencies"][1]["checks"][0]["type"] = "python"
+
+    def _cmd_missing(c):
+        c["dependencies"][1]["checks"][0].pop("command")
+
+    _expect_reject(_cmd_path, "command 不得带路径")
+    _expect_reject(_cmd_space, "command 不得带空白")
+    _expect_reject(_cmd_wrong_type, "command 字段只属 type=command")
+    _expect_reject(_cmd_missing, "type=command 缺 command")
+
+    # 增强层缺席：status 不受影响、degraded[] 有内容（票 62 验收核心）
+    st, deps, degs = aggregate(enh(degraded=_fresh_degraded())["dependencies"], {"功能甲", "增强能力"})
+    ok = ok and st == "ready"   # 增强层缺席不得拖垮 status
+    ok = ok and len(degs) == 1 and degs[0]["id"] == "enh"
+    ok = ok and degs[0]["degraded"] == _fresh_degraded()
+    ok = ok and all(d["id"] != "enh" for d in deps)   # 降级依赖不得混进 dependencies[]
+    # 增强层可用：degraded 整个缺席，且该依赖正常出现在 dependencies[]
+    saved_which = shutil.which
+    try:
+        shutil.which = lambda _name: "/fake/bin/mmdc"
+        st, deps, degs = aggregate(enh(degraded=_fresh_degraded())["dependencies"], {"功能甲", "增强能力"})
+    finally:
+        shutil.which = saved_which
+    ok = ok and st == "ready" and not degs
+    ok = ok and any(d["id"] == "enh" and d["status"] == "ready" for d in deps)
+    # 未请求增强能力时，它既不报降级也不出现（作用域纪律不因新通道松动）
+    st, deps, degs = aggregate(enh(degraded=_fresh_degraded())["dependencies"], {"功能甲"})
+    ok = ok and st == "ready" and not degs
 
     # check_item：python 版本满足 → ready；parse_version 严格（不被前后缀垃圾/强转蒙混）
     ok = ok and check_item({"id": "p", "type": "python", "required": True,
@@ -366,41 +593,9 @@ def main(argv=None) -> int:
                           "error": f"清单处理异常：{type(exc).__name__}: {exc}"}, ensure_ascii=False, indent=2))
         return 2
 
-    # 状态只覆盖本次请求能力；任何受影响能力未就绪都阻断，不附带替代方案。
+    # 状态只覆盖本次请求能力；核心层任何受影响能力未就绪都阻断，不附带替代方案。
     scope = set(args.capability) or set(manifest["capabilities"])
-    results = []
-    has_missing = False
-    has_needs_setup = False
-    has_unavailable = False
-    for dependency in dependencies:
-        check_results = [check_item(item) for item in dependency["checks"]]
-        dependency_state = dependency_status(check_results, scope)
-        dep_capabilities = [cap for cap in dependency["capabilities"] if cap in scope]
-        if dependency_state in ("missing", "needs_setup"):
-            has_missing = True
-            has_needs_setup = True
-        elif dependency_state != "ready":
-            has_unavailable = True
-        scoped_checks = [item for item in check_results if check_in_scope(item, scope)]
-        failures = [item for item in scoped_checks if item["status"] != "ready"]
-        item = {
-            "id": dependency["id"],
-            "type": dependency["type"],
-            "required": bool(dependency["required"]),
-            "capabilities": dep_capabilities,
-            "status": dependency_state,
-            "checks": failures if failures else [{"id": check["id"], "status": "ready", "reason_code": "ok"} for check in scoped_checks],
-        }
-        if dependency_state != "ready":
-            item["setup"] = filtered_setup(dependency["setup"])
-        results.append(item)
-
-    if has_unavailable:
-        status = "unavailable"
-    elif has_missing or has_needs_setup:
-        status = "needs_setup"
-    else:
-        status = "ready"
+    status, results, degradations = aggregate(dependencies, scope)
     output = {
         "status": status,
         "requested_capabilities": args.capability,
@@ -411,6 +606,9 @@ def main(argv=None) -> int:
             "unavailable": "停止当前运行；处理故障后重新检查，ready 后从原阶段继续",
         }[status],
     }
+    # 可选键：没有降级就整个键缺席，读的是"有没有降级"这件事本身
+    if degradations:
+        output["degraded"] = degradations
     print(json.dumps(output, ensure_ascii=False, indent=2))
     return 0 if status == "ready" else 1
 

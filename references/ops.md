@@ -56,7 +56,24 @@
 
 | 依赖 id | 类型 | 必需 | 支撑功能 | 检查方式 |
 |---|---|---|---|---|
-| python-runtime | runtime | 是 | 任务索引与进度解析 / 进度校验与证据验证 / 间隔调度与校准计算 / KP 拓扑排序与检环 / 环境就绪检查 / 讲义结构校验 | `scripts/check_environment.py`（python 检查项） |
+| python-runtime | runtime | 是（核心层） | 任务索引与进度解析 / 进度校验与证据验证 / 间隔调度与校准计算 / KP 拓扑排序与检环 / 环境就绪检查 / 讲义结构校验 | `scripts/check_environment.py`（python 检查项） |
+| svg-toolchain | toolchain | 否（增强层） | SVG 图示工具链 | `scripts/check_environment.py`（command 检查项，探测 PATH 上的 `mmdc`） |
+
+#### 核心层与增强层
+
+**分层依据不是「重不重要」，是「缺了还能不能交付同样的东西」。** 有降级声明（`degraded`）的是增强层，缺席不阻断；没有的是核心层，缺了必须停。判定完全由清单驱动，不在别处另立一张表。
+
+增强层缺席时 `check_environment.py` 的输出多一个顶层 `degraded` 数组，每个条目带 `fallback` / `standard` / `recovery` 三字段：
+
+| 字段 | 回答的问题 | 缺了会怎样 |
+|---|---|---|
+| `fallback` | 换成哪条确定性实现 | 说不清拿什么顶上 |
+| `standard` | 产物与验收标准为什么没降 | 等于承认降级就是降低标准 |
+| `recovery` | 什么条件回到增强路径 | 说不清会一直降级到什么时候 |
+
+**三个字段是「正当降级」这条纪律的机检容器**：降级只许换实现，不许换标准。把脚本的活交给模型或人（人工核对、模型手工计算、人工排序）不是降级，是造假——见 CR-9。清单校验会在缺字段、字段空值、多余字段、或把 `degraded` 挂到必需依赖上时直接拒绝。
+
+**`degraded` 不进学员可见文本**：出现时在讲授正文之外单说一句（哪项增强不可用、走哪条降级路径、恢复条件）；没出现就一个字都不提。
 
 环境依赖的机器可读清单与 `min_version` 以 `skill-dependencies.json` 为准；本册不重复版本号。跨平台注：本技能只依赖终端执行、文件读写、目录枚举与文本检索等能力接口；具体能力由宿主以等价工具提供，不绑定某个 agent、终端或命令名。
 
@@ -68,14 +85,16 @@
 
 | 状态 | 含义 | 处理 |
 |---|---|---|
-| ready | 本次请求的机器可检查依赖全部就绪 | 进入正常流程 |
-| needs_setup | 缺失依赖或版本不满足（含 Python 低于清单 `min_version`） | 停止当前运行；展示缺失项与安装步骤，处理后重新检查 |
+| ready | 本次请求的**核心层**机器可检查依赖全部就绪 | 进入正常流程（若同时有 `degraded`，按上一节说明一句） |
+| needs_setup | 核心层缺失依赖或版本不满足（含 Python 低于清单 `min_version`） | 停止当前运行；展示缺失项与安装步骤，处理后重新检查 |
 | unavailable | 检查不可执行、清单/请求无效或检查器无法运行 | 停止当前运行；展示原因与恢复步骤，处理后重新检查 |
 | manifest_error（exit 2） | 清单缺失、畸形或能力无检查覆盖 | 修复清单后重新检查；不得继续 |
 
 配置齐全时不重复展示本指南；重新检查时只报告状态变化。
 
 **`dependencies` 的显示口径**：`ready` 时列出全部依赖项；非 `ready` 时只列未通过项。空数组表示其余依赖检查通过，不是「没检查」。
+
+**增强层不进这一栏**：`status` 只由核心层决定。增强层缺席时不改 `status`、不写进 `dependencies`，只出现在顶层 `degraded` 里——所以「`status` 是 `ready`」和「有 `degraded`」可以同时成立，这不是矛盾，是增强层的定义。
 
 **阻断报告**必须说明四项：停止点、缺失条件、受影响动作、恢复条件。已有真实进度保留，不推进阶段、不定稿、不把未完成写成通过。
 
@@ -147,6 +166,8 @@
 | prereq_check | `E-LIST-MISSING` / `E-LIST-EMPTY` / `E-SCAN-MISSING` / `W-TERM-UNTAUGHT` | 清单缺失 / 清单零可用行 / 扫描文件缺失；`W-TERM-UNTAUGHT` 为术语对账逐条违规提示（stderr），exit 1 |
 
 > `check_environment.py` 用 `ready` / `needs_setup` / `unavailable` / `manifest_error`（exit 2）状态而不是 E/W 码；`kp_sort.py` 用 exit 1 表示畸形行、依赖环或解释器版本不足。两者详见 `scripts-contract.json`。
+>
+> `degraded` 不是错误码、也不是第五种状态：它是 `ready` 输出里的一个可选数组，读的是「有没有走降级路径」这件事。检查项里只有 `command_not_found` 一个 reason_code 属它。
 
 ## 证据与核验边界
 
@@ -201,7 +222,7 @@
 | CR-6 | 不可逆动作无确认 | 删除/重写任务目录、覆盖既有计划，未获用户确认 | 停止；列出将被影响的文件，取得明确确认后再动 |
 | CR-7 | 路径逃逸 | 把学习数据写到数据根之外的位置（如用户主目录、系统目录） | 停止；改用规范数据根路径（可安全恢复类：改回并简述即可） |
 | CR-8 | 删除/改写判分证据 | 为过闸删除判分行、把 `未判` 改成 `对`、删除 `作废` 原行、删除或改写 KP 类型/视觉任务字段或证据标签、静默改判 | 停止；保留原行+原因，按 `references/assessment.md`「作废与申诉」重判；原判分行与已声明的分型字段不得删除或改写 |
-| CR-9 | 失败后降级继续 | 能力、输入、脚本、实跑、渲染、落盘或真人验证失败后，以人工代验、模型推算、低等级来源、未实跑版本、纯文本/文字图替代或其他降低交付与证据标准的方式继续 | 立即停止当前运行；说明停止点、缺失条件、受影响动作与恢复条件；处理完后重跑原检查，从原阶段继续 |
+| CR-9 | 失败后降级继续 | 能力、输入、脚本、实跑、渲染、落盘或真人验证失败后，以人工代验、模型推算、低等级来源、未实跑版本、纯文本/文字图替代或其他降低交付与证据标准的方式继续。**两条子句**：① **禁增强层冒充核心层**——把增强层（SVG 工具链等）缺失当成核心能力缺失而停机，或反过来把核心层失败记成可降级的增强项，都是伪造分层；分层只以 `skill-dependencies.json` 的 `degraded` 声明为准。② **禁用降级冒充达标**——走降级路径时，产物仍须过同一套校验、证据仍须达同一标准；把「走的是降级路径」写成免责理由（少一次校验、少一份存档、把示意图标成按比例图），即命中本条 | 立即停止当前运行；说明停止点、缺失条件、受影响动作与恢复条件；处理完后重跑原检查，从原阶段继续 |
 
 ### 🟡 Standard 红线
 
@@ -292,6 +313,7 @@
 - **解释器**统一 `python`（仅有 `python3` 时等价替换）。
 - `task_index` / `progress_check` / `scheduler` / `kp_sort` / `prereq_check` 带 `--selftest`；`check_environment` / `verify_explanation` / `rule_contract` / `verify-doc-pointers` 也带 `--selftest`。
 - 契约文件固定为 `<技能根>/contracts/rules.json`；缺失/畸形 → 依赖契约的脚本一律 fail closed，报 `E-CONTRACT-MISSING` / `E-CONTRACT-INVALID`（`prereq_check`、`check_environment` 不读契约，不在其列）。
+- `check_environment` 的清单是 `<技能根>/skill-dependencies.json`，与 `rules.json` 是两份不同的东西：前者管「宿主能不能跑」，后者管「业务常量是什么」。
 
 ### 退出码与错误码
 
@@ -355,9 +377,9 @@ python -B evals/verify-svg-checker.py
 
 ### 当前核验
 
-- 适用版本：9.20.6
-- 核验日期：2026-11-09
-- 环境依赖：`skill-dependencies.json`（Python `min_version`）；只有 `check_environment.py` 输出 `ready` 才能继续。
+- 适用版本：9.20.9
+- 核验日期：2026-11-11
+- 环境依赖：`skill-dependencies.json`（核心层 Python `min_version`；增强层 `mmdc` 缺席不阻断）；只有 `check_environment.py` 输出 `ready` 才能继续，`degraded` 按上一节「核心层与增强层」说明一句。
 
 ## 来源分级与出处四要素
 

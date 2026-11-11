@@ -1188,7 +1188,9 @@ L3 产物的题量与同题例外唯一事实源见 `references/assessment.md`�
 
 - **选型**：比较 → 柱状；趋势 → 折线；构成（≤5 类）→ 饼/堆叠；关系/分布 → 散点；流程/结构 → 流程图；**查精确值 → 用表不配图**；文字三句内说清 → 不配图。
 - **一图一论点**：信息元素 ≤7±2，超过先分组；标注贴元素旁，图例 ≥3 类才用。
-- **Mermaid**：宿主实测支持且限基础图型才可用；存档仍走 SVG 双轨，不落 `assets/`。**ASCII ≤5 行**仅简单示意。**非数学科目**用 Unicode（`→`）不写 LaTeX 命令（真公式按本册）。
+- **Mermaid**：限基础图型才可用；存档仍走 SVG 双轨，不落 `assets/`。**ASCII ≤5 行**仅简单示意。**非数学科目**用 Unicode（`→`）不写 LaTeX 命令（真公式按本册）。
+  - **可用性判据在清单里，不在本册**：Mermaid 属**增强层**（`skill-dependencies.json` 的 `svg-toolchain`，探测 PATH 上的 `mmdc`）。**缺工具链不等于不能画图**——按 `degraded.fallback` 手写 SVG，产物仍落 `materials/assets/`，仍须过同一套 SVG 校验（含 `verify_explanation.py --reader` 的 `W-READER-SVG`）。**降级的只是生成方式，不是产物标准**；不许拿「宿主不支持 Mermaid」当降低图质量或跳过存档的理由（CR-9）。
+  - 是否走了降级以 `check_environment.py` 的输出为准：有 `degraded` 就在讲授正文之外说明一句，没有就完全不提。
 
 ## 讲义版面：页面、字体与元素
 

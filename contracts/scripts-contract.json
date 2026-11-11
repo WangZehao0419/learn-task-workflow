@@ -52,11 +52,11 @@
    "script": "check_environment.py",
    "usage": "[--manifest <路径>] [--capability <名称>]... [--selftest]",
    "exit_codes": {
-    "0": "ready",
-    "1": "needs_setup / unavailable（停止当前运行，处理后重检）",
+    "0": "ready（增强层缺席也计 ready，另出 degraded）",
+    "1": "needs_setup / unavailable（核心层未就绪，停止当前运行，处理后重检）",
     "2": "清单畸形 manifest_error"
    },
-   "notes": "manifest schema 2；删除 functional_degradations、依赖级 degradation、partial 与 unmapped_capabilities；只保留机器可检查能力，文件写入与来源检索在实际动作边界验证；严格校验 dependency type、setup.steps/verify/security、布尔、min_version 与 capabilities"
+   "notes": "manifest schema 2；删除 functional_degradations、依赖级 degradation、partial 与 unmapped_capabilities；只保留机器可检查能力，文件写入与来源检索在实际动作边界验证；严格校验 dependency type、setup.steps/verify/security、布尔、min_version 与 capabilities。核心层与增强层分层：依赖上声明 degraded（恰好 fallback/standard/recovery 三非空字符串，且 required=false）即为增强层——缺席不改 status、不进 dependencies[]，只进顶层可选 degraded[]；没有声明的是核心层，缺席必须停。新增 command 检查类型：只探测 PATH，不执行、不起子进程、不联网"
   },
   {
    "script": "verify_explanation.py",
