@@ -1942,13 +1942,46 @@ def selftest():
             len(codes(check_text(prose_bad, "prosebad.md", base_dir=d3, reader=True),
                       "W-READER-SVG")) == 1)
 
-        # ── code span 里引述的写法示例不是真图片(Spec 轴 P1-3)──
+        # ── 图注检查的坐标系与豁免(票 68)──
         # 文档自己会写「`![](x.svg)` 这样引用」。ALT/SVG 走 vis 已豁免,
         # 图注若仍走原始行就会漏出来——两处必须同一坐标系。
-        span_md = ("# 第 1 节 · 示例\n\n写法示例：`![](assets/bad.svg)` 这样引用。\n")
+        # 各用例共用一张「真图+正确图注」作前置:has_image_ref 读 vis 判「有没有图」,
+        # 只有 code span 的文档会被判成无图、整套图检查不执行,用例就恒过了(假闸口)。
+        (d3 / "assets" / "ok.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+        img_ok = "![流程图:先删不可行项,再排序](assets/ok.png)\n\n- 图注：图下一句话结论。\n"
+        img_head = "# 第 1 节 · 示例\n\n正文一句。\n\n" + img_ok + "\n"
+        span_probe = "写法示例：`![](assets/bad.svg)` 这样引用。\n"
+        span_md = img_head + span_probe
+        # 自防护:夹具退化(真图被删)会让下面 code span 那条重新恒过而无人报警。
+        # 这里钉死「探针确实认得出图」,夹具一退化就先红。
+        span_lines = span_md.splitlines()
+        span_vis, span_fence = compute_visible(span_lines)
+        chk("夹具前置:图检查确实被触发(防夹具退化成恒过)",
+            ltw_typography.has_image_ref(span_lines, span_vis, span_fence))
         r_span = codes(check_text(span_md, "span.md", base_dir=d3, reader=True),
                        "W-READER-CAPTION")
         chk("code span 里引述的图片语法不报 W-READER-CAPTION", len(r_span) == 0)
+        img_findings = check_text(img_head, "img.md", base_dir=d3, reader=True)
+        chk("同一份含真图的文档里,真图也不会被误报",
+            len(codes(img_findings, "W-READER-CAPTION")) == 0)
+        # 这张真图对上述断言承重(它决定 has_image_ref 为真)。只判 CAPTION 的话,
+        # 文件被当废文件清掉也不会红,故在此钉死「真图确实落盘且无死链」。
+        chk("夹具前置:真图确实落盘可供图检查(防被当废文件清掉)",
+            (d3 / "assets" / "ok.png").exists()
+            and len(codes(img_findings, "E-IMG-DEADLINK")) == 0)
+        fenced_md = img_head + "```markdown\n![](assets/bad.svg)\n```\n"
+        chk("围栏代码块里的图片不报 W-READER-CAPTION",
+            len(codes(check_text(fenced_md, "fenced.md", base_dir=d3, reader=True),
+                      "W-READER-CAPTION")) == 0)
+        table_md = img_head + "| 写法 | 说明 |\n|---|---|\n| ![](assets/bad.svg) | 示例 |\n"
+        chk("表格内图片不报 W-READER-CAPTION",
+            len(codes(check_text(table_md, "table.md", base_dir=d3, reader=True),
+                      "W-READER-CAPTION")) == 0)
+        # 反向:删掉图注必须照报,且只报真图那条(code span 不得凑数)。
+        missing_md = img_head.replace("- 图注：图下一句话结论。\n", "") + span_probe
+        r_missing = codes(check_text(missing_md, "missing.md", base_dir=d3, reader=True),
+                          "W-READER-CAPTION")
+        chk("真图缺图注仍恰报 1 条,code span 不凑数", len(r_missing) == 1)
 
     print(("OK " if ok else "FAIL ") + "verify_explanation --selftest")
     return 0 if ok else 1
