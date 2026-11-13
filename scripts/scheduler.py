@@ -30,12 +30,15 @@ SKILL.md「判断归模型、数据归脚本」）。
             --today YYYY-MM-DD [--all]
         读 <root>/<slug>/progress.md 的「薄弱点」「错题本」「保持复习」三区，
         按 cw 优先 → 最逾期优先 → due 早优先 → slug/条目名稳定序 排序。
-        每条输出 reason（到期/逾期/优先级的人类可读说明）；schema=ltw-due-queue/4。
+        每条输出 reason（到期/逾期/优先级的人类可读说明）；schema=ltw-due-queue/5。
+        条目回显「顺延」计数（干预留痕，不进排序、不改 S/D、不写 last）。
         默认只出 due <= today；--all 出全部（供收尾五件套报具体日期用）。
         v2.2：条目输出新增 错因/级/meta_default 三键（加键升 schema
-        ltw-due-queue/4）；排序契约 cw→最逾期→due 早→稳定序 逐字不动。
+        ltw-due-queue/5）；排序契约 cw→最逾期→due 早→稳定序 逐字不动。
         v2.7：D 回显形态随 FSRS-6 换律而变（连续值、[1,10]、保留 4 位小数），
         按 data.md 的 minor 规则把 schema 从 /3 升到 /4；键集合与排序契约不动。
+        v2.8：条目回显新增「顺延」键（键集合变化，按 data.md minor 规则升 /5）；
+        reason 追加顺延披露。排序契约仍逐字不动。
         薄弱点/错题行元数据挂载点全角/半角双兼容（推荐全角，
         半角兜底），防模型写半角括号/竖线时元数据静默丢失。
 
@@ -95,7 +98,13 @@ from datetime import date
 from pathlib import Path
 
 import rule_contract
-from ltw_parse import FIELD_RE, parse_field_line
+# 条目元数据解析（META_KEYS / parse_meta / 括注拆分）与 S/D 值域常数住在
+# ltw_parse：due-queue 与 progress_check 必须读同一条判据，各写一份就是判据分叉。
+from ltw_parse import (DATE_RE, D_MAX, D_MIN, FIELD_RE, META_KEYS, META_TOKEN_RES,
+                       NONE_MARKS, NONE_RE, S_MAX, S_MIN, WRONG_LINE_RE,
+                       _finite_pos, _in_range, _looks_like_meta, _valid_iso,
+                       parse_field_line, parse_meta, parse_progress_sections,
+                       split_weak_item, split_wrong_item)
 
 
 class ScheduleError(ValueError):
@@ -122,8 +131,6 @@ def _contract_fail(msg):
 
 W = [float(x) for x in _C["w"]]
 DESIRED_RETENTION = float(_C["desired_retention"])
-S_MAX = float(_C["s_max"])
-S_MIN = float(_C["s_min"])
 MAXIMUM_INTERVAL = int(_C["maximum_interval"])
 ENABLE_FUZZING = bool(_C["enable_fuzzing"])
 if len(W) != 21:
@@ -142,7 +149,6 @@ DECAY = -W[20]                       # FSRS-6 遗忘曲线衰减指数（decay =
 # 曲线形状常数：按 FSRS 定义**只由 w20 与参考保持率 0.9 决定**，与 desired_retention 无关
 # （desired_retention 只进 interval_for 的 I(r,S)）。改 desired_retention 不会改变它。
 FACTOR = 0.9 ** (1.0 / DECAY) - 1.0
-D_MIN, D_MAX = 1.0, 10.0             # FSRS-6 的 D 值域（连续，无粒度要求）
 _GRADE_INDEX = {"again": 1, "hard": 2, "good": 3, "easy": 4}
 ELAPSED_INF = float("inf")   # 经过天数只要求「有限且 ≥0」：R(t,S) 随 t 单调趋 0，
 # 长中断自然压低增幅，无需人为上界（长中断兼容）。
@@ -150,9 +156,6 @@ DATE_MIN_ORD = date.min.toordinal()
 DATE_MAX_ORD = date.max.toordinal()
 DEFAULT_CAUSE = "知识性"  # v2.2：错因缺省枚举（仅脚本输出侧占位回显，模型不得盲补）
 DEFAULT_LEVEL = "B"       # v2.2：级缺省枚举（同上）
-
-DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-
 
 def fail(msg):
     """用法/参数错误：stderr 显式说明 + exit 2，不静默退化。"""
@@ -170,32 +173,6 @@ def norm_num(x):
     if isinstance(x, float) and x.is_integer():
         return int(x)
     return x
-
-
-def _finite_pos(tok, hi=S_MAX):
-    """解析有限正浮点（S 等）；非数值 / NaN / Inf / <=0 / >hi 一律返回 None。
-
-    坏元数据（如 `S=1..2`）不得让整队列裸崩——解析失败按「缺省」处理，
-    由调用方走默认链并标 migrated，不静默崩溃。有效域 (0, hi]，默认 hi=S_MAX。
-    """
-    try:
-        v = float(tok)
-    except (TypeError, ValueError):
-        return None
-    if not math.isfinite(v) or v <= 0 or v > hi:
-        return None
-    return v
-
-
-def _in_range(tok, lo, hi):
-    """解析 [lo,hi] 内浮点（D 等）；失败或越界返回 None。NaN/Inf 一律 None。"""
-    try:
-        v = float(tok)
-    except (TypeError, ValueError):
-        return None
-    if not math.isfinite(v) or v < lo or v > hi:
-        return None
-    return v
 
 
 def require_finite(value, name, lo, hi):
@@ -225,17 +202,6 @@ def safe_add_days(anchor_iso, days):
     if ord_new < DATE_MIN_ORD or ord_new > DATE_MAX_ORD:
         return None
     return date.fromordinal(ord_new).isoformat()
-
-
-def _valid_iso(tok):
-    """是否为合法真实日历日期（YYYY-MM-DD）；非法（如 2026-02-30）返回 None。"""
-    if not DATE_RE.match(tok or ""):
-        return None
-    try:
-        date.fromisoformat(tok)
-    except ValueError:
-        return None
-    return tok
 
 
 def _clamp(x, lo, hi):
@@ -398,157 +364,14 @@ def next_interval(grade, stability=None, difficulty=None, elapsed=None,
 # due-queue：读 progress.md 的薄弱点 / 错题本两区，只读排序输出
 # ---------------------------------------------------------------------------
 
-# 输入行已由 parse_progress_sections 剥去「- 」前缀
-WRONG_LINE_RE = re.compile(r"^\[(\d{4}-\d{2}-\d{2})\]\s*(.*)$")
-META_KEYS = ("S=", "D=", "last=", "due=", "信心=", "evt=", "attempt_id=", "子类=", "错因=", "级=")
-# ↑ v2.6：与 META_TOKEN_RES 的「键=」形态一一对应（v2.5 的 attempt_id= 现已补解析器）；
-#   cw/顽固 为无值标记，拆分判定改由 _looks_like_meta 按整段括注逐 token 可解析判定，
-#   避免普通中文括注（如「抄自 cw 笔记」）因子串命中被误拆。
-#   此前不被拆出，导致同一次作答的投影无法归组合并。
-# 元数据逐键严格格式（分隔后整 token fullmatch）：只认合法前缀会把 S=3oops 截成 3、
-# 信心=50 截成 5，把坏内容当有效观测——v2.4 起一律 fullmatch，坏 token 显式记入
-# invalid_tokens 并降级（走缺省链），不再「截前缀修正」。
-META_TOKEN_RES = (
-    ("S", re.compile(r"S=(\S+)"), lambda g: _finite_pos(g, S_MAX)),
-    ("D", re.compile(r"D=(\S+)"), lambda g: _in_range(g, D_MIN, D_MAX)),
-    ("last", re.compile(r"last=(\S+)"), _valid_iso),
-    ("due", re.compile(r"due=(\S+)"), _valid_iso),
-    ("错因", re.compile(r"错因=(\S+)"),
-     lambda g: g if g in ("知识性", "理解性", "技巧性") else None),
-    ("子类", re.compile(r"子类=(\S+)"), lambda g: g),
-    ("级", re.compile(r"级=(\S+)"), lambda g: g if g in ("A", "B", "C") else None),
-    ("evt", re.compile(r"evt=([A-Za-z0-9_\-]+)"), lambda g: g),
-    ("attempt_id", re.compile(r"attempt_id=([A-Za-z0-9_\-]+)"), lambda g: g),
-)
-# 空区占位标记：薄弱点/错题本/归档区无内容时按文档写「无」，解析器须跳过，不得当作坏数据
-# 整行「无+括注」形态（如「无（暂无错题）」）同为占位；「无法/无向」等真实知识点开头不受影响
-NONE_MARKS = ("无", "无。", "（暂无）", "(暂无)")
-NONE_RE = re.compile(r"无[（(][^（）()]*[）)]")
+# 条目元数据解析（META_KEYS / parse_meta / 括注拆分）已下沉 scripts/ltw_parse.py：
+# due-queue 与 progress_check 必须读同一条判据（如「顺延=」），各写一份即判据分叉。
+# 本模块只从 ltw_parse 导入，不再保留本地副本。
 
 
-def parse_progress_sections(text):
-    """提取「最近更新」字段与薄弱点/错题本/保持复习三区的条目行（纯文本解析）。"""
-    section = None
-    recent_update = None
-    weak_lines = []
-    wrong_lines = []
-    retention_lines = []
-    for raw in text.splitlines():
-        line = raw.rstrip()
-        if line.startswith("## "):
-            section = line[3:].strip()
-            continue
-        if section is None:
-            fv = parse_field_line(line.strip())
-            if fv and fv[0] == "最近更新":
-                recent_update = fv[1]
-            continue
-        if section == "薄弱点" and line.strip().startswith("- "):
-            weak_lines.append(line.strip()[2:].strip())
-        elif section == "错题本" and line.strip().startswith("- "):
-            wrong_lines.append(line.strip()[2:].strip())
-        elif section == "保持复习" and line.strip().startswith("- "):
-            retention_lines.append(line.strip()[2:].strip())
-    return recent_update, weak_lines, wrong_lines, retention_lines
 
-
-def parse_meta(meta_text):
-    """解析全角括号 / 「元数据：」段内的 键=值 与无值标记（cw/顽固）。
-
-    v2.4：分隔后**逐 token fullmatch**，坏 token（重复键、畸形值、越域）不截前缀，
-    一律记入 `invalid_tokens` 并保持该键为 None（走缺省链），由调用方告警披露。
-    """
-    meta = {"S": None, "D": None, "last": None, "due": None, "信心": None,
-            "cw": False, "顽固": False, "错因": None, "子类": None, "级": None, "evt": None,
-            "attempt_id": None,
-            "invalid_tokens": [], "dup_keys": [], "信心_retro": False}
-    tokens = [t for t in re.split(r"[，,;；\s]+", meta_text or "") if t]
-    seen = set()
-    for tok in tokens:
-        if tok == "cw":
-            meta["cw"] = True
-            continue
-        if tok == "顽固":
-            meta["顽固"] = True
-            continue
-        # 信心单独处理：区分「数值原信心」「回顾性时序标志」「重复键」「坏值」
-        m = re.fullmatch(r"信心=(\S+)", tok)
-        if m:
-            g = m.group(1)
-            if "信心" in seen:
-                meta["dup_keys"].append("信心")      # 同一条目重复信心 → 身份歧义
-                meta["invalid_tokens"].append(tok)
-            else:
-                seen.add("信心")
-                if re.fullmatch(r"[1-5]", g):
-                    meta["信心"] = int(g)
-                elif g in ("回顾性", "回顾"):
-                    meta["信心_retro"] = True        # 文档定义的合法时序标志，非坏 token
-                else:
-                    meta["invalid_tokens"].append(tok)
-            continue
-        matched = False
-        for key, pat, conv in META_TOKEN_RES:
-            m = pat.fullmatch(tok)
-            if not m:
-                continue
-            matched = True
-            if key in seen:
-                meta["dup_keys"].append(key)         # 重复键 → 标坏 + 记入歧义键
-                meta["invalid_tokens"].append(tok)
-                break
-            seen.add(key)
-            value = conv(m.group(1))
-            if value is None:
-                meta["invalid_tokens"].append(tok)   # 畸形/越域值 → 标坏，保持缺省
-            else:
-                meta[key] = value
-            break
-        if not matched and "=" in tok:
-            meta["invalid_tokens"].append(tok)       # 未知键=值 → 标坏
-    return meta
-
-
-def _looks_like_meta(candidate):
-    """括注是否为元数据段：逐 token（分词口径同 parse_meta）判定——
-
-    「键=」形态的键必须 ∈ META_KEYS，cw/顽固 须为独立 token；出现任何
-    非元数据词（如「抄自 cw 笔记」的「抄自」）即判普通括注，不拆。
-    """
-    toks = [t for t in re.split(r"[，,;；\s]+", candidate) if t]
-    if not toks:
-        return False
-    for tok in toks:
-        if tok in ("cw", "顽固"):
-            continue
-        key = tok.split("=", 1)[0] if "=" in tok else None
-        if key is not None and (key + "=") in META_KEYS:
-            continue
-        return False
-    return True
-
-
-def split_weak_item(line):
-    """薄弱点行：尾部全角/半角括注为元数据段时拆出（推荐全角，半角兜底），否则整行是条目文本。
-
-    拆分判定用 _looks_like_meta（v2.6）：整段括注逐 token 均为元数据形态才拆，
-    纯子串命中不再触发；混合散文与元数据的括注不拆（元数据留在条目名，不静默拆碎）。
-    """
-    for close_ch, open_ch in (("）", "（"), (")", "(")):
-        if line.endswith(close_ch) and open_ch in line:
-            idx = line.rfind(open_ch)
-            candidate = line[idx + 1:-1]
-            if _looks_like_meta(candidate):
-                return line[:idx].strip(), candidate
-    return line, None
-
-
-def split_wrong_item(rest):
-    """错题本行：取首个「｜/|」前的题目段作条目名；行尾「元数据：…」段拆出（全角/半角双兼容）。"""
-    m = re.search(r"元数据[：:](.*)$", rest)
-    if m:
-        rest = rest[:m.start()].rstrip("｜| ").strip()
-    return re.split(r"[｜|]", rest)[0].strip(), (m.group(1).strip() if m else None)
+# parse_progress_sections / parse_meta / _looks_like_meta / split_weak_item /
+# split_wrong_item 全部由 ltw_parse 提供（见文件头 import）。
 
 
 def resolve_item(item_text, meta_text, kind, wrong_date, recent_update):
@@ -588,6 +411,9 @@ def resolve_item(item_text, meta_text, kind, wrong_date, recent_update):
         "级": meta["级"] if meta["级"] is not None else ("" if is_retention else DEFAULT_LEVEL),
         "meta_default": (not is_retention) and (meta["错因"] is None or meta["级"] is None),
         "teach": meta["顽固"],
+        # 顺延=n：干预留痕计数（票 58 定语义、票 72 定消费口径）。缺省 None 与 0 都表示
+        # 「无顺延」，回显时统一成整数；它不改 S/D、不写 last、不产生 evt，只作披露。
+        "顺延": meta["顺延"] if meta["顺延"] is not None else 0,
     }, migrated
 
 
@@ -736,6 +562,10 @@ def review_reason(entry):
     else:
         parts.append("还有 " + str(-overdue) + " 天到期")
     parts.append("S=" + str(entry["S"]) + "，D=" + str(entry["D"]))
+    # 顺延披露（票 72 Q1：形态判据「顺延>0 → 下一轮开场必须明示」）。只报形态，
+    # 不给「累计欠账」总数、不把顺延数当进度指标——Q3 的三条禁止项。
+    if entry.get("顺延"):
+        parts.append("已顺延 " + str(entry["顺延"]) + " 次（保留原到期日）")
     return "；".join(parts)
 
 
@@ -753,7 +583,8 @@ def due_queue_output(root, slug_filter, today, show_all):
     ))
     fields = ("slug", "item", "kind", "due", "overdue_days", "cw", "顽固",
               "S", "D", "migrated", "teach")
-    fields = fields + ("错因", "级", "meta_default", "reason")  # 加键回显；排序契约不动
+    # 加键回显；排序契约不动（cw→最逾期→due 早→稳定序 逐字保留）
+    fields = fields + ("错因", "级", "meta_default", "顺延", "reason")
     return {
         "schema": _SCHEMAS["due_queue"],
         "today": today.isoformat(),
@@ -1449,7 +1280,7 @@ def selftest():
         (root_r / "slug-r").mkdir(parents=True)
         (root_r / "slug-r" / "progress.md").write_text(FIX_R, encoding="utf-8")
         out_r = due_queue_output(root_r, None, today_r, False)
-        ok = ok and out_r["schema"] == "ltw-due-queue/4"
+        ok = ok and out_r["schema"] == "ltw-due-queue/5"
         ok = ok and len(out_r["queue"]) == 1
         ok = ok and out_r["queue"][0]["kind"] == "保持"
         ok = ok and out_r["queue"][0]["reason"].startswith("保持复习")
@@ -1547,6 +1378,7 @@ def selftest():
 
     # 断言 12：due-queue 新键——v2.2 完整条目错因/级原值回显 meta_default:false；
     # v6.0 schema 升 ltw-due-queue/3（加 reason/保持复习）；v2.7 因 D 回显形态变化升 /4；
+    # v2.8 加「顺延」回显键升 /5；
     # 排序契约（cw 排前）断言 7 逐字保留未动
     queue_c, _wc = queue_from_progress_texts(
         [("slug-c", FIX_C)], date.fromisoformat("2026-10-10"))
@@ -1560,7 +1392,50 @@ def selftest():
     ok = ok and by_item_c["变式题"]["meta_default"] is False
     out = due_queue_output(Path(__file__).resolve().parent, None,
                            date.fromisoformat("2026-10-10"), True)
-    ok = ok and out["schema"] == "ltw-due-queue/4"
+    ok = ok and out["schema"] == "ltw-due-queue/5"
+
+    # 断言 12b（v2.8）：顺延计数——解析、坏值、回显、reason 披露，且不进排序契约。
+    # 顺延=n 是票 58 定的干预留痕（只碰 due、不碰 S/D），票 72 定其消费口径为形态判据。
+    ok = ok and "顺延=" in META_KEYS
+    ok = ok and parse_meta("S=3，D=3，顺延=1")["顺延"] == 1
+    ok = ok and parse_meta("顺延=0")["顺延"] == 0
+    # 坏值：非数字 / 负数 → invalid_tokens，按缺省链继续、不硬拒（与既有坏值口径一致）
+    ok = ok and parse_meta("顺延=abc")["invalid_tokens"] == ["顺延=abc"]
+    ok = ok and parse_meta("顺延=abc")["顺延"] is None
+    ok = ok and parse_meta("顺延=-1")["invalid_tokens"] == ["顺延=-1"]
+    # 重复键 → 标坏，保留首值（与 S/D 重复键同口径）
+    _dup_sy = parse_meta("顺延=1，顺延=2")
+    ok = ok and _dup_sy["invalid_tokens"] == ["顺延=2"] and _dup_sy["顺延"] == 1
+    # 含顺延的括注必须能被拆成元数据段（否则「点（顺延=1）」会把元数据留在条目名里）
+    _sy_name, _sy_meta = split_weak_item("点（S=3，D=3，顺延=2）")
+    ok = ok and _sy_name == "点" and _sy_meta is not None
+    # 回显与 reason 披露：顺延>0 → 条目带「顺延」键且 reason 明示次数
+    _sy_q, _sy_w = queue_from_progress_texts(
+        [("slug-sy", "- 最近更新：2026-10-01\n## 薄弱点\n"
+                     "- 顺延点：没清完（S=3，D=3，last=2026-10-01，due=2026-10-02，顺延=2）\n"
+                     "- 无顺延点：正常（S=3，D=3，last=2026-10-01，due=2026-10-02）\n")],
+        date.fromisoformat("2026-10-10"))
+    _sy_by = {e["item"]: e for e in _sy_q}
+    ok = ok and _sy_by["顺延点：没清完"]["顺延"] == 2
+    ok = ok and _sy_by["无顺延点：正常"]["顺延"] == 0
+    ok = ok and "已顺延 2 次" in review_reason(_sy_by["顺延点：没清完"])
+    ok = ok and "顺延" not in review_reason(_sy_by["无顺延点：正常"])
+    # 顺延不得进排序契约：走**真实的** due_queue_output 排序，而不是在本断言里再排一遍
+    # （自己按自己的键排一遍，等于没验被测代码——变异测试会照出这种假断言）。
+    # 甲 due 更早（逾期 8 天）、乙 due 更晚（逾期 7 天）却带顺延=9：
+    # 若顺延进了排序键，乙会被提前；正确行为是甲仍在前。
+    with tempfile.TemporaryDirectory() as _td_sy:
+        _root_sy = Path(_td_sy) / ".learning"
+        (_root_sy / "slug-o").mkdir(parents=True)
+        (_root_sy / "slug-o" / "progress.md").write_text(
+            "- 最近更新：2026-10-01\n## 薄弱点\n"
+            "- 甲：普通逾期（S=3，D=3，last=2026-10-01，due=2026-10-02）\n"
+            "- 乙：大量顺延（S=3，D=3，last=2026-10-01，due=2026-10-03，顺延=9）\n",
+            encoding="utf-8")
+        _sy_out = due_queue_output(_root_sy, None, date.fromisoformat("2026-10-10"), False)
+        _sy_items = [e["item"] for e in _sy_out["queue"]]
+        ok = ok and _sy_items == ["甲：普通逾期", "乙：大量顺延"]
+        ok = ok and _sy_out["queue"][1]["顺延"] == 9
 
     # 断言 13：calibration 畸形输入 → exit 2；--root 非目录 → exit 1
     for call in [["calibration"]]:  # 缺必填 --root → argparse exit 2

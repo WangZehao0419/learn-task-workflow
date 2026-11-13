@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/3",
- "version": "9.21.4",
+ "version": "9.21.5",
  "constants": {
   "phases": [
    "接料建档",
@@ -84,7 +84,7 @@
   },
   "schemas": {
    "index": "learn-task-index/7",
-   "due_queue": "ltw-due-queue/4",
+   "due_queue": "ltw-due-queue/5",
    "calibration": "ltw-calibration/4",
    "manifest": "2"
   },
@@ -291,6 +291,7 @@
     "W-READER-SVG",
     "W-READER-TABLE",
     "W-READER-TABLE-ALIGN",
+    "W-REVIEW-DEBT",
     "W-RUBRIC-SOURCE",
     "W-SELFTEST-EMPTY",
     "W-SELFTEST-MISSING",

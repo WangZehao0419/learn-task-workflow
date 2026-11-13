@@ -11,7 +11,9 @@ task_index / progress_check / kp_sort / scheduler 复用同一实现，防止字
 """
 from __future__ import annotations
 
+import math
 import re
+from datetime import date
 
 import rule_contract
 
@@ -195,3 +197,215 @@ def parse_kp_row(segs):
             "bottom_note": bottom_note, "needs_consolidation": needs_consolidation,
             "type": kp_type, "visual_tasks": visual_tasks,
             "intro": intro}
+
+# ---------------------------------------------------------------------------
+# 条目元数据解析（T04）：META_KEYS / META_TOKEN_RES / parse_meta 与括注拆分
+# ---------------------------------------------------------------------------
+# 下沉理由：due-queue（scheduler）与闸口（progress_check）都要读同一条「顺延=」
+# 判据。放在 scheduler 会让校验脚本反向依赖调度脚本；各写一份正则则是同一判据
+# 写两遍。本模块已是 4 脚本共用的行级解析层，判据只在这里实现一次。
+#
+# 调度域常数（S/D 值域）在此按契约取用：元数据解析的 fullmatch 纪律要求「越域即坏
+# token」，而这个值域的唯一来源就是 contracts/rules.json 的 scheduler 块。
+_S = _C["scheduler"]
+S_MAX = float(_S["s_max"])
+S_MIN = float(_S["s_min"])
+D_MIN, D_MAX = 1.0, 10.0             # FSRS-6 的 D 值域（连续，无粒度要求）
+
+DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _finite_pos(tok, hi=S_MAX):
+    """解析有限正浮点（S 等）；非数值 / NaN / Inf / <=0 / >hi 一律返回 None。
+
+    坏元数据（如 S=1..2）不得让整队列裸崩——解析失败按「缺省」处理，
+    由调用方走默认链并标 migrated，不静默崩溃。有效域 (0, hi]，默认 hi=S_MAX。
+    """
+    try:
+        v = float(tok)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(v) or v <= 0 or v > hi:
+        return None
+    return v
+
+
+def _in_range(tok, lo, hi):
+    """解析 [lo,hi] 内浮点（D 等）；失败或越界返回 None。NaN/Inf 一律 None。"""
+    try:
+        v = float(tok)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(v) or v < lo or v > hi:
+        return None
+    return v
+
+
+def _valid_iso(tok):
+    """是否为合法真实日历日期（YYYY-MM-DD）；非法（如 2026-02-30）返回 None。"""
+    if not DATE_RE.match(tok or ""):
+        return None
+    try:
+        date.fromisoformat(tok)
+    except ValueError:
+        return None
+    return tok
+
+
+# 输入行已由 parse_progress_sections 剥去「- 」前缀
+WRONG_LINE_RE = re.compile(r"^\[(\d{4}-\d{2}-\d{2})\]\s*(.*)$")
+META_KEYS = ("S=", "D=", "last=", "due=", "信心=", "evt=", "attempt_id=", "子类=", "错因=", "级=",
+             "顺延=")
+# ↑ v2.6：与 META_TOKEN_RES 的「键=」形态一一对应（v2.5 的 attempt_id= 现已补解析器）；
+#   cw/顽固 为无值标记，拆分判定改由 _looks_like_meta 按整段括注逐 token 可解析判定，
+#   避免普通中文括注（如「抄自 cw 笔记」）因子串命中被误拆。
+#   此前不被拆出，导致同一次作答的投影无法归组合并。
+# v2.8：追加「顺延=」——票 58 定的干预留痕计数，此前未进白名单，写了就逐条报
+#   W-META-INVALID，等于「已定的语义没有落点」。
+# 元数据逐键严格格式（分隔后整 token fullmatch）：只认合法前缀会把 S=3oops 截成 3、
+# 信心=50 截成 5，把坏内容当有效观测——v2.4 起一律 fullmatch，坏 token 显式记入
+# invalid_tokens 并降级（走缺省链），不再「截前缀修正」。
+META_TOKEN_RES = (
+    ("S", re.compile(r"S=(\S+)"), lambda g: _finite_pos(g, S_MAX)),
+    ("D", re.compile(r"D=(\S+)"), lambda g: _in_range(g, D_MIN, D_MAX)),
+    ("last", re.compile(r"last=(\S+)"), _valid_iso),
+    ("due", re.compile(r"due=(\S+)"), _valid_iso),
+    ("错因", re.compile(r"错因=(\S+)"),
+     lambda g: g if g in ("知识性", "理解性", "技巧性") else None),
+    ("子类", re.compile(r"子类=(\S+)"), lambda g: g),
+    ("级", re.compile(r"级=(\S+)"), lambda g: g if g in ("A", "B", "C") else None),
+    ("evt", re.compile(r"evt=([A-Za-z0-9_\-]+)"), lambda g: g),
+    ("attempt_id", re.compile(r"attempt_id=([A-Za-z0-9_\-]+)"), lambda g: g),
+    # 顺延：非负整数，fullmatch 纪律同其他键。坏值（顺延=abc / 顺延=-1）走
+    # invalid_tokens → 按缺省链继续、不硬拒，与既有坏值口径一致。
+    ("顺延", re.compile(r"顺延=(\d+)"), lambda g: int(g)),
+)
+# 空区占位标记：薄弱点/错题本/归档区无内容时按文档写「无」，解析器须跳过，不得当作坏数据
+# 整行「无+括注」形态（如「无（暂无错题）」）同为占位；「无法/无向」等真实知识点开头不受影响
+NONE_MARKS = ("无", "无。", "（暂无）", "(暂无)")
+NONE_RE = re.compile(r"无[（(][^（）()]*[）)]")
+
+
+def parse_progress_sections(text):
+    """提取「最近更新」字段与薄弱点/错题本/保持复习三区的条目行（纯文本解析）。"""
+    section = None
+    recent_update = None
+    weak_lines = []
+    wrong_lines = []
+    retention_lines = []
+    for raw in text.splitlines():
+        line = raw.rstrip()
+        if line.startswith("## "):
+            section = line[3:].strip()
+            continue
+        if section is None:
+            fv = parse_field_line(line.strip())
+            if fv and fv[0] == "最近更新":
+                recent_update = fv[1]
+            continue
+        if section == "薄弱点" and line.strip().startswith("- "):
+            weak_lines.append(line.strip()[2:].strip())
+        elif section == "错题本" and line.strip().startswith("- "):
+            wrong_lines.append(line.strip()[2:].strip())
+        elif section == "保持复习" and line.strip().startswith("- "):
+            retention_lines.append(line.strip()[2:].strip())
+    return recent_update, weak_lines, wrong_lines, retention_lines
+
+
+def parse_meta(meta_text):
+    """解析全角括号 / 「元数据：」段内的 键=值 与无值标记（cw/顽固）。
+
+    v2.4：分隔后**逐 token fullmatch**，坏 token（重复键、畸形值、越域）不截前缀，
+    一律记入 invalid_tokens 并保持该键为 None（走缺省链），由调用方告警披露。
+    """
+    meta = {"S": None, "D": None, "last": None, "due": None, "信心": None,
+            "cw": False, "顽固": False, "错因": None, "子类": None, "级": None, "evt": None,
+            "attempt_id": None, "顺延": None,
+            "invalid_tokens": [], "dup_keys": [], "信心_retro": False}
+    tokens = [t for t in re.split(r"[，,;；\s]+", meta_text or "") if t]
+    seen = set()
+    for tok in tokens:
+        if tok == "cw":
+            meta["cw"] = True
+            continue
+        if tok == "顽固":
+            meta["顽固"] = True
+            continue
+        # 信心单独处理：区分「数值原信心」「回顾性时序标志」「重复键」「坏值」
+        m = re.fullmatch(r"信心=(\S+)", tok)
+        if m:
+            g = m.group(1)
+            if "信心" in seen:
+                meta["dup_keys"].append("信心")      # 同一条目重复信心 → 身份歧义
+                meta["invalid_tokens"].append(tok)
+            else:
+                seen.add("信心")
+                if re.fullmatch(r"[1-5]", g):
+                    meta["信心"] = int(g)
+                elif g in ("回顾性", "回顾"):
+                    meta["信心_retro"] = True        # 文档定义的合法时序标志，非坏 token
+                else:
+                    meta["invalid_tokens"].append(tok)
+            continue
+        matched = False
+        for key, pat, conv in META_TOKEN_RES:
+            m = pat.fullmatch(tok)
+            if not m:
+                continue
+            matched = True
+            if key in seen:
+                meta["dup_keys"].append(key)         # 重复键 → 标坏 + 记入歧义键
+                meta["invalid_tokens"].append(tok)
+                break
+            seen.add(key)
+            value = conv(m.group(1))
+            if value is None:
+                meta["invalid_tokens"].append(tok)   # 畸形/越域值 → 标坏，保持缺省
+            else:
+                meta[key] = value
+            break
+        if not matched and "=" in tok:
+            meta["invalid_tokens"].append(tok)       # 未知键=值 → 标坏
+    return meta
+
+
+def _looks_like_meta(candidate):
+    """括注是否为元数据段：逐 token（分词口径同 parse_meta）判定——
+
+    「键=」形态的键必须 ∈ META_KEYS，cw/顽固 须为独立 token；出现任何
+    非元数据词（如「抄自 cw 笔记」的「抄自」）即判普通括注，不拆。
+    """
+    toks = [t for t in re.split(r"[，,;；\s]+", candidate) if t]
+    if not toks:
+        return False
+    for tok in toks:
+        if tok in ("cw", "顽固"):
+            continue
+        key = tok.split("=", 1)[0] if "=" in tok else None
+        if key is not None and (key + "=") in META_KEYS:
+            continue
+        return False
+    return True
+
+
+def split_weak_item(line):
+    """薄弱点行：尾部全角/半角括注为元数据段时拆出（推荐全角，半角兜底），否则整行是条目文本。
+
+    拆分判定用 _looks_like_meta（v2.6）：整段括注逐 token 均为元数据形态才拆，
+    纯子串命中不再触发；混合散文与元数据的括注不拆（元数据留在条目名，不静默拆碎）。
+    """
+    for close_ch, open_ch in (("）", "（"), (")", "(")):
+        if line.endswith(close_ch) and open_ch in line:
+            idx = line.rfind(open_ch)
+            candidate = line[idx + 1:-1]
+            if _looks_like_meta(candidate):
+                return line[:idx].strip(), candidate
+    return line, None
+
+
+def split_wrong_item(rest):
+    """错题本行：取首个「｜/|」前的题目段作条目名；行尾「元数据：…」段拆出（全角/半角双兼容）。"""
+    m = re.search(r"元数据[：:](.*)$", rest)
+    if m:
+        rest = rest[:m.start()].rstrip("｜| ").strip()
+    return re.split(r"[｜|]", rest)[0].strip(), (m.group(1).strip() if m else None)

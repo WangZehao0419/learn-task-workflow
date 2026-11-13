@@ -151,6 +151,7 @@
 | progress_check | `W-GRADED-LOSS-UNLOGGED` | 节判分记录中「判错」行或标「→ 入薄弱点」行未入薄弱点/错题本（含 `j-` 加练；`z-`/`00-`/`99-`/`S4-` 前缀与作废行豁免；warning 不拦截） |
 | progress_check | `W-UNPARSED-KP` / `W-UNPARSED-MODULE` / `W-UNPARSED-MATERIAL` / `W-MODULE` / `W-MODULE-CONTRACT-INCOMPLETE` / `W-MATERIAL-COVERAGE-GAP` | 课程体系目行 / 章规划行 / 材料条目畸形，或章规划与材料覆盖契约不完整 |
 | progress_check | `W-STALE-REVIEW-ORIGIN` | 复习来源阶段指向已失效的阶段值 |
+| progress_check | `W-REVIEW-DEBT` | 存在 `顺延>0` 的复习条目（形态判据，E5）：下一轮开场须明示队列长度与顺延方案。**只验数据形态，验不了「模型有没有明示」**；不参与「连续 3 天」计数；warning 不拦截 |
 | scheduler | `W-PROGRESS` / `W-PROGRESS-MISSING` / `W-PROGRESS-UNREADABLE` / `W-CONFIDENCE-AMBIGUOUS` / `W-CW-LOWCONF` / `W-CW-ORPHAN` / `W-META-INVALID` / `W-NO-EVT` | 任务进度缺失/不可读；信心/时序歧义、低信心 cw、孤立 cw、元数据非法；校准不计或跳过；条目缺 `evt=` 按单条观察计入 |
 | scheduler | `W-UNPARSED-ITEM` | 调度条目无法解析或缺合法日期，不入队、不猜值 |
 | verify_explanation | `E-BOX` / `E-BOX-EMPTY` / `E-BOX-FORMAT` / `E-BOX-INCOMPLETE` / `E-BOX-WRAP` / `E-HEADER-BRIEF` / `E-REQ-MISSING` | 五要素 / 答案框 / 标记行 / 节首导读缺失或体例错误 |
@@ -381,8 +382,8 @@ python -B evals/verify-gate-registry.py
 
 ### 当前核验
 
-- 适用版本：9.21.4
-- 核验日期：2026-11-13
+- 适用版本：9.21.5
+- 核验日期：2026-11-14
 - 环境依赖：`skill-dependencies.json`（核心层 Python `min_version`；增强层 `mmdc` 缺席不阻断）；只有 `check_environment.py` 输出 `ready` 才能继续，`degraded` 按上一节「核心层与增强层」说明一句。
 
 ## 来源分级与出处四要素

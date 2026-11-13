@@ -92,7 +92,9 @@ import rule_contract
 from ltw_parse import (ENUM_KP_TYPE, ENUM_KP_VISUAL, FIELD_RE, HOLD_KEYS, parse_field_line, strip_inline_comment,
                        KP_ID_ANY_RE, KP_ID_RE,
                        ROUTE_RE, hold_disposition_excluded, hold_entry_malformed,
-                       kp_status_base, normalize_kp_id, parse_kp_optional, parse_kp_row)
+                       kp_status_base, normalize_kp_id, parse_kp_optional, parse_kp_row,
+                       parse_progress_sections, parse_meta, split_weak_item, split_wrong_item,
+                       WRONG_LINE_RE, NONE_MARKS, NONE_RE)
 
 # 枚举唯一来源：contracts/rules.json（缺失/畸形即结构化失败）。
 _C = rule_contract.load_or_exit()["constants"]
@@ -1554,9 +1556,45 @@ def check(task_dir, release=False, proposed=None):
                                           "、".join(mandatory_unlearned_ids) +
                                           "——关键能力缺可判分证据，不得结课"})
 
+    # ── 复习债形态判据（R36 / 票 72 Q1+Q2）：warning 非 error，不拦截 ──
+    # 判据：progress.md 三区（薄弱点/错题本/保持复习）任一存在「顺延>0」的条目。
+    # 语义是「这段等待期结束前没清完」的**形态证据**，不是阈值——不给数字（Q1 选 b）。
+    # 边界（必须随码留档）：本检查**只能验数据形态**（磁盘上存在 顺延>0 的条目），
+    # **验不了「模型有没有在下一轮开场明示」**——progress_check 看不到对话。把「数据对了」
+    # 当「行为做了」就是假闸口。该告警也**不参与**「连续 3 天触发停新」计数（Q7：
+    # progress.md 无「连续 N 天」字段，缺口指给票 75）。
+    review_debt = []
+    _recent_sy, _weak_sy, _wrong_sy, _ret_sy = parse_progress_sections(text)
+    for _kind, _lines in (("薄弱点", _weak_sy), ("错题本", _wrong_sy), ("保持复习", _ret_sy)):
+        for _line in _lines:
+            if _line in NONE_MARKS or NONE_RE.fullmatch(_line):
+                continue
+            if _kind == "薄弱点":
+                _item, _meta_text = split_weak_item(_line)
+            elif _kind == "错题本":
+                _m = WRONG_LINE_RE.match(_line)
+                _item, _meta_text = split_wrong_item(_m.group(2) if _m else _line)
+            else:
+                _m = WRONG_LINE_RE.match(_line)
+                _item, _meta_text = split_wrong_item(_m.group(2) if _m else _line)
+            _n = parse_meta(_meta_text)["顺延"] if _meta_text else None
+            if _n:
+                review_debt.append({"kind": _kind, "item": _item, "n": _n})
+    if review_debt:
+        warnings.append({
+            "code": "W-REVIEW-DEBT",
+            "message": "存在顺延未清的复习条目 " + str(len(review_debt)) + " 条（"
+                       + "、".join(d["kind"] + "「" + d["item"] + "」顺延 " + str(d["n"]) + " 次"
+                                   for d in review_debt)
+                       + "）——下一轮开场须明示队列长度与顺延方案；"
+                         "对学员只说「今天清这 X 条就够」，禁累计欠账清单、禁把顺延数当进度指标、"
+                         "禁归因到人（warning，不拦截）",
+        })
+
     return {"ok": not errors, "task_dir": str(task_dir), "phase": phase,
             "release": release, "errors": errors, "warnings": warnings,
             "coverage": coverage,
+            "review_debt": review_debt,
             "proposed_state_supplied": proposed_state_supplied,
             "checked_lessons": checked_lessons,
             "delta_new_mastery": delta,
@@ -2955,6 +2993,55 @@ def selftest():
         r_jnolog = check(d_jnolog)
         ok = ok and r_jnolog["ok"] and any(
             w["code"] == "W-GRADED-LOSS-UNLOGGED" for w in r_jnolog["warnings"])
+
+        # 复习债形态判据（票 72 Q1+Q2）：顺延>0 → W-REVIEW-DEBT，且 ok 仍为 true（只告警不拦停）。
+        # 判据是形态不是阈值：顺延=1 与顺延=9 触发同一个告警，不引入新数字。
+        d_debt = Path(td) / "review-debt"
+        (d_debt / "exercises").mkdir(parents=True)
+        (d_debt / "progress.md").write_text(
+            _led_head + "## 薄弱点\n"
+            "- 顺延点：没清完（S=3，D=3，last=2026-01-01，due=2026-01-02，顺延=2）\n\n"
+            "## 错题本\n- 无\n" + _led_tail, encoding="utf-8")
+        (d_debt / "课程体系.md").write_text(_led_curr, encoding="utf-8")
+        (d_debt / "exercises" / "01-极限-2026-01-01.md").write_text(
+            _fixture_evidence_text("01-极限-2026-01-01.md", _ev_wrong), encoding="utf-8")
+        r_debt = check(d_debt)
+        ok = ok and r_debt["ok"]                       # 不拦停：warning 不影响 ok
+        ok = ok and not any(e["code"] == "W-REVIEW-DEBT" for e in r_debt["errors"])
+        ok = ok and sum(1 for w in r_debt["warnings"]
+                        if w["code"] == "W-REVIEW-DEBT") == 1
+        ok = ok and r_debt["review_debt"][0]["n"] == 2
+        ok = ok and r_debt["review_debt"][0]["kind"] == "薄弱点"
+
+        # 无顺延（或缺省）→ 不产生该告警：不能把「没写顺延」当成有债
+        d_nodebt = Path(td) / "review-nodebt"
+        (d_nodebt / "exercises").mkdir(parents=True)
+        (d_nodebt / "progress.md").write_text(
+            _led_head + "## 薄弱点\n"
+            "- 普通点：正常（S=3，D=3，last=2026-01-01，due=2026-01-02）\n\n"
+            "## 错题本\n- 无\n" + _led_tail, encoding="utf-8")
+        (d_nodebt / "课程体系.md").write_text(_led_curr, encoding="utf-8")
+        (d_nodebt / "exercises" / "01-极限-2026-01-01.md").write_text(
+            _fixture_evidence_text("01-极限-2026-01-01.md", _ev_wrong), encoding="utf-8")
+        r_nodebt = check(d_nodebt)
+        ok = ok and r_nodebt["ok"]
+        ok = ok and not any(w["code"] == "W-REVIEW-DEBT" for w in r_nodebt["warnings"])
+        ok = ok and r_nodebt["review_debt"] == []
+
+        # 顺延=0 与缺省同义（「已清零」不是债）；顺延=abc 是坏值不构成形态判据
+        for _sy_txt, _want in (("顺延=0", False), ("顺延=abc", False)):
+            d_sy = Path(td) / ("review-" + _sy_txt.replace("=", "-"))
+            (d_sy / "exercises").mkdir(parents=True)
+            (d_sy / "progress.md").write_text(
+                _led_head + "## 薄弱点\n"
+                "- 点：" + _sy_txt + "（S=3，D=3，last=2026-01-01，due=2026-01-02，"
+                + _sy_txt + "）\n\n## 错题本\n- 无\n" + _led_tail, encoding="utf-8")
+            (d_sy / "课程体系.md").write_text(_led_curr, encoding="utf-8")
+            (d_sy / "exercises" / "01-极限-2026-01-01.md").write_text(
+                _fixture_evidence_text("01-极限-2026-01-01.md", _ev_wrong), encoding="utf-8")
+            r_sy = check(d_sy)
+            ok = ok and r_sy["ok"]
+            ok = ok and (any(w["code"] == "W-REVIEW-DEBT" for w in r_sy["warnings"]) == _want)
 
     print(("OK " if ok else "FAIL ") + "progress_check --selftest")
     return 0 if ok else 1

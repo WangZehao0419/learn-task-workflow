@@ -22,7 +22,7 @@
     "1": "不通过",
     "2": "用法错误"
    },
-   "notes": "--release 放行模式：判分四态 correct/partial/incorrect/ungraded；partial 入分母不入分子，ungraded 与作废行不入分母（W-VOIDED-ATTEMPT / W-UNGRADED-ATTEMPT）；参考答案/标准答案/正确答案不构成学员作答；节号和 changed-lessons 仅接受正整数；目行 KP 查重与前置统一别名归一（课程体系.md 为目清单唯一来源）；同 attempt 的结果/独立性/KP 冲突报 E-ATTEMPT-CONFLICT；非法显式目标线报 E-FINAL-INVALID-TARGET；KP 类型/视觉任务声明后分型验收（E-KP-TYPED-GATE）；章规划/材料覆盖结构提示（W-MODULE-CONTRACT-INCOMPLETE / W-UNPARSED-MODULE / W-UNPARSED-MATERIAL / W-MATERIAL-COVERAGE-GAP）；空/模板证据 E-EMPTY-EVIDENCE；结课蓝图覆盖按机器行「KP=<id>｜评分点=<…>」同行映射判（仅题面提编号不算映射，缺口分「未出现 / 出现但未挂评分点」两类报 E-FINAL-BLUEPRINT-GAP）；结课/已完成未完成路线 E-ROUTE-UNDONE；复习来源阶段枚举 {逐节学习, 结课, 已完成}；起点自进入 S2 起必填；节目标线可选字段缺省取 gates.min_ratio，非法报 E-GATE-RATIO-INVALID；复述门要求关键点 ≥ restatement.keypoints 且「无事实性错误」已勾"
+   "notes": "--release 放行模式：判分四态 correct/partial/incorrect/ungraded；partial 入分母不入分子，ungraded 与作废行不入分母（W-VOIDED-ATTEMPT / W-UNGRADED-ATTEMPT）；参考答案/标准答案/正确答案不构成学员作答；节号和 changed-lessons 仅接受正整数；目行 KP 查重与前置统一别名归一（课程体系.md 为目清单唯一来源）；同 attempt 的结果/独立性/KP 冲突报 E-ATTEMPT-CONFLICT；非法显式目标线报 E-FINAL-INVALID-TARGET；KP 类型/视觉任务声明后分型验收（E-KP-TYPED-GATE）；章规划/材料覆盖结构提示（W-MODULE-CONTRACT-INCOMPLETE / W-UNPARSED-MODULE / W-UNPARSED-MATERIAL / W-MATERIAL-COVERAGE-GAP）；空/模板证据 E-EMPTY-EVIDENCE；结课蓝图覆盖按机器行「KP=<id>｜评分点=<…>」同行映射判（仅题面提编号不算映射，缺口分「未出现 / 出现但未挂评分点」两类报 E-FINAL-BLUEPRINT-GAP）；结课/已完成未完成路线 E-ROUTE-UNDONE；复习来源阶段枚举 {逐节学习, 结课, 已完成}；起点自进入 S2 起必填；节目标线可选字段缺省取 gates.min_ratio，非法报 E-GATE-RATIO-INVALID；复述门要求关键点 ≥ restatement.keypoints 且「无事实性错误」已勾；复习债形态判据 W-REVIEW-DEBT：progress.md 三区任一存在「顺延>0」条目即告警（形态不是阈值，不引入新数字），**只验数据形态、验不了「模型有没有明示」**（闸口看不到对话），不参与「连续 3 天触发停新」计数（progress.md 无该字段，缺口见票 75），warning 不拦截、不影响 ok"
   },
   {
    "script": "scheduler.py",
@@ -33,10 +33,10 @@
     "2": "参数错误"
    },
    "schema": {
-    "due-queue": "ltw-due-queue/4",
+    "due-queue": "ltw-due-queue/5",
     "calibration": "ltw-calibration/4"
    },
-   "notes": "增长律 = FSRS-6（21 个 w + desired_retention + s_max=36500 + s_min=0.0001 + maximum_interval=365 产品护栏 + enable_fuzzing=false；常数唯一来源 = rules.json 的 scheduler 块，21 项与 fuzzing 关闭均启动自检，失败 exit 1 + E-CONTRACT-INVALID）；D 值域 [1,10] 连续、无 0.5 粒度，落盘保留 4 位小数；interval_days = min(max(1, round_half_up(I(desired_retention, S'))), maximum_interval)；elapsed 四档全必填（失败档的遗忘后 S 也依赖 R(t,S)）；--init-shift 已删除（新卡 D 只由 D0(G) 决定，旧调用侧传它 exit 2）；next-interval 同会话重复答对（elapsed=0，again 档除外）返回 same_session=true，S/D 不变；既有卡此分支必须传 --current-due 并原样返回，缺失或日期非法 exit 2；其他 due 锚点 = 本次复习日 today + interval_days；due-queue 读取薄弱点/错题本/保持复习三区并输出 reason；calibration 先按 evt 归组并合并互补投影再统计（无 evt 条目各成单条观察并报 W-NO-EVT 提示补标）；只有重复信心键、冲突信心或回顾性 × 数值并存构成信心/时序歧义，重复 S/D/due 不污染信心比率；cw 只数「反馈前信心 ≥4 且判错」的子集，孤立/低信心 cw 与信心/时序歧义令 overconfidence_rate=null + rate_valid=false；纯回顾性观察不入分母（retro_excluded_count）"
+   "notes": "增长律 = FSRS-6（21 个 w + desired_retention + s_max=36500 + s_min=0.0001 + maximum_interval=365 产品护栏 + enable_fuzzing=false；常数唯一来源 = rules.json 的 scheduler 块，21 项与 fuzzing 关闭均启动自检，失败 exit 1 + E-CONTRACT-INVALID）；D 值域 [1,10] 连续、无 0.5 粒度，落盘保留 4 位小数；interval_days = min(max(1, round_half_up(I(desired_retention, S'))), maximum_interval)；elapsed 四档全必填（失败档的遗忘后 S 也依赖 R(t,S)）；--init-shift 已删除（新卡 D 只由 D0(G) 决定，旧调用侧传它 exit 2）；next-interval 同会话重复答对（elapsed=0，again 档除外）返回 same_session=true，S/D 不变；既有卡此分支必须传 --current-due 并原样返回，缺失或日期非法 exit 2；其他 due 锚点 = 本次复习日 today + interval_days；due-queue 读取薄弱点/错题本/保持复习三区并输出 reason 与「顺延」计数（干预留痕，不进排序、不改 S/D、不写 last；schema 因加键升 /5）；calibration 先按 evt 归组并合并互补投影再统计（无 evt 条目各成单条观察并报 W-NO-EVT 提示补标）；只有重复信心键、冲突信心或回顾性 × 数值并存构成信心/时序歧义，重复 S/D/due 不污染信心比率；cw 只数「反馈前信心 ≥4 且判错」的子集，孤立/低信心 cw 与信心/时序歧义令 overconfidence_rate=null + rate_valid=false；纯回顾性观察不入分母（retro_excluded_count）"
   },
   {
    "script": "kp_sort.py",
