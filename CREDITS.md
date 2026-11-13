@@ -293,6 +293,36 @@
 17. **v9.8.0 待核标注**：Richardson et al. 2012 r≈0.59（二手转述）、归因再训练精确 d（Haynes 2009 系统综述非元分析、付费墙）、He 2025（摘要级转述）、Gollwitzer & Sheeran d=0.65 与 Richardson r 同批来自检索摘要（方向支持级引用）。
 18. **v9.7.0 未核实/未执行**：未逐篇核对全部论文精确效应量与页码；打印/PDF 未在 pandoc/xelatex/浏览器/Prince 实测；未跑真人冷读与延迟迁移；未验证所有渲染器对 `<details>`/表格对齐/引用块的支持。
 
+**教学红线凭据分级：依据附录（票 42，2026-11-13 调研）**：本节是「11 条红线按证据分级重写」所需的**原文措辞与出处**，从本轮 475 行研究底稿中挑出被决议直接引用者。底稿所在目录不入库，故依据在此落账——**本节只记账，不改任何判据**；判据改动须经票 42 决议与红线回放验证。
+
+| # | 条目 | 一手原文（逐字） | 出处 / 我读到什么 |
+|---|---|---|---|
+| R1-1 | 排版提示标得过密则效应归零 | 「Cued recall was better in the light condition than in the control or heavy conditions, which did not differ.」 | Lorch, Lorch & Klusewitz 1995, *Contemp. Educ. Psychol.* 20(1) 51–64, doi:10.1006/ceps.1995.1003。**摘要级**（机构库完整摘要 + ERIC）。自变量是下划线/全大写，**不是加粗** |
+| R1-2 | 实验者预置高亮的效应量 | 「instructor-provided highlighting improved both memory and comprehension, both with an average effect size of 0.44」 | Ponce, Mayer & Méndez 2022, *Educ. Psychol. Rev.* 34, 989–1024, doi:10.1007/s10648-021-09654-1。**摘要级**（Springer 文章页），k/异质性/发表偏倚检验未核实 |
+| R1-3 | 屏幕阅读 RCT 主效应不显著 | 「the main effect of condition did not emerge for any of the outcomes」 | Mason et al. 2023, *J. Comput. Assist. Learn.* 40, 637–653, doi:10.1111/jcal.12903。**摘要级**（Crossref），N=170 |
+| R1-4 | WCAG 2.2 SC 1.4.8 是「机制可用」不是「内容必须」 | 「a mechanism is available to achieve the following」「Content is not required to use these values.」 | W3C *WCAG 2.2* SC 1.4.8（Level AAA），规范正文 + Understanding 全文已读。全文检索 italic / bold / emphasis **各 0 命中** |
+| R1-5 | ISO 24495-1:2023 对加粗有无要求 | **未核实** | 仅取得 ANSI 官方预览 PDF（目录/前言/引言）；正文第 1–10 页条款需付费未读。**不得引用** |
+| R2-1 | GB/T 15834-2011 的适用范围 | 「本标准规定了现代汉语标点符号的用法。本标准适用于汉语的书面语（包括汉语和外语混合排版时的汉语部分）。」 | GB/T 15834-2011 §1，教育部官网 PDF（OCR 全文）+ 电子版逐条比对。标准现行 |
+| R2-2 | 破折号与省略号只规定**形式** | 「破折号的形式是「——」。」「省略号的形式是「……」。」 | 同上 4.10.2 / 4.11.2。全文检索「全角」**仅 1 处**且讲行末压缩（5.1.10）→ 不能支撑「正文标点必须用全角字符」 |
+| R2-3 | 国标**规定**了着重号的合法用法 | 「标号的一种，标示语段中某些重要的或需要指明的文字。」「着重号的形式是「.」标注在相应文字的下方。」 | 同上 4.12.1 / 4.12.2 → 红线 10③ 的「禁着重号」子项**不得标 E3**，只能是 E5 工程约定 |
+| R2-4 | 中英空格**不强制** | 「中文文本中夹用英文词句时，应根据所选用的中英文字体、字符间距以及排版的视觉效果决定英文词句与中文文字之间是否留有空格间距。如留空格，应保证体例的统一。」 | CY/T 154-2017 §8.1，国家新闻出版署官网 PDF + 学报转载 PDF 两处逐字一致 |
+| R2-5 | 唯一带「不」字、可机检的空格规则 | 「如英文部分之前或之后有中文标点符号，则英文部分与中文标点之间不设空格。」 | 同上 §8.2 → 建议补进红线 10⑥ 作为可执行判据 |
+| R2-6 | 数值与单位之间留空隙的唯一硬条文 | 「表示量值时，单位符号应当置于数值之后，数值与单位符号间留一空隙。……唯一例外为平面角的单位度、分和秒，数值和单位符号之间不留空隙。」 | GB 3101-1993 §3.4（维基文库电子版逐字，与 CY/T 154 §12.2.1 引用互证）。**原文说「空隙」不说「半角」**，且属「各科学技术领域」→ 用在学习材料属领域外推。标准现行/废止状态**未在官方系统确认** |
+| R2-7 | GB/T 15835 不构成间距依据 | — | GB/T 15835-2011 管**汉字数字与阿拉伯数字的选用**，不管间距。**坑**：中国石油大学转载页标题写 2011 但正文实为 **1995 版**条文，不可当 2011 原文用；该标准 2011 版正文本轮**未核实** |
+| R3-1 | 预测试的最基本必要条件 | 「such testing—formally known as prequestioning or pretesting—can benefit learning if there is an opportunity to study the correct answers afterwards」 | Pan & Carpenter 2023, *Educ. Psychol. Rev.* 35:97, doi:**10.1007**/s10648-023-09814-5（票面原写 10.10648 前缀有误）。Springer OA **全文 40 页已读完** |
+| R3-2 | 只对**被直接测过**的内容稳定 | 「Unlike with directly tested materials, the evidence involving untested materials presented for study is highly inconsistent.」 | 同上 p.14 → 预测试只对「被问过的那个知识点」主张收益 |
+| R3-3 | 材料须具体直白 | 「pre-instruction testing is a useful and effective learning strategy for material that is fairly concrete and straightforward.」 | 同上 p.32 → 抽象推理/复杂推断类**不用**预测试 |
+| R3-4 | 学员会当成考试、需要 warm-up | 「students are largely unaware of the learning benefits of pre-instruction testing」「instructors may anticipate that students may need some warm up time」 | 同上 p.31 |
+| R3-5 | 唯一的负面效应证据：退课风险 | 「Students that had received pretests were more likely to drop out of the MOOC as it progressed, but among the students that persisted until the end of the MOOC, exam performance was better」 | 同上 p.15（Janelli & Lipnevich 2021）→ 与本仓红线 8「失败日零施压」直接冲突；「当轮立即讲透能中和」**无任何实验验证**，只能写成待验证假设 |
+| R3-6 | ⚠️ 一处必须撤销的引用 | **该句在原文查无**：「pretesting effects tend to be stronger when there is prior knowledge upon which the learners can draw」在 Pan & Carpenter 全文检索 stronger / can draw / prior knowledge upon / aptitude / expertise **全部 0 命中** | 该句原挂在本仓研究底稿 applicability-and-boundaries-v2.md 第 187 行，属**归属误挂、真实出处未找到** → **不得带进任何分级决策**；「预测试只在有先备知识时放开」这一门槛据此**撤销** |
+| R4-1 | 没有任何「催促频率」RCT | **未找到同场景实验** | 本轮检索结论。最接近的是「有无提醒」的二值操纵，不是频率 |
+| R4-2 | 唯一把「后续提醒」独立随机化的教育现场 RCT，结果为零 | 「Across all treatment groups, we observe no evidence of an effect on GPA, course credits, or second year persistence.」「Our estimates are precise enough to discern a seven percent standardized performance effect at a five percent significance level.」 | Dobronyi, Oreopoulos & Petronijevic 2019, *JREE* 12(1) 38–66, doi:10.1080/19345747.2018.1517849（NBER w23738 全文已读），n≈1,400，AEA 注册 |
+| R4-3 | 反向证据：高亮连续记录**未**观察到打击效应 | 「We do not observe a discouragement effect from highlighting streaks.」 | Aulagnon, Cristia, Cueto & Malamud 2025, NBER w34173（全文 57 页已读），n=60,000，八周四臂 → 红线 8③ **不能再说有实验支持**，只能说产品立场（E6）且唯一直接实验未发现该风险 |
+| R4-4 | 方向支持红线 8②「归因到排产而非人」 | 「the effect of intact (vs. broken) logged streaks is amplified when consumers attribute a break in the streak to themselves rather than to external factors, and attenuated when consumers can repair a broken streak」 | Silverman & Barasch 2022, *J. Consum. Res.* 49(6) 1095–1117, doi:10.1093/jcr/ucac029，**摘要级**，七项实验；被试是消费者不是长期学员 |
+| R4-5 | 归类的坑：Kizilcec 2020 **不是**提醒实验 | 五类干预为 plan-making / value-relevance / MCII / social accountability，**无一臂是提醒**；完成率 year 1 β = 0.19pp 95% CI [−0.69, 1.07]、year 2 β = −0.23pp 95% CI [−1.61, 1.14] | Kizilcec et al. 2020, *PNAS* 117(26) 14900–14905, doi:10.1073/pnas.1921417117（PMC 全文已读），n=269,169 → 只能当「轻触式干预推不动坚持性」的**间接**旁证，不得写成「提醒无效的直接证据」 |
+
+**本节口径**：以上 R1–R4 均为**凭据类型标注**所需，不构成「红线已分级完成」。凡标「摘要级」者，其 k、异质性、发表偏倚检验与预注册状态**均未核实**；凡标「未核实」者不得引用。研究底稿全文（475 行）在维护侧工作副本，**不入库**；本表是与仓库一同分发的那一份。
+
 **口径注记（E32）**：easedup/educator-skills、liulifeng8918/socratic-dialogue-skill、GarethManning/education-agent-skills 三个同类技能仓于 2026-10-31 缺口扫描时仅作**未审计结构参照**（未安装、未执行），按既定「未审计不入借鉴归因表」口径不入上方归因表。
 
 **版本注记（v9.17.0）**：本文件历史归因行中出现的 `handout-layout.md` 等版式册路径，是当时维护侧的归因位置；该册已于 v9.17.0 退役，不再运行时加载。历史行按「不改写历史」惯例保留。
