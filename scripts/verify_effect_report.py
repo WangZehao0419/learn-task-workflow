@@ -42,6 +42,11 @@ REPORT_GLOB = "效果报告-*.md"
 REQUIRED_SECTIONS = ("结课绝对水平", "延迟保持", "元认知校准", "证据指针")
 
 HEADING_RE = re.compile(r"^##\s+(.+?)\s*$")
+# 标题归一化：去尾随全角/半角冒号与括注。本仓其它判据普遍容忍括注（TARGET_RE、
+# doc 指针的去编号前缀），标题精确相等会把「## 结课绝对水平（2026-11-20）」这种
+# 正常写法判成缺段——那是假阳性，不是判据强度。
+TRAILING_PAREN_RE = re.compile(r"\s*[（(][^（）()]*[）)]\s*$")
+TRAILING_PUNCT_RE = re.compile(r"[\s：:]+$")
 VERDICT_RE = re.compile(r"^\s*(?:[-*]\s*)?判定\s*[：:]\s*(.*?)\s*$")
 MEASURED = "已测"
 UNMEASURED_RE = re.compile(r"^未测\s*[（(]\s*理由\s*[：:]\s*(.*?)\s*[）)]\s*$")
@@ -79,14 +84,26 @@ def find_report(task_dir: Path):
     return hits[0], hits
 
 
+def normalize_heading(name: str) -> str:
+    """标题归一化：去尾随冒号与括注（可叠多层，最多 3 轮）。"""
+    s = (name or "").strip()
+    for _ in range(3):
+        prev = s
+        s = TRAILING_PAREN_RE.sub("", s)
+        s = TRAILING_PUNCT_RE.sub("", s)
+        if s == prev:
+            break
+    return s
+
+
 def split_sections(text: str) -> dict:
-    """按 ## 切段，返回 {段名: [(行号, 行)]}。同名第二段并进同一键。"""
+    """按 ## 切段，返回 {归一化段名: [(行号, 行)]}。同名（归一化后）并进同一键。"""
     sections: dict = {}
     current = None
     for lineno, line in enumerate(text.splitlines(), 1):
         m = HEADING_RE.match(line)
         if m:
-            current = m.group(1).strip()
+            current = normalize_heading(m.group(1))
             sections.setdefault(current, [])
             continue
         if current is not None:
@@ -202,8 +219,10 @@ def check_report(task_dir: Path, report: Path):
                      "延迟测量文件写了 lesson_id=（会顶掉节验收证据）：" + p)
 
     if verdicts.get("元认知校准") == "已测":
+        # 两条都按全文找，不按段：与文档写明的「已知宽口」一致（指针按全文找）。
+        # 「见 progress.md」这种裸写必须算——它是最自然的写法，判成缺失是假阳性。
         has_conf = CONFIDENCE_RE.search(text) is not None
-        has_progress = any(PROGRESS_PTR_RE.search(p) for _l, p in pointers)
+        has_progress = PROGRESS_PTR_RE.search(text) is not None
         if not (has_conf or has_progress):
             _add(findings, "W-EFFECT-CALIBRATION", name,
                  "「元认知校准」判定为已测，但既未指到「信心=」行也未指到 progress.md")
@@ -272,6 +291,14 @@ def _selftest() -> int:
     c0 = codes(build(CLEAN))
     chk("正例：合规报告零告警", c0 == [], str(c0))
 
+    # 0b 标题带日期括注 / 全角冒号：本仓其它判据都容忍，这里也必须容忍（假阳性收口）
+    c0b = codes(build(CLEAN.replace("## 结课绝对水平\n", "## 结课绝对水平（2026-11-20）\n")))
+    chk("标题带括注不判缺段", c0b == [], str(c0b))
+    c0c = codes(build(CLEAN.replace("## 结课绝对水平\n", "## 结课绝对水平：\n")))
+    chk("标题带全角冒号不判缺段", c0c == [], str(c0c))
+    chk("normalize_heading 去括注+冒号",
+        normalize_heading("结课绝对水平（2026-11-20）：") == "结课绝对水平")
+
     # 1 缺段
     c1 = codes(build(CLEAN.replace("## 元认知校准\n- 判定：已测\n- 见下方指针记录的 信心=4 行。\n\n", "")))
     chk("缺段 → W-EFFECT-MARKER", c1 is not None and "W-EFFECT-MARKER" in c1, str(c1))
@@ -301,6 +328,12 @@ def _selftest() -> int:
     chk("88- 用例命中的是 lesson_id 分支（不是缺指针分支）",
         any("lesson_id=" in m for m in m4)
         and not any("未给出 exercises/88-" in m for m in m4), str(m4))
+
+    # 4b 元认知段裸写 progress.md（不带路径）也必须算指到
+    r4b = build(CLEAN.replace("- 见下方指针记录的 信心=4 行。", "- 见 progress.md 的记录。"))
+    c4b = codes(r4b)
+    chk("裸写 progress.md 也算指到（不报 W-EFFECT-CALIBRATION）",
+        c4b == [], str(c4b))
 
     # 5 报告不存在 → 找不到报告（调用方打印「跳过」且 rc=0）
     rep5, _h = find_report(build(CLEAN, with_report=False))
