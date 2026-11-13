@@ -300,12 +300,153 @@ def image_refs(vis_line):
     return refs
 
 
+def _run_len(line, i):
+    """从 i 起同字符连续长度。"""
+    j = i
+    while j < len(line) and line[j] == line[i]:
+        j += 1
+    return j - i
+
+
+def _escaped(line, i):
+    """line[i] 是否被奇数个反斜杠转义(CommonMark 反斜杠转义只认奇数前缀)。
+
+    连续反斜杠必须整段数:两个反斜杠不构成转义(第一个转义第二个),三个才转义。
+    只数紧邻一两个会算错,「反斜杠+反斜杠+反引号」就是反例。
+    """
+    k, j = 0, i - 1
+    while j >= 0 and line[j] == "\\":
+        k += 1
+        j -= 1
+    return k % 2 == 1
+
+
+def _tick_span_end(line, i, run):
+    """找闭合反引号 run 的起址,找不到返回 -1。
+
+    CommonMark 只认**等长** run 闭合,且 code span 内部反斜杠不生效:
+    这里既不认转义,也不接受长度不同的 run 当闭合——双反引号 span 里
+    出现的单反引号必须跳过继续找。
+    """
+    j, n = i + run, len(line)
+    while j < n:
+        if line[j] == "`":
+            r = _run_len(line, j)
+            if r == run:
+                return j
+            j += r
+        else:
+            j += 1
+    return -1
+
+
+def _dollar_close(line, i):
+    """从 i+1 找可作为行内公式闭合的 `$` 起址,找不到返回 -1。
+
+    GitHub 行内公式(实测)三条硬约束,缺一条就不成公式:
+      - 闭合 `$` 前一个字符不能是空白(`$x $` 是字面);
+      - 闭合 `$` 后一个字符不能是数字(`$x$5` 是字面);
+      - `$$` 归块级,不作行内闭合。
+    """
+    j, n = i + 1, len(line)
+    while j < n:
+        if line[j] == "$":
+            if j + 1 < n and line[j + 1] == "$":
+                j += 2
+                continue
+            if line[j - 1].isspace():
+                j += 1
+                continue
+            if j + 1 < n and line[j + 1].isdigit():
+                j += 1
+                continue
+            return j
+        j += 1
+    return -1
+
+
+def scan_inline(line):
+    """把一行切成 [(kind, start, end)],kind ∈ {text, code, math};另报未闭合的 `$$`。
+
+    返回 (segs, block_open, unclosed)。block_open ≥ 0 表示该行有一个找不到
+    同行闭合的 `$$`(跨行块起点),调用方据此让整行退出正文;unclosed 是
+    「开了没闭合」的反引号/`$` 起址,供 breaks_inline 判跨行拆断(E-BOX-WRAP)。
+
+    **单一真源**:compute_visible 与 breaks_inline 都走这里,两处不得再各写一套
+    定界符规则——票 69 的缺陷正源于配对逻辑只有一份且是错的。
+
+    规则按 CommonMark 0.31.2 §Code spans / §Backslash escapes 与 GitHub GFM 实测:
+      - 起始定界符必须未被转义(奇数反斜杠前缀);正文的转义反引号与
+        转义美元符号都是字面,不成 span / 公式;
+      - code span 闭合侧不认转义,只认等长 run(span 内转义不生效);
+      - 行内 `$` 的开闭侧另受空白与数字约束,见 _dollar_close;
+      - 任一侧找不到配对,该定界符按字面文本保留(不吞正文)。
+    """
+    segs = []
+    i, n = 0, len(line)
+    text_start = 0
+    block_open = -1
+    unclosed = []
+    while i < n:
+        ch = line[i]
+        if ch == "`":
+            run = _run_len(line, i)
+            if _escaped(line, i):
+                i += run            # 正文里被转义的反引号是字面,不成 span
+                continue
+            close = _tick_span_end(line, i, run)
+            if close < 0:
+                unclosed.append(i)  # 开了没闭合:跨行拆断的判据(breaks_inline)
+                i += run            # 字面,整行余下照常是正文
+                continue
+            if text_start < i:
+                segs.append(("text", text_start, i))
+            segs.append(("code", i, close + run))
+            i = text_start = close + run
+            continue
+        if ch == "$":
+            if _escaped(line, i):
+                i += 1              # 转义美元符号是字面,不开公式
+                continue
+            if i + 1 < n and line[i + 1] == "$":
+                close = line.find("$$", i + 2)
+                if close < 0:
+                    block_open = i  # 跨行块起点,由 compute_visible 整行退出正文
+                    break
+                if text_start < i:
+                    segs.append(("text", text_start, i))
+                segs.append(("math", i, close + 2))
+                i = text_start = close + 2
+                continue
+            if i + 1 >= n or line[i + 1].isspace():
+                i += 1              # 开侧紧跟空白,是字面("$ 5" 不是公式)
+                continue
+            close = _dollar_close(line, i)
+            if close < 0:
+                unclosed.append(i)  # 开了没闭合:同上
+                i += 1              # 字面,不吞该行余下正文
+                continue
+            if text_start < i:
+                segs.append(("text", text_start, i))
+            segs.append(("math", i, close + 1))
+            i = text_start = close + 1
+            continue
+        i += 1
+    if block_open < 0 and text_start < n:
+        segs.append(("text", text_start, n))
+    return segs, block_open, unclosed
+
+
 def compute_visible(lines):
     """逐行产出「可见正文」:剥代码围栏、行内 code span、$…$ 与 $$…$$ 公式。
 
     返回 (vis_lines, fence_flags)。围栏内 vis 为空串;跨行 $$ 块起点整行退出正文,
-    直到含闭合 $$ 的行。公式/代码内的 denylist 字符(如 `\rightarrow` 的字面引用、
+    直到含闭合 $$ 的行。公式/代码内的 denylist 字符(如字面反斜杠命令、
     code span 中引述的旧写法示例)因此天然豁免。
+
+    抹白区间一律替换成等长空格,正文行与原文逐字符对齐——下游 check_caption
+    用 `ln[m.end():]` 按位置取尾巴,长度一变就错位(票 68 的假闸口就在这条链上)。
+    定界符规则见 scan_inline。
     """
     vis, fence = [], []
     in_fence = False
@@ -328,38 +469,18 @@ def compute_visible(lines):
             if "$$" in ln:
                 in_math_block = False
             continue
-        out = []
-        i, n = 0, len(ln)
-        mode = None  # None=正文 / "code"=code span / "inline"=行内公式
-        while i < n:
-            ch = ln[i]
-            if mode is None:
-                if ch == "`":
-                    mode = "code"
-                    out.append(" ")
-                elif ch == "$":
-                    if i + 1 < n and ln[i + 1] == "$":
-                        j = ln.find("$$", i + 2)
-                        if j != -1:            # 单行内闭合的 $$…$$
-                            out.append(" " * (j + 2 - i))
-                            i = j + 2
-                            continue
-                        in_math_block = True   # 跨行块起点:整行退出正文
-                        out = [" "] * n
-                        break
-                    mode = "inline"
-                    out.append(" ")
-                else:
-                    out.append(ch)
-            elif mode == "code":
-                if ch == "`":
-                    mode = None
-                out.append(" ")
-            else:  # 行内公式;未闭合则该行剩余均视为公式内
-                if ch == "$":
-                    mode = None
-                out.append(" ")
-            i += 1
+        segs, block_open, _unclosed = scan_inline(ln)
+        if block_open >= 0:         # 跨行 $$ 块起点:整行退出正文(原行为)
+            # 但仍须与原文等长:下游按位置取尾巴,空串会错位。
+            vis.append(" " * len(ln))
+            in_math_block = True
+            continue
+        out = list(ln)
+        for kind, start, end in segs:
+            if kind == "text":
+                continue
+            for k in range(start, end):
+                out[k] = " "
         vis.append("".join(out))
     return vis, fence
 
@@ -454,14 +575,16 @@ def split_paragraphs(lines, rows):
 def breaks_inline(lines, rows):
     """段内多行是否拆断了行内 `$…$` 公式或 code span(定界符跨行未闭合)。
 
-    整行成对的 `$$…$$` 与成对 code span 先剥离,再看剩余定界符奇偶;
-    奇数说明该行的公式/代码被换行截断,渲染会直接损坏(判 E 的唯一情形)。
+    判据是 scan_inline 报出的**开了没闭合**的定界符:成对的已切出去,
+    转义与落单的按字面保留(不算未闭合),剩下的未闭合起点才是被换行
+    截断的公式/代码——渲染会直接损坏,这是判 E 的唯一情形。
+
+    **不得退回「整行数定界符奇偶」**:转义反引号与落单反引号都是字面
+    (票 69),数奇偶会把合法行判成拆断,那是同一个缺陷的第二个入口。
     """
     for r in rows:
-        body = box_body(lines[r])
-        body = re.sub(r"\$\$.*?\$\$", "", body)
-        body = re.sub(r"`[^`]*`", "", body)
-        if body.count("$") % 2 or body.count("`") % 2:
+        _segs, _block, unclosed = scan_inline(box_body(lines[r]))
+        if unclosed:
             return True
     return False
 
@@ -1983,6 +2106,67 @@ def selftest():
                           "W-READER-CAPTION")
         chk("真图缺图注仍恰报 1 条,code span 不凑数", len(r_missing) == 1)
 
+        # ── 票 69:可见正文的定界符扫描必须以渲染真值为准 ──
+        # 真值全部来自 GitHub /markdown(mode=gfm) 实测,不是照 CommonMark 推的:
+        # 正文里的转义反引号是字面文本;code span 内转义不生效、只认等长 run;
+        # 落单的反引号/美元符号是字面,不得吞掉该行余下正文。
+        # 旧实现把这四件事全判反,"$35/学生/年" 这类正文会被整段抹白而漏报。
+        def vis_of(line):
+            return compute_visible([line])[0][0]
+
+        chk("票 69 正文转义反引号是字面,不成 code span",
+            "foo" in vis_of(r"普通文本 \`foo` 结束")
+            and r"`foo`" in vis_of(r"普通文本 \`foo` 结束"))
+        chk("票 69 转义反引号两侧的可见正文不被吞掉",
+            vis_of(r"普通文本 \`foo` 结束 ![](assets/ok.svg) 尾巴")
+            == r"普通文本 \`foo` 结束 ![](assets/ok.svg) 尾巴")
+        chk("票 69 code span 内转义不生效:反斜杠反引号照样闭合",
+            vis_of(r"| `写法：\`![](assets/ok.svg)\` 如此` （code span） | x |")
+            .count("![](assets/ok.svg)") == 1)
+        # 判别式:等长 run 闭合后,收尾的 `` 也应被抹白;若被内部单反引号提前闭合,
+        # 收尾 `` 会漏成可见正文——用收尾 run 是否残留来区分,比只看图片名更硬。
+        chk("票 69 双反引号 span 不被内部单反引号提前闭合",
+            "``" not in vis_of("x ``a`b`` y")
+            and "``" not in vis_of("| `` `![](assets/ok.svg)` `` | x |"))
+        chk("票 69 六反引号等长配对整段抹白",
+            "![](assets/ok.svg)" not in vis_of(r"`````` ![](assets/ok.svg) ``````"))
+        chk("票 69 落单反引号是字面,不吞该行余下正文",
+            vis_of(r"落单的反引号 ` 在句中。") == r"落单的反引号 ` 在句中。")
+        chk("票 69 双反引号 span 里的违规字符仍被抹白",
+            "→" not in vis_of(r"用 ``→`` 表示箭头。"))
+        chk("票 69 转义美元符号是字面,不成公式",
+            vis_of(r"价格 \$5 到 \$9 结束。") == r"价格 \$5 到 \$9 结束。")
+        chk("票 69 落单美元符号不吞该行余下正文",
+            vis_of(r"学区付费约 $35/学生/年 结束") == r"学区付费约 $35/学生/年 结束")
+        chk("票 69 真行内公式仍整段抹白",
+            "x^2" not in vis_of(r"公式 $x^2$ 结束。")
+            and "结束" in vis_of(r"公式 $x^2$ 结束。"))
+        chk("票 69 开侧 $ 紧跟空白使该处不成公式(与 GitHub 一致)",
+            r"$ x$" in vis_of(r"公式 $ x$ 结束。"))
+        chk("票 69 闭合 $ 前的空白使该处不成公式(与 GitHub 一致)",
+            r"$x $" in vis_of(r"公式 $x $ 结束。"))
+        chk("票 69 闭合 $ 后紧跟数字使该处不成公式(与 GitHub 一致)",
+            r"$x$5" in vis_of(r"价格 $x$5 结束。"))
+        # 不变量:抹白只换字符不换长度,否则 check_caption 的 ln[m.end():] 会错位。
+        for probe in (r"| `![](a.svg)` | x |", r"用 ``→`` 表示。",
+                      r"价格 \$5 到 \$9 结束。"):
+            chk("票 69 可见正文与原文等长: " + probe,
+                len(vis_of(probe)) == len(probe))
+        # 跨行 $$ 块整行退出正文时也必须等长(旧实现返回空串,长度会错位)。
+        for block_md in ("> 说明$$\n", "$$\n", "文字 $$ $$ 之后\n"):
+            for probe_lines in ([block_md.rstrip("\n")],):
+                block_vis, _bf = compute_visible(probe_lines)
+                chk("票 69 跨行块起点与原文等长: " + probe_lines[0],
+                    len(block_vis[0]) == len(probe_lines[0]))
+        # 第二入口:breaks_inline 也必须走同一套规则,否则同一缺陷要被修两次。
+        # 框体行须带引用前缀,breaks_inline 走 box_body 取正文。
+        chk("票 69 breaks_inline 不再把转义反引号当未闭合定界符",
+            not breaks_inline([r"> 解:用 \` 表示反引号。"], [0])
+            and breaks_inline([r"> 解:用 \\` 表示反引号。"], [0]))
+        chk("票 69 breaks_inline 仍抓真拆断的公式",
+            breaks_inline(["> 解:先算 $x=", "> 2$ 再代入。"], [0, 1]))
+        chk("票 69 breaks_inline 仍抓真拆断的 code span",
+            breaks_inline(["> 解:见 `x", "> y` 结束。"], [0, 1]))
     print(("OK " if ok else "FAIL ") + "verify_explanation --selftest")
     return 0 if ok else 1
 
