@@ -93,6 +93,16 @@
    "notes": "R46 出题前术语对账的机器护栏：已引入集合 = 已讲目行引入列 ∪ 已讲 KP 名称 ∪ --extra-terms/--extra-file 追加；默认只扫题面区标题（## 题组/自测/检验/练习）之后到下一 ## 之前，--scan-all 扫全文；违规逐条输出 W-TERM-UNTAUGHT 到 stderr，JSON 汇总到 stdout；课程体系零可用目行 exit 2（E-LIST-EMPTY），不猜不补造"
   },
   {
+   "script": "verify_effect_report.py",
+   "usage": "<任务目录> [--selftest]",
+   "default_behavior": "只读静态校验，不写盘；只告警不拦停（W- 不进 ok，恒 rc=0）",
+   "exit_codes": {
+    "0": "已校验（可有 W）或报告不存在（打印「跳过」，未校验）",
+    "2": "用法/路径错误"
+   },
+   "notes": "效果报告（materials/效果报告-<课程名>.md）的消费通道：只验完整性 + 指针闭合，不重算得分率（票 64 否决「一致性」——同一批数据两套算法会打架）。四段硬必填（结课绝对水平 / 延迟保持 / 元认知校准 / 证据指针）+ 每段一行三态判定（判定：已测 / 判定：未测（理由：…），理由禁占位词）+ 按段定粒度的指针闭合（99- 卷须含「目标线：」；88- 延迟测量须不含 lesson_id=，写了会顶掉节验收证据；元认知指到「信心=」行或 progress.md）+ 报告不得写「键=值」字段行（撞 META_KEYS 白名单）。五码 W-EFFECT-MARKER / -LEVEL / -RETENTION / -CALIBRATION / -POINTER。段落必填、值可「未测」——结课当天报告即完整，第 30 天只回填该段；机检验「有没有这一栏」不验「做没做」。报告不存在打印「跳过」且 rc=0，不得打印「通过」（票 66 语义）。本脚本无 E 级判据，故无 exit 1：只告警不拦停是票 64 决议。不验内容一致性、不设达标线（归票 36）。"
+  },
+  {
    "script": "verify-doc-pointers.py",
    "usage": "[--selftest] [--root <仓库根>] [--json]",
    "default_behavior": "只读；扫描 SKILL.md 与 references/ 下所有 doc 指针，报告不可解析项",
@@ -124,8 +134,9 @@
    "python -B scripts/verify_explanation.py --selftest",
    "python -B scripts/prereq_check.py --selftest",
    "python -B scripts/rule_contract.py --selftest",
-   "python -B scripts/verify-doc-pointers.py --selftest"
+   "python -B scripts/verify-doc-pointers.py --selftest",
+   "python -B scripts/verify_effect_report.py --selftest"
   ],
-  "note": "九个命令行脚本自测覆盖确定性计算、结构校验、契约完整性与术语对账；真实教学回归与故障夹具见 evals；verify-doc-pointers 校验 doc 指针四项（路径/锚点/编号/自指）。本分区（scripts_contract vs internal_modules）不是人读声明，由 evals/verify-gate-registry.py 的 G1-G5 机检：G1 分区完备（不重不漏无幽灵）、G2 分类自证（命令行喂必败参数必须 rc≠0，内部模块喂同一参数必须 rc=0）、G3 清单可执行、G4 清单与契约同源、G5 覆盖去向（internal_modules 的 note 点名的每个覆盖者必须真的 import 该内部模块）。"
+  "note": "十个命令行脚本自测覆盖确定性计算、结构校验、契约完整性与术语对账；真实教学回归与故障夹具见 evals；verify-doc-pointers 校验 doc 指针四项（路径/锚点/编号/自指）。本分区（scripts_contract vs internal_modules）不是人读声明，由 evals/verify-gate-registry.py 的 G1-G5 机检：G1 分区完备（不重不漏无幽灵）、G2 分类自证（命令行喂必败参数必须 rc≠0，内部模块喂同一参数必须 rc=0）、G3 清单可执行、G4 清单与契约同源、G5 覆盖去向（internal_modules 的 note 点名的每个覆盖者必须真的 import 该内部模块）。"
  }
 }

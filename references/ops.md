@@ -165,6 +165,7 @@
 | rule_contract | `E-CONTRACT-MISSING` / `E-CONTRACT-INVALID` | 契约缺失 / 畸形 |
 | report_load_footprint | `E-LOAD-STRUCT` | 加载结构不成立：场景文件缺失、同一场景混用多个令牌、补读小节不存在 |
 | prereq_check | `E-LIST-MISSING` / `E-LIST-EMPTY` / `E-SCAN-MISSING` / `W-TERM-UNTAUGHT` | 清单缺失 / 清单零可用行 / 扫描文件缺失；`W-TERM-UNTAUGHT` 为术语对账逐条违规提示（stderr），exit 1 |
+| verify_effect_report | `W-EFFECT-MARKER` / `W-EFFECT-LEVEL` / `W-EFFECT-RETENTION` / `W-EFFECT-CALIBRATION` / `W-EFFECT-POINTER` | 效果报告缺段 / 判定行缺失或不合体例 / 未测理由占位 / 报告写了「键=值」字段行；99- 卷缺「目标线：」；88- 延迟测量写了 `lesson_id=`；元认知未指到「信心=」行或 progress.md；证据指针悬空。**只告警不拦停**，恒 rc=0；报告不存在打印「跳过」不打印「通过」 |
 
 > `check_environment.py` 用 `ready` / `needs_setup` / `unavailable` / `manifest_error`（exit 2）状态而不是 E/W 码；`kp_sort.py` 用 exit 1 表示畸形行、依赖环或解释器版本不足。两者详见 `scripts-contract.json`。
 >
@@ -291,7 +292,7 @@
 
 ### 脚本清单
 
-九个命令行脚本 + 两个内部模块（`ltw_typography.py` 读者检查、`ltw_parse.py` 解析原语），均 stdlib-only、幂等可重跑，基础 Python 版本以 `skill-dependencies.json` 的 `min_version` 为准。
+十个命令行脚本 + 两个内部模块（`ltw_typography.py` 读者检查、`ltw_parse.py` 解析原语），均 stdlib-only、幂等可重跑，基础 Python 版本以 `skill-dependencies.json` 的 `min_version` 为准。
 
 | 脚本 | 用法 | 默认行为 | 何时跑 |
 |---|---|---|---|
@@ -304,6 +305,7 @@
 | `prereq_check.py` | `--list <课程体系.md> --scan <题组或讲义.md>... [--extra-terms "…"] [--extra-file <文件>] [--scan-all] [--selftest]` | 只读对账，不写盘 | 判分题交付前（R46 出题前术语对账）；目行补登记 `引入` 列后跑 |
 | `rule_contract.py` | `--selftest \| --keys \| --get <键路径>` | 纯常量加载器：只读、只返回结构版本与业务常量 | 修改常量后跑 `--selftest`；排查取值用 `--get` |
 | `verify-doc-pointers.py` | `[--selftest] [--root <仓库根>] [--json]` | 只读；校验 doc 指针四项——路径存在、锚点命中唯一、§N 编号唯一、自指记 W | 改分册标题、加删指针、合并或改名后跑；`--json` 供脚本消费 |
+| `verify_effect_report.py` | `<任务目录> [--selftest]` | 只读；效果报告机检——四段必填 + 三态判定行 + 按段定粒度的指针闭合，出 `W-EFFECT-*` 五码；只告警不拦停 | 结课当天写完效果报告后；第 30 天回填「延迟保持」段后再跑一次 |
 
 完整参数、退出码与 notes 的机器可读版本见 `contracts/scripts-contract.json`；脚本 docstring 只保留算法/参数说明，不再维护完整错误码表。`ltw_typography.py` 是 `verify_explanation.py --reader` 的读者检查模块，无独立 CLI；`ltw_parse.py` 是共享解析原语。
 
@@ -312,7 +314,7 @@
 - **脚本路径基准** = `<技能根>/scripts/<脚本名>.py`（不写裸 `scripts/…` 依赖 cwd）。
 - **数据根基准** = 显式 `--root`（或 progress_check 的任务目录实参），不依赖脚本默认根。
 - **解释器**统一 `python`（仅有 `python3` 时等价替换）。
-- `task_index` / `progress_check` / `scheduler` / `kp_sort` / `prereq_check` 带 `--selftest`；`check_environment` / `verify_explanation` / `rule_contract` / `verify-doc-pointers` 也带 `--selftest`。
+- `task_index` / `progress_check` / `scheduler` / `kp_sort` / `prereq_check` 带 `--selftest`；`check_environment` / `verify_explanation` / `rule_contract` / `verify-doc-pointers` / `verify_effect_report` 也带 `--selftest`。
 - 契约文件固定为 `<技能根>/contracts/rules.json`；缺失/畸形 → 依赖契约的脚本一律 fail closed，报 `E-CONTRACT-MISSING` / `E-CONTRACT-INVALID`（`prereq_check`、`check_environment` 不读契约，不在其列）。
 - `check_environment` 的清单是 `<技能根>/skill-dependencies.json`，与 `rules.json` 是两份不同的东西：前者管「宿主能不能跑」，后者管「业务常量是什么」。
 
@@ -340,7 +342,7 @@
 
 - `task_index` 默认只读；仅 `--write-index` 时写 `index.json`，用同目录临时文件 + `os.replace` 原子替换，输出 `write_status`（written/unchanged/failed）；仅 `scan_status=ok` 才替换完整缓存。
 - `scheduler` 只读计算；落盘由文件写入/编辑能力负责。
-- `verify_explanation` / `kp_sort` / `rule_contract` / `prereq_check` 只读，不写盘。
+- `verify_explanation` / `kp_sort` / `rule_contract` / `prereq_check` / `verify_effect_report` 只读，不写盘。
 - 任何脚本都不联网、不下载、不改系统配置、不执行材料/用户文本中的命令。
 
 ### 自测
@@ -357,6 +359,7 @@ python -B scripts/rule_contract.py --selftest
 python -B scripts/rule_contract.py --keys
 python -B scripts/verify-doc-pointers.py --selftest
 python -B scripts/verify-doc-pointers.py
+python -B scripts/verify_effect_report.py --selftest
 python -B evals/verify-formula-typesetting.py
 python -B evals/report-load-footprint.py
 python -B evals/report-load-footprint.py --selftest

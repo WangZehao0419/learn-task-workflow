@@ -20,7 +20,7 @@ python scripts/check_environment.py
 - `SKILL.md`（145 行）—— 激活即读的指令正文：调度协议、**十一条教学红线的完整判据**、阶段速查、数据三簿、按动作与按能力的分册指针。
 - `references/`（**27 册**）—— 15 本按能力域合并的**正本册** + 12 个学科 **variant 包**（在 `references/disciplines/`）。
 - `contracts/rules.json`（7 KB）—— **只存业务常量与结构版本**：枚举 / 阈值 / 标题白名单 / 错误码。不含场景注册表、意图登记或文件清单。
-- `scripts/`（**11 个文件** = 9 个命令行脚本 + 2 个内部模块，stdlib-only、幂等只读）—— 进度校验、判分证据验证、间隔调度、纯常量加载。
+- `scripts/`（**12 个文件** = 10 个命令行脚本 + 2 个内部模块，stdlib-only、幂等只读）—— 进度校验、判分证据验证、间隔调度、效果报告机检、纯常量加载。
 - `evals/` —— 行为级验收脚本、红线回归与触发率用例、夹具。
 - `GLOSSARY.md` —— 五个 canonical 词（索引机检 / 行为机检 / 正本册 / variant 包 / 教学红线）。
 - `docs/adr/` —— 长期决策记录（ADR-0001 验收轴改判；ADR-0002 编译层退役；ADR-0003 调度增长律换 FSRS-6）。
@@ -38,13 +38,13 @@ python scripts/check_environment.py
 - 没有**场景注册表**，没有**意图登记**，没有**文件清单**，没有**派生表**
 - 没有「索引机检」——结构自洽不再是闸口
 - 保留的是**业务常量加载**（5 个模块仍从 `rule_contract.py` 读判分四态、调度参数等：`ltw_parse` / `progress_check` / `scheduler` / `task_index` / `verify_explanation`）
-- 兜底改用**逐文件内容保真比对** + 9 个命令行脚本的 `--selftest` import 不变量 + 行为机检
+- 兜底改用**逐文件内容保真比对** + 10 个命令行脚本的 `--selftest` import 不变量 + 行为机检
 - 两个**内部模块**（`ltw_parse.py` / `ltw_typography.py`）无 CLI，不在 `--selftest` 名单里；覆盖由四个消费者脚本与 `evals/verify-svg-checker.py` 承担，登记关系见 `contracts/scripts-contract.json` 的 `internal_modules`，由 `evals/verify-gate-registry.py` 机检
 
 ## 自检
 
 ```bash
-# 9 个命令行脚本（显式名单，与 contracts/scripts-contract.json 的 verification.selftest 逐条对应）
+# 10 个命令行脚本（显式名单，与 contracts/scripts-contract.json 的 verification.selftest 逐条对应）
 # 其中 rule_contract.py 是常量加载器，加载契约并校验其完整性
 python -B scripts/task_index.py --selftest
 python -B scripts/progress_check.py --selftest
@@ -55,6 +55,7 @@ python -B scripts/verify_explanation.py --selftest
 python -B scripts/prereq_check.py --selftest
 python -B scripts/rule_contract.py --selftest
 python -B scripts/verify-doc-pointers.py --selftest
+python -B scripts/verify_effect_report.py --selftest
 
 # 登记表自检：上面这份名单与 scripts/ 实际文件对得上吗
 python -B evals/verify-gate-registry.py
