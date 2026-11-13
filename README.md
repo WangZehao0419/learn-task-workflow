@@ -23,7 +23,7 @@ python scripts/check_environment.py
 - `scripts/`（**11 个文件** = 9 个命令行脚本 + 2 个内部模块，stdlib-only、幂等只读）—— 进度校验、判分证据验证、间隔调度、纯常量加载。
 - `evals/` —— 行为级验收脚本、红线回归与触发率用例、夹具。
 - `GLOSSARY.md` —— 五个 canonical 词（索引机检 / 行为机检 / 正本册 / variant 包 / 教学红线）。
-- `docs/adr/` —— 长期决策记录（ADR-0001 验收轴改判；ADR-0002 编译层退役）。
+- `docs/adr/` —— 长期决策记录（ADR-0001 验收轴改判；ADR-0002 编译层退役；ADR-0003 调度增长律换 FSRS-6）。
 
 十一条教学红线的判据写在 `SKILL.md` 里、**自足可判**，不依赖任何分册；正本册只承载背景、例外与学科差异。
 目录级导航见 `SKILL.md`「参考文件（按需加载）」。
@@ -91,7 +91,7 @@ python -B evals/compare-baseline.py --selftest
 ## 维护
 
 - **版本**：`SKILL.md` frontmatter 的 `metadata.version` 与 `contracts/rules.json` 各登记一处；
-  两者是否一致由发版清单人工逐条核对（见 `references/ops.md`「打包与验证」），改一处必改另一处。本次发布升版到 **9.21.0**（SKILL.md 与契约一致）。
+  两者是否一致由发版清单人工逐条核对（见 `references/ops.md`「打包与验证」），改一处必改另一处。本次发布升版到 **9.21.1**（SKILL.md 与契约一致）。
 - **加一门学科**：只在 `references/disciplines/` 加一个 variant 包，不牵动其他文档。
 - **改一条规则**：改它在**正本册**里的那一处；要引用就写指针，不复制条文。
 - **文献与借鉴出处**：见 `CREDITS.md`（维护侧档案，不进运行时上下文）。

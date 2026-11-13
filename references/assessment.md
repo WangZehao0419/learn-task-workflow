@@ -188,18 +188,20 @@
 
 ### 间隔调度
 
-`scripts/scheduler.py` 采用**自研简化双参数算法**（稳定度 / 难度双参数，按判分档位递增间隔），以零第三方依赖、简单稳健为先；**非 FSRS 算法，亦非 SM-2 标准实现**，不做参数个性化拟合。公式结构见 `scheduler.py` docstring，常数唯一来源 = 契约 `scheduler` 块；本册只写策略与调用时机。
+`scripts/scheduler.py` 采用 **FSRS-6 增长律 + 本仓记账法**：稳定度 S / 难度 D 双参数与六个公式（遗忘曲线、下次间隔、S0、D0、难度更新、成功/遗忘后 S）逐条照抄 FSRS-6 参考实现，21 个默认参数、边界取 fsrs-rs（Anki 实际在用的那套）；**记账法仍是本仓的**——四档判分、`elapsed=0` 同会话特判、纯文本 progress.md、零第三方依赖、不做 optimizer 参数拟合。公式结构见 `scheduler.py` docstring，常数唯一来源 = 契约 `scheduler` 块；本册只写策略与调用时机。**对学员不解释调度算法**（红线 6），这里只是维护侧口径。
+
+两个旋钮决定全部间隔尺度：`desired_retention`（默认 0.9，即「承诺复习后仍记得的概率」）与 `maximum_interval`（默认 365 天，**产品护栏，偏离 FSRS 官方默认**——FSRS 的 S 上限是 36500 天）。改 `desired_retention` 会让所有既有条目**下一次**间隔跳变（r=0.85 时 S=100 → 约 130 天；r=0.95 → 约 74 天），改前须知会这件事。
 
 #### 调用速查
 
-> **有效域与边界（脚本强制、非有限数一律 exit 2 结构化拒绝）**：S ∈ (0,365]、D ∈ [1,5] 且 0.5 粒度、**elapsed 有限且 ≥0**；日期加法越界同样拒绝，不裸崩、不输出非有限数。
+> **有效域与边界（脚本强制、非有限数一律 exit 2 结构化拒绝）**：S ∈ [0.0001, 36500]、**D ∈ [1,10] 连续（无粒度要求）**、**elapsed 有限且 ≥0 且四档都必填**（失败档的遗忘后 S 也依赖 R(t,S)）；`interval_days` 恒 ≥ 1 且 ≤ `maximum_interval`（365）；日期加法越界同样拒绝，不裸崩、不输出非有限数。
 
 - **新条目首次调度**（S3 新产生的薄弱点 / 错题 / 保持复习）：
-  `python "<技能根>/scripts/scheduler.py" next-interval --grade <判分档> --new-card --last <今天> --today <今天> [--init-shift {-1|0|1}]`
-  —— grade 取该条判分档（判错=again）；保持复习初始条目用 `--grade good`（例外：学员要求加速的同日清除按 `--grade hard` 档入保持，见 `references/workflow.md`「S4 复习巩固（可从逐节学习或结课随时插入）」闸口）；`--init-shift` 影响初始 D：顺向检索 -1（默认 0），反向问 / 迁移 +1；返回 stability_new / difficulty_new / due。
+  `python "<技能根>/scripts/scheduler.py" next-interval --grade <判分档> --new-card --last <今天> --today <今天>`
+  —— grade 取该条判分档（判错=again）；保持复习初始条目用 `--grade good`（例外：学员要求加速的同日清除按 `--grade hard` 档入保持，见 `references/workflow.md`「S4 复习巩固（可从逐节学习或结课随时插入）」闸口）；新卡 S0 / D0 **只由评分档决定**（S0 = 0.212 / 1.2931 / 2.3065 / 8.2956 天，D0 = 6.4133 / 5.1122 / 2.1181 / 1），首间隔 1 / 1 / 2 / 8 天；返回 stability_new / difficulty_new / due。**`--init-shift` 已失效**（形参暂留兼容旧调用，传了也不改变结果）。
 - **既有条目复习判分**（S4）：
   `python "<技能根>/scripts/scheduler.py" next-interval --grade <grade> --stability <S> --difficulty <D> --last <last> --today <今天> [--current-due <原due>]`。
-  **同会话重复答对**（`--last` 与 `--today` 同日）：必须同时传 `--current-due <原due>`；脚本返回 `same_session=true` 并原样返回该 due，S/D 不变——只刷新召回，不把一天内反复刷题记成长期保持。非同日复习不传 `--current-due`。保持复习按同一命令更新；`partial` 用 `again`，`未判/作废` 不写 S/D。前提：`due` 由脚本生成、不要手改；手改 due 的条目先按当前 S 与手工 due 对齐后再复习。
+  **同会话重复答对**（`--last` 与 `--today` 同日）：必须同时传 `--current-due <原due>`；脚本返回 `same_session=true` 并原样返回该 due，S/D 不变——只刷新召回，不把一天内反复刷题记成长期保持（FSRS-6 的同日复习公式 w17–w19 本仓不实现）。非同日复习不传 `--current-due`。保持复习按同一命令更新；`partial` 用 `again`，`未判/作废` 不写 S/D。前提：`due` 由脚本生成、不要手改；手改 due 的条目先按当前 S 与手工 due 对齐后再复习。
 
 #### 校准画像
 

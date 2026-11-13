@@ -201,8 +201,8 @@
 | 机制（定义处） | 文献依据 | 边界标注 |
 |---|---|---|
 | 检索练习（测试远优于重读）（workflow S3/S4） | Roediger & Karpicke 2006：测试回忆一周后保持 56% vs 重读 42%（d=0.83），无反馈亦成立；重读抬高自信但不改善记忆；Yang et al. 2021（Psychological Bulletin）真实课堂元分析：222 项研究、48,478 名学生，g=0.499，跨学段/学科/题型稳定 | 已验证（原文数值核对）。**不自动推出「复习永不原题」**——变式优先、原题保持按目标保留（T11） |
-| 间隔重复 / S-D 双参数调度（`assessment.md` + scheduler.py） | Cepeda et al. 2006/2008：分散练习普遍优于集中；最优复习间隔约为测验延迟的 5%–20% | 自研简化算法为工程取舍（零依赖），非 FSRS/SM-2 标准实现 |
-| Hard 档答对仍拉长间隔（scheduler.py `max(S*factor, S+0.5)`） | Anki(SM-2 改)：Hard = 间隔 ×1.2 且必然增长；原版 SM-2 q=3 仍按 I(n)=I(n−1)×EF 放大（EF 下限 1.3）；FSRS：Hard 评分稳定度「增加或持平」 | 与主流一致；Hard base=1.4 略高于 Anki 1.2，属参数选择 |
+| 间隔重复 / FSRS-6 增长律（`assessment.md` + scheduler.py） | Cepeda et al. 2006/2008：分散练习普遍优于集中；最优复习间隔约为测验延迟的 5%–20%。**FSRS-6 的 21 参数与六公式**取自 open-spaced-repetition 的 awesome-fsrs wiki `The-Algorithm.md`、`py-fsrs` `scheduler.py`、`fsrs-rs` `model_v6.rs`（三处交叉核对无差异，抓取锚点见 `docs/research/fsrs-default-params.md` §5）；边界取 fsrs-rs（`S_MIN=0.0001` / `S_MAX=36500` / D ∈ [1,10]） | 增长律为**照抄的参考实现**，不是自研；本仓自研部分只剩记账法（四档判分、`elapsed=0` 特判、纯文本 progress.md、零依赖、不做 optimizer）。`maximum_interval=365` 与 `enable_fuzzing=false` 是**本仓偏离官方默认的选择**，见 `docs/adr/0003-fsrs6-full-switch.md` |
+| Hard 档答对仍拉长间隔（scheduler.py 成功回忆后 S 的 `w15` 惩罚乘子） | Anki(SM-2 改)：Hard = 间隔 ×1.2 且必然增长；原版 SM-2 q=3 仍按 I(n)=I(n−1)×EF 放大（EF 下限 1.3）；FSRS-6：Hard 档乘 `w15=0.6014`，稳定度仍增（`S'=S·(1+正项·w15)`，正项 > 0 时必然 > S） | 与主流一致；「Hard 也涨、只是涨得少」由公式结构保证，不再是常数选择 |
 | 难度伺服 85% 目标（`assessment.md`） | Wilson et al. 2019（Nature Communications）：训练错误率 ~15.87% 最优（仿真）；Rosenshine 课堂研究 ~82% 成功率呼应 | **启发式参数**：Wilson 为仿真研究且作者自述「85% 不是魔法数字」，不宜当普适硬参数 |
 | 示范先行 / 工作样例与例题—习题交替（`teaching.md`） | Sweller 认知负荷理论：新手先学完整样例优于直接解题（Sweller & Cooper 1985 起）；例题—习题对优于纯解题（Van Gog, Kester & Paas 2011；Cheng 2014 元分析：学习效率显著更优；Chen 2023 佐证），新手期交替、随熟练度渐撤 | 已验证 |
 | 样例撤除 / 高起点跳样例（`teaching.md`） | 专长反转效应：Kalyuga, Ayres, Chandler & Sweller 2003——熟练度升高后支架优势缩小乃至反转 | 已验证 |

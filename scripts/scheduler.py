@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""scheduler.py - 间隔重复调度计算（自研简化双参数算法，非 FSRS/SM-2 标准实现；确定性，stdlib-only，只读）。
+"""scheduler.py - 间隔重复调度计算（FSRS-6 增长律 + 本仓记账法；确定性，stdlib-only，只读）。
 
 用途：learn-task-workflow v2.1 的确定性调度环节。判分（grade/信心/复述）与
 落盘决策归模型；S'/D'/due 计算与到期排序归本脚本。脚本**只读计算**——
@@ -18,6 +18,9 @@ SKILL.md「判断归模型、数据归脚本」）。
         只回 interval_days，由模型以当日推算绝对日期——保证输出不依赖
         机器时钟、完全确定。同会话重复答对（elapsed=0）必须传 --current-due，
         返回原日期，不以重算值覆盖。
+        **FSRS-6 起 elapsed 对四档全必填**（失败档的遗忘后 S 也依赖 R(t,S)，
+        缺 elapsed 无法算 R，脚本拒绝猜）。--init-shift 已失效（新卡 D 只由
+        D0(G) 决定），形参暂留兼容调用侧，由后续票删除。
         **due 锚点**：新 due = 本次复习日期 today + interval_days；last 仅用于
         计算 elapsed（经过天数）与旧记录回显，**不**参与 due 起算——否则逾期卡
         复习后会把 due 算到过去日期。仅当 today 缺省（直连函数调用）时才回退用 last。
@@ -27,10 +30,12 @@ SKILL.md「判断归模型、数据归脚本」）。
             --today YYYY-MM-DD [--all]
         读 <root>/<slug>/progress.md 的「薄弱点」「错题本」「保持复习」三区，
         按 cw 优先 → 最逾期优先 → due 早优先 → slug/条目名稳定序 排序。
-        每条输出 reason（到期/逾期/优先级的人类可读说明）；schema=ltw-due-queue/3。
+        每条输出 reason（到期/逾期/优先级的人类可读说明）；schema=ltw-due-queue/4。
         默认只出 due <= today；--all 出全部（供收尾五件套报具体日期用）。
         v2.2：条目输出新增 错因/级/meta_default 三键（加键升 schema
-        ltw-due-queue/3）；排序契约 cw→最逾期→due 早→稳定序 逐字不动。
+        ltw-due-queue/4）；排序契约 cw→最逾期→due 早→稳定序 逐字不动。
+        v2.7：D 回显形态随 FSRS-6 换律而变（连续值、[1,10]、保留 4 位小数），
+        按 data.md 的 minor 规则把 schema 从 /3 升到 /4；键集合与排序契约不动。
         薄弱点/错题行元数据挂载点全角/半角双兼容（推荐全角，
         半角兜底），防模型写半角括号/竖线时元数据静默丢失。
 
@@ -45,23 +50,33 @@ SKILL.md「判断归模型、数据归脚本」）。
         W-NO-EVT（提示补 evt，同次作答的投影才能去重）。
         快照口径不做时间窗，不需 --today。脚本只算不判，教学化呈现归模型。
 
-公式契约（不得在调用侧自行更改；grade_base / init_s / d_drift / s_max / r_min /
-    r_max / d_min / d_max / default_s / default_d 十项常数唯一来源 = 契约
-    scheduler 块，此处不重复数值）:
-    成功档（hard/good/easy）：
-        factor = grade_base[档] * (1 + 0.35*(R-1)) * (1.3 - 0.1*D)
-        R = clamp(elapsed/S, r_min, r_max)
-        S' = max(S*factor, S+0.5)，上限 s_max
-    失败档（again）：S' = max(1.0, S*0.3)
-    难度漂移：again / hard / easy / good 各取 d_drift[档]，夹 [d_min, d_max]（0.5 粒度）
-    新卡：初始 S 取 init_s[档]；初始 D 取 default_d + --init-shift
-          （顺向检索 -1，默认 0，反向问/迁移 +1）
+公式契约（FSRS-6 增长律；不得在调用侧自行更改；w / desired_retention / s_max /
+    s_min / maximum_interval / enable_fuzzing 六项唯一来源 = 契约 scheduler 块，
+    此处不重复数值）:
+    常量：decay = -w20；factor = 0.9^(1/decay) - 1
+    遗忘曲线      R(t,S) = (1 + factor*t/S)^(-w20)          （R 是回忆概率，0-1）
+    下次间隔      I(r,S) = S/factor * (r^(1/(-w20)) - 1)
+    初始稳定度    S0(G) = w[G-1]        （again/hard/good/easy = 1/2/3/4）
+    初始难度      D0(G) = clamp(w4 - e^(w5*(G-1)) + 1, 1, 10)
+    难度更新      ΔD = -w6*(G-3); D' = D + ΔD*(10-D)/9;
+                  D'' = w7*D0(4) + (1-w7)*D'
+    成功回忆后 S  S' = S*(1 + e^w8*(11-D)*S^(-w9)*(e^(w10*(1-R))-1)
+                          * w15^[G=2] * w16^[G=4])，夹 [s_min, s_max]
+    遗忘后 S      S' = min(w11*D^(-w12)*((S+1)^w13 - 1)*e^(w14*(1-R)),
+                           S/e^(w17*w18))，夹 [s_min, s_max]
+    间隔取整：interval_days = min(max(1, round_half_up(I(desired_retention, S'))),
+                                  maximum_interval)
+    同日复习（Q6=I1）：elapsed=0 且答对仍走 same_session 特判——不套上面任何公式，
+        只刷新召回，S/D 不变、原 due 原样返回；w17-w19 的同日复习公式不实现。
     round 一律四舍五入 0.5 进位（int(x+0.5)），规避银行家舍入歧义。
+    fuzzing 恒关（契约 enable_fuzzing=false）：同输入同输出。
     信心度仅回显，不进公式（cw 惩罚已由 grade=again 承载，避免双重惩罚）。
-    有效域（所有计算入口先验，NaN/Inf 一律拒绝、exit 2）：S ∈ (0, s_max]，
-    D ∈ [d_min, d_max] 且 0.5 粒度，elapsed 有限且 ≥0（R 已夹紧，长中断不放大间隔）；
-    日期加法越界（如 9999-12-31 + 间隔）同样结构化拒绝，不裸崩、不输出非有限数
-    （json.dumps allow_nan=False）。
+    有效域（所有计算入口先验，NaN/Inf 一律拒绝、exit 2）：S ∈ [s_min, s_max]，
+    D ∈ [1, 10] 连续（不再要求 0.5 粒度），elapsed 有限且 ≥0（长中断只让 R 趋 0，
+    不放大间隔）；日期加法越界（如 9999-12-31 + 间隔）同样结构化拒绝，不裸崩、
+    不输出非有限数（json.dumps allow_nan=False）。
+    上限拆两个常数：s_max=36500 是 FSRS/fsrs-rs 的 S 上限；maximum_interval=365
+    是本仓的产品护栏（偏离 FSRS 官方默认，见 docs/adr/0003-fsrs6-full-switch.md）。
 
 约定：
     --root 显式传数据根，不依赖 cwd（沿用脚本调用约定）。
@@ -91,18 +106,40 @@ class ScheduleError(ValueError):
 _CONSTANTS = rule_contract.load_or_exit()["constants"]
 _C = _CONSTANTS["scheduler"]
 _SCHEMAS = _CONSTANTS["schemas"]
-GRADE_BASE = dict(_C["grade_base"])
-INIT_S = dict(_C["init_s"])
-D_DRIFT = dict(_C["d_drift"])
+
+
+def _contract_fail(msg):
+    """契约自检失败：fail closed，不退回内置默认值继续跑。"""
+    print("[learn-task-workflow] 契约错误：" + msg, file=sys.stderr)
+    sys.exit(2)
+
+
+W = [float(x) for x in _C["w"]]
+DESIRED_RETENTION = float(_C["desired_retention"])
 S_MAX = float(_C["s_max"])
-R_MIN, R_MAX = float(_C["r_min"]), float(_C["r_max"])
-D_MIN, D_MAX = float(_C["d_min"]), float(_C["d_max"])
-ELAPSED_INF = float("inf")   # 经过天数只要求「有限且 ≥0」：R=elapsed/S 已夹在 [0.25,2.0]，
-# 故长中断（如 10 年）不会放大间隔，无需人为上界（长中断兼容）。
+S_MIN = float(_C["s_min"])
+MAXIMUM_INTERVAL = int(_C["maximum_interval"])
+ENABLE_FUZZING = bool(_C["enable_fuzzing"])
+if len(W) != 21:
+    _contract_fail("scheduler.w 必须是 21 项（FSRS-6），实际 " + str(len(W)) + " 项")
+if ENABLE_FUZZING:
+    # 本仓确定性契约：fuzzing 一开，同输入不再同输出，直接拒绝启动。
+    _contract_fail("scheduler.enable_fuzzing 必须为 false（确定性契约）")
+if not (0.0 < DESIRED_RETENTION < 1.0):
+    _contract_fail("scheduler.desired_retention 须在 (0,1)，实际 " + str(DESIRED_RETENTION))
+if not (0.0 < S_MIN < S_MAX):
+    _contract_fail("scheduler 须满足 0 < s_min < s_max")
+if MAXIMUM_INTERVAL < 1:
+    _contract_fail("scheduler.maximum_interval 须 ≥ 1，实际 " + str(MAXIMUM_INTERVAL))
+
+DECAY = -W[20]                       # FSRS-6 遗忘曲线衰减指数（decay = -w20）
+FACTOR = 0.9 ** (1.0 / DECAY) - 1.0  # 由 desired_retention=0.9 定标的曲线形状常数
+D_MIN, D_MAX = 1.0, 10.0             # FSRS-6 的 D 值域（连续，无粒度要求）
+_GRADE_INDEX = {"again": 1, "hard": 2, "good": 3, "easy": 4}
+ELAPSED_INF = float("inf")   # 经过天数只要求「有限且 ≥0」：R(t,S) 随 t 单调趋 0，
+# 长中断自然压低增幅，无需人为上界（长中断兼容）。
 DATE_MIN_ORD = date.min.toordinal()
 DATE_MAX_ORD = date.max.toordinal()
-DEFAULT_S = float(_C["default_s"])
-DEFAULT_D = int(_C["default_d"])
 DEFAULT_CAUSE = "知识性"  # v2.2：错因缺省枚举（仅脚本输出侧占位回显，模型不得盲补）
 DEFAULT_LEVEL = "B"       # v2.2：级缺省枚举（同上）
 
@@ -153,13 +190,6 @@ def _in_range(tok, lo, hi):
     return v
 
 
-def _half_step(v):
-    """D 须为 0.5 粒度；None（解析失败）视为不合规。"""
-    if v is None:
-        return False
-    return abs(v * 2 - round(v * 2)) < 1e-9
-
-
 def require_finite(value, name, lo, hi):
     """CLI 计算入口统一有限值+范围校验（纵深防御：NaN/Inf/越界一律拒绝）。
 
@@ -200,9 +230,75 @@ def _valid_iso(tok):
     return tok
 
 
-def clamp_r(elapsed, stability):
-    """R = elapsed/S 夹在 [0.25, 2.0]。"""
-    return max(R_MIN, min(R_MAX, elapsed / stability))
+def _clamp(x, lo, hi):
+    return max(lo, min(hi, x))
+
+
+def retrievability(elapsed, stability):
+    """FSRS-6 遗忘曲线 R(t,S) = (1 + factor*t/S)^(-w20)，值域 (0,1]。
+
+    与旧律同名不同义：旧 R 是 elapsed/S 的**相对时间比**（可 >1，夹 [0.25,2]），
+    新 R 是**回忆概率**（0-1）。S=100 / elapsed=1 时前者 0.01、后者约 0.9985。
+    """
+    return (1.0 + FACTOR * elapsed / stability) ** (-W[20])
+
+
+def initial_stability(grade):
+    """S0(G) = w[G-1]（again/hard/good/easy = 1/2/3/4）。"""
+    return W[_GRADE_INDEX[grade] - 1]
+
+
+def initial_difficulty(grade, clamp=True):
+    """D0(G) = w4 - e^(w5*(G-1)) + 1；clamp 时夹 [1,10]。
+
+    easy 档原始值约 -4.77，靠夹持兜底到 1——这是 FSRS-6 默认参数的既有形态。
+    """
+    v = W[4] - math.e ** (W[5] * (_GRADE_INDEX[grade] - 1)) + 1.0
+    return _clamp(v, D_MIN, D_MAX) if clamp else v
+
+
+def next_difficulty(difficulty, grade):
+    """ΔD=-w6*(G-3)；D'=D+ΔD*(10-D)/9；D''=w7*D0(4)+(1-w7)*D'，夹 [1,10]。"""
+    delta = -(W[6] * (_GRADE_INDEX[grade] - 3))
+    damped = difficulty + delta * (10.0 - difficulty) / 9.0
+    v = W[7] * initial_difficulty("easy", clamp=False) + (1.0 - W[7]) * damped
+    return _clamp(v, D_MIN, D_MAX)
+
+
+def stability_after_success(stability, difficulty, r, grade):
+    """成功回忆后 S'（hard 乘 w15、easy 乘 w16），夹 [s_min, s_max]。"""
+    hard_penalty = W[15] if grade == "hard" else 1.0
+    easy_bonus = W[16] if grade == "easy" else 1.0
+    v = stability * (1.0 + math.e ** W[8] * (11.0 - difficulty)
+                     * (stability ** -W[9])
+                     * (math.e ** (W[10] * (1.0 - r)) - 1.0)
+                     * hard_penalty * easy_bonus)
+    return _clamp(v, S_MIN, S_MAX)
+
+
+def stability_after_failure(stability, difficulty, r):
+    """遗忘后 S = min(长期项, S/e^(w17*w18))，夹 [s_min, s_max]。
+
+    短期项只在同日复习公式启用时才有意义（Q6=I1 未启用 w17-w19），但 fsrs-rs
+    在长期公式里同样取这条 min 上界；此处照参考实现保留，行为可对照。
+    """
+    long_term = (W[11] * (difficulty ** -W[12])
+                 * (((stability + 1.0) ** W[13]) - 1.0)
+                 * math.e ** (W[14] * (1.0 - r)))
+    short_term = stability / math.e ** (W[17] * W[18])
+    return _clamp(min(long_term, short_term), S_MIN, S_MAX)
+
+
+def interval_for(stability):
+    """I(r,S) → 四舍五入 → 下限 1 天 → 产品护栏 maximum_interval。"""
+    days = (stability / FACTOR) * (DESIRED_RETENTION ** (1.0 / (-W[20])) - 1.0)
+    return min(max(1, round_half_up(days)), MAXIMUM_INTERVAL)
+
+
+# 缺省链（progress.md 元数据缺失时的兜底）：S 取 S0(good)、D 取 D0(good)，
+# 与旧律的 default_s=3.0 / default_d=3 同位置、同用途，值随增长律换新。
+DEFAULT_S = initial_stability("good")
+DEFAULT_D = initial_difficulty("good")
 
 
 def next_interval(grade, stability=None, difficulty=None, elapsed=None,
@@ -221,20 +317,17 @@ def next_interval(grade, stability=None, difficulty=None, elapsed=None,
     if new_card:
         s_old = None
         d_old = None
-        s_new = INIT_S[grade]
-        d_new = max(1, min(5, 3 + init_shift))
+        s_new = initial_stability(grade)
+        d_new = initial_difficulty(grade)
     else:
         # 纵深防御：纯函数入口亦校验有限值与范围（CLI 已校验，直连调用不绕过）。
-        require_finite(stability, "stability", 1e-9, S_MAX)
+        require_finite(stability, "stability", S_MIN, S_MAX)
         require_finite(difficulty, "difficulty", D_MIN, D_MAX)
-        if grade != "again":
-            require_finite(elapsed, "elapsed", 0.0, ELAPSED_INF)
+        # FSRS-6：失败档的遗忘后 S 也依赖 R(t,S)，故四档都要求 elapsed。
+        require_finite(elapsed, "elapsed", 0.0, ELAPSED_INF)
         s_old = stability
         d_old = difficulty
-        if grade == "again":
-            s_new = max(1.0, stability * 0.3)
-            d_new = max(1.0, min(5.0, difficulty + D_DRIFT[grade]))
-        elif elapsed == 0:
+        if elapsed == 0 and grade != "again":
             same_session = True
             if current_due is None:
                 raise ScheduleError("同会话重复答对必须提供 --current-due，以保留原复习日")
@@ -247,17 +340,21 @@ def next_interval(grade, stability=None, difficulty=None, elapsed=None,
             s_new = stability
             d_new = difficulty
         else:
-            r = clamp_r(elapsed, stability)
-            factor = GRADE_BASE[grade] * (1 + 0.35 * (r - 1)) * (1.3 - 0.1 * difficulty)
-            s_new = max(stability * factor, stability + 0.5)
-            d_new = max(1.0, min(5.0, difficulty + D_DRIFT[grade]))
-        s_new = min(s_new, S_MAX)
+            r = retrievability(elapsed, stability)
+            if grade == "again":
+                s_new = stability_after_failure(stability, difficulty, r)
+            else:
+                s_new = stability_after_success(stability, difficulty, r, grade)
+            d_new = next_difficulty(difficulty, grade)
 
-    # 输出侧确定性舍入（4 位小数）：消除浮点噪音（如 6.6000000000000005），
-    # 同输入同输出的 JSON 才逐字节稳定；不影响 interval_days 的 0.5 进位取整。
+    # 输出侧确定性舍入（4 位小数）：消除浮点噪音（如 13.767699999999999），
+    # 同输入同输出的 JSON 才逐字节稳定；D 是连续值（[1,10]，无粒度要求），
+    # 落盘回读必须能逐位还原，故同口径保留 4 位。
     s_new = round(s_new, 4)
+    d_new = round(d_new, 4)
 
-    interval_days = round_half_up(s_new)
+    # 间隔由 S 与 desired_retention 反解（FSRS-6），不再直接取整 S。
+    interval_days = interval_for(s_new)
     # due 锚点 = 本次复习日期 today（逾期卡复习后必须从「今天」起算下一间隔），
     # 仅当 today 缺省时才回退用 last（兼容直连函数调用；CLI 侧要求成对传入）。
     anchor = today if today is not None else last
@@ -302,8 +399,7 @@ META_KEYS = ("S=", "D=", "last=", "due=", "信心=", "evt=", "attempt_id=", "子
 # invalid_tokens 并降级（走缺省链），不再「截前缀修正」。
 META_TOKEN_RES = (
     ("S", re.compile(r"S=(\S+)"), lambda g: _finite_pos(g, S_MAX)),
-    ("D", re.compile(r"D=(\S+)"),
-     lambda g: _in_range(g, D_MIN, D_MAX) if _half_step(_in_range(g, D_MIN, D_MAX)) else None),
+    ("D", re.compile(r"D=(\S+)"), lambda g: _in_range(g, D_MIN, D_MAX)),
     ("last", re.compile(r"last=(\S+)"), _valid_iso),
     ("due", re.compile(r"due=(\S+)"), _valid_iso),
     ("错因", re.compile(r"错因=(\S+)"),
@@ -461,7 +557,7 @@ def resolve_item(item_text, meta_text, kind, wrong_date, recent_update):
     due = meta["due"]
     if due is None and last is not None:
         # last 已经过 _valid_iso 校验；safe_add_days 处理越界/坏 S 的加法（返回 None）
-        due = safe_add_days(last, round_half_up(s_val))
+        due = safe_add_days(last, interval_for(s_val))
     migrated = not (meta["S"] is not None and meta["D"] is not None
                     and (meta["due"] is not None or meta["last"] is not None))
     if due is None:
@@ -867,10 +963,9 @@ def parse_date_str(value, label):
 
 
 def check_difficulty(value):
-    if not (1 <= value <= 5):
-        fail("--difficulty 须在 [1,5]，收到：" + str(value))
-    if abs(value * 2 - round(value * 2)) > 1e-9:
-        fail("--difficulty 须为 0.5 粒度，收到：" + str(value))
+    # FSRS-6：D 是 [1,10] 的连续值，不再要求 0.5 粒度（Q4=G1）。
+    if not (D_MIN <= value <= D_MAX):
+        fail("--difficulty 须在 [1,10]，收到：" + str(value))
     return float(value)
 
 
@@ -884,7 +979,7 @@ def cmd_next_interval(args):
     stability = None
     difficulty = None
     if not args.new_card:
-        stability = require_finite(args.stability, "--stability", 1e-9, S_MAX)
+        stability = require_finite(args.stability, "--stability", S_MIN, S_MAX)
         if args.difficulty is None:
             fail("既有条目必须传 --difficulty")
         difficulty = check_difficulty(args.difficulty)
@@ -913,8 +1008,8 @@ def cmd_next_interval(args):
             fail("--today 早于 --last：" + args.today + " < " + args.last)
         last = last_d.isoformat()
         elapsed = (today_d - last_d).days   # 有限且 ≥0（日期已校验，today ≥ last）；R 会夹到 [0.25,2]
-    elif args.elapsed is None and args.grade != "again":
-        fail("成功档（hard/good/easy）必须提供 --elapsed 或 --last/--today 之一组")
+    elif args.elapsed is None:
+        fail("必须提供 --elapsed 或 --last/--today 之一组（FSRS-6 四档都依赖 R(t,S)）")
     confidence = args.confidence
     if confidence is not None and not (1 <= confidence <= 5):
         fail("--confidence 须在 [1,5]，收到：" + str(confidence))
@@ -943,7 +1038,7 @@ def cmd_due_queue(args):
 def build_parser():
     ap = argparse.ArgumentParser(
         prog="scheduler.py",
-        description="间隔重复调度计算（自研简化双参数算法，只读，不写任何文件）")
+        description="间隔重复调度计算（FSRS-6 增长律，只读，不写任何文件）")
     ap.add_argument("--selftest", action="store_true",
                     help="运行内置自测（公式与队列契约断言）")
     sub = ap.add_subparsers(dest="cmd")
@@ -1102,24 +1197,23 @@ def approx(a, b, eps=1e-9):
 def selftest():
     ok = True
 
-    # 断言 1：good, S=3, D=3, elapsed=3 -> factor=2.2, S'=6.6, D'=3
-    # due 锚点 = 本次复习日 today（2026-10-13）+ 7 天 = 2026-10-20；不再用 last 起算
+    # 断言 1：good, S=3, D=3, elapsed=3（FSRS-6 重算：R=0.9687、S'=13.7677、D'=2.9922）
+    # due 锚点 = 本次复习日 today（2026-10-13）+ 14 天 = 2026-10-27；不再用 last 起算
     r = next_interval("good", stability=3.0, difficulty=3, elapsed=3,
                       last="2026-10-10", today="2026-10-13")
-    ok = ok and approx(r["stability_new"], 6.6)
-    ok = ok and r["difficulty_new"] == 3
-    ok = ok and r["interval_days"] == 7
-    ok = ok and r["due"] == "2026-10-20"
+    ok = ok and approx(r["stability_new"], 13.7677, 1e-4)
+    ok = ok and approx(r["difficulty_new"], 2.9922, 1e-4)
+    ok = ok and r["interval_days"] == 14
+    ok = ok and r["due"] == "2026-10-27"
 
-    # 断言 2：R 夹持（elapsed/S 夹在 [0.25, 2.0]）
+    # 断言 2：遗忘曲线单调——elapsed 越大 R 越小、S' 增幅越大；不再有 [0.25,2] 相对时间比地板
     r_low = next_interval("good", stability=3.0, difficulty=3, elapsed=0.5)
-    # R=0.25 -> factor=2.2*(1+0.35*(-0.75))=1.6225 -> S'=max(4.8675, 3.5)=4.8675
-    ok = ok and approx(r_low["stability_new"], 4.8675)
+    ok = ok and approx(r_low["stability_new"], 5.4082, 1e-4)      # R≈0.977
     r_high = next_interval("good", stability=3.0, difficulty=3, elapsed=10)
-    # R=2.0 -> factor=2.2*1.35=2.97 -> S'=max(8.91, 3.5)=8.91
-    ok = ok and approx(r_high["stability_new"], 8.91)
+    ok = ok and approx(r_high["stability_new"], 25.4873, 1e-4)    # R≈0.800
+    ok = ok and r_low["stability_new"] < r["stability_new"] < r_high["stability_new"]
 
-    # 断言 2b：同会话重复答对（elapsed=0）只刷新召回，不增长 S/D、不推迟 due
+    # 断言 2b：同会话重复答对（elapsed=0）只刷新召回，不增长 S/D、不推迟 due（Q6=I1）
     r_same = next_interval("easy", stability=6.0, difficulty=3, elapsed=0,
                            last="2026-10-20", today="2026-10-20",
                            current_due="2026-10-20")
@@ -1151,40 +1245,88 @@ def selftest():
     ok = ok and rc_cli == 0 and cli_out["due"] == "2026-10-20"
     r_not_same = next_interval("good", stability=3.0, difficulty=3, elapsed=1)
     ok = ok and r_not_same["same_session"] is False
-    ok = ok and approx(r_not_same["stability_new"], 5.06)  # R=1/3 -> 仍正常增长
+    ok = ok and approx(r_not_same["stability_new"], 7.4893, 1e-4)  # R≈0.957 -> 正常增长
 
-    # 断言 3：失败档 again
+    # 断言 3：失败档 again 走遗忘后 S（依赖 R、D），不再是与 elapsed 无关的 S*0.3
     r = next_interval("again", stability=5.0, difficulty=3, elapsed=5,
                       last="2026-10-05", today="2026-10-10")
-    ok = ok and approx(r["stability_new"], 1.5)
-    ok = ok and r["difficulty_new"] == 4
+    ok = ok and approx(r["stability_new"], 0.9839, 1e-4)
+    ok = ok and approx(r["difficulty_new"], 7.6844, 1e-4)
+    ok = ok and r["interval_days"] == 1
+    ok = ok and r["due"] == "2026-10-11"
     r = next_interval("again", stability=2.0, difficulty=3, elapsed=2)
-    ok = ok and approx(r["stability_new"], 1.0)
+    ok = ok and approx(r["stability_new"], 0.5476, 1e-4)
+    ok = ok and r["interval_days"] == 1  # 遗忘后 S 再小，间隔下限仍是 1 天
 
-    # 断言 4：难度漂移与 [1,5] 夹持（D 0.5 粒度）
+    # 断言 4：难度更新（线性阻尼 + 向 D0(4) 回归）与 [1,10] 连续夹持——不再有 0.5 粒度
     r = next_interval("hard", stability=3.0, difficulty=3, elapsed=3)
-    ok = ok and r["difficulty_new"] == 3.5
+    ok = ok and approx(r["difficulty_new"], 5.3383, 1e-4)
     r = next_interval("easy", stability=3.0, difficulty=1, elapsed=3)
-    ok = ok and r["difficulty_new"] == 1
+    ok = ok and r["difficulty_new"] == 1  # 下界夹持
     r = next_interval("again", stability=3.0, difficulty=5, elapsed=3)
-    ok = ok and r["difficulty_new"] == 5
+    ok = ok and approx(r["difficulty_new"], 8.3418, 1e-4)
+    r = next_interval("again", stability=3.0, difficulty=10, elapsed=3)
+    ok = ok and approx(r["difficulty_new"], 9.9852, 1e-4)  # 上界附近仍连续
+    ok = ok and r["difficulty_new"] <= 10.0
+    # D 连续：1.4969 与 1.5 都合法，且都能原值落盘回读（不再被 0.5 粒度拦掉）
+    ok = ok and approx(parse_meta("S=3，D=1.4969")["D"], 1.4969)
+    ok = ok and approx(parse_meta("S=3，D=1.5")["D"], 1.5)
+    ok = ok and check_difficulty(1.4969) == 1.4969
+    ok = ok and check_difficulty(1.5) == 1.5
 
-    # 断言 5：新卡初始表 4 档 + --init-shift 1 -> D=4
-    expect_s = {"again": 1.0, "hard": 1.5, "good": 3.0, "easy": 6.0}
-    for grade, s0 in expect_s.items():
+    # 断言 5：新卡 S0 = w[G-1]、D0 = clamp(w4-e^(w5*(G-1))+1, 1, 10)
+    # easy 档 D0 原始值约 -4.77，靠夹持兜底到 1——这是 FSRS-6 默认参数的既有形态
+    expect = {
+        "again": (0.212, 6.4133, 1),
+        "hard": (1.2931, 5.1122, 1),
+        "good": (2.3065, 2.1181, 2),
+        "easy": (8.2956, 1.0, 8),
+    }
+    for grade, (s0, d0, iv0) in expect.items():
         r = next_interval(grade, new_card=True, init_shift=0)
-        ok = ok and approx(r["stability_new"], s0)
-        ok = ok and r["difficulty_new"] == 3
+        ok = ok and approx(r["stability_new"], s0, 1e-4)
+        ok = ok and approx(r["difficulty_new"], d0, 1e-4)
+        ok = ok and r["interval_days"] == iv0
         ok = ok and r["stability_old"] is None and r["difficulty_old"] is None
         ok = ok and r["same_session"] is False
-    r = next_interval("good", new_card=True, init_shift=1)
-    ok = ok and r["difficulty_new"] == 4
-    r = next_interval("good", new_card=True, init_shift=-1)
-    ok = ok and r["difficulty_new"] == 2
+    # --init-shift 已失效：新卡 D 只由 D0(G) 决定（形参暂留，票 76 删除）
+    ok = ok and approx(next_interval("good", new_card=True, init_shift=1)["difficulty_new"], 2.1181, 1e-4)
 
-    # 断言 6：S' 上限 365 护栏（S=300, easy, D=1 -> 1080 -> 365）
+    # 断言 6：S 上限 s_max=36500 与产品护栏 maximum_interval=365 分开
+    # S=300, easy, D=1, elapsed=300 -> S'=1470.4321（远未触 s_max），间隔封 365
     r = next_interval("easy", stability=300.0, difficulty=1, elapsed=300)
-    ok = ok and r["stability_new"] == 365
+    ok = ok and approx(r["stability_new"], 1470.4321, 1e-3)
+    ok = ok and r["stability_new"] < S_MAX
+    ok = ok and r["interval_days"] == 365
+
+    # 断言 6b（票 61 验收 1）：elapsed=1, S=100, good -> S' 增幅 < 5%
+    # 旧律在 R 地板 0.25 下恒定 +62%，12 天顶到 365 天上限（票 59 的原始缺陷）
+    r = next_interval("good", stability=100.0, difficulty=3, elapsed=1)
+    ok = ok and (r["stability_new"] - 100.0) / 100.0 < 0.05
+    ok = ok and approx(r["stability_new"], 102.8918, 1e-3)
+
+    # 断言 6c（票 61 验收 2）：连续 12 天 daily good -> S < 100（旧律会顶到 365）
+    s_walk, d_walk = initial_stability("good"), initial_difficulty("good")
+    for _ in range(12):
+        r_walk = next_interval("good", stability=s_walk, difficulty=d_walk, elapsed=1)
+        s_walk, d_walk = r_walk["stability_new"], r_walk["difficulty_new"]
+    ok = ok and s_walk < 100.0
+    ok = ok and approx(s_walk, 51.3848, 1e-3)
+
+    # 断言 6d（票 61 验收 6/7/8）：间隔恒 ≥1；同输入同输出；S 可长到 36500 而间隔封 365
+    ok = ok and interval_for(S_MIN) >= 1
+    ok = ok and interval_for(S_MAX) == MAXIMUM_INTERVAL
+    r_idem_a = next_interval("good", stability=3.0, difficulty=3, elapsed=3)
+    r_idem_b = next_interval("good", stability=3.0, difficulty=3, elapsed=3)
+    ok = ok and json.dumps(r_idem_a, sort_keys=True) == json.dumps(r_idem_b, sort_keys=True)
+    s_grow, d_grow = 365.0, 1.0
+    for _ in range(6):
+        r_grow = next_interval("easy", stability=s_grow, difficulty=d_grow,
+                               elapsed=max(1, int(s_grow)))
+        s_grow, d_grow = r_grow["stability_new"], r_grow["difficulty_new"]
+    ok = ok and r_grow["interval_days"] == 365
+    ok = ok and s_grow > 365.0  # S 继续长，只是间隔被封
+
 
     # 断言 7：due-queue（cw 排前 / 缺省链兜底 migrated / 无日期告警且 exit 0）
     # 纯函数核心直接喂夹具文本——selftest 全程零写盘。
@@ -1202,8 +1344,10 @@ def selftest():
     by_item = {e["item"].split("：")[0]: e for e in ordered}
     ok = ok and by_item["更逾期点"]["overdue_days"] == 6  # 最逾期次优先
     ok = ok and by_item["默认链点"]["migrated"] is True  # 缺 S/D/due，靠「最近更新」兜底推日期
-    ok = ok and by_item["默认链点"]["S"] == 3 and by_item["默认链点"]["D"] == 3
-    ok = ok and by_item["默认链点"]["due"] == "2026-10-08"  # 最近更新+round(3)
+    # 缺省链已随增长律换新：S 取 S0(good)=2.3065、D 取 D0(good)=2.1181
+    ok = ok and approx(by_item["默认链点"]["S"], DEFAULT_S)
+    ok = ok and approx(by_item["默认链点"]["D"], DEFAULT_D, 1e-4)
+    ok = ok and by_item["默认链点"]["due"] == "2026-10-07"  # 最近更新 10-05 + round(2.3065)=2
     ok = ok and by_item["顽固点"]["teach"] is True  # 顽固 -> teach
     ok = ok and by_item["自信但错点"]["cw"] is True
     ok = ok and by_item["老错题"]["kind"] == "错题"
@@ -1258,7 +1402,7 @@ def selftest():
         (root_r / "slug-r").mkdir(parents=True)
         (root_r / "slug-r" / "progress.md").write_text(FIX_R, encoding="utf-8")
         out_r = due_queue_output(root_r, None, today_r, False)
-        ok = ok and out_r["schema"] == "ltw-due-queue/3"
+        ok = ok and out_r["schema"] == "ltw-due-queue/4"
         ok = ok and len(out_r["queue"]) == 1
         ok = ok and out_r["queue"][0]["kind"] == "保持"
         ok = ok and out_r["queue"][0]["reason"].startswith("保持复习")
@@ -1284,11 +1428,13 @@ def selftest():
         ["next-interval", "--grade", "good", "--stability", "0",
          "--difficulty", "3", "--elapsed", "3"],  # S<=0
         ["next-interval", "--grade", "good", "--stability", "3",
-         "--difficulty", "7", "--elapsed", "3"],  # D 越界
+         "--difficulty", "10.5", "--elapsed", "3"],  # D 越界（FSRS-6 上界 10）
         ["next-interval", "--grade", "good", "--stability", "3",
-         "--difficulty", "3.3", "--elapsed", "3"],  # D 非 0.5 粒度
+         "--difficulty", "0.5", "--elapsed", "3"],  # D 越界（FSRS-6 下界 1）
         ["next-interval", "--grade", "good", "--stability", "3",
-         "--difficulty", "3"],  # 成功档缺 elapsed 组
+         "--difficulty", "3"],  # 缺 elapsed 组（四档都依赖 R(t,S)）
+        ["next-interval", "--grade", "again", "--stability", "3",
+         "--difficulty", "3"],  # 失败档同样必须给 elapsed（FSRS-6 遗忘后 S 依赖 R）
         ["next-interval", "--grade", "good", "--new-card",
          "--difficulty", "3"],  # new-card 与 --difficulty 冲突
         ["next-interval", "--grade", "good", "--stability", "3",
@@ -1353,7 +1499,8 @@ def selftest():
     ok = ok and by_item["自信但错点"]["meta_default"] is True
 
     # 断言 12：due-queue 新键——v2.2 完整条目错因/级原值回显 meta_default:false；
-    # v6.0 schema 升 ltw-due-queue/3（加 reason/保持复习）；排序契约（cw 排前）断言 7 逐字保留未动
+    # v6.0 schema 升 ltw-due-queue/3（加 reason/保持复习）；v2.7 因 D 回显形态变化升 /4；
+    # 排序契约（cw 排前）断言 7 逐字保留未动
     queue_c, _wc = queue_from_progress_texts(
         [("slug-c", FIX_C)], date.fromisoformat("2026-10-10"))
     ok = ok and len(queue_c) == 2
@@ -1366,7 +1513,7 @@ def selftest():
     ok = ok and by_item_c["变式题"]["meta_default"] is False
     out = due_queue_output(Path(__file__).resolve().parent, None,
                            date.fromisoformat("2026-10-10"), True)
-    ok = ok and out["schema"] == "ltw-due-queue/3"
+    ok = ok and out["schema"] == "ltw-due-queue/4"
 
     # 断言 13：calibration 畸形输入 → exit 2；--root 非目录 → exit 1
     for call in [["calibration"]]:  # 缺必填 --root → argparse exit 2
@@ -1399,8 +1546,8 @@ def selftest():
     # 不得回落到过去日期（旧缺陷：last=2026-10-01 起算 → due=2026-10-10 已是过去）
     r15 = next_interval("good", stability=3.0, difficulty=3, elapsed=14,
                         last="2026-10-01", today="2026-10-15")
-    ok = ok and r15["interval_days"] == 9
-    ok = ok and r15["due"] == "2026-10-24"
+    ok = ok and r15["interval_days"] == 29
+    ok = ok and r15["due"] == "2026-11-13"
 
     # 断言 16：坏元数据隔离——单条坏数据（坏 S / 坏日历日期）不得让整队列裸崩，
     # 其余好条目仍可用；坏值按缺省链解析并标 migrated。
@@ -1414,8 +1561,9 @@ def selftest():
                                          date.fromisoformat("2026-10-12"))
     by16 = {e["item"].split("：")[0]: e for e in q16}
     ok = ok and len(q16) == 3  # 三条均入队，无崩溃、无丢失
-    ok = ok and by16["坏S点"]["S"] == 3 and by16["坏S点"]["migrated"] is True  # 坏 S → 默认 3
-    ok = ok and by16["坏日期点"]["due"] == "2026-10-10"  # 坏日期 → 回退最近更新 2026-10-08 + 2
+    # 坏 S → 缺省链取 S0(good)=2.3065；坏日期 → 回退最近更新 2026-10-08 + round(2.3065)=2
+    ok = ok and approx(by16["坏S点"]["S"], DEFAULT_S) and by16["坏S点"]["migrated"] is True
+    ok = ok and by16["坏日期点"]["due"] == "2026-10-10"
     ok = ok and by16["坏日期点"]["migrated"] is True
     ok = ok and by16["好点"]["due"] == "2026-10-10" and by16["好点"]["migrated"] is False
     # 坏值走默认链（标 W-META-INVALID 披露），但**不得**判为不可推算的 UNPARSED
@@ -1470,11 +1618,12 @@ def selftest():
 
     # 断言 21：parse_meta 逐 token fullmatch——坏 token 不截前缀，全部落 invalid_tokens，
     # 各键保持缺省（旧缺陷：S=3oops→3、信心=50→5、last=2026-10-09oops→2026-10-09）。
-    m21 = parse_meta("S=3oops，D=3.3，last=2026-10-09oops，信心=50，cw")
+    # FSRS-6 起 D=3.3 是合法连续值，坏 D 改用越界的 11（值域 [1,10]）
+    m21 = parse_meta("S=3oops，D=11，last=2026-10-09oops，信心=50，cw")
     ok = ok and m21["S"] is None and m21["D"] is None and m21["last"] is None
     ok = ok and m21["信心"] is None and m21["cw"] is True
     ok = ok and len(m21["invalid_tokens"]) == 4
-    m21b = parse_meta("S=3，D=3.5，last=2026-10-09，信心=5，cw")   # 合法：D 半步、信心 1-5
+    m21b = parse_meta("S=3，D=3.5，last=2026-10-09，信心=5，cw")   # 合法：D 连续值、信心 1-5
     ok = ok and m21b["S"] == 3.0 and m21b["D"] == 3.5 and m21b["信心"] == 5
     ok = ok and m21b["invalid_tokens"] == []
     m21c = parse_meta("S=3，S=4，D=3")                             # 重复键 → 标坏
