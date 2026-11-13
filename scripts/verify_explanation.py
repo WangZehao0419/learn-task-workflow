@@ -341,36 +341,45 @@ def _tick_span_end(line, i, run):
 
 
 def _dollar_close(line, i):
-    """从 i+1 找可作为行内公式闭合的 `$` 起址,找不到返回 -1。
+    """从 i+1 找可作为行内公式闭合的 `$`,返回 (闭合起址, 是否见过候选)。
 
     GitHub 行内公式(实测)三条硬约束,缺一条就不成公式:
       - 闭合 `$` 前一个字符不能是空白(`$x $` 是字面);
       - 闭合 `$` 后一个字符不能是数字(`$x$5` 是字面);
       - `$$` 归块级,不作行内闭合。
+
+    第二个返回值区分两种「没找到」,breaks_inline 靠它判 E-BOX-WRAP:
+      - 见过候选但被规则否掉 → 该 `$` 是**确定的字面**("$5-$9"),不算拆断;
+      - 连候选都没见过 → 形如 "$x=" 的**悬空定界符**,可能是公式被换行截断。
     """
     j, n = i + 1, len(line)
+    saw_candidate = False
     while j < n:
         if line[j] == "$":
             if j + 1 < n and line[j + 1] == "$":
                 j += 2
                 continue
+            saw_candidate = True
             if line[j - 1].isspace():
                 j += 1
                 continue
             if j + 1 < n and line[j + 1].isdigit():
                 j += 1
                 continue
-            return j
+            return j, saw_candidate
         j += 1
-    return -1
+    return -1, saw_candidate
 
 
 def scan_inline(line):
     """把一行切成 [(kind, start, end)],kind ∈ {text, code, math};另报未闭合的 `$$`。
 
     返回 (segs, block_open, unclosed)。block_open ≥ 0 表示该行有一个找不到
-    同行闭合的 `$$`(跨行块起点),调用方据此让整行退出正文;unclosed 是
-    「开了没闭合」的反引号/`$` 起址,供 breaks_inline 判跨行拆断(E-BOX-WRAP)。
+    同行闭合的 `$$`(跨行块起点),调用方据此让整行退出正文;unclosed 只记
+    **反引号 code span** 的「开了没闭合」起址,供 breaks_inline 判跨行拆断
+    (E-BOX-WRAP)。行内 `$` 未找到闭合符时按字面保留;只有整行除 `$$` 外恰好
+    剩一个无处配对的 `$`(形如被换行截断的 "$x=")才计入 unclosed,
+    "$5-$9" 这类成对出现的字面美元符号因此不会被误判成拆断。
 
     **单一真源**:compute_visible 与 breaks_inline 都走这里,两处不得再各写一套
     定界符规则——票 69 的缺陷正源于配对逻辑只有一份且是错的。
@@ -387,6 +396,7 @@ def scan_inline(line):
     text_start = 0
     block_open = -1
     unclosed = []
+    pending_dollar = []
     while i < n:
         ch = line[i]
         if ch == "`":
@@ -419,12 +429,15 @@ def scan_inline(line):
                 i = text_start = close + 2
                 continue
             if i + 1 >= n or line[i + 1].isspace():
-                i += 1              # 开侧紧跟空白,是字面("$ 5" 不是公式)
+                # 开侧规则直接否掉 → 这是**确定的字面**("$ 5"、". $"),
+                # 不是悬空定界符,不记 unclosed。
+                i += 1
                 continue
-            close = _dollar_close(line, i)
+            close, saw_candidate = _dollar_close(line, i)
             if close < 0:
-                unclosed.append(i)  # 开了没闭合:同上
-                i += 1              # 字面,不吞该行余下正文
+                # 先按字面保留;是否算「悬空定界符」在行末统一裁定(见函数尾)。
+                pending_dollar.append(i)
+                i += 1              # 不吞该行余下正文
                 continue
             if text_start < i:
                 segs.append(("text", text_start, i))
@@ -434,6 +447,11 @@ def scan_inline(line):
         i += 1
     if block_open < 0 and text_start < n:
         segs.append(("text", text_start, n))
+    # 行末裁定 `$` 是否「悬空」。判据:全行除 `$$` 外恰好只剩一个无处配对的 `$`。
+    # "$5-$9"、"$35/年 与 $50/年"、"$x $" 这类成对出现的字面美元符号剩下 0 个或
+    # 成对残留,都不算拆断;形如 "$x="(换行把 `$…$` 截断)只剩 1 个,才算。
+    if len(pending_dollar) % 2 == 1:
+        unclosed.append(pending_dollar[0])
     return segs, block_open, unclosed
 
 
@@ -2175,6 +2193,14 @@ def selftest():
             not breaks_inline([r"> 解:用 \` 表示反引号。"], [0])
             and breaks_inline([r"> 解:用 \\` 表示反引号。"], [0]))
         chk("票 69 breaks_inline 仍抓真拆断的公式",
+            breaks_inline(["> 解:先算 $x=", "> 2$ 再代入。"], [0, 1]))
+        # 票 69 code review P0:字面美元符号不得判成 E-BOX-WRAP(假阳性回归)。
+        # "$5-$9" 这类正文在 BASE 上不报;修复过程中一度被 breaks_inline 误判成拆断。
+        for literal in ("> 价格 $5-$9 之间。", "> 区间 $5 到 $9。",
+                        "> 学费 $35/年 与 $50/年。"):
+            chk("票 69 字面美元符号不判拆断: " + literal,
+                not breaks_inline([literal], [0]))
+        chk("票 69 真被换行截断的公式仍报拆断(行内只剩悬空 $)",
             breaks_inline(["> 解:先算 $x=", "> 2$ 再代入。"], [0, 1]))
         chk("票 69 breaks_inline 仍抓真拆断的 code span",
             breaks_inline(["> 解:见 `x", "> y` 结束。"], [0, 1]))
