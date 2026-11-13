@@ -12,15 +12,15 @@ SKILL.md「判断归模型、数据归脚本」）。
         python scheduler.py next-interval --grade {again|hard|good|easy} \
             (--stability <S> | --new-card) --difficulty <D> \
             (--elapsed <N> | --last YYYY-MM-DD --today YYYY-MM-DD) \
-            [--current-due YYYY-MM-DD] [--confidence <1-5>] [--init-shift {-1|0|1}（已失效，仅为兼容保留）]
+            [--current-due YYYY-MM-DD] [--confidence <1-5>]
         --elapsed 与 --last/--today 同传时数值必须一致（elapsed = today-last），
         不一致 exit 2；仅传 --elapsed（无 --last/--today）时 due 为 null，
         只回 interval_days，由模型以当日推算绝对日期——保证输出不依赖
         机器时钟、完全确定。同会话重复答对（elapsed=0）必须传 --current-due，
         返回原日期，不以重算值覆盖。
         **FSRS-6 起 elapsed 对四档全必填**（失败档的遗忘后 S 也依赖 R(t,S)，
-        缺 elapsed 无法算 R，脚本拒绝猜）。--init-shift 已失效（新卡 D 只由
-        D0(G) 决定），形参暂留兼容调用侧，由后续票删除。
+        缺 elapsed 无法算 R，脚本拒绝猜）。新卡初始难度只由评分档 D0(G)
+        决定，不接收方向偏移；--init-shift 已删除（旧调用侧传它 exit 2）。
         **due 锚点**：新 due = 本次复习日期 today + interval_days；last 仅用于
         计算 elapsed（经过天数）与旧记录回显，**不**参与 due 起算——否则逾期卡
         复习后会把 due 算到过去日期。仅当 today 缺省（直连函数调用）时才回退用 last。
@@ -313,7 +313,7 @@ DEFAULT_D = round(initial_difficulty("good"), 4)
 
 
 def next_interval(grade, stability=None, difficulty=None, elapsed=None,
-                  last=None, today=None, confidence=None, init_shift=0,
+                  last=None, today=None, confidence=None,
                   new_card=False, current_due=None):
     """纯计算函数：同输入同输出，不碰文件、不取当前时间。
 
@@ -1028,7 +1028,7 @@ def cmd_next_interval(args):
         parse_date_str(args.current_due, "--current-due")
     result = next_interval(args.grade, stability=stability, difficulty=difficulty,
                            elapsed=elapsed, last=last, today=args.today,
-                           confidence=confidence, init_shift=args.init_shift,
+                           confidence=confidence,
                            new_card=args.new_card, current_due=args.current_due)
     print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
     return 0
@@ -1064,7 +1064,6 @@ def build_parser():
     p1.add_argument("--today", default=None)
     p1.add_argument("--current-due", default=None)
     p1.add_argument("--confidence", type=int, default=None)
-    p1.add_argument("--init-shift", type=int, default=0, choices=[-1, 0, 1])
     p1.set_defaults(func=cmd_next_interval)
     p2 = sub.add_parser("due-queue", help="查到期复习队列（只读）")
     p2.add_argument("--root", required=True)
@@ -1294,14 +1293,20 @@ def selftest():
         "easy": (8.2956, 1.0, 8),
     }
     for grade, (s0, d0, iv0) in expect.items():
-        r = next_interval(grade, new_card=True, init_shift=0)
+        r = next_interval(grade, new_card=True)
         ok = ok and approx(r["stability_new"], s0, 1e-4)
         ok = ok and approx(r["difficulty_new"], d0, 1e-4)
         ok = ok and r["interval_days"] == iv0
         ok = ok and r["stability_old"] is None and r["difficulty_old"] is None
         ok = ok and r["same_session"] is False
-    # --init-shift 已失效：新卡 D 只由 D0(G) 决定（形参暂留，票 76 删除）
-    ok = ok and approx(next_interval("good", new_card=True, init_shift=1)["difficulty_new"], 2.1181, 1e-4)
+    # 断言 5c：--init-shift 已删除——旧调用侧传它必须拿到 exit 2（argparse 未知参数），
+    # 不得静默接受后按 D0(G) 返回，否则「已删除」只是文档承诺。
+    try:
+        main(["next-interval", "--grade", "good", "--new-card",
+              "--last", "2026-11-13", "--today", "2026-11-13", "--init-shift", "1"])
+        ok = False
+    except SystemExit as exc:
+        ok = ok and exc.code == 2
 
     # 断言 5b：遗忘后 S 的短期上界 min(长期项, S/e^(w17*w18)) 真的会生效
     # （票面六公式块原文；不是 w17-w19 的同日复习公式）。S=1/D=1/R≈0.1 时长期项反超。

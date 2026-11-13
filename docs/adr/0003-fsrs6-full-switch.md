@@ -3,7 +3,7 @@
 - 状态：已采纳
 - 日期：2026-11-13
 - 决策者：维护者
-- 相关：决策 #61（八题全按推荐）；任务 #77（本 ADR 的落地票）；#76（删 `--init-shift`，本票阻塞它）；#59（旧律 R 地板缺陷，已作废）
+- 相关：决策 #61（八题全按推荐）；任务 #77（本 ADR 的落地票）；#76（删 `--init-shift`，v9.21.3 已落地）；#59（旧律 R 地板缺陷，已作废）
 
 ## 背景
 
@@ -80,7 +80,7 @@
 - `contracts/rules.json` 的 `scheduler` 块整体替换（旧 10 项常量名全部退役）。
 - `scripts/scheduler.py`：常数加载、公式、D 解析（去 `_half_step`）、`check_difficulty`、六组断言全部重写。
 - `references/assessment.md` / `references/data.md` / `contracts/scripts-contract.json` / `CREDITS.md` 同步口径。
-- **新卡 D 改由 D0(G) 决定**，`--init-shift` 失效；形参暂留兼容旧调用，由 #76 删除。因此 #77 必须先合、#76 后合。
+- **新卡 D 改由 D0(G) 决定**，`--init-shift` 失效；形参暂留兼容旧调用，由 #76 删除（已落地 v9.21.3：参数整条删除，旧调用侧传它 exit 2）。因此 #77 必须先合、#76 后合。
 
 ### 行为跳变（对既有数据）
 

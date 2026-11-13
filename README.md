@@ -91,7 +91,7 @@ python -B evals/compare-baseline.py --selftest
 ## 维护
 
 - **版本**：`SKILL.md` frontmatter 的 `metadata.version` 与 `contracts/rules.json` 各登记一处；
-  两者是否一致由发版清单人工逐条核对（见 `references/ops.md`「打包与验证」），改一处必改另一处。本次发布升版到 **9.21.2**（SKILL.md 与契约一致）。
+  两者是否一致由发版清单人工逐条核对（见 `references/ops.md`「打包与验证」），改一处必改另一处。本次发布升版到 **9.21.3**（SKILL.md 与契约一致）。
 - **加一门学科**：只在 `references/disciplines/` 加一个 variant 包，不牵动其他文档。
 - **改一条规则**：改它在**正本册**里的那一处；要引用就写指针，不复制条文。
 - **文献与借鉴出处**：见 `CREDITS.md`（维护侧档案，不进运行时上下文）。

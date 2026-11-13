@@ -198,7 +198,7 @@
 
 - **新条目首次调度**（S3 新产生的薄弱点 / 错题 / 保持复习）：
   `python "<技能根>/scripts/scheduler.py" next-interval --grade <判分档> --new-card --last <今天> --today <今天>`
-  —— grade 取该条判分档（判错=again）；保持复习初始条目用 `--grade good`（例外：学员要求加速的同日清除按 `--grade hard` 档入保持，见 `references/workflow.md`「S4 复习巩固（可从逐节学习或结课随时插入）」闸口）；新卡 S0 / D0 **只由评分档决定**，**数值唯一来源 = 契约 `scheduler.w`**（本册不复制——要核对就跑脚本看 `stability_new` / `difficulty_new`）；首间隔四档为 1 / 1 / 2 / 8 天（again / hard / good / easy）。返回 stability_new / difficulty_new / due。**`--init-shift` 已失效**（形参暂留兼容旧调用，传了也不改变结果）。
+  —— grade 取该条判分档（判错=again）；保持复习初始条目用 `--grade good`（例外：学员要求加速的同日清除按 `--grade hard` 档入保持，见 `references/workflow.md`「S4 复习巩固（可从逐节学习或结课随时插入）」闸口）；新卡 S0 / D0 **只由评分档决定**，**数值唯一来源 = 契约 `scheduler.w`**（本册不复制——要核对就跑脚本看 `stability_new` / `difficulty_new`）；首间隔四档为 1 / 1 / 2 / 8 天（again / hard / good / easy）。返回 stability_new / difficulty_new / due。**`--init-shift` 已删除**——旧调用侧传它一律 exit 2（argparse 未知参数），不再静默接受。
 - **既有条目复习判分**（S4）：
   `python "<技能根>/scripts/scheduler.py" next-interval --grade <grade> --stability <S> --difficulty <D> --last <last> --today <今天> [--current-due <原due>]`。
   **同会话重复答对**（`--last` 与 `--today` 同日）：必须同时传 `--current-due <原due>`；脚本返回 `same_session=true` 并原样返回该 due，S/D 不变——只刷新召回，不把一天内反复刷题记成长期保持（FSRS-6 的同日复习公式 w17–w19 本仓不实现）。非同日复习不传 `--current-due`。保持复习按同一命令更新；`partial` 用 `again`，`未判/作废` 不写 S/D。前提：`due` 由脚本生成、不要手改；手改 due 的条目先按当前 S 与手工 due 对齐后再复习。
