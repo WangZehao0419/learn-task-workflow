@@ -444,8 +444,10 @@ def compute_visible(lines):
     直到含闭合 $$ 的行。公式/代码内的 denylist 字符(如字面反斜杠命令、
     code span 中引述的旧写法示例)因此天然豁免。
 
-    抹白区间一律替换成等长空格,正文行与原文逐字符对齐——下游 check_caption
-    用 `ln[m.end():]` 按位置取尾巴,长度一变就错位(票 68 的假闸口就在这条链上)。
+    抹白区间一律替换成等长空格:除**代码围栏内**的 vis 固定为空串外,每一行 vis
+    都与原文逐字符等长(含跨行 $$ 块的起点行与续行)——下游 check_caption 用
+    `ln[m.end():]` 按位置取尾巴,长度一变就错位(票 68 的假闸口就在这条链上)。
+    围栏行不参与位置取尾(靠 fence 标记短路),故保留空串。
     定界符规则见 scan_inline。
     """
     vis, fence = [], []
@@ -465,7 +467,8 @@ def compute_visible(lines):
             continue
         fence.append(False)
         if in_math_block:
-            vis.append("")
+            # 续行同样保持等长:与起点行一致,下游按位置取尾巴才不错位。
+            vis.append(" " * len(ln))
             if "$$" in ln:
                 in_math_block = False
             continue
@@ -2152,12 +2155,20 @@ def selftest():
                       r"价格 \$5 到 \$9 结束。"):
             chk("票 69 可见正文与原文等长: " + probe,
                 len(vis_of(probe)) == len(probe))
-        # 跨行 $$ 块整行退出正文时也必须等长(旧实现返回空串,长度会错位)。
-        for block_md in ("> 说明$$\n", "$$\n", "文字 $$ $$ 之后\n"):
-            for probe_lines in ([block_md.rstrip("\n")],):
-                block_vis, _bf = compute_visible(probe_lines)
-                chk("票 69 跨行块起点与原文等长: " + probe_lines[0],
-                    len(block_vis[0]) == len(probe_lines[0]))
+        # 跨行 $$ 块的起点行与续行都必须等长(旧实现两处都返回空串,长度会错位)。
+        for start_line, rest, expect_open in (
+                ("> 说明$$", None, True),
+                ("$$", None, True),
+                ("文字 $$", "后续 $$", True),
+                ("文字 $$ $$ 之后", None, False)):
+            block_lines = [start_line] + ([rest] if rest is not None else [])
+            block_vis, _bf = compute_visible(block_lines)
+            # 前三例真跨行(block_open 生效),末例同行闭合——两者都须等长。
+            chk("票 69 块公式行与原文等长(跨行起点): " + start_line,
+                len(block_vis[0]) == len(block_lines[0]))
+            if rest is not None:
+                chk("票 69 块公式行与原文等长(跨行续行): " + rest,
+                    len(block_vis[1]) == len(block_lines[1]))
         # 第二入口:breaks_inline 也必须走同一套规则,否则同一缺陷要被修两次。
         # 框体行须带引用前缀,breaks_inline 走 box_body 取正文。
         chk("票 69 breaks_inline 不再把转义反引号当未闭合定界符",
