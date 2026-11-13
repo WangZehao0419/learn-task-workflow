@@ -29,14 +29,14 @@
    "usage": "next-interval | due-queue | calibration [--selftest]",
    "exit_codes": {
     "0": "正常",
-    "1": "数据根缺失或非目录",
+    "1": "数据根缺失或非目录；契约畸形（与 rule_contract.load_or_exit 同口径，输出 E-CONTRACT-INVALID 的 JSON）",
     "2": "参数错误"
    },
    "schema": {
     "due-queue": "ltw-due-queue/4",
     "calibration": "ltw-calibration/4"
    },
-   "notes": "增长律 = FSRS-6（21 个 w + desired_retention + s_max=36500 + s_min=0.0001 + maximum_interval=365 产品护栏 + enable_fuzzing=false；常数唯一来源 = rules.json 的 scheduler 块，21 项与 fuzzing 关闭均启动自检，失败 exit 2）；D 值域 [1,10] 连续、无 0.5 粒度，落盘保留 4 位小数；interval_days = min(max(1, round_half_up(I(desired_retention, S'))), maximum_interval)；elapsed 四档全必填（失败档的遗忘后 S 也依赖 R(t,S)）；--init-shift 已失效（新卡 D 只由 D0(G) 决定），形参暂留兼容；next-interval 同会话重复答对（elapsed=0，again 档除外）返回 same_session=true，S/D 不变；既有卡此分支必须传 --current-due 并原样返回，缺失或日期非法 exit 2；其他 due 锚点 = 本次复习日 today + interval_days；due-queue 读取薄弱点/错题本/保持复习三区并输出 reason；calibration 先按 evt 归组并合并互补投影再统计（无 evt 条目各成单条观察并报 W-NO-EVT 提示补标）；只有重复信心键、冲突信心或回顾性 × 数值并存构成信心/时序歧义，重复 S/D/due 不污染信心比率；cw 只数「反馈前信心 ≥4 且判错」的子集，孤立/低信心 cw 与信心/时序歧义令 overconfidence_rate=null + rate_valid=false；纯回顾性观察不入分母（retro_excluded_count）"
+   "notes": "增长律 = FSRS-6（21 个 w + desired_retention + s_max=36500 + s_min=0.0001 + maximum_interval=365 产品护栏 + enable_fuzzing=false；常数唯一来源 = rules.json 的 scheduler 块，21 项与 fuzzing 关闭均启动自检，失败 exit 1 + E-CONTRACT-INVALID）；D 值域 [1,10] 连续、无 0.5 粒度，落盘保留 4 位小数；interval_days = min(max(1, round_half_up(I(desired_retention, S'))), maximum_interval)；elapsed 四档全必填（失败档的遗忘后 S 也依赖 R(t,S)）；--init-shift 已失效（新卡 D 只由 D0(G) 决定），形参暂留兼容；next-interval 同会话重复答对（elapsed=0，again 档除外）返回 same_session=true，S/D 不变；既有卡此分支必须传 --current-due 并原样返回，缺失或日期非法 exit 2；其他 due 锚点 = 本次复习日 today + interval_days；due-queue 读取薄弱点/错题本/保持复习三区并输出 reason；calibration 先按 evt 归组并合并互补投影再统计（无 evt 条目各成单条观察并报 W-NO-EVT 提示补标）；只有重复信心键、冲突信心或回顾性 × 数值并存构成信心/时序歧义，重复 S/D/due 不污染信心比率；cw 只数「反馈前信心 ≥4 且判错」的子集，孤立/低信心 cw 与信心/时序歧义令 overconfidence_rate=null + rate_valid=false；纯回顾性观察不入分母（retro_excluded_count）"
   },
   {
    "script": "kp_sort.py",

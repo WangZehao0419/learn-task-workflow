@@ -12,7 +12,7 @@ SKILL.md「判断归模型、数据归脚本」）。
         python scheduler.py next-interval --grade {again|hard|good|easy} \
             (--stability <S> | --new-card) --difficulty <D> \
             (--elapsed <N> | --last YYYY-MM-DD --today YYYY-MM-DD) \
-            [--current-due YYYY-MM-DD] [--confidence <1-5>] [--init-shift {-1|0|1}]
+            [--current-due YYYY-MM-DD] [--confidence <1-5>] [--init-shift {-1|0|1}（已失效，仅为兼容保留）]
         --elapsed 与 --last/--today 同传时数值必须一致（elapsed = today-last），
         不一致 exit 2；仅传 --elapsed（无 --last/--today）时 due 为 null，
         只回 interval_days，由模型以当日推算绝对日期——保证输出不依赖
@@ -109,9 +109,15 @@ _SCHEMAS = _CONSTANTS["schemas"]
 
 
 def _contract_fail(msg):
-    """契约自检失败：fail closed，不退回内置默认值继续跑。"""
-    print("[learn-task-workflow] 契约错误：" + msg, file=sys.stderr)
-    sys.exit(2)
+    """契约自检失败：fail closed，不退回内置默认值继续跑。
+
+    与 rule_contract.load_or_exit() 同口径——契约畸形属「校验不通过」，走 exit 1 +
+    结构化 JSON（E-CONTRACT-INVALID），不走 exit 2（那是用法/参数错误）。同一类失败
+    在同一个脚本里必须只有一个退出码，否则调用方没法统一处理。
+    """
+    print(json.dumps({"ok": False, "code": "E-CONTRACT-INVALID", "message": msg},
+                     ensure_ascii=False))
+    raise SystemExit(1)
 
 
 W = [float(x) for x in _C["w"]]
@@ -133,7 +139,9 @@ if MAXIMUM_INTERVAL < 1:
     _contract_fail("scheduler.maximum_interval 须 ≥ 1，实际 " + str(MAXIMUM_INTERVAL))
 
 DECAY = -W[20]                       # FSRS-6 遗忘曲线衰减指数（decay = -w20）
-FACTOR = 0.9 ** (1.0 / DECAY) - 1.0  # 由 desired_retention=0.9 定标的曲线形状常数
+# 曲线形状常数：按 FSRS 定义**只由 w20 与参考保持率 0.9 决定**，与 desired_retention 无关
+# （desired_retention 只进 interval_for 的 I(r,S)）。改 desired_retention 不会改变它。
+FACTOR = 0.9 ** (1.0 / DECAY) - 1.0
 D_MIN, D_MAX = 1.0, 10.0             # FSRS-6 的 D 值域（连续，无粒度要求）
 _GRADE_INDEX = {"again": 1, "hard": 2, "good": 3, "easy": 4}
 ELAPSED_INF = float("inf")   # 经过天数只要求「有限且 ≥0」：R(t,S) 随 t 单调趋 0，
@@ -296,9 +304,12 @@ def interval_for(stability):
 
 
 # 缺省链（progress.md 元数据缺失时的兜底）：S 取 S0(good)、D 取 D0(good)，
-# 与旧律的 default_s=3.0 / default_d=3 同位置、同用途，值随增长律换新。
-DEFAULT_S = initial_stability("good")
-DEFAULT_D = initial_difficulty("good")
+# 与旧律的 default_s / default_d 同位置、同用途，值随增长律换新。
+# 必须按输出侧同口径 round 到 4 位：D 是连续值，未 round 的 2.118103970459016 会被
+# due-queue 原样写进 progress.md，与 data.md「落盘保留 4 位小数」及 next-interval 的
+# 回显形态打架（两条路径对同一个 D 给出两种写法）。
+DEFAULT_S = round(initial_stability("good"), 4)
+DEFAULT_D = round(initial_difficulty("good"), 4)
 
 
 def next_interval(grade, stability=None, difficulty=None, elapsed=None,
@@ -975,7 +986,7 @@ def cmd_next_interval(args):
     if not args.new_card and args.stability is None:
         fail("既有条目必须传 --stability（新卡请传 --new-card）")
     if args.new_card and args.difficulty is not None:
-        fail("--new-card 时初始 D 由 --init-shift 决定，不传 --difficulty")
+        fail("--new-card 时初始 D 由评分档的 D0(G) 决定，不传 --difficulty")
     stability = None
     difficulty = None
     if not args.new_card:
@@ -1007,7 +1018,7 @@ def cmd_next_interval(args):
         if today_d < last_d:
             fail("--today 早于 --last：" + args.today + " < " + args.last)
         last = last_d.isoformat()
-        elapsed = (today_d - last_d).days   # 有限且 ≥0（日期已校验，today ≥ last）；R 会夹到 [0.25,2]
+        elapsed = (today_d - last_d).days   # 有限且 ≥0（日期已校验，today ≥ last）；R(t,S) 随 t 单调趋 0
     elif args.elapsed is None:
         fail("必须提供 --elapsed 或 --last/--today 之一组（FSRS-6 四档都依赖 R(t,S)）")
     confidence = args.confidence
@@ -1292,12 +1303,39 @@ def selftest():
     # --init-shift 已失效：新卡 D 只由 D0(G) 决定（形参暂留，票 76 删除）
     ok = ok and approx(next_interval("good", new_card=True, init_shift=1)["difficulty_new"], 2.1181, 1e-4)
 
+    # 断言 5b：遗忘后 S 的短期上界 min(长期项, S/e^(w17*w18)) 真的会生效
+    # （票面六公式块原文；不是 w17-w19 的同日复习公式）。S=1/D=1/R≈0.1 时长期项反超。
+    import math as _m
+    _stf = _m.e ** (W[17] * W[18])
+    _r5b = 0.1                               # S=1/D=1 且 R 极低时长期项反超（全域扫描实测）
+    _long = (W[11] * (1.0 ** -W[12]) * (((1.0 + 1) ** W[13]) - 1.0)
+             * _m.e ** (W[14] * (1.0 - _r5b)))
+    _short = 1.0 / _stf
+    ok = ok and _short < _long                       # 前提：短期项确实更小
+    ok = ok and approx(stability_after_failure(1.0, 1.0, _r5b), _short, 1e-9)
+    ok = ok and approx(stability_after_failure(1.0, 1.0, _r5b), min(_long, _short), 1e-9)
+
     # 断言 6：S 上限 s_max=36500 与产品护栏 maximum_interval=365 分开
     # S=300, easy, D=1, elapsed=300 -> S'=1470.4321（远未触 s_max），间隔封 365
     r = next_interval("easy", stability=300.0, difficulty=1, elapsed=300)
     ok = ok and approx(r["stability_new"], 1470.4321, 1e-3)
     ok = ok and r["stability_new"] < S_MAX
     ok = ok and r["interval_days"] == 365
+
+    # 断言 6a：契约畸形必须 exit 1（与 rule_contract.load_or_exit 同口径），不是 exit 2。
+    # 不启子进程（ops.md「脚本无子进程」），直接调 _contract_fail 看它抛什么。
+    import contextlib as _cl
+    import io as _io
+    _buf = _io.StringIO()
+    try:
+        with _cl.redirect_stdout(_buf):
+            _contract_fail("selftest 探针")
+        ok = False                                   # 没抛即失败
+    except SystemExit as _exc:
+        ok = ok and _exc.code == 1
+    _probe = json.loads(_buf.getvalue())
+    ok = ok and _probe["ok"] is False
+    ok = ok and _probe["code"] == "E-CONTRACT-INVALID"
 
     # 断言 6b（票 61 验收 1）：elapsed=1, S=100, good -> S' 增幅 < 5%
     # 旧律在 R 地板 0.25 下恒定 +62%，12 天顶到 365 天上限（票 59 的原始缺陷）
@@ -1344,9 +1382,13 @@ def selftest():
     by_item = {e["item"].split("：")[0]: e for e in ordered}
     ok = ok and by_item["更逾期点"]["overdue_days"] == 6  # 最逾期次优先
     ok = ok and by_item["默认链点"]["migrated"] is True  # 缺 S/D/due，靠「最近更新」兜底推日期
-    # 缺省链已随增长律换新：S 取 S0(good)=2.3065、D 取 D0(good)=2.1181
-    ok = ok and approx(by_item["默认链点"]["S"], DEFAULT_S)
-    ok = ok and approx(by_item["默认链点"]["D"], DEFAULT_D, 1e-4)
+    # 缺省链已随增长律换新：S 取 S0(good)=2.3065、D 取 D0(good)=2.1181。
+    # 断言必须与字面值比，不能与 DEFAULT_S/DEFAULT_D 自比——自比恒真，抓不到精度回归。
+    ok = ok and approx(by_item["默认链点"]["S"], 2.3065, 1e-9)
+    ok = ok and approx(by_item["默认链点"]["D"], 2.1181, 1e-9)
+    # D 落盘形态必须与 next-interval 一致（4 位小数），不得泄出 2.118103970459016
+    ok = ok and by_item["默认链点"]["D"] == next_interval("good", new_card=True)["difficulty_new"]
+    ok = ok and str(by_item["默认链点"]["D"]).count(".") <= 1 and len(str(by_item["默认链点"]["D"]).split(".")[-1]) <= 4
     ok = ok and by_item["默认链点"]["due"] == "2026-10-07"  # 最近更新 10-05 + round(2.3065)=2
     ok = ok and by_item["顽固点"]["teach"] is True  # 顽固 -> teach
     ok = ok and by_item["自信但错点"]["cw"] is True
@@ -1562,7 +1604,7 @@ def selftest():
     by16 = {e["item"].split("：")[0]: e for e in q16}
     ok = ok and len(q16) == 3  # 三条均入队，无崩溃、无丢失
     # 坏 S → 缺省链取 S0(good)=2.3065；坏日期 → 回退最近更新 2026-10-08 + round(2.3065)=2
-    ok = ok and approx(by16["坏S点"]["S"], DEFAULT_S) and by16["坏S点"]["migrated"] is True
+    ok = ok and approx(by16["坏S点"]["S"], 2.3065, 1e-9) and by16["坏S点"]["migrated"] is True
     ok = ok and by16["坏日期点"]["due"] == "2026-10-10"
     ok = ok and by16["坏日期点"]["migrated"] is True
     ok = ok and by16["好点"]["due"] == "2026-10-10" and by16["好点"]["migrated"] is False
@@ -1709,7 +1751,7 @@ def selftest():
         [('s', '- 最近更新：2026-10-15\n## 薄弱点\n- A（evt=E1）\n'
               '## 错题本\n- [2026-10-15] B ｜ 元数据：信心=5，cw，evt=E1\n')])[0][0]
     ok = ok and evt24["total_items"] == 1 and evt24["cw_count"] == 1
-    # 断言 25：长中断（10 年）不再因人为上界被拒（R 已夹 [0.25,2]）
+    # 断言 25：长中断（10 年）不再因人为上界被拒（R(t,S) 单调趋 0，长中断自然压低增幅）
     try:
         main(["next-interval", "--grade", "good", "--stability", "3", "--difficulty", "3",
               "--last", "2016-10-14", "--today", "2026-10-15"])
