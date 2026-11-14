@@ -18,6 +18,9 @@
      不计入摘要计数）、
      W-KP-SUMMARY-MISMATCH（覆盖摘要行计数与逐行实际不符；rows 空但摘要行有值照常核对）、
      W-KP-LIST-MISSING（指针存在但文件不存在或不可读）、
+     W-KP-JUDGE（判定三字段格式合法但语义不闭合：已判却缺依据 / 依据指向的文件或题号
+     不存在 / 指针个数 ≠ 独立正确日期个数 / 未判却写了另两字段；**只验指针闭合，
+     验不了「这个题号是不是真的判对了」**；warning 不拦截）、
      W-KP-HOLD-CROSS（清单摘要暂缓数 ≠ 暂缓区块可比条目数（处置为暂缓的条目）/ 清单排除数 ≠ 处置为排除的条目数；
      「滚雪球候选」等设计性范围外条目与排除条目均不计入暂缓比对基数）、
      W-CURRENT-SECTION（「当前节」与学习路线勾选/阶段不一致；仅提示）、
@@ -90,7 +93,7 @@ from pathlib import Path
 
 import rule_contract
 from ltw_parse import (ENUM_KP_TYPE, ENUM_KP_VISUAL, FIELD_RE, HOLD_KEYS, parse_field_line, strip_inline_comment,
-                       KP_ID_ANY_RE, KP_ID_RE,
+                       JUDGE_POINTER_PREFIX, KP_ID_ANY_RE, KP_ID_RE,
                        ROUTE_RE, hold_disposition_excluded, hold_entry_malformed,
                        kp_status_base, normalize_kp_id, parse_kp_optional, parse_kp_row,
                        parse_day_rows, parse_progress_sections, parse_meta,
@@ -263,6 +266,69 @@ def has_typed_extra(body):
     """畸形行是否声明了类型/视觉任务（跳过 KP 编号与知识点标题，用于分型门拦停）。"""
     segs = [s.strip() for s in re.split(r"[｜|]", body or "")]
     return any(seg.startswith(TYPED_FIELD_PREFIXES) for seg in segs[2:])
+
+
+# 判定依据指针的语义拆分（形态已由 ltw_parse 把关）：exercises/<文件名>.md#题<N>
+JUDGE_REF_RE = re.compile(r"^" + re.escape(JUDGE_POINTER_PREFIX) + r"(.+?\.md)#题(\d+)$")
+
+
+def judge_warnings(row, ex_dir):
+    """目行判定三字段的**语义**闭合检查，返回消息列表（只告警，不拦停）。
+
+    票 81 决议把「形态」与「语义」分家：形态问题（非法枚举值 / 重复键 / 日期格式坏 /
+    指针格式坏 / 日期不升序或超上限）已在 parse_kp_row 里 fail closed → W-UNPARSED-KP。
+    这里只管「格式合法但账没对上」的四类：
+
+      1. 判定=已判 但缺判定依据；
+      2. 判定依据指向的文件不存在，或文件里没有该题号；
+      3. 指针个数 ≠ 独立正确的日期个数；
+      4. 判定缺席或为「未判」，却写了独立正确 / 判定依据。
+
+    **边界（必须与契约注记一致）**：只能验指针闭合，验不了「这个题号是不是真的判对了」
+    ——闸口看不到对话与判分过程。不写这句就是把「数据对了」冒充成「判定做了」。
+    """
+    kid = row.get("id", "?")
+    judge = row.get("judge")
+    dates = row.get("indep_dates") or []
+    refs = row.get("judge_ref") or []
+    msgs = []
+
+    if judge != "已判":
+        if dates or refs:
+            msgs.append("目行「" + kid + "」判定为「" + (judge or "缺省") +
+                        "」却写了独立正确/判定依据——判没判会退化成「看有没有依据」（两处真相）；"
+                        "判定未判或缺席时这两字段必须留空")
+        return msgs
+
+    if not refs:
+        msgs.append("目行「" + kid + "」判定=已判 但缺「判定依据」——判定的证据无处可查"
+                    "（独立正确可空：摸底「已会」是一次性证据，但依据不能空）")
+        return msgs
+
+    # 「跨日」看的是**不同日数**，不是写了几个日期：同日两次答对不是跨日两次
+    # （11-10 对、11-11 错、11-12 对 → 不同日数 2；11-10 对两次 → 不同日数 1）。
+    distinct = len(set(dates))
+    if distinct < len(dates):
+        msgs.append("目行「" + kid + "」独立正确写了 " + str(len(dates)) + " 个日期但只有 " +
+                    str(distinct) + " 个不同日期——同日重复不构成「跨日」证据")
+
+    if len(refs) != len(dates):
+        msgs.append("目行「" + kid + "」判定依据 " + str(len(refs)) + " 个、独立正确 " +
+                    str(len(dates)) + " 个日期——两者必须一一对齐（全角分号分隔）")
+
+    for ref in refs:
+        m = JUDGE_REF_RE.match(ref)
+        if not m:
+            continue  # 形态问题归 W-UNPARSED-KP，此处不重复报
+        name, qno = m.group(1), m.group(2)
+        body = _read_evidence(ex_dir, name)
+        if not (ex_dir / name).is_file():
+            msgs.append("目行「" + kid + "」判定依据指向的判分记录不存在：" + name)
+            continue
+        if not re.search(r"题\s*" + re.escape(qno) + r"(?!\d)", body):
+            msgs.append("目行「" + kid + "」判定依据指向 " + name + " 的题" + qno +
+                        "，但该记录内无此题号")
+    return msgs
 
 
 def material_key(line):
@@ -1309,7 +1375,10 @@ def check(task_dir, release=False, proposed=None):
                 for body in kp["malformed"]:
                     warnings.append({"code": "W-UNPARSED-KP",
                                      "message": "课程体系存在未解析目行（必需六字段：KP编号｜目名｜所属节｜前置｜来源｜状态；"
-                                                "可选：类型：记忆/概念/程序/设计、视觉任务：识别/关系/图表/比较；"
+                                                "可选：类型：记忆/概念/程序/设计、视觉任务：识别/关系/图表/比较、"
+                                                "引入：<术语>、判定：已判/未判、"
+                                                "独立正确：YYYY-MM-DD[,YYYY-MM-DD]（最多 2 个不同日期、升序）、"
+                                                "判定依据：exercises/<文件名>.md#题<N>（多个用全角分号分隔）；"
                                                 "畸形行不计入摘要计数）：" + body})
                     if release and has_typed_extra(body):
                         errors.append({"code": "E-KP-TYPED-GATE",
@@ -1353,6 +1422,11 @@ def check(task_dir, release=False, proposed=None):
                 for i in dup_ids:
                     warnings.append({"code": "W-UNPARSED-KP",
                                      "message": "课程体系存在重复 KP 编号（重复行不计入摘要计数）：" + i})
+                # 判定三字段的语义闭合（票 82）：只告警不拦停，不进 ok；
+                # 只能验指针闭合，验不了「这个题号是不是真的判对了」。
+                for r in rows_unique:
+                    for msg in judge_warnings(r, ex_dir):
+                        warnings.append({"code": "W-KP-JUDGE", "message": msg})
                 for r in rows_unique:
                     for p in r["prereqs"]:
                         if normalize_kp_id(p) not in seen_ids:
@@ -2268,6 +2342,95 @@ def selftest():
         ok = ok and sum(1 for w in _kp_warnings(r25) if w["code"] == "W-KP-HOLD-CROSS") == 1
         ok = ok and sum(1 for w in _kp_warnings(r25)
                         if w["code"].startswith("W-KP") or w["code"] == "W-UNPARSED-KP") == 1
+
+        # ── 判定三字段（票 81 决议 / 票 82 落地）──
+        # 形态问题走 W-UNPARSED-KP（fail closed 在 ltw_parse），语义问题走 W-KP-JUDGE（只告警）
+        def _judge_row(extra, kid="KP-01-01", status="已讲"):
+            return ("- " + kid + " ｜ 数列极限 ｜ 节 1 ｜ 前置：  ｜ 来源：目录 1.2 ｜ 状态：" + status
+                    + ("" if not extra else " ｜ " + " ｜ ".join(extra)))
+
+        def _judge_dir(name, rows, ev_files=None):
+            d = Path(td) / name
+            (d / "exercises").mkdir(parents=True)
+            (d / "progress.md").write_text(KP_PROG_OK, encoding="utf-8")
+            head = ("# 课程体系：判定夹具\n- 版本：1\n- 覆盖范围：全量\n"
+                    "- 覆盖摘要：总 1 ｜ 未讲 0 ｜ 已讲 1 ｜ 暂缓 0 ｜ 排除 0\n\n## 学习路线\n### 章1 ｜ 基础\n")
+            (d / "课程体系.md").write_text(_fixture_text_ids(head + rows + "\n"), encoding="utf-8")
+            for fname, body in (ev_files or {}).items():
+                (d / "exercises" / fname).write_text(body, encoding="utf-8")
+            return d
+
+        EV_A = "## 作答与判分\n#### 题 2 · 极限（C1）\n- 题2：作答「3」｜正确性=对｜独立性=独立\n"
+        EV_B = "## 作答与判分\n#### 题 3 · 收敛（C1）\n- 题3：作答「4」｜正确性=对｜独立性=独立\n"
+        EVS = {"01-数列极限-2026-11-10.md": EV_A, "01-数列极限-2026-11-12.md": EV_B}
+        REF_A = "exercises/01-数列极限-2026-11-10.md#题2"
+        REF_B = "exercises/01-数列极限-2026-11-12.md#题3"
+
+        # ㊱ 三字段齐全且闭合 → 零 W-KP-JUDGE，ok 不受影响
+        r36 = check(_judge_dir("judge-ok", _judge_row(
+            ["判定：已判", "独立正确：2026-11-10,2026-11-12", "判定依据：" + REF_A + "；" + REF_B]), EVS))
+        ok = ok and r36["ok"]
+        ok = ok and not any(w["code"] == "W-KP-JUDGE" for w in r36["warnings"])
+
+        # ㊲ 旧六段行零回归：解析成功、无 W-UNPARSED-KP、无 W-KP-JUDGE
+        r37 = check(_judge_dir("judge-old", _judge_row([]), EVS))
+        ok = ok and r37["ok"]
+        ok = ok and not any(w["code"] in ("W-UNPARSED-KP", "W-KP-JUDGE") for w in r37["warnings"])
+
+        # ㊳ 非法判定值 → 行畸形（W-UNPARSED-KP），不得升级成 E-KP-TYPED-GATE
+        r38 = check(_judge_dir("judge-enum", _judge_row(["判定：已掌握"]), EVS))
+        ok = ok and r38["ok"]
+        ok = ok and any(w["code"] == "W-UNPARSED-KP" and "未解析目行" in w["message"]
+                        for w in r38["warnings"])
+        ok = ok and not any(w["code"] == "W-KP-JUDGE" for w in r38["warnings"])
+        # 三字段不属于分型门：非法判定值只走 W-UNPARSED-KP，不得升级成 E-KP-TYPED-GATE
+        ok = ok and not has_typed_extra(
+            "KP-01-01 ｜ 数列极限 ｜ 节 1 ｜ 前置：  ｜ 来源：目录 1.2 ｜ 状态：已讲 ｜ 判定：已掌握")
+        r38r = check(_judge_dir("judge-enum-release", _judge_row(["判定：已掌握"]), EVS), release=True)
+        ok = ok and not any(e["code"] == "E-KP-TYPED-GATE" for e in r38r["errors"])
+
+        # ㊴ 同日两次（不同日数 1）→ W-KP-JUDGE，且不拦停
+        r39 = check(_judge_dir("judge-dup", _judge_row(
+            ["判定：已判", "独立正确：2026-11-10,2026-11-10", "判定依据：" + REF_A + "；" + REF_A]), EVS))
+        ok = ok and r39["ok"]
+        ok = ok and sum(1 for w in r39["warnings"] if w["code"] == "W-KP-JUDGE") == 1
+
+        # ㊵ 三个日期 → 超上限，形态畸形（不是语义问题）
+        r40 = check(_judge_dir("judge-3d", _judge_row(
+            ["判定：已判", "独立正确：2026-11-10,2026-11-11,2026-11-12"]), EVS))
+        ok = ok and any(w["code"] == "W-UNPARSED-KP" for w in r40["warnings"])
+        ok = ok and not any(w["code"] == "W-KP-JUDGE" for w in r40["warnings"])
+
+        # ㊶ 已判却缺依据 → W-KP-JUDGE，ok 仍真（只告警）
+        r41 = check(_judge_dir("judge-noref", _judge_row(["判定：已判"]), EVS))
+        ok = ok and r41["ok"]
+        ok = ok and sum(1 for w in r41["warnings"] if w["code"] == "W-KP-JUDGE") == 1
+
+        # ㊷ 未判却写依据 → W-KP-JUDGE
+        r42 = check(_judge_dir("judge-unjudged", _judge_row(
+            ["判定：未判", "判定依据：" + REF_A]), EVS))
+        ok = ok and r42["ok"]
+        ok = ok and sum(1 for w in r42["warnings"] if w["code"] == "W-KP-JUDGE") == 1
+
+        # ㊸ 指针个数 ≠ 日期个数 → W-KP-JUDGE；文件不存在 / 题号不存在同样只告警
+        r43 = check(_judge_dir("judge-count", _judge_row(
+            ["判定：已判", "独立正确：2026-11-10,2026-11-12", "判定依据：" + REF_A]), EVS))
+        ok = ok and r43["ok"]
+        ok = ok and any(w["code"] == "W-KP-JUDGE" and "一一对齐" in w["message"] for w in r43["warnings"])
+        # 注意：夹具文件名不得含「不存在」字样——否则「无此题号」的文案会把
+        # 「文件不存在」的断言假绿（本票变异测试 M4 首次就是这么骗过去的）。
+        r43b = check(_judge_dir("judge-nofile", _judge_row(
+            ["判定：已判", "判定依据：exercises/99-缺号-2026-11-10.md#题1"]), EVS))
+        ok = ok and any(w["code"] == "W-KP-JUDGE" and "判分记录不存在" in w["message"]
+                        for w in r43b["warnings"])
+        r43c = check(_judge_dir("judge-noq", _judge_row(
+            ["判定：已判", "判定依据：" + REF_B.replace("题3", "题9")]), EVS))
+        ok = ok and any(w["code"] == "W-KP-JUDGE" and "无此题号" in w["message"] for w in r43c["warnings"])
+
+        # ㊹ 非真实日历日 → 形态畸形（复用 fromisoformat 纪律）
+        r44 = check(_judge_dir("judge-cal", _judge_row(
+            ["判定：已判", "独立正确：2026-02-30"]), EVS))
+        ok = ok and any(w["code"] == "W-UNPARSED-KP" for w in r44["warnings"])
 
         # ㉖ 判分文件存在但内容无「判分/作答」→ W-EMPTY-EVIDENCE（warning 级不阻断）
         d26 = Path(td) / "empty-ev"

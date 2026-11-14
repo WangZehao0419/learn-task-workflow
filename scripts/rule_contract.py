@@ -9,7 +9,8 @@
 契约里不再有场景注册表、意图登记、文件清单、规则编号登记或退役编号表；
 那些只服务索引的编译关系已随编译层一起退役。
 
---selftest 覆盖：真实契约可加载、缺文件、空文件、非法 JSON、缺键、枚举重复、比例非法。
+--selftest 覆盖：真实契约可加载、缺文件、空文件、非法 JSON、缺键、枚举重复、比例非法、
+kp.judge（目行判定三字段的枚举与日期上限）缺失或越界。
 """
 from __future__ import annotations
 
@@ -103,6 +104,20 @@ def validate(data: dict) -> dict:
                  "E-CONTRACT-INVALID", "kp.%s 必须是非空数组" % key)
         _require(not _dup(kp[key]), "E-CONTRACT-INVALID", "kp.%s 有重复" % key)
 
+    # 目行判定三字段（票 81 决议）：枚举与上限从契约取，解析器不得内置默认值。
+    judge = kp.get("judge")
+    _require(isinstance(judge, dict), "E-CONTRACT-INVALID", "kp.judge 必须是对象")
+    for key in ("values",):
+        _require(isinstance(judge.get(key), list) and judge[key],
+                 "E-CONTRACT-INVALID", "kp.judge.%s 必须是非空数组" % key)
+        _require(not _dup(judge[key]), "E-CONTRACT-INVALID", "kp.judge.%s 有重复" % key)
+    _require(isinstance(judge.get("max_dates"), int) and judge["max_dates"] >= 1,
+             "E-CONTRACT-INVALID", "kp.judge.max_dates 必须是 ≥1 的整数")
+    _require(isinstance(judge.get("pointer_prefix"), str) and judge["pointer_prefix"].strip(),
+             "E-CONTRACT-INVALID", "kp.judge.pointer_prefix 必须是非空字符串")
+    _require(isinstance(judge.get("pointer_sep"), str) and judge["pointer_sep"].strip(),
+             "E-CONTRACT-INVALID", "kp.judge.pointer_sep 必须是非空字符串")
+
     for key in ("min_ratio", "final_ratio"):
         val = c["gates"].get(key)
         _require(isinstance(val, list) and len(val) == 2
@@ -166,8 +181,10 @@ def _selftest() -> int:
     import tempfile
 
     fails = []
+    ran = [0]
 
     def case(name, fn, expect_ok):
+        ran[0] += 1
         try:
             fn()
             got_ok = True
@@ -234,6 +251,18 @@ def _selftest() -> int:
             return load(write("disc.json", d))
         case("discipline_slugs 重复", dup_discipline, False)
 
+        def bad_judge():
+            d = json.loads(json.dumps(base))
+            d["constants"]["kp"]["judge"]["max_dates"] = 0
+            return load(write("judge.json", d))
+        case("kp.judge.max_dates 非正", bad_judge, False)
+
+        def missing_judge():
+            d = json.loads(json.dumps(base))
+            d["constants"]["kp"].pop("judge")
+            return load(write("nojudge.json", d))
+        case("kp.judge 缺失", missing_judge, False)
+
         def retired_key():
             d = json.loads(json.dumps(base))
             d["constants"].pop("scheduler")
@@ -244,7 +273,7 @@ def _selftest() -> int:
         for f in fails:
             print("FAIL", f)
         return 1
-    print("PASS 纯常量加载器：11 个用例")
+    print("PASS 纯常量加载器：%d 个用例" % ran[0])
     return 0
 
 

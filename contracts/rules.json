@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/3",
- "version": "9.21.8",
+ "version": "9.21.9",
  "constants": {
   "phases": [
    "接料建档",
@@ -57,7 +57,16 @@
     "关系",
     "图表",
     "比较"
-   ]
+   ],
+   "judge": {
+    "values": [
+     "已判",
+     "未判"
+    ],
+    "max_dates": 2,
+    "pointer_prefix": "exercises/",
+    "pointer_sep": "；"
+   }
   },
   "gates": {
    "min_ratio": [
@@ -265,6 +274,7 @@
     "W-GRADED-LOSS-UNLOGGED",
     "W-KP",
     "W-KP-HOLD-CROSS",
+    "W-KP-JUDGE",
     "W-KP-LIST-MISSING",
     "W-KP-STATE-MISMATCH",
     "W-KP-SUMMARY-MISMATCH",

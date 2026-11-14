@@ -382,6 +382,20 @@ def selftest():
     rest, codet = sort_from_text(TYPED)
     ok = ok and codet == 0 and rest.get("order") == ["KP-01-01", "KP-01-02"]
 
+    # ⑫b 判定三字段（票 82）：带三字段的目行走同一解析器，排序结果与计数不得改变
+    judge_tail = (" ｜ 判定：已判 ｜ 独立正确：2026-11-10,2026-11-12"
+                  " ｜ 判定依据：exercises/01-a-2026-11-10.md#题2；exercises/01-a-2026-11-12.md#题3")
+    judge_list = TYPED.replace("状态：未讲 ｜ 类型：概念", "状态：未讲 ｜ 类型：概念" + judge_tail)
+    resj, codej = sort_from_text(judge_list)
+    ok = ok and codej == 0
+    ok = ok and resj.get("order") == rest.get("order")
+    ok = ok and resj.get("count") == rest.get("count")
+    ok = ok and resj.get("excluded") == rest.get("excluded") and resj.get("held") == rest.get("held")
+    # 非法判定值 → 行畸形（不因新增字段而放宽）
+    judge_bad = judge_list.replace("判定：已判", "判定：已掌握")
+    resjb, codejb = sort_from_text(judge_bad)
+    ok = ok and codejb != 0 and "畸形" in resjb.get("error", "")
+
     # ⑫ P1 别名前置：前置用单位数 KP-1-1，目标写补零 KP-01-01 → 能命中，不误报不存在
     alias_pre = ("# 课程体系：别名前置\n- 版本：1\n\n"
                  "- KP-01-01 ｜ 甲 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 ｜ 状态：未讲\n"

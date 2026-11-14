@@ -62,6 +62,18 @@ ENUM_KP_STATUS = tuple(_C["kp"]["states"])
 ENUM_KP_TYPE = tuple(_C["kp"]["types"])
 ENUM_KP_VISUAL = tuple(_C["kp"]["visual_tasks"])
 
+# 目行判定三字段（票 81 决议 / 票 82 落地）：枚举、日期上限、指针形态的唯一来源是
+# contracts/rules.json 的 kp.judge——解析器不内置默认值，契约缺失即 fail closed。
+_JUDGE = _C["kp"]["judge"]
+ENUM_KP_JUDGE = tuple(_JUDGE["values"])
+JUDGE_MAX_DATES = int(_JUDGE["max_dates"])
+JUDGE_POINTER_PREFIX = _JUDGE["pointer_prefix"]
+JUDGE_POINTER_SEP = _JUDGE["pointer_sep"]
+# 指针形态 exercises/<文件名>.md#题<N>：**只认题号**。文件存在性与题号存在性是语义
+# 校验（progress_check 的 W-KP-JUDGE），不在这里做——解析器只看形态。
+JUDGE_POINTER_RE = re.compile(
+    r"^" + re.escape(JUDGE_POINTER_PREFIX) + r".+\.md#题\d+$")
+
 
 def normalize_kp_id(kid):
     """KP 编号归一化：单位数与补零别名归一到两位规范形（KP-1-1 ≡ KP-01-01）。
@@ -112,13 +124,29 @@ def hold_disposition_excluded(body):
 
 
 def parse_kp_optional(segs):
-    """解析目行可选字段（类型/视觉任务/引入）；无字段返回 (None, [], "")，畸形返回 None。
+    """解析目行可选字段（类型/视觉任务/引入/判定/独立正确/判定依据）；畸形返回 None。
+
+    返回 6 元组 (kp_type, visual_tasks, intro, judge, indep_dates, judge_ref)；
+    全部缺席时为 (None, [], "", None, [], [])。
 
     `引入：` 登记该目首次引入的术语（R46 出题前术语对账账本，分号/顿号分隔），
-    解析为原文整段（切分交由 prereq_check），不参与枚举校验。"""
+    解析为原文整段（切分交由 prereq_check），不参与枚举校验。
+
+    判定三字段（票 81 决议，形态 vs 语义分家）：
+      · `判定：已判|未判`——精确枚举，全/半角冒号均可；非法值 → 行畸形；
+      · `独立正确：YYYY-MM-DD[,YYYY-MM-DD]`——ISO 升序、最多 JUDGE_MAX_DATES 个日期；
+        乱序 / 超上限 / 非真实日历日 → 行畸形。**同日重复不判畸形**（形态合法、
+        只是「不同日数」不足，归 W-KP-JUDGE 的语义检查）；
+      · `判定依据：exercises/<文件名>.md#题<N>`——多个用全角分号分隔，形态不合 → 行畸形。
+    「个数是否与日期对齐」「指针指向的文件与题号是否存在」「未判却写了另两字段」属
+    **语义**问题，一律不在这里拦（归 progress_check 的 W-KP-JUDGE，只告警）。
+    """
     kp_type = None
     visual_tasks = []
     intro = ""
+    judge = None
+    indep_dates = []
+    judge_ref = []
     for seg in segs:
         if seg.startswith("引入：") or seg.startswith("引入:"):
             if intro:
@@ -147,9 +175,41 @@ def parse_kp_optional(segs):
                 visual_tasks.append(tok)
             if not visual_tasks:
                 return None
+        elif seg.startswith("判定：") or seg.startswith("判定:"):
+            if judge is not None:
+                return None
+            raw = re.split(r"[：:]", seg, maxsplit=1)[1].strip()
+            if raw not in ENUM_KP_JUDGE:
+                return None
+            judge = raw
+        elif seg.startswith("独立正确：") or seg.startswith("独立正确:"):
+            if indep_dates:
+                return None
+            raw = re.split(r"[：:]", seg, maxsplit=1)[1].strip()
+            for tok in raw.split(","):
+                tok = tok.strip()
+                # 复用既有日期纪律：DATE_RE 卡形态、date.fromisoformat 卡真实日历日
+                if _valid_iso(tok) is None:
+                    return None
+                if len(indep_dates) >= JUDGE_MAX_DATES:
+                    return None          # 满上限即冻结，第 N+1 个日期属畸形（形态问题）
+                indep_dates.append(tok)
+            if indep_dates != sorted(indep_dates):
+                return None              # ISO 升序：乱序即形态问题，不静默排序
+            # 同日重复**不判畸形**：它形态合法但「不同日数」不足，属语义问题，
+            # 由 progress_check 出 W-KP-JUDGE（票 82 验收第 4 条）。
+        elif seg.startswith("判定依据：") or seg.startswith("判定依据:"):
+            if judge_ref:
+                return None
+            raw = re.split(r"[：:]", seg, maxsplit=1)[1].strip()
+            for tok in raw.split(JUDGE_POINTER_SEP):
+                tok = tok.strip()
+                if not JUDGE_POINTER_RE.match(tok):
+                    return None
+                judge_ref.append(tok)
         else:
             return None
-    return kp_type, visual_tasks, intro
+    return kp_type, visual_tasks, intro, judge, indep_dates, judge_ref
 
 
 def parse_kp_row(segs):
@@ -165,7 +225,7 @@ def parse_kp_row(segs):
     optional = parse_kp_optional(segs[6:])
     if optional is None:
         return None
-    kp_type, visual_tasks, intro = optional
+    kp_type, visual_tasks, intro, judge, indep_dates, judge_ref = optional
     m = KP_ID_RE.match(kid)
     if not m or not title or not section:
         return None
@@ -196,7 +256,8 @@ def parse_kp_row(segs):
             "sec_decl": sec_decl, "prereqs": prereqs, "status": base,
             "bottom_note": bottom_note, "needs_consolidation": needs_consolidation,
             "type": kp_type, "visual_tasks": visual_tasks,
-            "intro": intro}
+            "intro": intro, "judge": judge,
+            "indep_dates": indep_dates, "judge_ref": judge_ref}
 
 # ---------------------------------------------------------------------------
 # 条目元数据解析（T04）：META_KEYS / META_TOKEN_RES / parse_meta 与括注拆分
