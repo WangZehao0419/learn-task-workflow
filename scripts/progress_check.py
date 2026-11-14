@@ -3024,7 +3024,9 @@ def selftest():
             "- 题3：作答「y」｜正确性=错｜独立性=独立｜调度档=Again\n" + RESTATE)
         r50, c50 = _codes("v60-partial-mix", PROG_S3, EV_PARTIAL_MIX, release=True)
         ok = ok and (not r50["ok"]) and "E-GATE-THRESHOLD" in c50
-        ok = ok and any("1/3" in e["message"] and "partial" in e["message"]
+        # 补 code 谓词：本轮探针复核发现这处**没有** code 守卫，是全仓最后一条
+        ok = ok and any(e["code"] == "E-GATE-THRESHOLD"
+                        and "1/3" in e["message"] and "partial" in e["message"]
                         for e in r50["errors"])
 
         EV_PARTIAL_PASS = (
