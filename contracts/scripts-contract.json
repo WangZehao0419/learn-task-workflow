@@ -80,8 +80,8 @@
     "1": "契约缺失/畸形或拓扑问题",
     "2": "用法错误"
    },
-   "schema": "ltw-rules/2",
-   "notes": "契约唯一来源 contracts/rules.json；缺失/畸形报 E-CONTRACT-MISSING/E-CONTRACT-INVALID。纯常量加载器：只返回结构版本与业务常量。--selftest 跑加载器自测；--keys 列出业务常量键；--get <dotted> 取单个取值。历史上的 --topology / --coverage / --audit / --audit-strict 已随编译层退役（见 v9.20.0），不再提供。"
+   "schema": "ltw-rules/3",
+   "notes": "契约唯一来源 contracts/rules.json；缺失/畸形报 E-CONTRACT-MISSING/E-CONTRACT-INVALID。纯常量加载器：只返回结构版本与业务常量。本条目的 schema 与本脚本的 SCHEMA 常量是**两处必须相等的副本**（票 91），由本脚本 --selftest 直接读本文件比对，只改其中一处即红；同文件里 task_index.py 的 learn-task-index/7 是索引产物版本，语义不同，不参与相等。--selftest 跑加载器自测；--keys 列出业务常量键；--get <dotted> 取单个取值。历史上的 --topology / --coverage / --audit / --audit-strict 已随编译层退役（见 v9.20.0），不再提供。"
   },
   {
    "script": "prereq_check.py",

@@ -375,7 +375,7 @@ python -B evals/verify-gate-registry.py
 
 `verify-gate-registry` 是**登记表本身的闸口**（票 65、票 54）：上面这份自测清单若与 `scripts/` 实际文件对不上，它先红。六条判据——G1 分区完备（`scripts_contract` 与 `internal_modules` 不重、不漏、无幽灵）、G2 分类自证（命令行脚本喂 `--this-flag-does-not-exist` 必须 rc≠0；内部模块喂同一参数必须 rc=0）、G3 清单可执行、G4 清单与契约同源、G5 覆盖去向（`internal_modules` 的 note 点名的每个覆盖者都必须真的 `import` 该内部模块；note 只能写肯定式，不能写「某某不覆盖」）、**G6 字节同源**（git 报「干净」的文件，工作区字节必须逐字节等于 index blob；抓的是被 stat 缓存掩盖的 EOL 漂移与等长篡改——`git diff` 看不见、`touch` 一下才暴露，非 git 检出跳过并明说未校验）。**「有没有 CLI」不靠声称，靠实测**：`ltw_parse.py` / `ltw_typography.py` 这类无 `__main__` 的模块对任何参数都 rc=0，它们进不了任何命令清单，只能登记为内部模块并说明覆盖由谁承担。
 
-`rule_contract --selftest` 覆盖 15 个用例：真实契约可加载、缺文件、空文件、非法 JSON、缺顶层键、schema 版本不符、枚举重复、比例非法、group_slugs 与学科族不一致、discipline_slugs 重复、`kp.judge` 缺失、`kp.judge.max_dates` 非正、缺业务常量键。**用例计数由脚本自报（不写死在文案里）**，新增校验项不必再同步改这句话。**契约里已没有场景注册表、意图登记、文件清单或规则编号登记**——那些只服务索引的编译关系随编译层一起退役，因此也没有对应的校验子命令。`report-load-footprint` 只读报告每场景 core/补读字符与轮级加载量；`--check` 只校验结构（分册存在、补读小节可解析），数值一律不参与闸口。
+`rule_contract --selftest` 覆盖 22 个用例：真实契约可加载、缺文件、空文件、非法 JSON、缺顶层键、schema 版本不符、枚举重复、比例非法、group_slugs 与学科族不一致、discipline_slugs 重复、`kp.judge` 缺失、`kp.judge.max_dates` 非正、缺业务常量键；外加**两处 schema 声明必须相等**（票 91）——登记表里 `rule_contract.py` 那条的 `schema` 必须等于本脚本的 `SCHEMA` 常量，含五个用例：真实登记表相等、只改文档侧一处变红、还原回绿、文档侧删掉字段变红、登记表缺该条目变红；再加两条反例锁住边界：**索引侧 `learn-task-index/7` 改掉仍绿**（它是另一套产物版本，不参与相等，也不得被一并抹平）、**别的脚本也声明 `ltw-rules/*` 变红**（这只认一处登记）。**用例计数由脚本自报（不写死在文案里）**，新增校验项不必再同步改这句话。**契约里已没有场景注册表、意图登记、文件清单或规则编号登记**——那些只服务索引的编译关系随编译层一起退役，因此也没有对应的校验子命令。`report-load-footprint` 只读报告每场景 core/补读字符与轮级加载量；`--check` 只校验结构（分册存在、补读小节可解析），数值一律不参与闸口。
 
 ### 打包与验证
 
@@ -388,7 +388,7 @@ python -B evals/verify-gate-registry.py
 
 ### 当前核验
 
-- 适用版本：9.21.11
+- 适用版本：9.21.13
 - 核验日期：2026-11-14
 - 环境依赖：`skill-dependencies.json`（核心层 Python `min_version`；增强层 `mmdc` 缺席不阻断）；只有 `check_environment.py` 输出 `ready` 才能继续，`degraded` 按上一节「核心层与增强层」说明一句。
 

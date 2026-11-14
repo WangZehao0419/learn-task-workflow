@@ -10,7 +10,9 @@
 那些只服务索引的编译关系已随编译层一起退役。
 
 --selftest 覆盖：真实契约可加载、缺文件、空文件、非法 JSON、缺键、枚举重复、比例非法、
-kp.judge（目行判定三字段的枚举与日期上限）缺失或越界。
+kp.judge（目行判定三字段的枚举与日期上限）缺失或越界；以及**两处 schema 声明必须相等**
+——登记表 contracts/scripts-contract.json 里本脚本那条的 schema 与本文件的常量 SCHEMA——
+含「只改其中一处就红、还原就绿」的变异用例，与「索引侧 learn-task-index/7 不参与相等」的反例。
 """
 from __future__ import annotations
 
@@ -20,6 +22,13 @@ import sys
 from pathlib import Path
 
 SCHEMA = "ltw-rules/3"
+# schema 声明在仓里有两处必然相等的副本（票 91）：本文件的 SCHEMA，与登记表
+# contracts/scripts-contract.json 里 rule_contract.py 那条的 schema。这对副本漂移过很久
+# 且没人发现——validate() 只查被加载的契约，查不到登记表里的那一处。
+SCHEMA_REGISTRY_SCRIPT = "rule_contract.py"
+# 只有 rule_contract.py 可以声明 ltw-rules/ 家族。同一份登记表里的 learn-task-index/7
+# 是索引产物版本，语义不同，**不要求相等**，也不得被这条判据一并抹平。
+SCHEMA_FAMILY = "ltw-rules/"
 # 必填键收窄为结构版本与常量两组
 REQUIRED_TOP = ("schema", "version", "constants")
 # 七个确定性脚本与行为脚本实际消费的业务常量键
@@ -61,6 +70,42 @@ def _dup(values) -> list:
             dup.append(v)
         seen.add(v)
     return dup
+
+
+def schema_declarations_mismatch(data: dict) -> "str | None":
+    """两处必须相等的 schema 声明：登记表里 rule_contract.py 的 schema 与代码常量 SCHEMA。
+
+    判据（票 91）：
+      ① 登记表里必须有一条 rule_contract.py，且它的 schema == SCHEMA；
+      ② ltw-rules/ 家族只允许 rule_contract.py 声明——别的脚本也声明 ltw-rules/*
+         说明有人在把第三处一并抹平，必须红；
+      ③ 其余 schema（如索引侧的 learn-task-index/7）是另一套产物版本，**不参与**比较：
+         它们可以自由变化，不得被本判据收编。
+
+    返回 None 表示通过，否则返回人读差异。本函数只读、不写盘、不联网。
+    """
+    entries = data.get("scripts_contract")
+    if not isinstance(entries, list):
+        return "登记表缺 scripts_contract 数组"
+    declared = None
+    outsiders = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        schema = entry.get("schema")
+        if not (isinstance(schema, str) and schema.strip()):
+            continue
+        if entry.get("script") == SCHEMA_REGISTRY_SCRIPT:
+            declared = schema
+        elif schema.startswith(SCHEMA_FAMILY):
+            outsiders.append("%s=%r" % (entry.get("script"), schema))
+    if declared is None:
+        return "登记表缺 %s 的 schema 声明" % SCHEMA_REGISTRY_SCRIPT
+    if declared != SCHEMA:
+        return "登记表 %r ≠ 代码常量 %r" % (declared, SCHEMA)
+    if outsiders:
+        return "ltw-rules 家族被第三处声明：%s" % "、".join(outsiders)
+    return None
 
 
 def validate(data: dict) -> dict:
@@ -226,6 +271,78 @@ def _selftest() -> int:
             d["schema"] = "ltw-rules/2"
             return load(write("schema.json", d))
         case("schema 版本不符", bad_schema, False)
+
+        # ── 两处 schema 声明必须相等（票 91）──────────────────────────────
+        # 真实登记表当夹具：断言的对象就是线上那两个值，不是另造一份常量。
+        def must(cond, msg):
+            if not cond:
+                _fail("E-CONTRACT-INVALID", msg)
+
+        real_contract = json.loads(
+            (skill_root() / "contracts" / "scripts-contract.json").read_text(encoding="utf-8"))
+
+        def mutate(script, new_schema, drop_entry=False):
+            d = json.loads(json.dumps(real_contract))
+            kept = []
+            for entry in d["scripts_contract"]:
+                if isinstance(entry, dict) and entry.get("script") == script:
+                    if drop_entry:
+                        continue
+                    if new_schema is None:
+                        entry.pop("schema", None)
+                    else:
+                        entry["schema"] = new_schema
+                kept.append(entry)
+            d["scripts_contract"] = kept
+            return d
+
+        def pair_ok():
+            diff = schema_declarations_mismatch(real_contract)
+            must(diff is None, "真实登记表两处 schema 不一致：%s" % diff)
+
+        def pair_drift_detected():
+            must(schema_declarations_mismatch(mutate(SCHEMA_REGISTRY_SCRIPT, SCHEMA + "-drift"))
+                 is not None, "文档侧单独漂移没有被发现")
+
+        def pair_reverted_clean():
+            must(schema_declarations_mismatch(mutate(SCHEMA_REGISTRY_SCRIPT, SCHEMA)) is None,
+                 "还原后仍报漂移")
+
+        def pair_missing_field_detected():
+            must(schema_declarations_mismatch(mutate(SCHEMA_REGISTRY_SCRIPT, None))
+                 is not None, "文档侧删掉 schema 字段没有被发现")
+
+        def pair_missing_entry_detected():
+            must(schema_declarations_mismatch(
+                mutate(SCHEMA_REGISTRY_SCRIPT, SCHEMA, drop_entry=True)) is not None,
+                 "登记表里没有 rule_contract.py 这一条也没有被发现")
+
+        def pinned(script, new_schema):
+            # 先把文档侧钉到代码常量，再动 targets：这样反例只证明「这一处不参与相等」。
+            # 不钉的话，文档侧漂移会污染反例，让它为错误的理由变红（变异测试 M1 实测踩到）。
+            base = mutate(SCHEMA_REGISTRY_SCRIPT, SCHEMA)
+            for entry in base["scripts_contract"]:
+                if isinstance(entry, dict) and entry.get("script") == script:
+                    entry["schema"] = new_schema
+            return base
+
+        def index_side_exempt():
+            # 反例：索引侧是另一套产物版本，改它不得变红——锁住「不得把第三个一并抹平」
+            must(schema_declarations_mismatch(pinned("task_index.py", "learn-task-index/99")) is None,
+                 "索引侧 schema 被收编进了两处相等判据")
+
+        def third_declaration_rejected():
+            # 另一个脚本也来声明 ltw-rules/*，必须红：这条判据只认一处登记
+            must(schema_declarations_mismatch(pinned("task_index.py", SCHEMA)) is not None,
+                 "ltw-rules 家族被第三处声明也没有被发现")
+
+        case("真实登记表两处 schema 相等", pair_ok, True)
+        case("变异：只改文档侧一处 → 红", pair_drift_detected, True)
+        case("变异：文档侧还原 → 绿", pair_reverted_clean, True)
+        case("变异：文档侧删掉 schema 字段 → 红", pair_missing_field_detected, True)
+        case("变异：登记表缺该条目 → 红", pair_missing_entry_detected, True)
+        case("反例：索引侧 schema 不参与相等 → 绿", index_side_exempt, True)
+        case("反例：第三处声明 ltw-rules/* → 红", third_declaration_rejected, True)
 
         def dup_phase():
             d = json.loads(json.dumps(base))
