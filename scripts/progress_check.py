@@ -277,12 +277,17 @@ def judge_warnings(row, ex_dir):
 
     票 81 决议把「形态」与「语义」分家：形态问题（非法枚举值 / 重复键 / 日期格式坏 /
     指针格式坏 / 日期不升序或超上限）已在 parse_kp_row 里 fail closed → W-UNPARSED-KP。
-    这里只管「格式合法但账没对上」的四类：
+    这里只管「格式合法但账没对上」的五类：
 
       1. 判定=已判 但缺判定依据；
       2. 判定依据指向的文件不存在，或文件里没有该题号；
-      3. 指针个数 ≠ 独立正确的日期个数；
-      4. 判定缺席或为「未判」，却写了独立正确 / 判定依据。
+      3. 独立正确**非空**时，指针个数 ≠ 日期个数；
+      4. 独立正确**为空**（摸底「已会」的单次证据路径）却写了 >1 个指针；
+      5. 判定缺席或为「未判」，却写了独立正确 / 判定依据。
+
+    第 3/4 条的分叉是票 81 Q2 的必然推论：Q2 明写「独立正确可空，否则摸底目永远判不了」，
+    若机械套用「个数必须等于日期个数」，空日期 + 1 指针就会被判违规——**规则反过来把
+    它要保护的那个场景判成错**。
 
     **边界（必须与契约注记一致）**：只能验指针闭合，验不了「这个题号是不是真的判对了」
     ——闸口看不到对话与判分过程。不写这句就是把「数据对了」冒充成「判定做了」。
@@ -312,9 +317,18 @@ def judge_warnings(row, ex_dir):
         msgs.append("目行「" + kid + "」独立正确写了 " + str(len(dates)) + " 个日期但只有 " +
                     str(distinct) + " 个不同日期——同日重复不构成「跨日」证据")
 
-    if len(refs) != len(dates):
-        msgs.append("目行「" + kid + "」判定依据 " + str(len(refs)) + " 个、独立正确 " +
-                    str(len(dates)) + " 个日期——两者必须一一对齐（全角分号分隔）")
+    # 对齐规则（票 81 Q2 的必然推论，票面表里「个数必须等于日期个数」没写这个例外）：
+    #   独立正确**非空** → 指针个数必须等于日期个数；
+    #   独立正确**为空** → 这是摸底「已会」的单次证据路径（Q2 明写「不要求独立正确非空，
+    #   否则摸底目永远判不了」），只允许 1 个指针。不写这个例外，Q2 保护的那个场景
+    #   反而会被本码误报——正是「规则写了、反向把目标场景判违规」的典型。
+    if dates:
+        if len(refs) != len(dates):
+            msgs.append("目行「" + kid + "」判定依据 " + str(len(refs)) + " 个、独立正确 " +
+                        str(len(dates)) + " 个日期——两者必须一一对齐（全角分号分隔）")
+    elif len(refs) > 1:
+        msgs.append("目行「" + kid + "」独立正确为空（单次证据路径）却写了 " + str(len(refs)) +
+                    " 个判定依据——该路径只允许 1 个指针（要记跨日证据就把日期补上）")
 
     for ref in refs:
         m = JUDGE_REF_RE.match(ref)
@@ -2432,6 +2446,36 @@ def selftest():
             ["判定：已判", "独立正确：2026-02-30"]), EVS))
         ok = ok and any(w["code"] == "W-UNPARSED-KP" for w in r44["warnings"])
 
+        # ㊺ 摸底路径：已判 + **空独立正确** + 1 个依据 → 零告警（票 81 Q2 明确允许）
+        # 这是「个数必须等于日期个数」的例外分支；不写这条断言，机械对齐规则会把
+        # Q2 要保护的场景判成违规，且没有任何用例会发现。
+        r45 = check(_judge_dir("judge-bottom", _judge_row(
+            ["判定：已判", "判定依据：" + REF_A]), EVS))
+        ok = ok and r45["ok"]
+        ok = ok and not any(w["code"] == "W-KP-JUDGE" for w in r45["warnings"])
+
+        # ㊻ 空独立正确却写 2 个依据 → W-KP-JUDGE（单次证据路径只允许 1 个指针）
+        r46 = check(_judge_dir("judge-bottom-2ref", _judge_row(
+            ["判定：已判", "判定依据：" + REF_A + "；" + REF_B]), EVS))
+        ok = ok and r46["ok"]
+        ok = ok and any(w["code"] == "W-KP-JUDGE" and "只允许 1 个指针" in w["message"]
+                        for w in r46["warnings"])
+
+        # ㊼ 判定**缺席**（不写判定键）却写了独立正确 → W-KP-JUDGE
+        # 覆盖「缺省」这一支：只写 dates、不写 refs，专门堵 M6 那类「dates or refs → refs」的假绿。
+        r47 = check(_judge_dir("judge-absent-dates", _judge_row(
+            ["独立正确：2026-11-10"]), EVS))
+        ok = ok and r47["ok"]
+        ok = ok and any(w["code"] == "W-KP-JUDGE" and "缺省" in w["message"]
+                        for w in r47["warnings"])
+
+        # ㊽ 判定缺席却写了**判定依据** → W-KP-JUDGE（缺省 + refs 单支）
+        r48 = check(_judge_dir("judge-absent-ref", _judge_row(
+            ["判定依据：" + REF_A]), EVS))
+        ok = ok and r48["ok"]
+        ok = ok and any(w["code"] == "W-KP-JUDGE" and "缺省" in w["message"]
+                        for w in r48["warnings"])
+
         # ㉖ 判分文件存在但内容无「判分/作答」→ W-EMPTY-EVIDENCE（warning 级不阻断）
         d26 = Path(td) / "empty-ev"
         (d26 / "exercises").mkdir(parents=True)
@@ -2881,7 +2925,9 @@ def selftest():
             "- 题2：作答「x」｜正确性=未判｜独立性=未测\n" + RESTATE)
         r53, c53 = _codes("v60-void-only", PROG_S3, EV_VOID_ONLY, release=True)
         ok = ok and (not r53["ok"]) and "E-NO-GRADED-ATTEMPT" in c53
-        ok = ok and any("作废" in e["message"] and "未判" in e["message"]
+        # 补 code 谓词：只按子串找，任何一条错误消息同时含「作废」「未判」都会假绿
+        ok = ok and any(e["code"] == "E-NO-GRADED-ATTEMPT"
+                        and "作废" in e["message"] and "未判" in e["message"]
                         for e in r53["errors"])
         ok = ok and any(w["code"] == "W-VOIDED-ATTEMPT" for w in r53["warnings"])
         ok = ok and any(w["code"] == "W-UNGRADED-ATTEMPT" for w in r53["warnings"])

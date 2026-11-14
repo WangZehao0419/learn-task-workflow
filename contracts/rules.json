@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/3",
- "version": "9.21.9",
+ "version": "9.21.10",
  "constants": {
   "phases": [
    "接料建档",

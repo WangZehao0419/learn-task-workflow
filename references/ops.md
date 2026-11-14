@@ -147,7 +147,7 @@
 | progress_check | `W-NO-ROUTE` / `W-UNPARSED-ROUTE` / `W-NO-COVERAGE` / `W-NO-COVERAGE-AUDIT` | 无路线 / 路线畸形 / 无覆盖 / 缺审计 |
 | progress_check / task_index | `W-UNPARSED-HOLD` / `W-MULTI-EVIDENCE` / `W-CURSOR-DANGLING` / `W-NO-PROPOSED-STATE` | 暂缓条目畸形 / 多份证据 / 游标悬空 / 未提供拟提交状态 |
 | progress_check | `W-KP` / `W-KP-LIST-MISSING` / `W-KP-SUMMARY-MISMATCH` / `W-KP-HOLD-CROSS` / `W-KP-STATE-MISMATCH` | 课程体系缺失 / 覆盖摘要不符 / 双写不交 / 状态不符 |
-| progress_check | `W-KP-JUDGE` | 目行判定三字段**格式合法但语义不闭合**：`判定=已判` 却缺 `判定依据` / 依据指向的判分记录或题号不存在 / 指针个数 ≠ `独立正确` 日期个数 / 同日重复不足「不同日数」/ `判定` 缺席或为「未判」却写了另两字段。**只验指针闭合，验不了「这个题号是不是真的判对了」**（闸口看不到对话与判分过程）；warning 不拦截、不影响 `ok` |
+| progress_check | `W-KP-JUDGE` | 目行判定三字段**格式合法但语义不闭合**：`判定=已判` 却缺 `判定依据` / 依据指向的判分记录或题号不存在 / 日期非空时指针个数 ≠ 日期个数（日期为空时只允许 1 个指针）/ 同日重复不足「不同日数」/ `判定` 缺席或为「未判」却写了另两字段。**只验指针闭合，验不了「这个题号是不是真的判对了」**（闸口看不到对话与判分过程）；warning 不拦截、不影响 `ok` |
 | progress_check | `W-CURRENT-SECTION` | `当前节` 与学习路线勾选/阶段不一致（节末未递增、跳节或未写末节序号） |
 | progress_check | `W-GRADED-LOSS-UNLOGGED` | 节判分记录中「判错」行或标「→ 入薄弱点」行未入薄弱点/错题本（含 `j-` 加练；`z-`/`00-`/`99-`/`S4-` 前缀与作废行豁免；warning 不拦截） |
 | progress_check | `W-UNPARSED-KP` / `W-UNPARSED-MODULE` / `W-UNPARSED-MATERIAL` / `W-MODULE` / `W-MODULE-CONTRACT-INCOMPLETE` / `W-MATERIAL-COVERAGE-GAP` | 课程体系目行 / 章规划行 / 材料条目畸形，或章规划与材料覆盖契约不完整 |
@@ -387,7 +387,7 @@ python -B evals/verify-gate-registry.py
 
 ### 当前核验
 
-- 适用版本：9.21.9
+- 适用版本：9.21.10
 - 核验日期：2026-11-14
 - 环境依赖：`skill-dependencies.json`（核心层 Python `min_version`；增强层 `mmdc` 缺席不阻断）；只有 `check_environment.py` 输出 `ready` 才能继续，`degraded` 按上一节「核心层与增强层」说明一句。
 
