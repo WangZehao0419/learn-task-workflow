@@ -31,6 +31,19 @@ kp.judge（目行判定三字段的枚举与日期上限）缺失或越界；以
 与 `--redline-keys` 都会显示）。反向**不判硬错**：容器先于内容落地，票 98 才填凭据正文，
 此刻 23 条出处必然全部未被引用；把它设成硬错会让契约在整个重写期不可加载，等于用闸口
 堵死自己的施工顺序。
+
+票 98 往容器里填了内容，并把两条体例约束变成会红的断言：
+
+    E-REDLINE-SEGMENT-MISSING  四段（凭据/覆盖/判定层/不能推出）缺任一段即红
+    E-REDLINE-SEGMENT-OVER     四段合计字符数 > REDLINE_SEGMENT_LIMIT（400）即红
+    E-SKILL-REDLINE-BUDGET     SKILL.md 红线节字符数 > SKILL_REDLINE_SECTION_LIMIT（5000）即红
+
+字符数的算法写死在这里，不留解释空间：**四段合计** = coverage + decision_layer +
+cannot_infer + 出处外键（按 `、` 连接）的字符数，判据原文不计。**红线节** = 从
+`## 十一条教学红线` 那一行起、到下一个二级标题之前为止（含标题行，行间换行计 1 字符）。
+
+为什么「上界写死在契约里」而不是写死在 SKILL.md 里：判据自足 ≠ 判定自足。入口只放判据，
+体例预算与凭据正文在契约里，两者由同一处常量收口，才不会出现「文档写 400、代码没拦」的漂移。
 """
 from __future__ import annotations
 
@@ -64,6 +77,23 @@ REDLINE_FIELDS = ("key", "order", "evidence", "coverage", "decision_layer",
                   "cannot_infer")
 REDLINE_KEY_RE = re.compile(r"^R(?P<line>[1-9][0-9]*)\.(?P<slug>[a-z][a-z0-9]*(?:-[a-z0-9]+)*)$")
 SOURCE_FIELDS = ("table", "section")
+# 票 42 Q7：每条子判据的「凭据 + 覆盖 + 判定层 + 不能推出」四段合计 ≤400 字符。
+# 票 42/49/52 的算术：11 条判据正文约 3.2k 字符已占掉入口预算，四段 11×400 塞进去必然
+# 撑破 5,000 字符上限，所以四段只能住契约——这里把它变成会红的断言，而不是文档里的一句话。
+REDLINE_SEGMENT_LIMIT = 400
+# 票 42 Q7：红线节（`## 十一条教学红线` 到下一个二级标题）合计 ≤5,000 字符。
+# SKILL.md 是**被重写对象**，它的预算由契约侧的只读检查来断言，不让被测方给自己打分。
+SKILL_MD = "SKILL.md"
+REDLINE_SECTION_HEAD = "## 十一条教学红线"
+SKILL_REDLINE_SECTION_LIMIT = 5000
+REDLINE_SEGMENT_TEXT_FIELDS = ("coverage", "decision_layer", "cannot_infer")
+# 凭据段（票 42 A 段）是**两样东西**：凭据类型 E1–E6（这一条有多硬）与出处外键
+# R<批>-<n>（硬到哪一步有原始文献）。两者都进 evidence，因为它俩是同一段的两个坐标：
+# 只写类型会退化成「我觉得算工程约定」，只写出处又答不出「有没有实验」。
+# E6 不是「弱」：它是「不可用实验裁决」，价值立场一旦定下，约束力与 E1 同级——这句必须
+# 落在代码旁边，否则下游会把 E6 当可豁免项。未在下面的白名单里的类型串一律按孤儿引用判红，
+# 这样「凭据分级」不允许随手编一个新等级出来。
+REDLINE_EVIDENCE_TIERS = ("E1", "E2", "E3", "E4", "E5", "E6")
 
 
 class ContractError(ValueError):
@@ -281,12 +311,31 @@ def _validate_redlines(c: dict) -> None:
 
             ev = ct["evidence"]
             _require(isinstance(ev, list), "E-CONTRACT-INVALID", "%s.evidence 必须是数组" % key)
+            tiers = [ref for ref in ev if isinstance(ref, str)
+                     and ref in REDLINE_EVIDENCE_TIERS]
+            _require(tiers, "E-EVIDENCE-REF-MISSING",
+                     "%s 的凭据段没有凭据类型（E1–E6 一个都没有，无法判断这一条有多硬）" % key)
             for ref in ev:
+                if isinstance(ref, str) and ref in REDLINE_EVIDENCE_TIERS:
+                    continue
                 _require(isinstance(ref, str) and ref in srcs, "E-EVIDENCE-REF-MISSING",
                          "%s 引用了 sources 里不存在的出处 %r（孤儿引用）" % (key, ref))
-            for f in ("coverage", "decision_layer", "cannot_infer"):
+            for f in REDLINE_SEGMENT_TEXT_FIELDS:
                 _require(isinstance(ct[f], str), "E-CONTRACT-INVALID",
-                         "%s.%s 必须是字符串（允许空串占位）" % (key, f))
+                         "%s.%s 必须是字符串" % (key, f))
+
+            # 四段体例（票 98）：缺一段即红，超 400 字符即红。既不做成「警告」也不做成
+            # 「可选」——可选等于永远没人填，这是本仓在「契约首版留空」上已经交过的学费。
+            # 凭据段的「空」由上面的类型检查先兜住（没有 E1–E6 就是 E-EVIDENCE-REF-MISSING），
+            # 这里只管另外三段——留一个永远够不着的分支，等于留一处没人验证过的判据。
+            empty = [f for f in REDLINE_SEGMENT_TEXT_FIELDS if not ct[f].strip()]
+            _require(not empty, "E-REDLINE-SEGMENT-MISSING",
+                     "%s 的四段没写全，缺：%s（凭据/覆盖/判定层/不能推出缺一不可）"
+                     % (key, "、".join(empty)))
+            seg_len = redline_segment_length(ct)
+            _require(seg_len <= REDLINE_SEGMENT_LIMIT, "E-REDLINE-SEGMENT-OVER",
+                     "%s 的四段合计 %d 字符 > 上限 %d（判据原文不计；超出即把研究笔记搬进契约）"
+                     % (key, seg_len, REDLINE_SEGMENT_LIMIT))
 
         _require(sorted(orders) == list(range(1, len(orders) + 1)), "E-CONTRACT-INVALID",
                  "redlines.%d 的 order 必须是 1..%d 的一个排列（实际 %s）"
@@ -316,6 +365,60 @@ def orphan_sources(data: dict) -> list:
     used = {ref for line in redlines_of(data).values()
             for ct in line["criteria"] for ref in ct["evidence"]}
     return sorted(set(srcs) - used)
+
+
+def redline_segment_text(ct: dict) -> str:
+    """四段的人读正文：覆盖 + 判定层 + 不能推出 + 出处外键（判据原文不计）。"""
+    parts = [ct.get(f, "") if isinstance(ct.get(f), str) else ""
+             for f in REDLINE_SEGMENT_TEXT_FIELDS]
+    ev = ct.get("evidence")
+    parts.append("、".join(ev) if isinstance(ev, list) else "")
+    return "".join(parts)
+
+
+def redline_segment_length(ct: dict) -> int:
+    return len(redline_segment_text(ct))
+
+
+def skill_redline_section(skill_md, head=REDLINE_SECTION_HEAD) -> "str | None":
+    """截出 SKILL.md 的红线节：从 head 那一行起，到下一个二级标题之前。
+
+    找不到 head 返回 None（调用方必须把它当红——找不到锚点的预算检查是假绿）。
+    """
+    lines = Path(skill_md).read_text(encoding="utf-8").split("\n")
+    start = None
+    for i, line in enumerate(lines):
+        if line.startswith(head):
+            start = i
+            break
+    if start is None:
+        return None
+    end = len(lines)
+    for j in range(start + 1, len(lines)):
+        if lines[j].startswith("## "):
+            end = j
+            break
+    return "\n".join(lines[start:end])
+
+
+def skill_redline_section_chars(skill_md, head=REDLINE_SECTION_HEAD) -> "int | None":
+    sec = skill_redline_section(skill_md, head)
+    return None if sec is None else len(sec)
+
+
+def skill_redline_section_violation(root: Path | None = None) -> "str | None":
+    """红线节字符数超预算、或锚点缺失时返回人读说明；通过返回 None。只读。"""
+    base = Path(root) if root is not None else skill_root()
+    p = base / SKILL_MD
+    try:
+        chars = skill_redline_section_chars(p)
+    except OSError as e:
+        return "红线节预算检查读不到 %s：%s" % (SKILL_MD, e)
+    if chars is None:
+        return "%s 里找不到红线节锚点 %r（找不到就无从检查，按红处理）" % (SKILL_MD, REDLINE_SECTION_HEAD)
+    if chars > SKILL_REDLINE_SECTION_LIMIT:
+        return "红线节 %d 字符 > 上限 %d" % (chars, SKILL_REDLINE_SECTION_LIMIT)
+    return None
 
 
 def render_redlines(data: dict) -> str:
@@ -642,6 +745,114 @@ def _selftest() -> int:
             return data
         case("反向校验：sources 被孤儿/被引用完整覆盖", orphan_reported, True)
 
+        # ── 四段体例与红线节预算（票 98）────────────────────────────────
+        # 这一组盯的是「体例本身会不会烂掉」：四段少一段没人发现、超 400 字符没人发现、
+        # 入口红线节被写胖到压缩砍点之后没人发现——三种都是静默失效，必须各自会红。
+        def drop_segment(field):
+            def _make():
+                d = json.loads(json.dumps(base))
+                d["constants"]["redlines"]["1"]["criteria"][0][field] = ""
+                return load(write("noseg_%s.json" % field, d))
+            return _make
+
+        for field in REDLINE_SEGMENT_TEXT_FIELDS:
+            case("四段缺 %s → 红" % field, drop_segment(field), False)
+
+        def drop_evidence():
+            d = json.loads(json.dumps(base))
+            d["constants"]["redlines"]["1"]["criteria"][0]["evidence"] = []
+            return load(write("noev.json", d))
+        # 凭据为空时先被类型检查拦下（没有 E1–E6 就判断不了这一条有多硬），
+        # 所以这里断言的是「红」，不是某个具体错误码——写死错误码会把实现细节当判据。
+        case("四段缺凭据 → 红", drop_evidence, False)
+
+        def evidence_source_only():
+            # 只有出处的凭据段等价于「没分级」：必须红，否则「这条有多硬」永远没人写
+            d = json.loads(json.dumps(base))
+            d["constants"]["redlines"]["1"]["criteria"][0]["evidence"] = ["R1-1"]
+            return load(write("evonly.json", d))
+        case("凭据只有出处、没有 E1–E6 类型 → 红", evidence_source_only, False)
+
+        def evidence_bad_tier():
+            d = json.loads(json.dumps(base))
+            d["constants"]["redlines"]["1"]["criteria"][0]["evidence"] = ["E9"]
+            return load(write("evtier.json", d))
+        case("凭据类型不在 E1–E6 白名单 → 红", evidence_bad_tier, False)
+
+        def segment_over():
+            d = json.loads(json.dumps(base))
+            ct = d["constants"]["redlines"]["1"]["criteria"][0]
+            ct["cannot_infer"] = "推" * REDLINE_SEGMENT_LIMIT
+            return load(write("segover.json", d))
+        case("四段合计超 400 字符 → 红", segment_over, False)
+
+        def segment_boundary_ok():
+            # 正好等于上限必须绿：把边界写成 < 会把上限悄悄改成 399，谁也不会发现
+            d = json.loads(json.dumps(base))
+            ct = d["constants"]["redlines"]["1"]["criteria"][0]
+            room = REDLINE_SEGMENT_LIMIT - (redline_segment_length(ct) - len(ct["cannot_infer"]))
+            assert room > 0, "夹具预算不足，边界用例失效"
+            ct["cannot_infer"] = "推" * room
+            assert redline_segment_length(ct) == REDLINE_SEGMENT_LIMIT
+            return load(write("segedge.json", d))
+        case("四段合计正好 400 字符 → 绿", segment_boundary_ok, True)
+
+        def real_segments_filled():
+            data = load(real)
+            names = redline_keys(data)
+            assert names, "真实契约没有子判据"
+            for line in redlines_of(data).values():
+                for ct in line["criteria"]:
+                    assert ct["evidence"], "%s 凭据段为空" % ct["key"]
+                    for f in REDLINE_SEGMENT_TEXT_FIELDS:
+                        assert ct[f].strip(), "%s.%s 为空" % (ct["key"], f)
+                    assert redline_segment_length(ct) <= REDLINE_SEGMENT_LIMIT, \
+                        "%s 四段 %d 字符超预算" % (ct["key"], redline_segment_length(ct))
+            return data
+        case("真实契约：四段全部写全且都在 400 字符内", real_segments_filled, True)
+
+        def forbidden_source_not_cited():
+            # R1-5 在 CREDITS 里明写「未核实、不得引用」。它必须一直是孤儿——
+            # 有人把它填进 evidence，就是拿未核实的条目当凭据，比留空更坏。
+            data = load(real)
+            orph = set(orphan_sources(data))
+            assert "R1-5" in orph, "R1-5 标了不得引用，不得出现在任何凭据里"
+            return data
+        case("负向记录 R1-5 未被任何子判据引用", forbidden_source_not_cited, True)
+
+        def skill_budget_ok():
+            assert skill_redline_section_violation() is None, \
+                "真实 SKILL.md 红线节超预算：%s" % skill_redline_section_violation()
+        case("真实 SKILL.md 红线节 ≤%d 字符" % SKILL_REDLINE_SECTION_LIMIT,
+             skill_budget_ok, True)
+
+        # 红线节预算的变异：在临时目录里造一份 SKILL.md，把红线节撑胖 → 必红；还原 → 必绿。
+        # 不拿真实 SKILL.md 开刀：变异测试改被测文件再改回来，中间态一旦被别的进程读到就是事故。
+        def skill_budget_mutation():
+            fake = td / "fake_skill"
+            fake.mkdir(exist_ok=True)
+            p = fake / SKILL_MD
+            p.write_text("%s\n小\n\n## 下一节\n" % REDLINE_SECTION_HEAD, encoding="utf-8")
+            assert skill_redline_section_violation(fake) is None, "小红线节应通过"
+            p.write_text("%s\n%s\n\n## 下一节\n"
+                         % (REDLINE_SECTION_HEAD, "胖" * (SKILL_REDLINE_SECTION_LIMIT + 1)),
+                         encoding="utf-8")
+            assert skill_redline_section_violation(fake) is not None, "撑胖后没有变红"
+            p.write_text("%s\n小\n\n## 下一节\n" % REDLINE_SECTION_HEAD, encoding="utf-8")
+            assert skill_redline_section_violation(fake) is None, "还原后仍报超预算"
+            return True
+        case("变异：红线节撑到 >%d 字符 → 红，还原 → 绿"
+             % SKILL_REDLINE_SECTION_LIMIT, skill_budget_mutation, True)
+
+        def skill_budget_anchor_missing():
+            fake = td / "fake_nohead"
+            fake.mkdir(exist_ok=True)
+            (fake / SKILL_MD).write_text("## 别的节\n内容\n", encoding="utf-8")
+            assert skill_redline_section_violation(fake) is not None, \
+                "锚点找不到时必须按红处理，否则是假绿"
+            return True
+        case("红线节锚点缺失 → 红（找不到即无从检查）", skill_budget_anchor_missing, True)
+
     if fails:
         for f in fails:
             print("FAIL", f)
@@ -679,6 +890,14 @@ def main(argv=None) -> int:
             "keys": redline_keys(data),
             "fingerprint": redline_fingerprint(data),
             "orphan_sources": orphan_sources(data),
+            "segment_limit": REDLINE_SEGMENT_LIMIT,
+            "segment_max_chars": max((redline_segment_length(ct)
+                                     for line in redlines_of(data).values()
+                                     for ct in line["criteria"]), default=0),
+            "skill_redline_section_chars": skill_redline_section_chars
+            (skill_root() / SKILL_MD),
+            "skill_redline_section_limit": SKILL_REDLINE_SECTION_LIMIT,
+            "skill_redline_section_violation": skill_redline_section_violation(),
         }, ensure_ascii=False, indent=1))
         return 0
     if args.redlines:
