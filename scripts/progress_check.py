@@ -932,16 +932,9 @@ def check(task_dir, release=False, proposed=None):
     fields, sections, hold_entries = parse(text)
     # 「日达标」区结构校验（票 75）：只验行形态，不判教学事实、不拦停——
     # 「连续未达 ≥2」的阈值是 E5 工程约定，不能拿它拦学员。
-    _day_lines = []
-    _in_day = False
-    for _raw in text.splitlines():
-        _line = _raw.rstrip()
-        if _line.startswith("## "):
-            _in_day = _line[3:].strip() == "日达标"
-            continue
-        if _in_day and _line.strip().startswith("- "):
-            _day_lines.append(_line.strip()[2:].strip())
-    _day_rows, _day_bad = parse_day_rows(_day_lines)
+    # 区段切分复用 ltw_parse.parse_progress_sections（与 scheduler 同源）：自己再扫一遍
+    # 「## 」标题就是同一判据写两份，改一处两处打架。
+    _day_rows, _day_bad = parse_day_rows(parse_progress_sections(text)[4])
     for _body in _day_bad:
         warnings.append({"code": "W-DAY-ROW-INVALID",
                          "message": "「日达标」条目形态不符（应为「<YYYY-MM-DD> ｜ 达|未达 ｜ 证据：<…>」）："
@@ -3092,6 +3085,20 @@ def selftest():
         r_dayok = check(d_dayok)
         ok = ok and r_dayok["ok"]
         ok = ok and not any(w["code"] == "W-DAY-ROW-INVALID" for w in r_dayok["warnings"])
+
+        # 复核 9aaf728：照 data.md 模板原样抄的占位行不得自报坏行（闸口不惩罚照文档办事的人）
+        d_tpl = Path(td) / "day-template"
+        (d_tpl / "exercises").mkdir(parents=True)
+        (d_tpl / "progress.md").write_text(
+            _led_head + "## 薄弱点\n- 无\n\n## 错题本\n- 无\n\n## 日达标\n"
+            "- <YYYY-MM-DD> ｜ <达|未达> ｜ 证据：<exercises 文件名 / evt=ID / 无>\n"
+            "- （无记录时本区写「无」）\n" + _led_tail, encoding="utf-8")
+        (d_tpl / "课程体系.md").write_text(_led_curr, encoding="utf-8")
+        (d_tpl / "exercises" / "01-极限-2026-01-01.md").write_text(
+            _fixture_evidence_text("01-极限-2026-01-01.md", _ev_wrong), encoding="utf-8")
+        r_tpl = check(d_tpl)
+        ok = ok and r_tpl["ok"]
+        ok = ok and not any(w["code"] == "W-DAY-ROW-INVALID" for w in r_tpl["warnings"])
 
     print(("OK " if ok else "FAIL ") + "progress_check --selftest")
     return 0 if ok else 1

@@ -316,8 +316,27 @@ def parse_progress_sections(text):
 
 
 DAY_ROW_RE = re.compile(
-    r"^(\d{4}-\d{2}-\d{2})\s*[｜|]\s*(达|未达)\s*[｜|]\s*证据\s*[：:]\s*(\S.*?)\s*$")
+    r"^(\d{4}-\d{2}-\d{2})\s*[｜|]\s*(达|未达)\s*[｜|]\s*证据\s*[：:]\s*(.*?)\s*$")
 DAY_STATUSES = ("达", "未达")
+# 模板占位：照 data.md 原样抄下来、还没填的行。它们不是「写错的数据」，是「还没写」——
+# 按坏行报就是拿闸口惩罚一个照文档办事的人。判据是「必填位仍是 <...> 占位符」，
+# 不是「出现了尖括号」：证据位合法写法里本来就可以有 <exercises 文件名> 这类说明。
+_PLACEHOLDER_DATE = "<YYYY-MM-DD>"
+_PLACEHOLDER_STATUS = ("<达|未达>", "<达 | 未达>")
+_PLACEHOLDER_NOTE_RE = re.compile(r"^[（(].*[）)]$")
+
+
+def is_template_placeholder(body):
+    """整行是模板占位（未填）而非坏数据：日期位仍是 <YYYY-MM-DD>，或整行是括注说明。"""
+    if not body:
+        return False
+    if _PLACEHOLDER_NOTE_RE.match(body) and ("写「无」" in body or "无记录" in body):
+        return True
+    if not body.startswith(_PLACEHOLDER_DATE):
+        return False
+    rest = body[len(_PLACEHOLDER_DATE):]
+    return any(rest.lstrip().startswith(s) or ("｜" in rest and s in rest)
+               for s in _PLACEHOLDER_STATUS)
 
 
 def parse_day_rows(lines):
@@ -338,6 +357,8 @@ def parse_day_rows(lines):
         body = (raw or "").strip()
         if not body or body in NONE_MARKS or NONE_RE.fullmatch(body):
             continue
+        if is_template_placeholder(body):
+            continue            # 照模板原样抄的占位行不是数据，不报坏行（见下）
         m = DAY_ROW_RE.match(body)
         if not m:
             bad.append(body)

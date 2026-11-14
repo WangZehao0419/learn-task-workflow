@@ -796,7 +796,11 @@ def cmd_calibration(args):
 # ---------------------------------------------------------------------------
 
 def _prev_day(d):
-    return d - timedelta(days=1)
+    """前一天；越过 date.min 返回 None（结构化降级，不让 OverflowError 冒到外部协议）。"""
+    try:
+        return d - timedelta(days=1)
+    except (OverflowError, ValueError):
+        return None
 
 
 def day_streak_output(root, slug_filter, today):
@@ -822,7 +826,12 @@ def day_streak_output(root, slug_filter, today):
                             + "（应为「<YYYY-MM-DD> ｜ 达|未达 ｜ 证据：<…>」，实际：" + body + "）")
         by_date = {}
         for row in rows:
-            by_date[row["date"]] = row          # 同日多行：最后一行生效
+            prev = by_date.get(row["date"])
+            # 同日多行：**「达」优先**，其余按最后一行。
+            # 方向不能反——反了就把「达标日」改判成「未达」，凭空造出一次未达并触发
+            # 红线 8 判据④ 的干预，正是「宁可漏，不可错」要防的那种错。
+            if prev is None or row["met"] or not prev["met"]:
+                by_date[row["date"]] = row
         ordered = [by_date[d] for d in sorted(by_date)]
         miss_streak = 0
         cursor = today
@@ -831,7 +840,12 @@ def day_streak_output(root, slug_filter, today):
             if row is None or row["met"]:
                 break                           # 缺天 / 达 → 连续段终止
             miss_streak += 1
-            cursor = _prev_day(cursor)
+            nxt = _prev_day(cursor)
+            if nxt is None:                     # 日期下溢（0001-01-01 再往前）→ 停，不裸崩
+                warnings.append("W-DAY-STREAK-UNDERFLOW: " + slug
+                                + "（连续未达已数到日期下界，计数在此停止）")
+                break
+            cursor = nxt
         last_met = None
         for row in ordered:
             if row["met"]:
@@ -1778,6 +1792,55 @@ def selftest():
             ok = ok and rc_ds == 1
         except SystemExit:
             ok = False
+
+    # 断言 27（复核 9aaf728 补）：同日「达→未达」不得反向改判（否则凭空造出一次未达）
+    with tempfile.TemporaryDirectory() as td_rv:
+        root_rv = Path(td_rv) / ".learning"
+        d_rv = root_rv / "rv"
+        d_rv.mkdir(parents=True)
+        (d_rv / "progress.md").write_text(
+            "# 学习任务：复核\n- 最近更新：2026-10-15\n\n## 日达标\n"
+            "- 2026-10-15 ｜ 达 ｜ 证据：exercises/01-x.md\n"
+            "- 2026-10-15 ｜ 未达 ｜ 证据：无\n"
+            "- 2026-10-14 ｜ 未达 ｜ 证据：无\n", encoding="utf-8")
+        rv = day_streak_output(root_rv, "rv", date.fromisoformat("2026-10-15"))
+        ok = ok and rv["per_slug"][0]["miss_streak"] == 0     # 达优先，不改判
+        # entries 按日期排序（不是插入序）：按日期取，别拿下标当顺序
+        _by_date = {e["date"]: e for e in rv["per_slug"][0]["entries"]}
+        ok = ok and _by_date["2026-10-15"]["met"] is True
+        ok = ok and _by_date["2026-10-15"]["evidence"] == "exercises/01-x.md"
+        # 反向顺序（未达→达）同结论：方向无关，达恒胜
+        (d_rv / "progress.md").write_text(
+            "# 学习任务：复核\n- 最近更新：2026-10-15\n\n## 日达标\n"
+            "- 2026-10-15 ｜ 未达 ｜ 证据：无\n"
+            "- 2026-10-15 ｜ 达 ｜ 证据：exercises/01-x.md\n", encoding="utf-8")
+        rv2 = day_streak_output(root_rv, "rv", date.fromisoformat("2026-10-15"))
+        ok = ok and rv2["per_slug"][0]["miss_streak"] == 0
+
+        # 日期下溢：0001-01-01 再往前 → 结构化停（W-DAY-STREAK-UNDERFLOW），不裸崩
+        d_uf = root_rv / "uf"
+        d_uf.mkdir(parents=True)
+        (d_uf / "progress.md").write_text(
+            "# 学习任务：下溢\n- 最近更新：0001-01-02\n\n## 日达标\n"
+            "- 0001-01-01 ｜ 未达 ｜ 证据：无\n"
+            "- 0001-01-02 ｜ 未达 ｜ 证据：无\n", encoding="utf-8")
+        uf = day_streak_output(root_rv, "uf", date(1, 1, 2))
+        ok = ok and uf["per_slug"][0]["miss_streak"] == 2
+        ok = ok and any(w.startswith("W-DAY-STREAK-UNDERFLOW") for w in uf["warnings"])
+
+        # 模板占位行不是坏数据：照 data.md 原样抄不应自报坏行
+        _tpl_rows, _tpl_bad = parse_day_rows([
+            "<YYYY-MM-DD> ｜ <达|未达> ｜ 证据：<exercises 文件名 / evt=ID / 无>",
+            "（无记录时本区写「无」）",
+        ])
+        ok = ok and _tpl_rows == [] and _tpl_bad == []
+        # 但真坏行照报：日期非法 / 状态非法
+        _bad_rows, _bad_bad = parse_day_rows(["2026-02-30 ｜ 未达 ｜ 证据：无", "2026-10-15 ｜ 未知 ｜ 证据：无"])
+        ok = ok and _bad_rows == [] and len(_bad_bad) == 2
+        # 证据位留空合法（未达本就没证据），不再当坏行
+        _empty_rows, _empty_bad = parse_day_rows(["2026-10-15 ｜ 未达 ｜ 证据："])
+        ok = ok and len(_empty_rows) == 1 and _empty_bad == []
+        ok = ok and _empty_rows[0]["evidence"] == ""
 
     print(("OK " if ok else "FAIL ") + "scheduler --selftest")
     return 0 if ok else 1
