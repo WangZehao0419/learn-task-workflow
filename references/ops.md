@@ -371,7 +371,7 @@ python -B evals/verify-svg-checker.py
 python -B evals/verify-gate-registry.py
 ```
 
-`verify-gate-registry` 是**登记表本身的闸口**（票 65、票 54）：上面这份自测清单若与 `scripts/` 实际文件对不上，它先红。五条判据——G1 分区完备（`scripts_contract` 与 `internal_modules` 不重、不漏、无幽灵）、G2 分类自证（命令行脚本喂 `--this-flag-does-not-exist` 必须 rc≠0；内部模块喂同一参数必须 rc=0）、G3 清单可执行、G4 清单与契约同源、G5 覆盖去向（`internal_modules` 的 note 点名的每个覆盖者都必须真的 `import` 该内部模块；note 只能写肯定式，不能写「某某不覆盖」）。**「有没有 CLI」不靠声称，靠实测**：`ltw_parse.py` / `ltw_typography.py` 这类无 `__main__` 的模块对任何参数都 rc=0，它们进不了任何命令清单，只能登记为内部模块并说明覆盖由谁承担。
+`verify-gate-registry` 是**登记表本身的闸口**（票 65、票 54）：上面这份自测清单若与 `scripts/` 实际文件对不上，它先红。六条判据——G1 分区完备（`scripts_contract` 与 `internal_modules` 不重、不漏、无幽灵）、G2 分类自证（命令行脚本喂 `--this-flag-does-not-exist` 必须 rc≠0；内部模块喂同一参数必须 rc=0）、G3 清单可执行、G4 清单与契约同源、G5 覆盖去向（`internal_modules` 的 note 点名的每个覆盖者都必须真的 `import` 该内部模块；note 只能写肯定式，不能写「某某不覆盖」）、**G6 字节同源**（git 报「干净」的文件，工作区字节必须逐字节等于 index blob；抓的是被 stat 缓存掩盖的 EOL 漂移与等长篡改——`git diff` 看不见、`touch` 一下才暴露，非 git 检出跳过并明说未校验）。**「有没有 CLI」不靠声称，靠实测**：`ltw_parse.py` / `ltw_typography.py` 这类无 `__main__` 的模块对任何参数都 rc=0，它们进不了任何命令清单，只能登记为内部模块并说明覆盖由谁承担。
 
 `rule_contract --selftest` 覆盖 11 个用例：真实契约可加载、缺文件、空文件、非法 JSON、缺顶层键、schema 版本不符、枚举重复、比例非法、group_slugs 与学科族不一致、discipline_slugs 重复、缺业务常量键。**契约里已没有场景注册表、意图登记、文件清单或规则编号登记**——那些只服务索引的编译关系随编译层一起退役，因此也没有对应的校验子命令。`report-load-footprint` 只读报告每场景 core/补读字符与轮级加载量；`--check` 只校验结构（分册存在、补读小节可解析），数值一律不参与闸口。
 

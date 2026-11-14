@@ -15,6 +15,10 @@
   G4 清单同源    verification.selftest 覆盖的脚本集合必须与 scripts_contract 相等。
   G5 覆盖去向    internal_modules 的 note 若点名了某个命令行脚本，该脚本必须真的
                  import 这个内部模块。「谁覆盖谁」不是文档里的一句话，是实测。
+  G6 字节同源    git 说「干净」的文件，工作区字节必须真的等于 index 字节。
+                 抓的是被 stat 缓存掩盖的 EOL 漂移：`git status` 显示无改动，
+                 实际工作区是 CRLF 而 index 是 LF——`git diff` 看不见，`touch`
+                 一下才暴露。非 git 检出（打包后的 skill）跳过并明说未校验。
 
 为什么 G2 是核心：`ltw_parse.py` / `ltw_typography.py` 这类无 `__main__` 的模块对
 **任何**参数都 rc=0（`--selftest` 与 `--this-flag-does-not-exist` 一视同仁）。把它们
@@ -136,8 +140,74 @@ def imports_module(script_name, module_name):
     return re.search(pattern, text) is not None
 
 
+def _git(*args):
+    """在仓库根跑 git，返回 (rc, stdout_bytes)。非 git 检出时 rc!=0。"""
+    proc = subprocess.run(["git"] + list(args), cwd=str(SKILL_ROOT),
+                          capture_output=True)
+    return proc.returncode, proc.stdout
+
+
+def check_byte_identity(c):
+    """G6：git 认为未改动的文件，工作区字节必须等于 index blob。
+
+    只对 git 报「干净」的路径做比对——正常在途编辑与 index 不同是应该的，
+    不在本检查范围。返回一段人读摘要（供汇总行打印）。
+    """
+    rc, _ = _git("rev-parse", "--is-inside-work-tree")
+    if rc != 0:
+        c.check("G6 字节同源：非 git 检出，跳过（未校验）", True, "")
+        return "跳过（非 git 检出，未校验）"
+
+    rc, out = _git("diff", "--name-only", "HEAD")
+    if rc != 0:
+        c.check("G6 字节同源：git diff 执行失败，跳过（未校验）", True, "")
+        return "跳过（git 不可用，未校验）"
+    dirty = {p for p in out.decode("utf-8", "replace").splitlines() if p}
+    rc_u, out_u = _git("ls-files", "--others", "--exclude-standard")
+    if rc_u == 0:
+        dirty |= {p for p in out_u.decode("utf-8", "replace").splitlines() if p}
+
+    rc_ls, out_ls = _git("ls-files", "-s")
+    if rc_ls != 0:
+        c.check("G6 字节同源：ls-files 执行失败，跳过（未校验）", True, "")
+        return "跳过（ls-files 不可用，未校验）"
+    index = {}
+    for line in out_ls.decode("utf-8", "replace").splitlines():
+        parts = line.split("\t", 1)
+        if len(parts) != 2:
+            continue
+        meta, rel = parts
+        fields = meta.split()
+        if len(fields) < 2:
+            continue
+        index[rel] = fields[1]
+
+    TEXT_EXT = {".py", ".md", ".json", ".sh", ".yml", ".yaml", ".txt", ".svg"}
+    drifted, checked = [], 0
+    for rel, blob in sorted(index.items()):
+        if rel in dirty:
+            continue                      # 在途改动不属本检查
+        p = SKILL_ROOT / rel
+        if not p.is_file() or p.suffix.lower() not in TEXT_EXT:
+            continue
+        checked += 1
+        rc_b, blob_bytes = _git("cat-file", "blob", blob)
+        if rc_b != 0:
+            continue
+        if p.read_bytes() != blob_bytes:
+            wt = p.read_bytes()
+            drifted.append("{}（工作区 {} 字节 / index {} 字节；CRLF {} 行）".format(
+                rel, len(wt), len(blob_bytes), wt.count(b"\r\n")))
+
+    c.check("G6 字节同源：git 说干净的 {} 个文本文件，工作区字节 == index".format(checked),
+            not drifted, "漂移 {} 个：{}".format(len(drifted), "; ".join(drifted[:5])))
+    if drifted:
+        return "{} 个文件漂移".format(len(drifted))
+    return "{} 个文本文件逐字节一致".format(checked)
+
+
 def main():
-    ap = argparse.ArgumentParser(description="验收清单登记表机检（G1-G4）")
+    ap = argparse.ArgumentParser(description="验收清单登记表机检（G1-G6）")
     ap.add_argument("--selftest", action="store_true",
                     help="幂等开关：本评估无状态，带与不带行为相同")
     ap.parse_args()
@@ -204,9 +274,19 @@ def main():
                     [n for n in named if not imports_module(n, mod)],
                     [n for n in named if resolve_script(n) is None]))
 
+    # ── G6 字节同源：git 说干净的文件，字节必须真的等于 index ────────
+    # 为什么需要：git 的 stat 缓存会按 (mtime, size, inode) 判断「没变」，于是
+    # 「工作区 CRLF / index LF」这种等长或近似等长的差异会被 `git diff` 静默吞掉。
+    # 实测踩过两次（票 80 复核）：scripts/prereq_check.py 与 evals/verify-marker-rules.py
+    # 都是 w/crlf、i/lf，而 `git status` 报干净；一旦有人 touch 或换机器检出，
+    # 就会在提交里炸出几百行纯 EOL 噪声。这不是风格问题，是「闸口看不见的改动」。
+    # 边界：只查 git 认为**未改动**的文件——正常在途编辑本来就该与 index 不同，
+    # 那不是本检查的对象。
+    eol_result = check_byte_identity(c)
     print()
-    print("G1-G5 汇总：{} 过 / {} 败；scripts/ {} 个文件 = {} 命令行 + {} 内部模块；"
-          "selftest 清单 {} 条".format(c.ok, c.fail, len(on_disk), len(cli), len(internal), len(selftest)))
+    print("G1-G6 汇总：{} 过 / {} 败；scripts/ {} 个文件 = {} 命令行 + {} 内部模块；"
+          "selftest 清单 {} 条；字节同源 {}".format(
+              c.ok, c.fail, len(on_disk), len(cli), len(internal), len(selftest), eol_result))
     return 1 if c.fail else 0
 
 
