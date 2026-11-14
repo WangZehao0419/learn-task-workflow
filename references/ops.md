@@ -158,6 +158,7 @@
 | scheduler | `W-PROGRESS` / `W-PROGRESS-MISSING` / `W-PROGRESS-UNREADABLE` / `W-CONFIDENCE-AMBIGUOUS` / `W-CW-LOWCONF` / `W-CW-ORPHAN` / `W-META-INVALID` / `W-NO-EVT` | 任务进度缺失/不可读；信心/时序歧义、低信心 cw、孤立 cw、元数据非法；校准不计或跳过；条目缺 `evt=` 按单条观察计入 |
 | scheduler | `W-UNPARSED-ITEM` | 调度条目无法解析或缺合法日期，不入队、不猜值 |
 | scheduler / progress_check | `W-DAY-ROW-INVALID` | 「日达标」条目形态不符（应为「<YYYY-MM-DD> ｜ 达|未达 ｜ 证据：<…>」）/ 日期非 ISO / 状态非「达|未达」。只告警不拦停——阈值是 E5 工程约定，不能拿它拦学员 |
+| progress_check | `W-SECTION-LEVEL` | 状态簿的区标题不是二级标题（如 `### 检索锚` / `### 日达标`）。三级不切换区，条目会被并进上一条区间当条目消费，**且全程不报错**——解析层已对任何层级的同名区硬性静音（不并区、不计入），本告警让该静音看得见。只告警不拦停：存量文件不回溯，修法是把它改成 `## ` 开头 |
 | verify_explanation | `E-BOX` / `E-BOX-EMPTY` / `E-BOX-FORMAT` / `E-BOX-INCOMPLETE` / `E-BOX-WRAP` / `E-HEADER-BRIEF` / `E-REQ-MISSING` | 五要素 / 答案框 / 标记行 / 节首导读缺失或体例错误 |
 | verify_explanation | `E-IMG-DEADLINK` / `E-IMG-READ` / `E-READ-FILE` | 图引用死链 / 图读取失败 / 文件读取失败 |
 | verify_explanation | `E-RUBRIC-SUM` | 给分点量表各点分值之和不等于合计 |
@@ -389,7 +390,7 @@ python -B evals/verify-gate-registry.py
 
 ### 当前核验
 
-- 适用版本：9.21.15
+- 适用版本：9.21.16
 - 核验日期：2026-11-14
 - 环境依赖：`skill-dependencies.json`（核心层 Python `min_version`；增强层 `mmdc` 缺席不阻断）；只有 `check_environment.py` 输出 `ready` 才能继续，`degraded` 按上一节「核心层与增强层」说明一句。
 

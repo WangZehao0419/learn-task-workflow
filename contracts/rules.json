@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/3",
- "version": "9.21.15",
+ "version": "9.21.16",
  "constants": {
   "phases": [
    "接料建档",
@@ -313,6 +313,7 @@
     "W-READER-TABLE-ALIGN",
     "W-REVIEW-DEBT",
     "W-RUBRIC-SOURCE",
+    "W-SECTION-LEVEL",
     "W-SELFTEST-EMPTY",
     "W-SELFTEST-MISSING",
     "W-STALE-REVIEW-ORIGIN",

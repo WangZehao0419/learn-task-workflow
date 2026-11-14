@@ -132,6 +132,9 @@ denylist 口径:任务点名字符(→ ✓ √ ≤ ≥ ∪ ⇔)及其同族验�
 
 用法:
     python verify_explanation.py <材料目录|单文件.md>   # 目录递归取 *.md(忽略 assets/ 与非 .md)
+
+排除名单(票 97):效果报告(materials/效果报告-<课程名>.md)是评审证据不是讲义,整份跳过;
+跳过时打印「已跳过 N 个文件(不在讲义校验范围)」而不打印「通过」——跳过 ≠ 通过(票 66)。
     python verify_explanation.py <材料目录|单文件.md> --reader  # 加跑读者版 W 级可读性检查(不阻断)
     python verify_explanation.py --selftest            # 内嵌样例自检(临时目录,不写盘被校验目录)
 
@@ -177,6 +180,36 @@ SELFTEST_OPEN_RE = re.compile(
     r"^\s*[-*]\s*(?:检验|自测)说明\s*[：:].*"
     r"(?:开放|口头|无标准答案|不设|跳过|练手|动手|压缩)")
 STATUS_LINE_RE = re.compile(r"^-\s*状态\s*[:：]\s*(.*)$")
+
+# ── 讲义排除名单(票 97)──
+# materials/ 里住着两类东西:讲义(NN-<节名>.md,本脚本的被测对象)与**效果报告**
+# (效果报告-<课程名>.md)。效果报告是结课时的评审证据,不是讲义——它没有概念单元、
+# 没有五要素、没有答案框,按讲义扫必然零命中,于是旧实现打印"通过:无违规项"。
+# 这是**假绿**:它把"这份文件根本不是讲义"伪装成"这份讲义写得没问题"。
+# 五要素完整性归 verify_effect_report.py(W-EFFECT-*),本脚本不重复判、也不替它判。
+#
+# 名单按**形状**匹配,不写死单个文件名:
+#   ① 文件名前缀(EXEMPT_NAME_PREFIXES)——"效果报告-<任意课程名>.md" 全部命中;
+#   ② 路径段(EXEMPT_DIR_SEGMENTS)——"<数据根>/<slug>/materials/" 下的整段路径。
+# 新增一类同类文件时只加一条前缀/一个路径段,不改判定逻辑(可扩展是硬要求)。
+EXEMPT_NAME_PREFIXES = ("效果报告-", "效果报告_")
+EXEMPT_DIR_SEGMENTS = ("materials",)
+
+
+def exemption_reason(rel):
+    """该相对路径是否在讲义校验范围之外;在则返回原因串,否则 None。
+
+    rel 用 POSIX 分隔的相对路径(与输出里的 rel 同一坐标系)。
+    """
+    name = rel.rsplit("/", 1)[-1]
+    for prefix in EXEMPT_NAME_PREFIXES:
+        if name.startswith(prefix):
+            return "效果报告(评审证据,不按讲义五要素校验)"
+    parts = rel.split("/")[:-1]
+    for seg in EXEMPT_DIR_SEGMENTS:
+        if seg in parts:
+            return "materials/ 下的非讲义文件"
+    return None
 # 记账状态行:「状态(日期…):」+ 判分词确认;头部「- 状态:定稿(…)」是「状态:」在前,
 # 不满足「状态(」紧邻结构,不会误命中
 LEDGER_RE = re.compile(r"状态\s*[(（][^)）]*[)）]\s*[:：]")
@@ -965,16 +998,20 @@ def check_text(text, rel, base_dir=None, reader=False, skips=None):
     return findings
 
 
-def report(findings, skips=None):
+def report(findings, skips=None, exempt=None):
     """打印逐条结果与摘要行,返回退出码(0=无 E,1=有 E)。
 
     skips 非空时额外打印「已跳过」行:跳过与通过是两回事,跳过时不得出现
     「通过:无违规项」——那会把「没查」伪装成「查过且没问题」(票 66)。
+    exempt(票 97)是被排除名单挡下的文件名列表;它同样**阻止**打印「通过:无违规项」:
+    一份都没校验时还报"通过",就是把"没查"再包装一次。措辞与 skips 分开写,
+    因为两者跳过的东西不同(一个是读者版规则、一个是整份文件)。
     跳过不改变退出码语义(0=无 E,1=有 E,2=用法/路径错误)。
     """
     for level, code, rel, lineno, msg in findings:
         print("[{}] {} {}:{} {}".format(level, code, rel, lineno, msg))
     skipped = sorted(set(skips or ()))
+    exempted = sorted(set(exempt or ()))
     if findings:
         e_count = sum(1 for f in findings if f[0] == "E")
         w_count = len(findings) - e_count
@@ -982,9 +1019,12 @@ def report(findings, skips=None):
     if skipped:
         print("已跳过 {} 项读者版检查(本文不像讲义,未校验):{}".format(
             len(skipped), "/".join(skipped)))
+    if exempted:
+        print("已跳过 {} 个文件(不在讲义校验范围,未校验):{}".format(
+            len(exempted), "/".join(exempted)))
     if findings:
         return 1 if any(f[0] == "E" for f in findings) else 0
-    if not skipped:
+    if not skipped and not exempted:
         print("通过:无违规项(结构通过;内容准确性、来源可信度与教学体验未校验,须人工/领域复核)")
     return 0
 
@@ -1026,8 +1066,15 @@ def main(argv=None):
         return 2
     findings = []
     skips = []
+    exempt = []
     for f in files:
         rel = f.relative_to(p).as_posix() if p.is_dir() else f.name
+        # 排除名单(票 97):效果报告等非讲义文件不参与讲义五要素检查。
+        # 显式点名单文件时也走同一判据——**按形状排除,不按调用方式排除**,
+        # 否则「目录里跳过、单文件却校验」就是同一判据写两份。
+        if exemption_reason(rel):
+            exempt.append(rel)
+            continue
         try:
             text = f.read_text(encoding="utf-8-sig")
         except (OSError, UnicodeError) as exc:
@@ -1037,7 +1084,7 @@ def main(argv=None):
             continue
         findings.extend(check_text(text, rel, base_dir=f.parent, reader=args.reader,
                                    skips=skips))
-    return report(findings, skips)
+    return report(findings, skips, exempt)
 
 
 # ═══════════════════ selftest 内嵌样例(运行于临时目录,不写盘被校验目录) ═══════════════════
@@ -2204,6 +2251,68 @@ def selftest():
             breaks_inline(["> 解:先算 $x=", "> 2$ 再代入。"], [0, 1]))
         chk("票 69 breaks_inline 仍抓真拆断的 code span",
             breaks_inline(["> 解:见 `x", "> y` 结束。"], [0, 1]))
+        # ── 票 97:效果报告排除名单 ──
+        # 效果报告(materials/效果报告-<课程名>.md)住在讲义目录里,但它不是讲义:
+        # 没有概念单元、没有五要素、没有答案框。旧实现在这里**静默返回「通过:无违规项」**
+        # ——那不是「检查通过」,是「根本没检查」。这组用例钉死三件事:
+        #   ① 报告不被当讲义扫(不产生五要素类 E);
+        #   ② 报告缺要素时不得打印「通过」,必须打印「已跳过 N 个文件(不在讲义校验范围)」;
+        #   ③ 退出码语义不变(跳过 ≠ 通过,但也没变成失败:0 仍是 0)。
+        import contextlib
+        import io
+
+        def _run_main(args):
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = main(args)
+            return rc, buf.getvalue()
+
+        d5 = Path(td) / "materials"
+        d5.mkdir()
+        # 缺五要素的效果报告:若被当讲义扫,必然出 E-REQ-MISSING;排除后应零命中。
+        report_md = ("# 效果报告:测试课程\n\n"
+                     "- 结课绝对水平:得分 18/25(按契约默认 4/5)\n\n"
+                     "## 延迟保持\n- 判定:未测(理由:第 30 天回填)\n\n"
+                     "## 元认知校准\n- 判定:未测(理由:第 30 天回填)\n\n"
+                     "## 证据指针\n- 判定:未测(理由:第 30 天回填)\n")
+        (d5 / "效果报告-测试课程.md").write_text(report_md, encoding="utf-8")
+        rc5, out5 = _run_main([str(d5)])
+        chk("效果报告不被当讲义扫(缺五要素不报 E-REQ-MISSING)", rc5 == 0)
+        chk("效果报告不被当讲义扫(零逐条结果)", "[E]" not in out5)
+        chk("效果报告缺要素时不得打印「通过」", "通过" not in out5)
+        chk("跳过必须显式说出来(已跳过 N 个文件)", "已跳过" in out5 and "个文件" in out5)
+        chk("跳过措辞指明「不在讲义校验范围」", "不在讲义校验范围" in out5)
+        chk("排除不改退出码语义(跳过仍 rc=0)", rc5 == 0)
+        # ② 同一目录里**真正的讲义**照旧被校验:排除只挡形状命中的文件,不挡整目录。
+        (d5 / "01-示例.md").write_text(FIX_LEDGER, encoding="utf-8")
+        rc5b, out5b = _run_main([str(d5)])
+        chk("同一 materials/ 目录里的讲义照旧被校验(排除不误伤)",
+            rc5b == 1 and "E-LEDGER-RESIDUE" in out5b)
+        chk("有讲义违规时不打印「通过」", "通过:无违规项" not in out5b)
+        # ③ 显式点名单个效果报告也走同一判据(按形状排除,不按调用方式排除)
+        rc5c, out5c = _run_main([str(d5 / "效果报告-测试课程.md")])
+        chk("显式传单个效果报告文件同样被排除", rc5c == 0 and "通过" not in out5c)
+        # ④ 排除名单可扩展:换一个课程名(前缀命中)仍然生效,不是写死文件名
+        (d5 / "效果报告-另一门课.md").write_text(report_md, encoding="utf-8")
+        d6 = Path(td) / "materials2"
+        d6.mkdir()
+        (d6 / "效果报告-另一门课.md").write_text(report_md, encoding="utf-8")
+        rc6, out6 = _run_main([str(d6)])
+        chk("排除名单按前缀可扩展(不写死单个文件名)",
+            rc6 == 0 and "已跳过" in out6 and "通过" not in out6)
+        # ⑤ 夹具前置(实测得出的,不是推的):效果报告被当讲义扫时**一条都不会报**——
+        #    它没有概念单元、没有答案框,所有讲义规则都走不到。这正是「假绿」的机制:
+        #    不是「查了没问题」,是「压根没查」。若这一条变红,说明报告开始能命中讲义规则,
+        #    上面「不打印通过」的断言就失去了测对象,必须先复核夹具。
+        chk("夹具前置:效果报告被当讲义扫时零命中(假绿的机制本身)",
+            check_text(report_md, "效果报告-测试课程.md", base_dir=d5) == [])
+        # ⑥ 牙齿证明:同一个检查器对报告里的违规字符**确实会报**——
+        #    否则「零命中」可能只是检查器眼瞎,排除名单就成了给瞎子戴墨镜。
+        chk("夹具前置:检查器对报告类文本确实有牙齿(denylist 字符照报)",
+            any(f[1] == "W-UNICODE-CHAR"
+                for f in check_text(report_md.replace("4/5", "4/5 → 已达"),
+                                    "效果报告-测试课程.md", base_dir=d5)))
+
     print(("OK " if ok else "FAIL ") + "verify_explanation --selftest")
     return 0 if ok else 1
 

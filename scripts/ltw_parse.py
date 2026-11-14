@@ -384,10 +384,48 @@ META_TOKEN_RES = (
 NONE_MARKS = ("无", "无。", "（暂无）", "(暂无)")
 NONE_RE = re.compile(r"无[（(][^（）()]*[）)]")
 
+# ── progress.md 区标题层级（票 97 结构守卫）──
+# 状态簿的区**必须是二级标题**。写成三级时，`## ` 扫描不会切换区，三级标题行本身
+# 又不以「- 」起头，于是它下面的条目会整段落进上一条区间被继续消费——而且全程不报错。
+# 「日达标」已实测踩过（票 38）：「### 日达标」的条目被并进「保持复习」当调度条目；
+# 「检索锚」是同一种形状的第二个坑（票 97）。
+# 两处一起收口，口径放在本模块：① 解析层对**任何**层级的同名区都硬性静音，污染在
+# 数据流上就不可能发生；② `progress_check` 对非二级形态出 W-SECTION-LEVEL，让人看得见。
+# 只列「区」——「# 学习任务：…」这类文件标题不在其中，二级以内的普通小节（如课程体系
+# 的「### 章1 ｜ …」）也不在，不误伤。
+PROGRESS_SECTION_NAMES = ("薄弱点", "错题本", "错题归档", "保持复习", "日达标",
+                          "检索锚", "暂缓与范围外", "本次交接", "下次续学")
+HEADING_RE = re.compile(r"^(#{1,6})\s+(.*?)\s*$")
+
+
+def misplaced_sections(text):
+    """progress.md 里**存在但不是二级标题**的区名（按出现顺序去重）。
+
+    返回如 ["检索锚"]。调用方据此出 W-SECTION-LEVEL；本函数只做判定，不改数据。
+    """
+    bad = []
+    for raw in (text or "").splitlines():
+        m = HEADING_RE.match(raw.rstrip())
+        if not m:
+            continue
+        if len(m.group(1)) == 2:
+            continue          # 二级是正确形态
+        name = m.group(2)
+        if name in PROGRESS_SECTION_NAMES and name not in bad:
+            bad.append(name)
+    return bad
+
 
 def parse_progress_sections(text):
-    """提取「最近更新」字段与薄弱点/错题本/保持复习三区的条目行（纯文本解析）。"""
+    """提取「最近更新」字段与薄弱点/错题本/保持复习三区的条目行（纯文本解析）。
+
+    只有**二级标题**（`## 名字`）会切换当前区；与他区同名但层级不是二级的标题
+    （如 `### 检索锚`、`### 日达标`）进入静音态：该行及其下条目一律不进任何区，
+    直到下一个二级标题复位。这条静音是「静默污染」的解：**宁可漏，不可错**——
+    把检索锚的线索行当成保持复习的调度条目去算 S/D/due，比少读几行严重得多。
+    """
     section = None
+    muted = False             # 处于非二级同名区的静音态
     recent_update = None
     weak_lines = []
     wrong_lines = []
@@ -395,8 +433,16 @@ def parse_progress_sections(text):
     day_lines = []
     for raw in text.splitlines():
         line = raw.rstrip()
-        if line.startswith("## "):
-            section = line[3:].strip()
+        m_head = HEADING_RE.match(line)
+        if m_head:
+            if len(m_head.group(1)) == 2:
+                section = m_head.group(2)
+                muted = False
+            elif m_head.group(2) in PROGRESS_SECTION_NAMES:
+                # 同名区写错层级：静音，绝不并进上一条区间当条目消费（票 97 / 票 38）
+                muted = True
+            continue
+        if muted:
             continue
         if section is None:
             fv = parse_field_line(line.strip())

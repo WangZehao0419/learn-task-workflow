@@ -1793,6 +1793,35 @@ def selftest():
         except SystemExit:
             ok = False
 
+    # ── 票 97：检索锚区的结构守卫（调度侧）──
+    # 检索锚是「给知识点留一条回查线索」的内容产物，**不写调度字段、不进保持复习区**。
+    # 硬约束：区标题必须是二级（`## 检索锚`）。写成三级不会切换当前区，线索行会继续
+    # 落进上一条区间被消费——对「保持复习」就是凭空多出一条复习任务，**且全程不报错**。
+    # 这一组断言把「静默污染」变成会红：
+    #   ① 二级形态：线索行不进任何队列、不出 W-UNPARSED-ITEM；
+    #   ② 三级形态：同样不进队列（解析层静音），而 progress_check 出 W-SECTION-LEVEL；
+    #   ③ 反向哨兵：若把静音去掉，三级形态会真的落进保持复习——用「解析结果相等」钉死。
+    _anchor_ok = ("# 学习任务：锚\n- 最近更新：2026-10-20\n\n"
+                  "## 保持复习\n"
+                  "- [2026-10-12] 第 1 节 变量 ｜ 元数据：S=3.0，D=3，last=2026-10-12，due=2026-10-15\n\n"
+                  "## 检索锚\n"
+                  "- [2026-10-19] 变量声明 ｜ 线索：02-变量.md 概念 1\n"
+                  "- [2026-10-19] 循环边界 ｜ 线索：课程体系.md 章1 目行 KP-01-02\n")
+    _anchor_bad = _anchor_ok.replace("## 检索锚", "### 检索锚")
+    _rq_ok, _rw_ok = queue_from_progress_texts([("slug-anchor", _anchor_ok)], today_r)
+    _rq_bad, _rw_bad = queue_from_progress_texts([("slug-anchor", _anchor_bad)], today_r)
+    ok = ok and len(_rq_ok) == 1 and _rq_ok[0]["item"] == "第 1 节 变量"
+    ok = ok and not any("变量声明" in e["item"] or "循环边界" in e["item"] for e in _rq_ok)
+    ok = ok and not any("变量声明" in w or "循环边界" in w for w in _rw_ok)
+    # 三级形态：静音后队列与二级形态**完全一致**（不并区、不多一条、不报坏条目）
+    ok = ok and json.dumps(_rq_bad, ensure_ascii=False, sort_keys=True) == \
+        json.dumps(_rq_ok, ensure_ascii=False, sort_keys=True)
+    ok = ok and _rw_bad == _rw_ok
+    # 哨兵：若静音被删，三级形态会多出 2 条「保持」条目——这里断言「没有多出来」
+    ok = ok and len(_rq_bad) == len(_rq_ok) == 1
+    # 检索锚不是普通未知段：不产生 W-META-INVALID（它不长成调度条目）
+    ok = ok and not any(w.startswith("W-META-INVALID") for w in _rw_ok + _rw_bad)
+
     # 断言 27（复核 9aaf728 补）：同日「达→未达」不得反向改判（否则凭空造出一次未达）
     with tempfile.TemporaryDirectory() as td_rv:
         root_rv = Path(td_rv) / ".learning"

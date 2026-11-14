@@ -97,6 +97,7 @@ from ltw_parse import (ENUM_KP_TYPE, ENUM_KP_VISUAL, FIELD_RE, HOLD_KEYS, parse_
                        ROUTE_RE, hold_disposition_excluded, hold_entry_malformed,
                        kp_status_base, normalize_kp_id, parse_kp_optional, parse_kp_row,
                        parse_day_rows, parse_progress_sections, parse_meta,
+                       misplaced_sections,
                        split_weak_item, split_wrong_item,
                        WRONG_LINE_RE, NONE_MARKS, NONE_RE)
 
@@ -1060,6 +1061,15 @@ def check(task_dir, release=False, proposed=None):
         warnings.append({"code": "W-DAY-ROW-INVALID",
                          "message": "「日达标」条目形态不符（应为「<YYYY-MM-DD> ｜ 达|未达 ｜ 证据：<…>」）："
                                     + _body})
+    # 区标题层级（票 97 结构守卫）：状态簿的区必须是二级标题。写成三级时它不会切换
+    # 当前区，条目会被并进上一条区间继续消费——**全程不报错**就是最坏的那种坏。
+    # 解析层已对任何层级的同名区硬性静音（见 ltw_parse.parse_progress_sections），
+    # 本告警负责让它**看得见**：静音是止血，告警是诊断，两者缺一都是把问题埋起来。
+    for _name in misplaced_sections(text):
+        warnings.append({"code": "W-SECTION-LEVEL",
+                         "message": "「" + _name + "」区标题不是二级标题（应为 `## " + _name
+                                    + "`）：写成三级不会切换区、条目会被并进上一条区间；"
+                                    "该区条目已按静音处理、不计入任何区"})
     if proposed.get("phase"):
         fields["当前阶段"] = proposed["phase"]   # 校验拟提交目标阶段，而非磁盘旧状态
     # 三簿分工：节路线读课程体系.md（规划簿），学习日志读记忆.md（叙事簿）
@@ -3512,6 +3522,50 @@ def selftest():
         r_tpl = check(d_tpl)
         ok = ok and r_tpl["ok"]
         ok = ok and not any(w["code"] == "W-DAY-ROW-INVALID" for w in r_tpl["warnings"])
+
+        # ── 票 97：检索锚区结构守卫 ──
+        # 检索锚 = 给知识点留一条回查线索的产物，落进状态簿的新区。硬约束：**区标题必须是二级**。
+        # 写成三级它不切换当前区，线索行会被并进上一条区间当条目消费，而且**全程不报错**——
+        # 这是静默污染，必须实测证伪而不是靠读代码相信。三组断言：
+        #   ① 二级合法：无线索行泄漏进调度区、不出 W-SECTION-LEVEL；
+        #   ② 三级非法：解析层静音（线索行不落进任何区）+ W-SECTION-LEVEL 让它看得见；
+        #   ③ 不拦停：告警是 W 级，ok 仍真（存量文件不回溯，不拿闸口惩罚写错的存量）。
+        _anchor_lines = ("- [2026-01-02] 极限定义 ｜ 线索：01-极限.md 概念 1\n"
+                         "- [2026-01-02] 循环边界 ｜ 线索：课程体系.md 章1 目行 KP-01-02\n")
+        d_anchor_ok = Path(td) / "anchor-ok"
+        (d_anchor_ok / "exercises").mkdir(parents=True)
+        _anchor_ok_text = (_led_head + "## 薄弱点\n- 无\n\n## 错题本\n- 无\n\n"
+                           "## 检索锚\n" + _anchor_lines + "\n## 日达标\n- 无\n" + _led_tail)
+        (d_anchor_ok / "progress.md").write_text(_anchor_ok_text, encoding="utf-8")
+        (d_anchor_ok / "课程体系.md").write_text(_led_curr, encoding="utf-8")
+        (d_anchor_ok / "exercises" / "01-极限-2026-01-01.md").write_text(
+            _fixture_evidence_text("01-极限-2026-01-01.md", _ev_wrong), encoding="utf-8")
+        r_anchor_ok = check(d_anchor_ok)
+        ok = ok and r_anchor_ok["ok"]
+        ok = ok and not any(w["code"] == "W-SECTION-LEVEL" for w in r_anchor_ok["warnings"])
+        # 二级合法时线索行**不得**被任何调度区收走（检索锚只做内容不做调度）
+        _anchor_secs = parse_progress_sections(_anchor_ok_text)
+        ok = ok and not any("极限定义" in _l or "循环边界" in _l
+                            for _l in (_anchor_secs[1] + _anchor_secs[2] + _anchor_secs[3]))
+
+        d_anchor_bad = Path(td) / "anchor-bad"
+        (d_anchor_bad / "exercises").mkdir(parents=True)
+        _anchor_bad_text = _anchor_ok_text.replace("## 检索锚", "### 检索锚")
+        (d_anchor_bad / "progress.md").write_text(_anchor_bad_text, encoding="utf-8")
+        (d_anchor_bad / "课程体系.md").write_text(_led_curr, encoding="utf-8")
+        (d_anchor_bad / "exercises" / "01-极限-2026-01-01.md").write_text(
+            _fixture_evidence_text("01-极限-2026-01-01.md", _ev_wrong), encoding="utf-8")
+        r_anchor_bad = check(d_anchor_bad)
+        ok = ok and sum(1 for w in r_anchor_bad["warnings"]
+                        if w["code"] == "W-SECTION-LEVEL") == 1
+        ok = ok and r_anchor_bad["ok"]                      # 只告警不拦停
+        # 静音证明：三级形态下线索行同样不落进任何调度区（若静音被删，这里会红）
+        _anchor_bad_secs = parse_progress_sections(_anchor_bad_text)
+        ok = ok and not any("极限定义" in _l or "循环边界" in _l
+                            for _l in (_anchor_bad_secs[1] + _anchor_bad_secs[2] + _anchor_bad_secs[3]))
+        # 变异锚点唯一性自检：两种形态只差一个 '#'，否则本组断言测不到目标分支
+        ok = ok and _anchor_bad_text != _anchor_ok_text
+        ok = ok and _anchor_bad_text.count("### 检索锚") == 1
 
     print(("OK " if ok else "FAIL ") + "progress_check --selftest")
     return 0 if ok else 1
