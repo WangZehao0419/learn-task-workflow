@@ -61,6 +61,6 @@
 
 ## 与群切片的接口
 
-- 群级误区库（等号当光标、分数分子分母各加、去括号只乘首项等）与本包误区库**都取**，消费优先级按 `references/subjects-common.md`「误区库消费纪律」（本学员历史错因 ＞ 学科包 ＞ 群级 ＞ 通识）——代数变形错误占失误大头，两边都要备。
-- CRA 序（`references/teaching.md`「新记号/新操作讲透（所有风格共用，硬规则）」）与群级的解后验算、变式、交错规则（`references/subjects-math.md`、`references/subjects-math.md`）全部适用，本包不重复。
+- 群级误区库（等号当光标、分数分子分母各加、去括号只乘首项等）与本包误区库**都取**，消费优先级按 `references/subjects-index.md`「误区库消费纪律」（本学员历史错因 ＞ 学科包 ＞ 群级 ＞ 通识）——代数变形错误占失误大头，两边都要备。
+- CRA 序（`references/interaction.md`「新记号/新操作讲透（所有风格共用，硬规则）」）与群级的解后验算、变式、交错规则（`references/subjects-math.md`、`references/subjects-math.md`）全部适用，本包不重复。
 - 本包独有的「导数两条路」「APOS 阶段」「级数收敛判据」在群切片里没有对应条目，讲授时必须补。

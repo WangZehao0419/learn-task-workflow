@@ -1373,7 +1373,7 @@ def check(task_dir, release=False, proposed=None):
                                             "」判 " + (a["result"] or "部分入账") + "（" +
                                             (a["kp"] or key or "无 KP 映射") +
                                             "）未入薄弱点/错题本——判错同轮归因定级并入账"
-                                            "（`workflow.md` 每轮小步⑤）；若已口头处理请补记条目"
+                                            "（`references/lessons.md` 每轮小步⑤）；若已口头处理请补记条目"
                                             "（warning，不拦截）"})
 
     # 未解析勾选行：出现勾选语法却未被识别（不得静默）

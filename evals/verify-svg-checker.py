@@ -9,7 +9,7 @@
      与 2 项相对字号误报（1.2em / 1.2rem 必须零告警）
   3. 放行项：文档内锚点 url(#a) / <use href="#sym"> 不得误杀
 
-判据源头：references/handout-layout.md「4.2 图 / SVG 技术要求」与
+判据源头：references/handout-unit.md「4. 元素系统」与 references/handout-enhance.md「图像可视化双轨」与
 「图像可视化双轨」；参数取自 contracts/rules.json 的 reader 块（单一事实源，
 避免「文档写 16、代码按 12 判」的静默漂移）。
 

@@ -67,7 +67,7 @@
    ],
    "degraded": {
     "fallback": "手写 SVG 直接落 materials/assets/NN-<图名>.svg，并用 Markdown 图片语法引用",
-    "standard": "同一套产物与校验：仍是 SVG 双轨（先存档后引用、无死链），仍须过 references/handout-layout.md「图像可视化双轨」的全部要求与 verify_explanation.py --reader 的 W-READER-SVG 检查",
+    "standard": "同一套产物与校验：仍是 SVG 双轨（先存档后引用、无死链），仍须过 references/handout-enhance.md「图像可视化双轨」的全部要求与 verify_explanation.py --reader 的 W-READER-SVG 检查",
     "recovery": "装上 mermaid-cli（mmdc 进 PATH）后重跑 python -B scripts/check_environment.py，degraded 消失即回到增强路径"
    },
    "setup": {

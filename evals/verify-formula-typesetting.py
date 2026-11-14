@@ -80,7 +80,8 @@ def parse_json(raw):
 
 def group_skill(skill_md, c):
     body = skill_md or ""
-    c.check("1.1 SKILL.md 引用 references/handout-layout.md", "references/handout-layout.md" in body)
+    c.check("1.1 SKILL.md 引用公式与排印正本",
+            "references/handout-typography.md" in body and "references/handout-unit.md" in body)
     c.check("1.2 SKILL.md 不再引用旧文件名", ("formula-" + "typesetting.md") not in body)
 
 
@@ -183,10 +184,18 @@ def main(argv=None) -> int:
             else Path(__file__).resolve().parent.parent)
 
     skill_md = read_text(root / "SKILL.md")
-    handout_layout = read_text(root / "references" / "handout-layout.md")
-    formulas = handout_layout
-    formula_subjects = handout_layout
-    teaching = read_text(root / "references" / "teaching.md")
+    # 票 93 切册后：公式正本在 handout-typography，讲义正文分散在
+    # handout-unit / handout-forms / handout-pipeline，教学动作分散在
+    # interaction / teaching-method。断言强度不变，只改定位来源。
+    formulas = "\n".join(filter(None, [read_text(root / "references" / n)
+                                        for n in ("handout-typography.md",)]))
+    handout_layout = "\n".join(filter(None, [
+        read_text(root / "references" / n)
+        for n in ("handout-unit.md", "handout-forms.md", "handout-pipeline.md")]))
+    formula_subjects = formulas
+    teaching = "\n".join(filter(None, [
+        read_text(root / "references" / n)
+        for n in ("interaction.md", "teaching-method.md")]))
     evals_raw = read_text(root / "evals" / "evals.json")
 
     scope = [("SKILL.md", skill_md), ("evals/evals.json", evals_raw)]

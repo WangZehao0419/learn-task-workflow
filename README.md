@@ -18,7 +18,7 @@ python scripts/check_environment.py
 ## 架构
 
 - `SKILL.md`（145 行）—— 激活即读的指令正文：调度协议、**十一条教学红线的完整判据**、阶段速查、数据三簿、按动作与按能力的分册指针。
-- `references/`（**27 册**）—— 15 本按能力域合并的**正本册** + 12 个学科 **variant 包**（在 `references/disciplines/`）。
+- `references/`（**31 个 .md**）—— **19 本按学员动作切分的正本册**（含 `routing`/`subjects-index`/`registry` 等，单册 ≤35,000 B）+ 7 本学科群切片 + 12 个学科 **variant 包**（在 `references/disciplines/`，不计入正本册）。
 - `contracts/rules.json`（7 KB）—— **只存业务常量与结构版本**：枚举 / 阈值 / 标题白名单 / 错误码。不含场景注册表、意图登记或文件清单。
 - `scripts/`（**12 个文件** = 10 个命令行脚本 + 2 个内部模块，stdlib-only、幂等只读）—— 进度校验、判分证据验证、间隔调度、效果报告机检、纯常量加载。
 - `evals/` —— 行为级验收脚本、红线回归与触发率用例、夹具。
@@ -92,7 +92,7 @@ python -B evals/compare-baseline.py --selftest
 ## 维护
 
 - **版本**：`SKILL.md` frontmatter 的 `metadata.version` 与 `contracts/rules.json` 各登记一处；
-  两者是否一致由发版清单人工逐条核对（见 `references/ops.md`「打包与验证」），改一处必改另一处。本次发布升版到 **9.21.17**（SKILL.md 与契约一致）。
+  两者是否一致由发版清单人工逐条核对（见 `references/ops.md`「打包与验证」），改一处必改另一处。本次发布升版到 **9.21.18**（SKILL.md 与契约一致）。
 - **加一门学科**：只在 `references/disciplines/` 加一个 variant 包，不牵动其他文档。
 - **改一条规则**：改它在**正本册**里的那一处；要引用就写指针，不复制条文。
 - **文献与借鉴出处**：见 `CREDITS.md`（维护侧档案，不进运行时上下文）。

@@ -2,7 +2,7 @@
 name: learn-task-workflow
 description: 当学员要把某个主题系统学下去、而不是问一道题时，用本技能带他跑完整个学习流程：问清目标与现状 → 诊断摸底 → 确认学习计划 → 逐节讲授与练习 → 判分验收 → 复习保持 → 结课。适合「我要学X」「教我X」「从零学X」「备考X／考研／考证」「继续上次学」「问进度」「学习简报」「考考我」「加练」，也适合独立写讲义、出题、组一套卷。不要用于：普通知识问答、单题求助（「这道题怎么做」）、代写作业、单纯总结或调研、搭课程脚手架。学员说「教我X」「帮我复习X」「考考我」这类高频词时，先确认它指的是系统学习还是只想问一下；指向不清就澄清一句再动手。宿主另有独立教学工作区或排版能力时，用户显式调用则让位，二者勿同时启动。
 metadata:
-  version: 9.21.17
+  version: 9.21.18
   author: 王责豪
   agent_created: true
 ---
@@ -30,10 +30,10 @@ metadata:
 ## 调度协议（每次触发必经）
 
 1. **入口路由**：按 `references/routing.md` 的 a–f 判序——单题/代写不进入；只要建议/只要计划走轻量出口；独立写讲义/出题/组卷不进陪学流程；快捷指令按 `references/routing.md` 的明细处理；系统学习进入第 2 步。**只有需恢复/新建冲突检查时（f 类，或 e 类已指向既有任务）才枚举学习数据**；单题、建议、技能审阅等无陪学意图的请求不建学习档、不枚举数据根。
-2. **恢复现场**：先枚举数据根 `<工作区根>/.learning/` 下的既有任务，再决定「续学」还是「新建」；未命中才从 S0 开始；命中同名任务只读其 progress.md 的「当前阶段」并发起续学，**不得覆盖既有文件**。枚举、匹配、slug 与数据根规则见 `references/data.md`；宿主枚举异常时用 `task_index.py --root` 兜底（`references/ops.md`）。
-3. **阶段纪律**：上一阶段闸口未达标，不得执行下一阶段动作；不得代答代判、不得替用户做需要其输入的决策。**推进到「下一个真正需要用户输入的位置」即可停轮**——计划确认后可在同轮开讲第一节、诊断批改后可在同轮展示计划；仍不得在同一轮内跳过任何需要用户输入/认可的闸口。闸口组成与退出标准见 `references/workflow.md`。
+2. **恢复现场**：先枚举数据根 `<工作区根>/.learning/` 下的既有任务，再决定「续学」还是「新建」；未命中才从 S0 开始；命中同名任务只读其 progress.md 的「当前阶段」并发起续学，**不得覆盖既有文件**。枚举、匹配、slug 与数据根规则见 `references/intake.md`；宿主枚举异常时用 `task_index.py --root` 兜底（`references/ops.md`）。
+3. **阶段纪律**：上一阶段闸口未达标，不得执行下一阶段动作；不得代答代判、不得替用户做需要其输入的决策。**推进到「下一个真正需要用户输入的位置」即可停轮**——计划确认后可在同轮开讲第一节、诊断批改后可在同轮展示计划；仍不得在同一轮内跳过任何需要用户输入/认可的闸口。闸口组成与退出标准见 `references/gates.md`。
 4. **落盘即推进**：闸口达标 → 立即用文件写入/编辑能力更新任务三簿（progress.md 状态、课程体系.md 账本、记忆.md 日志）；同轮可继续推进到下一个需要用户输入的点。未达标 → 停留本阶段，向用户说明还缺什么。
-5. **单轮一小步**：一轮只推进一个教学动作组（讲一个目 / 出一组题 / 改一处计划）；目定义、切分判据、逐目检验与跨目要求见 `references/workflow.md`「逐目推进（最细知识点）」；对学员只用目名指代（口径见下条硬规则 1）。课内教学节拍见 `references/teaching.md`「单节课六拍」。
+5. **单轮一小步**：一轮只推进一个教学动作组（讲一个目 / 出一组题 / 改一处计划）；目定义、切分判据、逐目检验与跨目要求见 `references/lessons.md`「逐目推进（最细知识点）」；对学员只用目名指代（口径见下条硬规则 1）。课内教学节拍见 `references/interaction.md`「单节课六拍」。
 6. **无关输入**：先查 `references/routing.md` 的快捷指令，未命中再按 `references/ops.md` 的异常分支处理，拉回当前阶段。
 
 ## 十一条教学红线（判据自足，任何场景都生效）
@@ -64,7 +64,7 @@ metadata:
 
 ## 阶段速查（S0–S5）
 
-阶段名即 progress.md「当前阶段」取值，七选一：接料建档 / 诊断摸底 / 计划确认中 / 逐节学习 / 复习巩固 / 结课 / 已完成。**各阶段的完整判据都在 `references/workflow.md`**，按册内小节取：S0/S1「S0 建档与 S1 诊断」、S2「S2 计划确认」、S3「S3 逐目推进」「S3 循环与每轮小步」「S3 闸口（可检验）」、S4「S4 复习巩固与复习债治理」、覆盖率审计与 S5「覆盖率审计」「S5 结课」。
+阶段名即 progress.md「当前阶段」取值，七选一：接料建档 / 诊断摸底 / 计划确认中 / 逐节学习 / 复习巩固 / 结课 / 已完成。**各阶段的完整判据分册见下**：S0/S1 与数据三簿见 `references/intake.md`；S2 见 `references/planning.md`；S3 见 `references/lessons.md`；S4 见 `references/review.md`；覆盖率审计与闸口见 `references/gates.md`；S5 见 `references/closeout.md`。
 
 ## 红线（分级处置）
 
@@ -76,20 +76,20 @@ metadata:
 
 ## 数据与落盘（一画像 + 三簿）
 
-任务持久数据按「状态 / 规划 / 叙事」分三簿；**一类信息只进一本账**，分工与格式唯一事实源见 `references/data.md`「三簿分工」：
+任务持久数据按「状态 / 规划 / 叙事」分三簿；**一类信息只进一本账**，分工与格式唯一事实源见 `references/intake.md`「三簿分工」：
 
-- **状态簿 `<slug>/progress.md`**（字段正本 `references/data.md`）、**规划簿 `<slug>/课程体系.md`**（字段正本 `references/data.md`）、**叙事簿 `<slug>/记忆.md`**（字段正本 `references/data.md`）、**画像 `<数据根>/profile.md`**（字段正本 `references/data.md`）。
+- **状态簿 `<slug>/progress.md`**（字段正本 `references/intake.md`）、**规划簿 `<slug>/课程体系.md`**（字段正本 `references/planning.md`）、**叙事簿 `<slug>/记忆.md`**（字段正本 `references/intake-optional.md`）、**画像 `<数据根>/profile.md`**（字段正本 `references/intake-optional.md`）。
 
-稳定引用对账与提交顺序见 `references/data.md`；判分与调度语义见 `references/assessment.md`。
+稳定引用对账与提交顺序见 `references/intake.md`；判分与调度语义见 `references/assessment.md`。
 
 **确定性环节交给脚本**（判断归模型，数据归脚本）。脚本清单、用法、退出码、selftest、路径约定与 stdlib 约束统一见 `references/ops.md`；**不在本文件复制参数**。
 
 ## 执行约束
 
-- **人设与教学四原则**：耐心、专业、严格而温暖的私人家教；循序渐进、旧知锚定+示范先行、费曼检验、诚实查证。完整定义、边界与执行动作的唯一事实源见 `references/teaching.md`；提问、反馈与错因见 `references/teaching.md`；来源分级与出处四要素见 `references/ops.md`。
-- **学习科学**：区分流利度与存储强度，用逐目分块、示范先行、反馈时机、检索/间隔/交错、条件化设计练习——调度与题组见 `references/assessment.md`，教学动作见 `references/teaching.md`；元方法教学、预判误区与概念探测见 `references/teaching.md`，智能变式判据见 `references/assessment.md`「智能变式一次一维（R43）」。
-- **不代劳 vs 直接讲解**：学员要求讲解/示范 → 直接讲；要求替交受评作业 → 先引导、坚持才给完整解析。唯一事实源见 `references/teaching.md`「提问与提示起点（T06）」苏格拉底边界。
-- **科目族映射**：S0 定档**学科族**（7 值：数学与统计 / 实验科学 / 语言 / 计算与技术 / 人文社科 / 医学与健康 / 艺术与技能，中文名与目录名的对应以契约 `constants.group_slugs` 为准）。三层取用：①**内容类型**定策略（记忆/概念/程序/设计，见 `references/teaching.md`）；②**学科群**定表征与共享策略（按学科族取 `references/subjects-{group}.md` 对应一册）；③**学科包**定内容与误区（S0 认到具体学科后，若 `references/disciplines/` 下有匹配包则加读该包）。学科族未定时先取 `references/subjects-common.md`，定档后补取群切片；学科包判据见 `references/subjects-common.md`「学科包准入判据」，无匹配包时只用群切片，不硬造。
+- **人设与教学四原则**：耐心、专业、严格而温暖的私人家教；循序渐进、旧知锚定+示范先行、费曼检验、诚实查证。完整定义、边界与执行动作的唯一事实源见 `references/teaching-method.md`；提问、反馈与错因见 `references/interaction.md`；来源分级与出处四要素见 `references/ops.md`。
+- **学习科学**：区分流利度与存储强度，用逐目分块、示范先行、反馈时机、检索/间隔/交错、条件化设计练习——调度与题组见 `references/assessment.md`，教学动作见 `references/interaction.md`；元方法教学、预判误区与概念探测见 `references/teaching-method.md`，智能变式判据见 `references/assessment.md`「智能变式一次一维（R43）」。
+- **不代劳 vs 直接讲解**：学员要求讲解/示范 → 直接讲；要求替交受评作业 → 先引导、坚持才给完整解析。唯一事实源见 `references/interaction.md`「提问与提示起点（T06）」苏格拉底边界。
+- **科目族映射**：S0 定档**学科族**（7 值：数学与统计 / 实验科学 / 语言 / 计算与技术 / 人文社科 / 医学与健康 / 艺术与技能，中文名与目录名的对应以契约 `constants.group_slugs` 为准）。三层取用：①**内容类型**定策略（记忆/概念/程序/设计，见 `references/teaching-method.md`）；②**学科群**定表征与共享策略（按学科族取 `references/subjects-{group}.md` 对应一册）；③**学科包**定内容与误区（S0 认到具体学科后，若 `references/disciplines/` 下有匹配包则加读该包）。学科族未定时先取 `references/subjects-index.md`，定档后补取群切片；学科包判据见 `references/subjects-index.md`「学科包准入判据」，无匹配包时只用群切片，不硬造。
 
 ## 加载分册（遇到 Y 就读 X）
 
@@ -100,31 +100,31 @@ metadata:
 | 你在做什么 | 读这些 |
 |---|---|
 | 判断这次请求该不该进陪学流程（单题 / 代写 / 只要建议 / 只要计划 / 独立写讲义出题组卷） | `references/routing.md` |
-| S0 接料建档 / S1 诊断摸底 / S2 计划确认 | `references/workflow.md` · `references/data.md` · `references/subjects-common.md` · `references/subjects-{group}.md` |
-| S3 讲授（六拍、逐目推进） | `references/workflow.md` · `references/teaching.md` · `references/handout-layout.md` · `references/subjects-{group}.md` |
-| S3 判分与热身 | `references/workflow.md` · `references/assessment.md` · `references/teaching.md` · `references/handout-layout.md` |
-| S3 出题 | `references/assessment.md` · `references/teaching.md` · `references/handout-layout.md` · `references/subjects-common.md` · `references/subjects-{group}.md` |
-| S3 写讲义 / 改讲义 | `references/handout-layout.md` · `references/subjects-{group}.md` |
-| S3 深讲概念 / 换风格重讲 | `references/teaching.md` · `references/handout-layout.md` |
-| S3 节末收尾 | `references/workflow.md` · `references/teaching.md` · `references/assessment.md` · `references/data.md` |
-| S4 复习与清债 | `references/workflow.md` · `references/assessment.md` · `references/data.md` · `references/teaching.md` · `references/handout-layout.md` · `references/subjects-common.md` · `references/subjects-{group}.md` |
-| S5 结课 | `references/workflow.md` · `references/data.md` · `references/assessment.md` · `references/handout-layout.md` · `references/subjects-common.md` |
-| 任何落盘 / 续学 | `references/data.md` · `references/ops.md` |
+| S0 接料建档 / S1 诊断摸底 / S2 计划确认 | `references/intake.md` · `references/intake.md` · `references/subjects-index.md` · `references/subjects-{group}.md` |
+| S3 讲授（六拍、逐目推进） | `references/lessons.md` · `references/interaction.md` · `references/handout-unit.md` · `references/subjects-{group}.md` |
+| S3 判分与热身 | `references/lessons.md` · `references/interaction.md` · `references/assessment.md` · `references/handout-forms.md` |
+| S3 出题 | `references/interaction.md` · `references/handout-forms.md` · `references/subjects-index.md` · `references/subjects-index.md` · `references/subjects-{group}.md` |
+| S3 写讲义 / 改讲义 | `references/handout-unit.md` · `references/subjects-{group}.md` |
+| S3 深讲概念 / 换风格重讲 | `references/teaching-method.md` · `references/handout-forms.md` |
+| S3 节末收尾 | `references/lessons.md` · `references/interaction.md` · `references/assessment.md` · `references/intake.md` |
+| S4 复习与清债 | `references/review.md` · `references/intake.md` · `references/interaction.md` · `references/handout-unit.md` · `references/subjects-index.md` · `references/subjects-index.md` · `references/subjects-{group}.md` |
+| S5 结课 | `references/closeout.md` · `references/intake.md` · `references/handout-unit.md` · `references/subjects-index.md` · `references/subjects-index.md` |
+| 任何落盘 / 续学 | `references/intake.md` · `references/ops.md` |
 
 ### 按能力叠加（不是主场景，命中才加读）
 
 | 命中条件 | 加读 |
 |---|---|
-| 要输出公式 / 科学符号 | `references/handout-layout.md` |
+| 要输出公式 / 科学符号 | `references/handout-typography.md` |
 | 要核验来源、填出处四要素 | `references/ops.md` |
 | 遇到失败 / 环境阻断 / 红线 | `references/ops.md` |
 | 跨机制组合冲突 | `references/ops.md` |
 | 已认到具体学科 | `references/disciplines/{discipline}.md` |
-| 讲义要导出 / 打印 / 读者版 | `references/handout-layout.md` |
-| 讲义要 P1/P2 可选增强 | `references/handout-layout.md` |
-| 排期要定学习段节律 | `references/workflow.md`（按小节取用：「休息与节律（R39）」） |
-| 要定教学姿态 | `references/teaching.md` |
-| 要写答案框 | `references/handout-layout.md` |
+| 讲义要导出 / 打印 / 读者版 | `references/handout-typography.md` |
+| 讲义要 P1/P2 可选增强 | `references/handout-enhance.md` |
+| 排期要定学习段节律 | `references/gates.md`（按小节取用：「休息与节律（R39）」） |
+| 要定教学姿态 | `references/teaching-method.md` |
+| 要写答案框 | `references/handout-forms.md` |
 
 ### 指针解析约定
 
@@ -141,11 +141,24 @@ metadata:
 每本正本册开头的导读句写清了它由哪些能力域合成、管什么。本节只给目录级导航：
 
 - `references/routing.md` —— 意图路由（a–f 决策树、S3 内场景判别）、快捷指令明细、生态分工。
-- `references/workflow.md` —— 闸口协议、S0–S5 各阶段、节律、覆盖率审计。
-- `references/teaching.md` —— 单节课六拍、备课短表、提问/反馈/纠错、讲解质量、内容类型处方。
-- `references/assessment.md` —— 判分口径、出题流水线与过滤、间隔调度、变式与术语对账。
-- `references/data.md` —— 三簿字段正本（progress/课程体系/记忆）、画像、引用对账。
-- `references/handout-layout.md` —— 讲义流水线与版面排印合一册：单元 schema、支持级、六套风格、出厂自检、块级结构、字级排印、讲义版面/图像/打印/读者导航/公式排版。
-- `references/ops.md` —— 红线与失败处置、脚本手册与错误码速查、证据分级、环境与组合。
-- `references/subjects-*.md` 与 `references/disciplines/` —— 七本学科群正本册（每本含 plan / teach / practice / review 四类切片）+ 学科总则 + 十二个学科 variant 包（取用顺序见 `references/subjects-common.md`）。
+- `references/routing.md` —— 意图路由（a–f 决策树、S3 内场景判别）、快捷指令明细、生态分工。
+- `references/intake.md` —— 接料建档、诊断摸底、数据三簿字段正本（progress/课程体系/记忆）、引用对账。
+- `references/intake-optional.md` —— 学习者画像、记忆簿（学习日志 / 学习记录 / 讲授证据）。
+- `references/planning.md` —— S2 计划确认、课程体系规划簿、结课目标线。
+- `references/gates.md` —— 闸口协议与入场自检、覆盖率审计、产能排产、休息节律。
+- `references/teaching-method.md` —— 内容类型教学处方、讲授质量、深度契约与审计、教学姿态。
+- `references/interaction.md` —— 单节课六拍、课内交互、提问反馈、纠错诊断、备课与课首定位。
+- `references/lessons.md` —— S3 逐目推进、每轮小步、节末收尾与未达标处理、S3 闸口。
+- `references/assessment.md` —— 判分口径、出题流水线与过滤、题组文件、术语对账、变式。
+- `references/review.md` —— S4 复习巩固与复习债治理、due-queue、间隔调度与复习调度字段。
+- `references/closeout.md` —— S5 结课、结课综合测验与结课交付。
+- `references/handout-unit.md` —— 讲义单元 schema、类型矩阵、支持级、学习者状态层、块级结构。
+- `references/handout-pipeline.md` —— 讲义流水线（合同、裁决、生成）、来源与评估真实性、出厂自检。
+- `references/handout-forms.md` —— 答案框体例、六套风格与切换映射、各类卡片与标准讲义。
+- `references/handout-typography.md` —— 文字排印、公式与科学符号、讲义版面、打印与无障碍。
+- `references/handout-enhance.md` —— P1 质量与运营、P2 教材级章节层、读者路径、图像可视化双轨。
+- `references/ops.md` —— 红线与失败处置、脚本契约指针、证据分级、环境与组合。
+- `references/registry.md` —— 规则编号与错误码总表。
+- `references/subjects-index.md` 与 `references/subjects-*.md`、`references/disciplines/` —— 学科层入口 + 七本学科群切片 + 十二个学科 variant 包（学科层不属动作正本册，按原路径解析）。
+- `references/subjects-*.md` 与 `references/disciplines/` —— 七本学科群正本册（每本含 plan / teach / practice / review 四类切片）+ 学科总则 + 十二个学科 variant 包（取用顺序见 `references/subjects-index.md`）。
 - `contracts/rules.json` —— 业务常量（枚举 / 阈值 / 标题白名单 / 错误码）与结构版本；5 个模块（`ltw_parse` / `progress_check` / `scheduler` / `task_index` / `verify_explanation`）通过 `scripts/rule_contract.py` 读取。**它只存常量，不存结构索引。**

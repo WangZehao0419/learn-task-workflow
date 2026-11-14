@@ -79,7 +79,7 @@
 
 - `contracts/rules.json` 的 `scheduler` 块整体替换（旧 10 项常量名全部退役）。
 - `scripts/scheduler.py`：常数加载、公式、D 解析（去 `_half_step`）、`check_difficulty`、六组断言全部重写。
-- `references/assessment.md` / `references/data.md` / `contracts/scripts-contract.json` / `CREDITS.md` 同步口径。
+- `references/assessment.md` / `references/intake.md` / `contracts/scripts-contract.json` / `CREDITS.md` 同步口径。
 - **新卡 D 改由 D0(G) 决定**，`--init-shift` 失效；形参暂留兼容旧调用，由 #76 删除（已落地 v9.21.3：参数整条删除，旧调用侧传它 exit 2）。因此 #77 必须先合、#76 后合。
 
 ### 行为跳变（对既有数据）

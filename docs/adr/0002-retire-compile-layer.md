@@ -43,7 +43,7 @@
 - **保留 17 个顶层键**：phases / types / subject_families / group_slugs / discipline_slugs /
   review_origin_phases / grading / kp / gates / restatement / budget / schemas / headings /
   scheduler / errors / **starts** / **reader**
-- **退役 2 个**：`handout`（数值已写在 `references/handout-layout.md` §2.8）、
+- **退役 2 个**：`handout`（数值已写在 `references/handout-pipeline.md` §2.8）、
   `intent_semantics`（全仓零消费）
 
 > `starts` 与 `reader` 差一点被误删：静态扫描只在函数体内找到引用，漏掉了 **import 期读取**。
