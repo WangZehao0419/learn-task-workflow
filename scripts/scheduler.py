@@ -94,7 +94,7 @@ import math
 import re
 import sys
 import tempfile
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import rule_contract
@@ -103,8 +103,8 @@ import rule_contract
 from ltw_parse import (DATE_RE, D_MAX, D_MIN, FIELD_RE, META_KEYS, META_TOKEN_RES,
                        NONE_MARKS, NONE_RE, S_MAX, S_MIN, WRONG_LINE_RE,
                        _finite_pos, _in_range, _looks_like_meta, _valid_iso,
-                       parse_field_line, parse_meta, parse_progress_sections,
-                       split_weak_item, split_wrong_item)
+                       parse_day_rows, parse_field_line, parse_meta,
+                       parse_progress_sections, split_weak_item, split_wrong_item)
 
 
 class ScheduleError(ValueError):
@@ -423,7 +423,7 @@ def observations_from_text(text, slug):
     返回 (raws, warnings)；queue 与 calibration 共用，防解析器漂移。
     raw = {item, kind, wrong_date, recent, meta, meta_text}
     """
-    recent_update, weak_lines, wrong_lines, retention_lines = parse_progress_sections(text)
+    recent_update, weak_lines, wrong_lines, retention_lines, _day_lines = parse_progress_sections(text)
     raws = []
     warnings = []
     for line in weak_lines:
@@ -792,6 +792,79 @@ def cmd_calibration(args):
 
 
 # ---------------------------------------------------------------------------
+# day-streak：日达标连续未达计数（只读、纯计算、不写盘；票 75 判据④）
+# ---------------------------------------------------------------------------
+
+def _prev_day(d):
+    return d - timedelta(days=1)
+
+
+def day_streak_output(root, slug_filter, today):
+    """按「日达标」区派生连续未达天数（只存按天事实、不存派生计数）。
+
+    口径（票 75 决议，逐条落在这里）：
+      · 达的判据是**可机检等价物**：当天 ≥1 条到期复习或 ≥1 次作答——由模型在
+        写入行时判定并落「达/未达」，本函数只消费行，不重算教学事实；
+      · 连续天数由行序派生，**不单独落盘**；
+      · 缺区合法：等同「无历史」，entries=[] / miss_streak=0，不推断不回溯；
+      · **缺天终止计数**（宁可漏，不可错）：today 当天没有记录、或记录为「达」，
+        连续段就此终止，绝不把「没记录」折算成「未达」；
+      · 同一天多行按**最后一行**为准（后写覆盖先写），不静默累加；
+      · 计数只从 today 往前数，不因未来日期行而提前终止。
+    """
+    entries_text, warnings = read_progress_entries(root, slug_filter)
+    per_slug = []
+    for slug, text in entries_text:
+        _recent, _weak, _wrong, _ret, day_lines = parse_progress_sections(text)
+        rows, bad = parse_day_rows(day_lines)
+        for body in bad:
+            warnings.append("W-DAY-ROW-INVALID: " + slug
+                            + "（应为「<YYYY-MM-DD> ｜ 达|未达 ｜ 证据：<…>」，实际：" + body + "）")
+        by_date = {}
+        for row in rows:
+            by_date[row["date"]] = row          # 同日多行：最后一行生效
+        ordered = [by_date[d] for d in sorted(by_date)]
+        miss_streak = 0
+        cursor = today
+        while True:
+            row = by_date.get(cursor.isoformat())
+            if row is None or row["met"]:
+                break                           # 缺天 / 达 → 连续段终止
+            miss_streak += 1
+            cursor = _prev_day(cursor)
+        last_met = None
+        for row in ordered:
+            if row["met"]:
+                last_met = row["date"]
+        per_slug.append({
+            "slug": slug,
+            "entries": ordered,
+            "miss_streak": miss_streak,
+            "last_met_date": last_met,
+            "day_rows_invalid": len(bad),
+        })
+    return {
+        "schema": _SCHEMAS["day_streak"],
+        "today": today.isoformat(),
+        "root": str(Path(root)),
+        "per_slug": per_slug,
+        "warnings": warnings,
+    }
+
+
+def cmd_day_streak(args):
+    today = parse_date_str(args.today, "--today")
+    root = Path(args.root)
+    if not root.exists() or not root.is_dir():
+        print("[learn-task-workflow] 数据根不存在或不是目录：" + str(root)
+              + "（应指向 <工作区根>/.learning）", file=sys.stderr)
+        return 1
+    print(json.dumps(day_streak_output(root, args.slug, today),
+                     ensure_ascii=False, indent=2, allow_nan=False))
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -906,6 +979,11 @@ def build_parser():
     p3.add_argument("--root", required=True)
     p3.add_argument("--slug", default=None)
     p3.set_defaults(func=cmd_calibration)
+    p4 = sub.add_parser("day-streak", help="日达标连续未达计数（只读，票 75 判据④）")
+    p4.add_argument("--root", required=True)
+    p4.add_argument("--slug", default=None)
+    p4.add_argument("--today", required=True)
+    p4.set_defaults(func=cmd_day_streak)
     return ap
 
 
@@ -1637,6 +1715,69 @@ def selftest():
               "--last", "2016-10-14", "--today", "2026-10-15"])
     except SystemExit:
         ok = False
+
+    # 断言 26（v2.9，票 75 判据④）：day-streak 只消费按天事实、缺天终止计数
+    with tempfile.TemporaryDirectory() as td_ds:
+        root_ds = Path(td_ds) / ".learning"
+
+        def _mk(slug, day_block):
+            d = root_ds / slug
+            d.mkdir(parents=True)
+            (d / "progress.md").write_text(
+                "# 学习任务：丁\n- 最近更新：2026-10-15\n\n## 保持复习\n- 无\n\n"
+                + day_block, encoding="utf-8")
+            return d
+
+        # 26a：连续三行未达 → miss_streak=3（今天 10-15，10-15/14/13 全未达）
+        _mk("ds3", "## 日达标\n"
+                   "- 2026-10-13 ｜ 未达 ｜ 证据：无\n"
+                   "- 2026-10-14 ｜ 未达 ｜ 证据：无\n"
+                   "- 2026-10-15 ｜ 未达 ｜ 证据：无\n")
+        # 26b：缺区 → entries=[] 且 miss_streak=0（缺区合法，不推断、不回溯）
+        _mk("dsnone", "")
+        # 26c：缺天终止计数——10-15/10-14 未达，10-13 缺 → 只数 2，不把没记录当未达
+        _mk("dsgap", "## 日达标\n"
+                     "- 2026-10-14 ｜ 未达 ｜ 证据：无\n"
+                     "- 2026-10-15 ｜ 未达 ｜ 证据：无\n")
+        # 26d：坏行 → W-DAY-ROW-INVALID，且坏行不参与计数
+        _mk("dsbad", "## 日达标\n"
+                     "- 2026-10-15 未达（缺竖线）\n"
+                     "- 2026-13-40 ｜ 未达 ｜ 证据：无\n"
+                     "- 2026-10-15 ｜ 未知 ｜ 证据：无\n")
+        # 26e：同日多行 → 最后一行生效；达 → 计数终止
+        _mk("dslast", "## 日达标\n"
+                      "- 2026-10-15 ｜ 未达 ｜ 证据：无\n"
+                      "- 2026-10-15 ｜ 达 ｜ 证据：exercises/01-x.md\n")
+        # 26f：今天是「达」→ miss_streak=0，但 last_met_date 记下来
+        _mk("dsmet", "## 日达标\n"
+                     "- 2026-10-14 ｜ 未达 ｜ 证据：无\n"
+                     "- 2026-10-15 ｜ 达 ｜ 证据：evt=E1\n")
+
+        ds = day_streak_output(root_ds, None, date.fromisoformat("2026-10-15"))
+        by_slug = {p["slug"]: p for p in ds["per_slug"]}
+        ok = ok and ds["schema"] == "ltw-day-streak/1"
+        ok = ok and by_slug["ds3"]["miss_streak"] == 3
+        ok = ok and len(by_slug["ds3"]["entries"]) == 3
+        ok = ok and by_slug["ds3"]["entries"][0]["evidence"] == "无"
+        ok = ok and by_slug["dsnone"]["entries"] == [] and by_slug["dsnone"]["miss_streak"] == 0
+        ok = ok and by_slug["dsgap"]["miss_streak"] == 2          # 缺天终止，不折算成未达
+        ok = ok and by_slug["dsbad"]["miss_streak"] == 0          # 坏行不参与计数
+        ok = ok and by_slug["dsbad"]["day_rows_invalid"] == 3
+        ok = ok and any(w.startswith("W-DAY-ROW-INVALID") for w in ds["warnings"])
+        ok = ok and by_slug["dslast"]["miss_streak"] == 0         # 同日最后一行「达」生效
+        ok = ok and by_slug["dslast"]["last_met_date"] == "2026-10-15"
+        ok = ok and by_slug["dsmet"]["miss_streak"] == 0
+        ok = ok and by_slug["dsmet"]["last_met_date"] == "2026-10-15"
+        # 26g：今天没有记录（缺天）→ 不数（宁可漏，不可错）
+        ds_tomorrow = day_streak_output(root_ds, "ds3", date.fromisoformat("2026-10-16"))
+        ok = ok and ds_tomorrow["per_slug"][0]["miss_streak"] == 0
+        # 26h：CLI 端到端——数据根不存在 exit 1，不谎报成功
+        try:
+            rc_ds = cmd_day_streak(argparse.Namespace(
+                root=str(Path(td_ds) / "__no_such_dir__"), slug=None, today="2026-10-15"))
+            ok = ok and rc_ds == 1
+        except SystemExit:
+            ok = False
 
     print(("OK " if ok else "FAIL ") + "scheduler --selftest")
     return 0 if ok else 1

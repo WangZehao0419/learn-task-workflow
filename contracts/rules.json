@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/3",
- "version": "9.21.5",
+ "version": "9.21.6",
  "constants": {
   "phases": [
    "接料建档",
@@ -86,6 +86,7 @@
    "index": "learn-task-index/7",
    "due_queue": "ltw-due-queue/5",
    "calibration": "ltw-calibration/4",
+   "day_streak": "ltw-day-streak/1",
    "manifest": "2"
   },
   "headings": {
@@ -253,6 +254,7 @@
     "W-CURSOR-DANGLING",
     "W-CW-LOWCONF",
     "W-CW-ORPHAN",
+    "W-DAY-ROW-INVALID",
     "W-EFFECT-CALIBRATION",
     "W-EFFECT-LEVEL",
     "W-EFFECT-MARKER",

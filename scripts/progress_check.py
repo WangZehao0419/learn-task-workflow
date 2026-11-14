@@ -93,7 +93,8 @@ from ltw_parse import (ENUM_KP_TYPE, ENUM_KP_VISUAL, FIELD_RE, HOLD_KEYS, parse_
                        KP_ID_ANY_RE, KP_ID_RE,
                        ROUTE_RE, hold_disposition_excluded, hold_entry_malformed,
                        kp_status_base, normalize_kp_id, parse_kp_optional, parse_kp_row,
-                       parse_progress_sections, parse_meta, split_weak_item, split_wrong_item,
+                       parse_day_rows, parse_progress_sections, parse_meta,
+                       split_weak_item, split_wrong_item,
                        WRONG_LINE_RE, NONE_MARKS, NONE_RE)
 
 # 枚举唯一来源：contracts/rules.json（缺失/畸形即结构化失败）。
@@ -929,6 +930,22 @@ def check(task_dir, release=False, proposed=None):
                     "warnings": [], "coverage": None,
                     "proposed_state_supplied": proposed_state_supplied}
     fields, sections, hold_entries = parse(text)
+    # 「日达标」区结构校验（票 75）：只验行形态，不判教学事实、不拦停——
+    # 「连续未达 ≥2」的阈值是 E5 工程约定，不能拿它拦学员。
+    _day_lines = []
+    _in_day = False
+    for _raw in text.splitlines():
+        _line = _raw.rstrip()
+        if _line.startswith("## "):
+            _in_day = _line[3:].strip() == "日达标"
+            continue
+        if _in_day and _line.strip().startswith("- "):
+            _day_lines.append(_line.strip()[2:].strip())
+    _day_rows, _day_bad = parse_day_rows(_day_lines)
+    for _body in _day_bad:
+        warnings.append({"code": "W-DAY-ROW-INVALID",
+                         "message": "「日达标」条目形态不符（应为「<YYYY-MM-DD> ｜ 达|未达 ｜ 证据：<…>」）："
+                                    + _body})
     if proposed.get("phase"):
         fields["当前阶段"] = proposed["phase"]   # 校验拟提交目标阶段，而非磁盘旧状态
     # 三簿分工：节路线读课程体系.md（规划簿），学习日志读记忆.md（叙事簿）
@@ -1564,7 +1581,7 @@ def check(task_dir, release=False, proposed=None):
     # 当「行为做了」就是假闸口。该告警也**不参与**「连续 3 天触发停新」计数（Q7：
     # progress.md 无「连续 N 天」字段，缺口指给票 75）。
     review_debt = []
-    _recent_sy, _weak_sy, _wrong_sy, _ret_sy = parse_progress_sections(text)
+    _recent_sy, _weak_sy, _wrong_sy, _ret_sy, _day_sy = parse_progress_sections(text)
     for _kind, _lines in (("薄弱点", _weak_sy), ("错题本", _wrong_sy), ("保持复习", _ret_sy)):
         for _line in _lines:
             if _line in NONE_MARKS or NONE_RE.fullmatch(_line):
@@ -3042,6 +3059,39 @@ def selftest():
             r_sy = check(d_sy)
             ok = ok and r_sy["ok"]
             ok = ok and (any(w["code"] == "W-REVIEW-DEBT" for w in r_sy["warnings"]) == _want)
+
+        # 「日达标」区结构校验（票 75）：坏行出 W-DAY-ROW-INVALID，且**不拦停**（ok 仍真）
+        d_day = Path(td) / "day-rows"
+        (d_day / "exercises").mkdir(parents=True)
+        (d_day / "progress.md").write_text(
+            _led_head + "## 薄弱点\n- 无\n\n## 错题本\n- 无\n\n## 日达标\n"
+            "- 2026-01-01 ｜ 未达 ｜ 证据：无\n"
+            "- 2026-01-02 未达（缺竖线）\n"
+            "- 2026-02-30 ｜ 未达 ｜ 证据：无\n"
+            "- 2026-01-03 ｜ 未知 ｜ 证据：无\n"
+            "- （暂无）\n" + _led_tail, encoding="utf-8")
+        (d_day / "课程体系.md").write_text(_led_curr, encoding="utf-8")
+        (d_day / "exercises" / "01-极限-2026-01-01.md").write_text(
+            _fixture_evidence_text("01-极限-2026-01-01.md", _ev_wrong), encoding="utf-8")
+        r_day = check(d_day)
+        ok = ok and r_day["ok"]                                  # 只告警不拦停
+        ok = ok and not any(e["code"] == "W-DAY-ROW-INVALID" for e in r_day["errors"])
+        ok = ok and sum(1 for w in r_day["warnings"]
+                        if w["code"] == "W-DAY-ROW-INVALID") == 3   # 缺竖线 / 非真实日期 / 状态非法
+        # 合规行 + 「无」占位不得误报（宁可漏，不可错）
+        d_dayok = Path(td) / "day-rows-ok"
+        (d_dayok / "exercises").mkdir(parents=True)
+        (d_dayok / "progress.md").write_text(
+            _led_head + "## 薄弱点\n- 无\n\n## 错题本\n- 无\n\n## 日达标\n"
+            "- 2026-01-01 ｜ 达 ｜ 证据：exercises/01-极限-2026-01-01.md\n"
+            "- 2026-01-02 ｜ 未达 ｜ 证据：无\n"
+            "- 无\n" + _led_tail, encoding="utf-8")
+        (d_dayok / "课程体系.md").write_text(_led_curr, encoding="utf-8")
+        (d_dayok / "exercises" / "01-极限-2026-01-01.md").write_text(
+            _fixture_evidence_text("01-极限-2026-01-01.md", _ev_wrong), encoding="utf-8")
+        r_dayok = check(d_dayok)
+        ok = ok and r_dayok["ok"]
+        ok = ok and not any(w["code"] == "W-DAY-ROW-INVALID" for w in r_dayok["warnings"])
 
     print(("OK " if ok else "FAIL ") + "progress_check --selftest")
     return 0 if ok else 1

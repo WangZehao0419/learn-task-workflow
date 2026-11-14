@@ -293,6 +293,7 @@ def parse_progress_sections(text):
     weak_lines = []
     wrong_lines = []
     retention_lines = []
+    day_lines = []
     for raw in text.splitlines():
         line = raw.rstrip()
         if line.startswith("## "):
@@ -309,7 +310,44 @@ def parse_progress_sections(text):
             wrong_lines.append(line.strip()[2:].strip())
         elif section == "保持复习" and line.strip().startswith("- "):
             retention_lines.append(line.strip()[2:].strip())
-    return recent_update, weak_lines, wrong_lines, retention_lines
+        elif section == "日达标" and line.strip().startswith("- "):
+            day_lines.append(line.strip()[2:].strip())
+    return recent_update, weak_lines, wrong_lines, retention_lines, day_lines
+
+
+DAY_ROW_RE = re.compile(
+    r"^(\d{4}-\d{2}-\d{2})\s*[｜|]\s*(达|未达)\s*[｜|]\s*证据\s*[：:]\s*(\S.*?)\s*$")
+DAY_STATUSES = ("达", "未达")
+
+
+def parse_day_rows(lines):
+    """「日达标」区条目行解析（只存按天事实，不存派生计数）。
+
+    lines：parse_progress_sections 的 day_lines（已剥「- 」前缀）。
+    返回 (rows, bad)：
+      rows —— [{date, met, evidence}]，按原文顺序、**不去重不改写**；
+      bad  —— 形态不符 / 日期非 ISO / 状态非「达|未达」的原文行（由调用方出
+              W-DAY-ROW-INVALID，只告警不拦停——阈值本身是 E5 工程约定，
+              不能拿它拦学员）。
+
+    「无」类占位整行跳过（与三区 NONE_MARKS/NONE_RE 同口径）；缺区 = 无历史，
+    由调用方判空，本函数不做任何推断、不回溯、不补天。
+    """
+    rows, bad = [], []
+    for raw in lines or []:
+        body = (raw or "").strip()
+        if not body or body in NONE_MARKS or NONE_RE.fullmatch(body):
+            continue
+        m = DAY_ROW_RE.match(body)
+        if not m:
+            bad.append(body)
+            continue
+        iso, status, evidence = m.group(1), m.group(2), m.group(3)
+        if _valid_iso(iso) is None or status not in DAY_STATUSES:
+            bad.append(body)
+            continue
+        rows.append({"date": iso, "met": status == "达", "evidence": evidence})
+    return rows, bad
 
 
 def parse_meta(meta_text):

@@ -154,6 +154,7 @@
 | progress_check | `W-REVIEW-DEBT` | 存在 `顺延>0` 的复习条目（形态判据，E5）：下一轮开场须明示队列长度与顺延方案。**只验数据形态，验不了「模型有没有明示」**；不参与「连续 3 天」计数；warning 不拦截 |
 | scheduler | `W-PROGRESS` / `W-PROGRESS-MISSING` / `W-PROGRESS-UNREADABLE` / `W-CONFIDENCE-AMBIGUOUS` / `W-CW-LOWCONF` / `W-CW-ORPHAN` / `W-META-INVALID` / `W-NO-EVT` | 任务进度缺失/不可读；信心/时序歧义、低信心 cw、孤立 cw、元数据非法；校准不计或跳过；条目缺 `evt=` 按单条观察计入 |
 | scheduler | `W-UNPARSED-ITEM` | 调度条目无法解析或缺合法日期，不入队、不猜值 |
+| scheduler / progress_check | `W-DAY-ROW-INVALID` | 「日达标」条目形态不符（应为「<YYYY-MM-DD> ｜ 达|未达 ｜ 证据：<…>」）/ 日期非 ISO / 状态非「达|未达」。只告警不拦停——阈值是 E5 工程约定，不能拿它拦学员 |
 | verify_explanation | `E-BOX` / `E-BOX-EMPTY` / `E-BOX-FORMAT` / `E-BOX-INCOMPLETE` / `E-BOX-WRAP` / `E-HEADER-BRIEF` / `E-REQ-MISSING` | 五要素 / 答案框 / 标记行 / 节首导读缺失或体例错误 |
 | verify_explanation | `E-IMG-DEADLINK` / `E-IMG-READ` / `E-READ-FILE` | 图引用死链 / 图读取失败 / 文件读取失败 |
 | verify_explanation | `E-RUBRIC-SUM` | 给分点量表各点分值之和不等于合计 |
@@ -298,7 +299,7 @@
 |---|---|---|---|
 | `task_index.py` | `--root <数据根> [--write-index \| --no-write-index] [--selftest]` | 只读、不物化 `index.json`（写缓存为显式 opt-in） | 会话开始/续学/问进度 |
 | `progress_check.py` | `<任务目录> [--release] [--proposed-phase <阶段>] [--staged <候选快照>] [--changed-lessons <正整数列表>] [--selftest]` | 日常校验（warning 不拦截） | 闸口推进前；新增掌握/结课/跨阶段加 `--release` |
-| `scheduler.py` | `next-interval \| due-queue \| calibration [--selftest]` | 只读计算，输出 JSON；落盘由文件写入能力负责 | 判分后算 S'/D'/due；开节前查到期队列；S4 开场校准 |
+| `scheduler.py` | `next-interval \| due-queue \| calibration \| day-streak [--selftest]` | 只读计算，输出 JSON；落盘由文件写入能力负责 | 判分后算 S'/D'/due；开节前查到期队列；S4 开场校准；红线 8 判据④读连续未达天数 |
 | `kp_sort.py` | `<课程体系.md> [--selftest]` | 只读、零写盘 | 知识型/技能型排序子步 |
 | `check_environment.py` | `[--manifest <路径>] [--capability <名称>]... [--selftest]` | 只读诊断 | 脚本调用出现解释器/版本类失败时诊断一次 |
 | `verify_explanation.py` | `<材料目录或单文件> [--selftest] [--reader]` | 只读静态校验，不写盘 | 讲义定稿前；`--reader` 加跑读者版 W 级检查 |
@@ -385,7 +386,7 @@ python -B evals/verify-gate-registry.py
 
 ### 当前核验
 
-- 适用版本：9.21.5
+- 适用版本：9.21.6
 - 核验日期：2026-11-14
 - 环境依赖：`skill-dependencies.json`（核心层 Python `min_version`；增强层 `mmdc` 缺席不阻断）；只有 `check_environment.py` 输出 `ready` 才能继续，`degraded` 按上一节「核心层与增强层」说明一句。
 
