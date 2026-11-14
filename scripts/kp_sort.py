@@ -9,13 +9,22 @@
 本脚本只读前六段并忽略附加段。
 
 用法：
-    python kp_sort.py <清单文件路径>
+    python kp_sort.py <清单文件路径>          # 拓扑序（默认；--list 是它的显式别名）
+    python kp_sort.py fringe <清单文件路径>   # 「已会 / 现在能学」两张清单（票 37 Q3 的消费端）
     python kp_sort.py --selftest
 
 输出（stdout，JSON）：
-    成功  {"order": ["KP-01-01", ...], "version": <N|null>, "count": <M>, "sort_rule": <...|null>}
-    失败  {"error": "..."}（含环时另含 "cycle" 环路径数组）
+    拓扑序  {"order": ["KP-01-01", ...], "version": <N|null>, "count": <M>, "sort_rule": <...|null>}
+    fringe  {"schema": "ltw-fringe/1", "met": [...], "available": [...],
+             "blockers": [{"kp", "prerequisite", "prerequisite_status"}],
+             "pending": [{"kp", "waiting_for": [...]}]}
+    失败    {"error": "..."}（含环时另含 "cycle" 环路径数组）
 退出码：0 成功 / 1 失败（清单缺失、畸形、前置引用不存在、依赖环、版本不足）/ 2 用法错误
+
+fringe 只读纯计算：**已会** = 判定=已判；**现在能学** = 硬前置全部已判（或带摸底「已会」
+括注）、自身未判。两张清单只收讲授域（状态 ∈ {未讲, 已讲}），暂缓/排除既不「已会」也不
+「能学」。输出按**原文行序**——「现在能学」的排序口径票 37 未定，本脚本不发明排序（要排序
+另起决策票）。不写盘、不改 order/excluded/held 任何既有输出字段。
 
 确定性纪律：
   - 同层 tie-break 在脚本内显式实现：最小堆 Kahn 变体，按 KP 编号（节序, KP 序）
@@ -90,6 +99,21 @@ TYPED = """# 课程体系：分型字段夹具（排序只读前六段）
 
 - KP-01-01 ｜ 甲 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲 ｜ 类型：概念
 - KP-01-02 ｜ 乙 ｜ 节 1 ｜ 前置：KP-01-01 ｜ 来源：总纲 1.1 ｜ 状态：未讲 ｜ 类型：记忆 ｜ 视觉任务：识别, 关系
+"""
+
+FRINGE = """# 课程体系：fringe 夹具（票 37 Q3 的两张清单）
+- 版本：1
+- 覆盖范围：全量
+
+- KP-01-01 ｜ 甲已判 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：已讲 ｜ 判定：已判 ｜ 判定依据：exercises/01-a-2026-11-10.md#题1
+- KP-01-02 ｜ 乙能学 ｜ 节 1 ｜ 前置：KP-01-01 ｜ 来源：总纲 1.1 ｜ 状态：未讲
+- KP-01-03 ｜ 丙被乙挡 ｜ 节 1 ｜ 前置：KP-01-02 ｜ 来源：总纲 1.1 ｜ 状态：未讲
+- KP-02-01 ｜ 丁前置暂缓 ｜ 节 2 ｜ 前置：KP-02-02 ｜ 来源：总纲 1.2 ｜ 状态：未讲
+- KP-02-02 ｜ 戊暂缓 ｜ 节 2 ｜ 前置：  ｜ 来源：总纲 1.2 ｜ 状态：暂缓
+- KP-03-01 ｜ 己摸底已会 ｜ 节 3 ｜ 前置：  ｜ 来源：总纲 1.3 ｜ 状态：未讲（已会：摸底全对，2026-10-11）
+- KP-03-02 ｜ 庚靠摸底放行 ｜ 节 3 ｜ 前置：KP-03-01 ｜ 来源：总纲 1.3 ｜ 状态：未讲
+- KP-04-01 ｜ 辛已判但暂缓 ｜ 节 4 ｜ 前置：  ｜ 来源：总纲 1.4 ｜ 状态：暂缓 ｜ 判定：已判 ｜ 判定依据：exercises/04-a-2026-11-10.md#题1
+- KP-05-01 ｜ 壬双前置缺一 ｜ 节 5 ｜ 前置：KP-01-01，KP-01-02 ｜ 来源：总纲 1.5 ｜ 状态：未讲
 """
 
 
@@ -189,13 +213,17 @@ def _counts(rows):
     return excluded, held
 
 
-def sort_from_text(text):
-    """清单文本 → (结果 dict, 退出码)。纯函数，零副作用。"""
-    parsed = parse_kp_list(text)
+def _precheck(parsed, text):
+    """排序与 fringe 共用的前置校验（同一判据只写一遍，防两处口径分叉）。
+
+    返回 (失败结果或 None, 退出码, norm_to_raw)。None 表示通过，调用方拿 rows 继续。
+    校验顺序与失败结果与 v9.21.10 逐字一致（旧行为零回归）：畸形行 → 重复编号（含别名
+    归一）→ 空清单伪解析 → 所属节冲突 → 前置悬空。
+    """
     if parsed["malformed"]:
         return ({"error": "清单存在畸形行（六字段：KP编号｜知识点｜所属节｜前置｜来源｜状态）："
                           + parsed["malformed"][0],
-                 "malformed_count": len(parsed["malformed"])}, 1)
+                 "malformed_count": len(parsed["malformed"])}, 1, None)
     rows = parsed["rows"]
     ids = [r["id"] for r in rows]
     # 别名归一：仅用于查重与前置匹配；输出 order 保留原书写形态（输出保真）
@@ -209,18 +237,15 @@ def sort_from_text(text):
             dups.append(n)
         seen.add(n)
     if dups:
-        return ({"error": "清单存在重复 KP 编号（含单位数/补零别名归一）：" + "、".join(dups)}, 1)
+        return ({"error": "清单存在重复 KP 编号（含单位数/补零别名归一）：" + "、".join(dups)}, 1, None)
     if not ids:
-        # 显式空清单（如「无」）→ 成功返回空 order；但**含 KP 编号痕迹却零解析行**
+        # 显式空清单（如「无」）→ 合法（空 order）；但**含 KP 编号痕迹却零解析行**
         # → 疑似解析失败，不得静默吞成「空成功」（P1）
         if re.search(r"KP-\d+-\d+", text):
             return ({"error": "疑似解析失败：文本含 KP 编号但未解析出任何合法 KP 行"
                               "（检查六字段：KP编号｜知识点｜所属节｜前置｜来源｜状态）",
-                     "kp_token_found": True}, 1)
-        exc_n, held_n = _counts(rows)
-        return ({"order": [], "version": parsed["version"], "count": 0,
-                 "excluded": exc_n, "held": held_n,
-                 "sort_rule": parsed["sort_rule"]}, 0)
+                     "kp_token_found": True}, 1, None)
+        return (None, 0, norm_to_raw)
     # K02 显式所属节与编号冲突：编号第一节数字即所属节序号，显式声明的节号必须一致
     sec_conflicts = [r for r in rows if r["sec_decl"] is not None and r["sec_decl"] != r["sec"]]
     if sec_conflicts:
@@ -228,11 +253,27 @@ def sort_from_text(text):
                     "{0}（编号节 {1}，声明节 {2}）".format(r["id"], r["sec"], r["sec_decl"])
                     for r in sec_conflicts),
                  "section_conflicts": [{"id": r["id"], "id_section": r["sec"],
-                                        "declared_section": r["sec_decl"]} for r in sec_conflicts]}, 1)
+                                        "declared_section": r["sec_decl"]} for r in sec_conflicts]}, 1, None)
     for r in rows:
         missing = [p for p in r["prereqs"] if normalize_kp_id(p) not in norm_to_raw]
         if missing:
-            return ({"error": "KP " + r["id"] + " 前置引用不存在的 KP：" + "、".join(missing)}, 1)
+            return ({"error": "KP " + r["id"] + " 前置引用不存在的 KP：" + "、".join(missing)}, 1, None)
+    return (None, 0, norm_to_raw)
+
+
+def sort_from_text(text):
+    """清单文本 → (结果 dict, 退出码)。纯函数，零副作用。"""
+    parsed = parse_kp_list(text)
+    bad, code, norm_to_raw = _precheck(parsed, text)
+    if bad is not None:
+        return (bad, code)
+    rows = parsed["rows"]
+    ids = [r["id"] for r in rows]
+    if not ids:
+        exc_n, held_n = _counts(rows)
+        return ({"order": [], "version": parsed["version"], "count": 0,
+                 "excluded": exc_n, "held": held_n,
+                 "sort_rule": parsed["sort_rule"]}, 0)
 
     # K01 硬先修教学阻塞：纳入项（未讲/已讲）的硬前置若被文档过滤为暂缓/排除，
     # 实际讲授序会缺失必需先修——必须显式报 blocker，不能让调用侧从成功序里自行过滤。
@@ -298,15 +339,93 @@ def sort_from_text(text):
              "sort_rule": parsed["sort_rule"]}, 0)
 
 
-def run(kp_list_path):
+FRINGE_SCHEMA = "ltw-fringe/1"
+
+
+def _fringe_satisfied(row):
+    """前置是否已满足：**判定=已判**，或带摸底「已会」括注（票 81 Q2：一次摸底全对即可放行，
+    否则「独立正确可空」的摸底目永远进不了别人的前置链）。"""
+    return row.get("judge") == "已判" or bool(row.get("bottom_note"))
+
+
+def fringe_from_text(text):
+    """清单文本 → (fringe 结果 dict, 退出码)。只读纯计算，零副作用。
+
+    票 37 Q3 定的两件事之一：**输出两张清单**（已会 / 现在能学），不做选题器
+    （票 44 v2 §2.2.2 判「两张清单的输出形态可抄，ALEKS 的选题器不可迁移」）。
+
+    - **已会** = 讲授域内「判定=已判」的目行。摸底「已会」括注按 kp_status_base 归
+      「未讲」基值——它是「前置可放行」的证据，不等于「这一目已判」，所以不进已会；
+    - **现在能学** = 讲授域内自身未判、且硬前置全部满足（_fringe_satisfied）的目行；
+    - **pending** = 自身未判但还有前置没满足的目行，附 waiting_for（缺哪几个前置）。
+      它不在票 37 的两张清单里，是同一遍遍历的副产品——**不加它，「能学清单为空」就
+      分不出「全学完了」与「全被前置挡住」**，调用侧只能猜；
+    - **blockers** 复用 sort_from_text 的既有形状（kp / prerequisite /
+      prerequisite_status），不新造第三类状态：硬前置被暂缓/排除时单独列出，该目既不进
+      「能学」也不进 pending——等一个永远不会判的目是假等待。
+
+    暂缓/排除的行**两张清单都不收**：它们不在讲授域里，写进「现在能学」等于叫人去学一个
+    已被文档过滤掉的目。输出按**原文行序**：票 37 未定「现在能学」的排序口径，脚本不发明
+    排序（要排序另起决策票，见 references/data.md 的 fringe 条目）。
+    """
+    parsed = parse_kp_list(text)
+    bad, code, norm_to_raw = _precheck(parsed, text)
+    if bad is not None:
+        return (bad, code)
+    rows = parsed["rows"]
+    status_by_norm = {normalize_kp_id(r["id"]): r["status"] for r in rows}
+    by_norm = {normalize_kp_id(r["id"]): r for r in rows}
+    met, available, pending, blockers = [], [], [], []
+    for r in rows:
+        if r["status"] not in ("未讲", "已讲"):
+            continue                      # 暂缓/排除：不在讲授域，两张清单都不收
+        if r.get("judge") == "已判":
+            met.append(r["id"])
+            continue
+        waiting, blocked = [], []
+        for p in r["prereqs"]:
+            np = normalize_kp_id(p)
+            disposition = status_by_norm.get(np)
+            if disposition in ("暂缓", "排除"):
+                blocked.append({"kp": r["id"], "prerequisite": p,
+                                "prerequisite_status": disposition})
+            elif not _fringe_satisfied(by_norm.get(np, {})):
+                waiting.append(p)
+        blockers.extend(blocked)
+        if blocked:
+            continue                      # 等一个被暂缓/排除的目永远不会到，不放进 pending
+        if waiting:
+            pending.append({"kp": r["id"], "waiting_for": waiting})
+        else:
+            available.append(r["id"])
+    return ({"schema": FRINGE_SCHEMA, "met": met, "available": available,
+             "blockers": blockers, "pending": pending}, 0)
+
+
+def _read_list(kp_list_path):
+    """读清单文本；返回 (text, 失败结果)。排序与 fringe 共用同一读取口径（BOM/不可读）。"""
     p = Path(kp_list_path)
     if not p.is_file():
-        return ({"error": "清单文件不存在：" + str(p)}, 1)
+        return (None, {"error": "清单文件不存在：" + str(p)})
     try:
-        text = p.read_text(encoding="utf-8-sig", errors="replace")  # utf-8-sig：BOM 吞首行缝隙闭合，无 BOM 无副作用
+        # utf-8-sig：BOM 吞首行缝隙闭合，无 BOM 无副作用
+        return (p.read_text(encoding="utf-8-sig", errors="replace"), None)
     except OSError as exc:
-        return ({"error": "清单文件不可读：" + str(exc)}, 1)
+        return (None, {"error": "清单文件不可读：" + str(exc)})
+
+
+def run(kp_list_path):
+    text, bad = _read_list(kp_list_path)
+    if bad is not None:
+        return (bad, 1)
     return sort_from_text(text)
+
+
+def run_fringe(kp_list_path):
+    text, bad = _read_list(kp_list_path)
+    if bad is not None:
+        return (bad, 1)
+    return fringe_from_text(text)
 
 
 def selftest():
@@ -442,15 +561,60 @@ def selftest():
     ok = ok and (json.dumps(resl, ensure_ascii=False, sort_keys=True)
                  == json.dumps(sort_from_text(leaf_cycle)[0], ensure_ascii=False, sort_keys=True))
 
+    # ⑯ fringe（票 37 Q3 的消费端）：两张清单 + 既有 blockers 形状 + 摸底放行
+    fr, frc = fringe_from_text(FRINGE)
+    ok = ok and frc == 0 and fr.get("schema") == FRINGE_SCHEMA
+    ok = ok and fr["met"] == ["KP-01-01"]
+    # 能学：乙（前置已判）、己（摸底已会，自身未判）、庚（前置是摸底目 → 放行）
+    ok = ok and fr["available"] == ["KP-01-02", "KP-03-01", "KP-03-02"]
+    # 丙被乙挡、丁被暂缓挡、壬有两个前置只满足一个（乙未判）；辛虽已判但状态暂缓 → 不进已会
+    # 壬这一行是「前置全部已判」的判别器：放宽成「至少一个已判」时它会掉进能学清单。
+    ok = ok and fr["pending"] == [
+        {"kp": "KP-01-03", "waiting_for": ["KP-01-02"]},
+        {"kp": "KP-05-01", "waiting_for": ["KP-01-02"]},
+    ]
+    ok = ok and fr["blockers"] == [{"kp": "KP-02-01", "prerequisite": "KP-02-02",
+                                  "prerequisite_status": "暂缓"}]
+    ok = ok and "KP-04-01" not in fr["met"] and "KP-02-02" not in fr["available"]
+    # 前置未判且自身未判 → 不进能学（丙）；前置全判且自身未判 → 进能学（乙）
+    ok = ok and "KP-01-03" not in fr["available"] and "KP-01-02" in fr["available"]
+    # 双前置只满足一个 → 不进能学（「全部已判」不是「至少一个已判」）
+    ok = ok and "KP-05-01" not in fr["available"]
+    # 只读纯计算：双跑逐字节一致，且不改拓扑序结果
+    ok = ok and (json.dumps(fr, ensure_ascii=False, sort_keys=True)
+                 == json.dumps(fringe_from_text(FRINGE)[0], ensure_ascii=False, sort_keys=True))
+    # 同一份夹具：拓扑序对「硬前置被暂缓」直接失败（K01），fringe 把它作为数据报出来
+    # 并照常返回 rc=0——这正是两张清单存在的意义：告诉调用侧「等谁」而不是「算不出来」。
+    _fs, _fsc = sort_from_text(FRINGE)
+    ok = ok and _fsc == 1 and _fs.get("blockers")
+    ok = ok and frc == 0 and fr["blockers"]
+    # 失败路径与拓扑序同源：畸形行 / 前置悬空都返回 error 而不是空清单
+    ok = ok and fringe_from_text(MALFORMED)[1] == 1 and "error" in fringe_from_text(MALFORMED)[0]
+    ok = ok and fringe_from_text(BAD_PREREQ)[1] == 1
+    # 空清单合法：两张清单都空，不是失败
+    _fe, _fec = fringe_from_text("# 课程体系：空\n- 版本：1\n\n- 无\n")
+    ok = ok and _fec == 0 and _fe["met"] == [] and _fe["available"] == []
+
     print(("OK " if ok else "FAIL ") + "kp_sort --selftest")
     return 0 if ok else 1
 
 
 def main(argv=None):
+    raw = list(sys.argv[1:] if argv is None else argv)
+    # 子命令先剥：argparse 的位置参数会把 `fringe` 当成清单路径、再对第二个实参报
+    # 「unrecognized arguments」。`fringe <清单>` 与 `--list <清单>` 都是显式入口；
+    # 裸路径仍走拓扑序（默认行为零改动——data.md 的「kp_sort 返回口径」依赖它）。
+    want_fringe = False
+    if raw and raw[0] == "fringe":
+        want_fringe = True
+        raw = raw[1:]
     ap = argparse.ArgumentParser(prog="kp_sort.py")
-    ap.add_argument("kp_list", nargs="?", default=None, help="课程体系.md 文件路径（显式实参，不依赖 cwd）")
+    ap.add_argument("kp_list", nargs="?", default=None,
+                    help="课程体系.md 文件路径（显式实参，不依赖 cwd）")
+    ap.add_argument("--list", action="store_true",
+                    help="拓扑序的显式别名（data.md 长期这么写；输出与裸路径逐字节相同）")
     ap.add_argument("--selftest", action="store_true")
-    args = ap.parse_args(argv)
+    args = ap.parse_args(raw)
     if args.selftest:
         return selftest()
     if sys.version_info < (3, 9):
@@ -461,7 +625,7 @@ def main(argv=None):
     if not args.kp_list:
         ap.print_usage()
         return 2
-    result, code = run(args.kp_list)
+    result, code = (run_fringe if want_fringe else run)(args.kp_list)
     print(json.dumps(result, ensure_ascii=False, sort_keys=True))
     return code
 

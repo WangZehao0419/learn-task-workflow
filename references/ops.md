@@ -135,6 +135,7 @@
 | progress_check | `E-LESSON-ID-MISSING` / `E-LESSON-ID-DUP` | 节路线行缺 `lesson_id=` / 路线间 `lesson_id` 重复 |
 | progress_check | `E-NO-EVIDENCE` / `E-EMPTY-EVIDENCE` / `E-NO-GRADED-ATTEMPT` / `E-ALL-FAILED` / `E-HINT-ONLY` / `E-NO-INDEPENDENCE` / `E-KEY-ABILITY-UNMET` / `E-GATE-THRESHOLD` / `E-NO-RESTATEMENT` | 已掌握/放行证据缺失或质量不足：无声明该 `lesson_id=` 的判分记录、空模板、无有效判定、全错、仅提示后对、独立性缺失、关键能力未独立通过、低于比例线、缺复述 |
 | progress_check | `E-KP-TYPED-GATE` | 声明了 KP 类型/视觉任务但缺对应分型证据 |
+| progress_check | `E-PREREQ-UNMET` | 出题前前置闸（票 37 Q3 / 票 83）：被出题或判分的目（节证据 attempt 行点名的 KP + 复述勾选点名的 KP + 结课综合测验点名的 KP）其硬前置 `判定≠已判` 且无摸底「已会」括注；前置被暂缓/排除同样拦（它不会被判，等它等于等不到）。**只在 `--release` 生效**，且只对已采用判定字段的任务生效（清单任意一行写了 `判定`）——全零的旧任务按未采用处理，否则升级当天存量任务全红。与 `W-KP-JUDGE` 的分工：W- 拦已写下的记账，E- 拦还没发生的那道题（票 81 Q4） |
 | progress_check | `E-REVIEW-ORIGIN` | S4「复习来源阶段」缺失或不在合法返回枚举 |
 | progress_check | `E-ROUTE-UNDONE` / `E-NO-ROUTE-STRICT` / `E-ROUTE-NUMBER` | 结课/已完成但路线未完成 / 路线不可解析 / 路线编号非法 |
 | progress_check | `E-NO-FINAL-EXAM` / `E-FINAL-NO-EVIDENCE` / `E-FINAL-BELOW-TARGET` / `E-FINAL-BLUEPRINT-GAP` / `E-FINAL-INVALID-TARGET` / `E-FINAL-ATTEMPT-CONFLICT` | 结课综合测验缺失 / 空文件 / 未达目标线 / 纳入 KP 缺**评分点映射**（同行 `KP=<id>｜评分点=<…>`；仅题面提编号不算）/ 目标线非法 / 同 attempt 结果冲突 |
@@ -169,7 +170,7 @@
 | prereq_check | `E-LIST-MISSING` / `E-LIST-EMPTY` / `E-SCAN-MISSING` / `W-TERM-UNTAUGHT` | 清单缺失 / 清单零可用行 / 扫描文件缺失；`W-TERM-UNTAUGHT` 为术语对账逐条违规提示（stderr），exit 1 |
 | verify_effect_report | `W-EFFECT-MARKER` / `W-EFFECT-LEVEL` / `W-EFFECT-RETENTION` / `W-EFFECT-CALIBRATION` / `W-EFFECT-POINTER` | 效果报告缺段（标题容忍尾随括注与全角冒号）/ 判定行缺失或不合体例 / 未测理由占位 / 报告写了「键=值」字段行（只认行首列表项形态，体例纪律）；99- 卷缺「目标线：」；88- 延迟测量写了 `lesson_id=`；元认知未指到「信心=」行或 progress.md；证据指针悬空。**只告警不拦停**，恒 rc=0；报告不存在打印「跳过」不打印「通过」 |
 
-> `check_environment.py` 用 `ready` / `needs_setup` / `unavailable` / `manifest_error`（exit 2）状态而不是 E/W 码；`kp_sort.py` 用 exit 1 表示畸形行、依赖环或解释器版本不足。两者详见 `scripts-contract.json`。
+> `check_environment.py` 用 `ready` / `needs_setup` / `unavailable` / `manifest_error`（exit 2）状态而不是 E/W 码；`kp_sort.py` 用 exit 1 表示畸形行、依赖环或解释器版本不足（`fringe` 子命令同口径，但它把「硬前置被暂缓/排除」作为 `blockers` 数据报出、照常 exit 0）。两者详见 `scripts-contract.json`。
 >
 > `degraded` 不是错误码、也不是第五种状态：它是 `ready` 输出里的一个可选数组，读的是「有没有走降级路径」这件事。检查项里只有 `command_not_found` 一个 reason_code 属它。
 
@@ -301,7 +302,7 @@
 | `task_index.py` | `--root <数据根> [--write-index \| --no-write-index] [--selftest]` | 只读、不物化 `index.json`（写缓存为显式 opt-in） | 会话开始/续学/问进度 |
 | `progress_check.py` | `<任务目录> [--release] [--proposed-phase <阶段>] [--staged <候选快照>] [--changed-lessons <正整数列表>] [--selftest]` | 日常校验（warning 不拦截） | 闸口推进前；新增掌握/结课/跨阶段加 `--release` |
 | `scheduler.py` | `next-interval \| due-queue \| calibration \| day-streak [--selftest]` | 只读计算，输出 JSON；落盘由文件写入能力负责 | 判分后算 S'/D'/due；开节前查到期队列；S4 开场校准；红线 8 判据④读连续未达天数 |
-| `kp_sort.py` | `<课程体系.md> [--selftest]` | 只读、零写盘 | 知识型/技能型排序子步 |
+| `kp_sort.py` | `fringe <课程体系.md>` \| `<课程体系.md> [--list] [--selftest]` | 只读、零写盘 | 知识型/技能型排序子步；S3 出题前查「现在能学」 |
 | `check_environment.py` | `[--manifest <路径>] [--capability <名称>]... [--selftest]` | 只读诊断 | 脚本调用出现解释器/版本类失败时诊断一次 |
 | `verify_explanation.py` | `<材料目录或单文件> [--selftest] [--reader]` | 只读静态校验，不写盘 | 讲义定稿前；`--reader` 加跑读者版 W 级检查 |
 | `prereq_check.py` | `--list <课程体系.md> --scan <题组或讲义.md>... [--extra-terms "…"] [--extra-file <文件>] [--scan-all] [--selftest]` | 只读对账，不写盘 | 判分题交付前（R46 出题前术语对账）；目行补登记 `引入` 列后跑 |
@@ -387,7 +388,7 @@ python -B evals/verify-gate-registry.py
 
 ### 当前核验
 
-- 适用版本：9.21.10
+- 适用版本：9.21.11
 - 核验日期：2026-11-14
 - 环境依赖：`skill-dependencies.json`（核心层 Python `min_version`；增强层 `mmdc` 缺席不阻断）；只有 `check_environment.py` 输出 `ready` 才能继续，`degraded` 按上一节「核心层与增强层」说明一句。
 

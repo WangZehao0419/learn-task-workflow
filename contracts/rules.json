@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/3",
- "version": "9.21.10",
+ "version": "9.21.11",
  "constants": {
   "phases": [
    "接料建档",
@@ -245,6 +245,7 @@
     "E-NO-PROGRESS",
     "E-NO-RESTATEMENT",
     "E-NO-ROUTE-STRICT",
+    "E-PREREQ-UNMET",
     "E-READ-FILE",
     "E-REQ-MISSING",
     "E-REVIEW-ORIGIN",

@@ -345,6 +345,45 @@ def judge_warnings(row, ex_dir):
     return msgs
 
 
+def prereq_unmet_errors(assessed_ids, row_by_norm, adopted):
+    """出题前前置闸（票 37 Q3 的消费端 / 票 83）：被出题或判分的目，其硬前置必须已满足。
+
+    与 W-KP-JUDGE 的分工是票 81 Q4 定死的：W- 拦的是「已经写下的记账」，拦记账等于禁止
+    记账，所以只告警；本码拦的是「**还没发生的那道题**」，拦停才有意义。
+
+    前置「已满足」有两条路：
+      · 该前置目 `判定=已判`；
+      · 该前置目带摸底「已会」括注——票 81 Q2 明写摸底目允许 `独立正确` 为空，若这里不认
+        这条，`E-PREREQ-UNMET` 会在第一节就误拦所有摸底目（票面验收第 4 条）。
+    前置被暂缓/排除同样拦：它永远不会被判，等它等于等不到。
+
+    **只对已采用判定字段的任务生效**（`adopted=False` 直接返回空）：全清单零 `判定` 的旧任务
+    按「未采用」处理，与分型门「未声明类型不触发」同一形态。不这么切，升级当天所有存量任务
+    立刻全红——那不是闸口，是迁移失败（票 81 Q3 零迁移的必然推论）。
+    """
+    if not adopted:
+        return []
+    msgs = []
+    for kid in assessed_ids:
+        row = row_by_norm.get(normalize_kp_id(kid))
+        if row is None:
+            continue          # 不在清单里的编号（无目行任务/外部标签）不归本码管
+        for p in row["prereqs"]:
+            pre = row_by_norm.get(normalize_kp_id(p))
+            if pre is None:
+                continue      # 前置悬空已由 W-UNPARSED-KP 报，不重复报
+            if pre.get("judge") == "已判" or pre.get("bottom_note"):
+                continue
+            if pre["status"] in ("暂缓", "排除"):
+                msgs.append("目行「" + kid + "」的出题前置 " + p + " 状态为" + pre["status"] +
+                            "——它不会被判，等它等于等不到；先改前置或先教该目")
+            else:
+                msgs.append("目行「" + kid + "」的出题前置 " + p + " 尚未判定" +
+                            "（判定≠已判且无摸底「已会」证据）——先判前置再出题，否则" +
+                            "这道题考的是它没学过的东西")
+    return msgs
+
+
 def material_key(line):
     """材料字面匹配键：去括注、取路径末段；用于覆盖区是否真的提到该材料。"""
     s = re.split(r"[（(]", (line or "").strip(), 1)[0].strip()
@@ -991,6 +1030,8 @@ def check(task_dir, release=False, proposed=None):
     delta = None              # 候选快照相对磁盘原状态的**真实新增掌握**集合
     evidence_used = []        # 各节实际选用的判分证据文件（确定性选取透明化）
     lesson_evidence = {}      # 节号 -> 判分记录全文（分型验收复用，避免重复选证据）
+    assessed_ids = []         # 被出题/判分点名的目（E-PREREQ-UNMET 的对象，票 83）
+    kp_rows_all = []          # 课程体系去重后的目行（前置闸与分型门共用，不二次解析）
     lesson_file = {}          # 节号 -> 选中的判分证据文件名（判错入账护栏的前缀豁免判断用）
     prog = task_dir / "progress.md"
     if proposed.get("text") is not None:
@@ -1220,6 +1261,12 @@ def check(task_dir, release=False, proposed=None):
             best, best_text = "real", _read_evidence(ex_dir, chosen)
             lesson_evidence[num] = best_text
             lesson_file[num] = chosen
+            # 出题前前置闸的对象：这一节真正被判分的目（attempt 行点名 + 复述勾选点名）
+            for _a in parse_attempts(best_text)["attempts"]:
+                if _a["kp"] and not _a["voided"]:
+                    assessed_ids.append(_a["kp"])
+            for _kid in restated_kp_ids(best_text):
+                assessed_ids.append(_kid)
         else:
             # 无 real 证据：仍按确定性顺序找 template/empty，给出可核查的拦截原因
             best, best_text = "empty", ""
@@ -1415,6 +1462,7 @@ def check(task_dir, release=False, proposed=None):
                     else:
                         seen_ids.add(normalized_id)
                         rows_unique.append(r)
+                kp_rows_all = rows_unique
                 # v9.12.0（R54）：「需巩固」标注只读计数（基值仍按已讲参与各项判定）
                 coverage["needs_consolidation"] = sum(
                     1 for r in rows_unique if r.get("needs_consolidation"))
@@ -1600,6 +1648,10 @@ def check(task_dir, release=False, proposed=None):
                                           "——空文件或仅凭文件名不得证明结课"})
             else:
                 ftext = _read_evidence(ex_dir, fin)
+                # 结课综合测验也是「出题」：它点名的目一并进前置闸（票 83）
+                for _a in parse_attempts(ftext)["attempts"]:
+                    if _a["kp"] and not _a["voided"]:
+                        assessed_ids.append(_a["kp"])
                 # 结课证据合同不同于节验收：另按真实分值与目标线，不套「复述 / 逐关键能力独立」
                 target = parse_target_ratio(ftext)
                 invalid_target = target is None and TARGET_DECL_RE.search(ftext)
@@ -1653,6 +1705,17 @@ def check(task_dir, release=False, proposed=None):
                                "message": "阶段为「" + phase + "」但课程体系仍有关键能力目行状态「未讲」：" +
                                           "、".join(mandatory_unlearned_ids) +
                                           "——关键能力缺可判分证据，不得结课"})
+
+    # ── 出题前前置闸（E-PREREQ-UNMET，票 37 Q3 / 票 83）：**拦停**，与 W-KP-JUDGE 相反 ──
+    # 判据分工见票 81 Q4：W- 拦的是已经写下的记账（拦记账＝禁止记账）；本码拦的是还没发生的
+    # 那道题，所以必须拦。只在 release 生效——日常校验不拦推进，与既有 E- 闸口同口径。
+    # 「已采用判定字段」的判法：清单里**任意一行**写了 `判定`。全零的旧任务按未采用处理，
+    # 与分型门「未声明类型不触发」同形态；不这么切，升级当天存量任务立刻全红。
+    if release and assessed_ids:
+        _adopted = any(r.get("judge") for r in kp_rows_all)
+        _row_by_norm = {normalize_kp_id(r["id"]): r for r in kp_rows_all}
+        for _msg in prereq_unmet_errors(assessed_ids, _row_by_norm, _adopted):
+            errors.append({"code": "E-PREREQ-UNMET", "message": _msg})
 
     # ── 复习债形态判据（R36 / 票 72 Q1+Q2）：warning 非 error，不拦截 ──
     # 判据：progress.md 三区（薄弱点/错题本/保持复习）任一存在「顺延>0」的条目。
@@ -2475,6 +2538,68 @@ def selftest():
         ok = ok and r48["ok"]
         ok = ok and any(w["code"] == "W-KP-JUDGE" and "缺省" in w["message"]
                         for w in r48["warnings"])
+
+        # ═══ 出题前前置闸 E-PREREQ-UNMET（票 37 Q3 / 票 83）═══
+        # 与 W-KP-JUDGE 相反：这里拦停。判据分工见票 81 Q4——W- 拦已写下的记账，E- 拦还没发生
+        # 的那道题。三条必测分支：前置未判→红 / 前置已判→绿 / 前置是摸底「已会」→绿。
+        _pg_head = ("# 学习任务：前置闸\n- 数据根：<root>\n- 当前阶段：逐节学习\n"
+                    "- 类型：知识型\n- 学科族：计算与技术\n- 目标：入门\n- 起点：零基础\n"
+                    "- 课程体系：课程体系.md\n\n## 学习路线\n- [x] 1. 变量\n")
+        _pg_ev = ("## 作答与判分\n"
+                  "- 题1：作答「3」｜正确性=对｜独立性=独立｜调度档=Good｜KP=KP-01-02\n"
+                  "## 复述检查清单\n- [x] 关键点1：变量\n- [x] 关键点2：赋值\n- [x] 无事实性错误\n")
+
+        def _pg_dir(name, row1, row2):
+            # 不借 _mk2：它在 selftest 更靠后才定义（作用域先于定义会 NameError）。
+            d = Path(td) / name
+            d.mkdir()
+            (d / "progress.md").write_text(_pg_head, encoding="utf-8")
+            (d / "exercises").mkdir()
+            (d / "exercises" / "01-变量-2026-01-01.md").write_text(
+                _fixture_evidence_text("01-变量-2026-01-01.md", _pg_ev), encoding="utf-8")
+            (d / "课程体系.md").write_text(_fixture_text_ids(
+                "# 课程体系：前置闸\n- 版本：1\n- 覆盖范围：全量\n"
+                "- 覆盖摘要：总 2 ｜ 未讲 2 ｜ 已讲 0 ｜ 暂缓 0 ｜ 排除 0\n\n"
+                "## 学习路线\n### 章1 ｜ 基础\n- [x] 1. 变量\n" + row1 + "\n" + row2 + "\n"),
+                encoding="utf-8")
+            return d
+
+        _pg_row1_plain = "- KP-01-01 ｜ 甲 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 ｜ 状态：已讲"
+        _pg_row2 = "- KP-01-02 ｜ 乙 ｜ 节 1 ｜ 前置：KP-01-01 ｜ 来源：总纲 ｜ 状态：已讲 ｜ 判定：未判"
+        # ① 前置未判 + 自身被出题 → E-PREREQ-UNMET 拦停（rc=1）
+        _pg_bad = _pg_dir("pre-unmet", _pg_row1_plain, _pg_row2)
+        _r_pg = check(_pg_bad, release=True)
+        ok = ok and (not _r_pg["ok"])
+        ok = ok and sum(1 for e in _r_pg["errors"] if e["code"] == "E-PREREQ-UNMET") == 1
+        ok = ok and any("KP-01-01" in e["message"] and "尚未判定" in e["message"]
+                        for e in _r_pg["errors"] if e["code"] == "E-PREREQ-UNMET")
+        # ② 前置已判 → 回绿
+        _pg_row1_judged = ("- KP-01-01 ｜ 甲 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 ｜ 状态：已讲"
+                           " ｜ 判定：已判 ｜ 判定依据：exercises/01-变量-2026-01-01.md#题1")
+        _pg_ok = _pg_dir("pre-met", _pg_row1_judged, _pg_row2)
+        _r_pgok = check(_pg_ok, release=True)
+        ok = ok and _r_pgok["ok"]
+        ok = ok and not any(e["code"] == "E-PREREQ-UNMET" for e in _r_pgok["errors"])
+        # ③ 前置是摸底「已会」（判定缺失 + 括注）→ 作为已满足前置放行（票 81 Q2 的必然推论）
+        _pg_row1_bottom = ("- KP-01-01 ｜ 甲 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲"
+                           " ｜ 状态：未讲（已会：摸底全对，2026-10-11）")
+        _r_pgb = check(_pg_dir("pre-bottom", _pg_row1_bottom, _pg_row2), release=True)
+        ok = ok and _r_pgb["ok"]
+        ok = ok and not any(e["code"] == "E-PREREQ-UNMET" for e in _r_pgb["errors"])
+        # ④ 前置被暂缓/排除 → 同样拦停，但文案说「等不到」而不是「尚未判定」
+        _pg_row1_held = "- KP-01-01 ｜ 甲 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 ｜ 状态：暂缓"
+        _r_pgh = check(_pg_dir("pre-held", _pg_row1_held, _pg_row2), release=True)
+        ok = ok and any(e["code"] == "E-PREREQ-UNMET" and "等不到" in e["message"]
+                        for e in _r_pgh["errors"])
+        # ⑤ 零迁移：清单里一行 `判定` 都没有 → 未采用判定字段，旧任务不因升级变红
+        _pg_row2_plain = "- KP-01-02 ｜ 乙 ｜ 节 1 ｜ 前置：KP-01-01 ｜ 来源：总纲 ｜ 状态：已讲"
+        _r_pg0 = check(_pg_dir("pre-legacy", _pg_row1_plain, _pg_row2_plain), release=True)
+        ok = ok and _r_pg0["ok"]
+        ok = ok and not any(e["code"] == "E-PREREQ-UNMET" for e in _r_pg0["errors"])
+        # ⑥ 日常模式不拦停（与既有 E- 闸口同口径：严格闸口只在 --release 生效）
+        _r_pgd = check(_pg_bad)
+        ok = ok and _r_pgd["ok"]
+        ok = ok and not any(e["code"] == "E-PREREQ-UNMET" for e in _r_pgd["errors"])
 
         # ㉖ 判分文件存在但内容无「判分/作答」→ W-EMPTY-EVIDENCE（warning 级不阻断）
         d26 = Path(td) / "empty-ev"

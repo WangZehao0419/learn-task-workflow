@@ -22,7 +22,7 @@
     "1": "不通过",
     "2": "用法错误"
    },
-   "notes": "--release 放行模式：判分四态 correct/partial/incorrect/ungraded；partial 入分母不入分子，ungraded 与作废行不入分母（W-VOIDED-ATTEMPT / W-UNGRADED-ATTEMPT）；参考答案/标准答案/正确答案不构成学员作答；节号和 changed-lessons 仅接受正整数；目行 KP 查重与前置统一别名归一（课程体系.md 为目清单唯一来源）；同 attempt 的结果/独立性/KP 冲突报 E-ATTEMPT-CONFLICT；非法显式目标线报 E-FINAL-INVALID-TARGET；KP 类型/视觉任务声明后分型验收（E-KP-TYPED-GATE）；章规划/材料覆盖结构提示（W-MODULE-CONTRACT-INCOMPLETE / W-UNPARSED-MODULE / W-UNPARSED-MATERIAL / W-MATERIAL-COVERAGE-GAP）；空/模板证据 E-EMPTY-EVIDENCE；结课蓝图覆盖按机器行「KP=<id>｜评分点=<…>」同行映射判（仅题面提编号不算映射，缺口分「未出现 / 出现但未挂评分点」两类报 E-FINAL-BLUEPRINT-GAP）；结课/已完成未完成路线 E-ROUTE-UNDONE；复习来源阶段枚举 {逐节学习, 结课, 已完成}；起点自进入 S2 起必填；节目标线可选字段缺省取 gates.min_ratio，非法报 E-GATE-RATIO-INVALID；复述门要求关键点 ≥ restatement.keypoints 且「无事实性错误」已勾；复习债形态判据 W-REVIEW-DEBT：progress.md 三区任一存在「顺延>0」条目即告警（形态不是阈值，不引入新数字），**只验数据形态、验不了「模型有没有明示」**（闸口看不到对话），不参与「连续 3 天触发停新」计数（progress.md 无该字段，缺口见票 75），warning 不拦截、不影响 ok；目行判定三字段（判定/独立正确/判定依据）的**形态**由 ltw_parse 的 parse_kp_row fail closed（非法枚举/重复键/日期格式坏或超 2 个不同日期/指针格式坏 → W-UNPARSED-KP），**语义**由 W-KP-JUDGE 只告警（已判却缺依据 / 依据指向的文件或题号不存在 / 日期非空时指针个数 ≠ 日期个数、日期为空时只允许 1 个指针（摸底「已会」单次证据路径，票 81 Q2）/ 同日重复不足不同日数 / 未判却写了另两字段）——该码只验指针闭合，**验不了「这个题号是不是真的判对了」**"
+   "notes": "--release 放行模式：判分四态 correct/partial/incorrect/ungraded；partial 入分母不入分子，ungraded 与作废行不入分母（W-VOIDED-ATTEMPT / W-UNGRADED-ATTEMPT）；参考答案/标准答案/正确答案不构成学员作答；节号和 changed-lessons 仅接受正整数；目行 KP 查重与前置统一别名归一（课程体系.md 为目清单唯一来源）；同 attempt 的结果/独立性/KP 冲突报 E-ATTEMPT-CONFLICT；非法显式目标线报 E-FINAL-INVALID-TARGET；KP 类型/视觉任务声明后分型验收（E-KP-TYPED-GATE）；章规划/材料覆盖结构提示（W-MODULE-CONTRACT-INCOMPLETE / W-UNPARSED-MODULE / W-UNPARSED-MATERIAL / W-MATERIAL-COVERAGE-GAP）；空/模板证据 E-EMPTY-EVIDENCE；结课蓝图覆盖按机器行「KP=<id>｜评分点=<…>」同行映射判（仅题面提编号不算映射，缺口分「未出现 / 出现但未挂评分点」两类报 E-FINAL-BLUEPRINT-GAP）；结课/已完成未完成路线 E-ROUTE-UNDONE；复习来源阶段枚举 {逐节学习, 结课, 已完成}；起点自进入 S2 起必填；节目标线可选字段缺省取 gates.min_ratio，非法报 E-GATE-RATIO-INVALID；复述门要求关键点 ≥ restatement.keypoints 且「无事实性错误」已勾；复习债形态判据 W-REVIEW-DEBT：progress.md 三区任一存在「顺延>0」条目即告警（形态不是阈值，不引入新数字），**只验数据形态、验不了「模型有没有明示」**（闸口看不到对话），不参与「连续 3 天触发停新」计数（progress.md 无该字段，缺口见票 75），warning 不拦截、不影响 ok；出题前前置闸 E-PREREQ-UNMET（票 37 Q3 / 票 83，**拦停**）：被出题或判分的目（节证据里 attempt 行点名的 KP + 复述勾选点名的 KP + 结课综合测验点名的 KP），其硬前置若 `判定≠已判` 且无摸底「已会」括注 → exit 1；前置被暂缓/排除同样拦（它不会被判，等它等于等不到）。**只在 --release 生效**，且**只对已采用判定字段的任务生效**（清单里任意一行写了 `判定`）——全零的旧任务按未采用处理，否则升级当天存量任务全红；与 W-KP-JUDGE 的分工是票 81 Q4 定的：W- 拦已写下的记账，E- 拦还没发生的那道题；目行判定三字段（判定/独立正确/判定依据）的**形态**由 ltw_parse 的 parse_kp_row fail closed（非法枚举/重复键/日期格式坏或超 2 个不同日期/指针格式坏 → W-UNPARSED-KP），**语义**由 W-KP-JUDGE 只告警（已判却缺依据 / 依据指向的文件或题号不存在 / 日期非空时指针个数 ≠ 日期个数、日期为空时只允许 1 个指针（摸底「已会」单次证据路径，票 81 Q2）/ 同日重复不足不同日数 / 未判却写了另两字段）——该码只验指针闭合，**验不了「这个题号是不是真的判对了」**"
   },
   {
    "script": "scheduler.py",
@@ -41,13 +41,14 @@
   },
   {
    "script": "kp_sort.py",
-   "usage": "<课程体系.md> [--selftest]",
+   "usage": "fringe <课程体系.md> | <课程体系.md> [--list] [--selftest]",
    "exit_codes": {
     "0": "正常",
     "1": "畸形行 / 依赖环 / 解释器版本不足 / 疑似解析失败",
     "2": "用法错误"
    },
-   "notes": "空合法课程体系与疑似解析失败分离；KP 编号别名归一（KP-1-1 ≡ KP-01-01）；环路径输出稳定"
+   "schema": {"fringe": "ltw-fringe/1"},
+   "notes": "空合法课程体系与疑似解析失败分离；KP 编号别名归一（KP-1-1 ≡ KP-01-01）；环路径输出稳定；`--list` 是默认拓扑序的显式别名（data.md 长期这么写，输出与裸路径逐字节相同）；`fringe` 是只读纯计算的「已会 / 现在能学」两张清单（票 37 Q3 的消费端）：已会 = 判定=已判，现在能学 = 讲授域内自身未判且硬前置全部已判（或带摸底「已会」括注，票 81 Q2）；暂缓/排除两张清单都不收；硬前置被暂缓/排除时复用既有 blockers 形状单独列出（不新造第三类状态）；输出另带 pending（自身未判但还有前置未满足，附 waiting_for）——没有它，「能学清单为空」就分不出「全学完了」与「全被前置挡住」。输出按原文行序：票 37 未定「现在能学」的排序口径，脚本不发明排序。不写盘、不改 order/excluded/held 任何既有输出字段"
   },
   {
    "script": "check_environment.py",
