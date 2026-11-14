@@ -123,11 +123,43 @@ def hold_disposition_excluded(body):
     return False
 
 
+# 目行可选段名白名单（票 92「未知段兜底」的唯一白名单）。
+# 只认「完整段名 + 冒号」：「判定」是「判定依据」的前缀，若按裸前缀匹配，
+# `判定依据补充：…` 这类新字段会被当成已知段而绕过兜底分支。
+KNOWN_OPTIONAL_FIELDS = ("引入", "类型", "视觉任务", "判定", "独立正确", "判定依据")
+# 六个必需段里的三个键名段。它们出现在可选区是**行错位**，不是「批④ 的新字段」——
+# 兜底不得替错位的行兜底（票 92：放宽的只有一个分支）。
+REQUIRED_FIELD_NAMES = ("前置", "来源", "状态")
+SEG_NAME_RE = re.compile(r"^([^：:]{1,16}?)\s*[：:]")
+
+
+def classify_optional_seg(seg):
+    """把可选区的一段分三类：known / unknown / malformed（票 92 的唯一分派点）。
+
+    - known：段名在 KNOWN_OPTIONAL_FIELDS 内，交给各分支解析（重复键仍由分支判畸形）；
+    - unknown：段名不认识但**形态是合法字段**（带冒号）→ 兜底放行，记进 unknown 列表；
+    - malformed：无冒号的段（含空段、`节 1` 这类错位段）或必需段被重复声明 → 仍判畸形。
+
+    这条边界就是票 92 的约束：**只放宽「段名不在白名单」一个分支**，
+    其余四条严格判据（状态非法 / 前置引用不存在 / 缺段 / 重复编号）一条都不动。
+    """
+    m = SEG_NAME_RE.match(seg or "")
+    if m is None:
+        return "malformed"
+    key = m.group(1).strip()
+    if key in REQUIRED_FIELD_NAMES:
+        return "malformed"
+    if key in KNOWN_OPTIONAL_FIELDS:
+        return "known"
+    return "unknown"
+
+
 def parse_kp_optional(segs):
     """解析目行可选字段（类型/视觉任务/引入/判定/独立正确/判定依据）；畸形返回 None。
 
-    返回 6 元组 (kp_type, visual_tasks, intro, judge, indep_dates, judge_ref)；
-    全部缺席时为 (None, [], "", None, [], [])。
+    返回 7 元组 (kp_type, visual_tasks, intro, judge, indep_dates, judge_ref, unknown)；
+    全部缺席时为 (None, [], "", None, [], [], [])。unknown 是**已忽略的未知段**
+    （票 92 兜底：段名不在白名单 → 忽略该段并记账，由告警层出 W-KP-ROW-UNKNOWN-SEG）。
 
     `引入：` 登记该目首次引入的术语（R46 出题前术语对账账本，分号/顿号分隔），
     解析为原文整段（切分交由 prereq_check），不参与枚举校验。
@@ -147,6 +179,7 @@ def parse_kp_optional(segs):
     judge = None
     indep_dates = []
     judge_ref = []
+    unknown = []
     for seg in segs:
         if seg.startswith("引入：") or seg.startswith("引入:"):
             if intro:
@@ -207,9 +240,13 @@ def parse_kp_optional(segs):
                 if not JUDGE_POINTER_RE.match(tok):
                     return None
                 judge_ref.append(tok)
+        elif classify_optional_seg(seg) == "unknown":
+            # 票 92：段名不在白名单 → 只忽略该段并记账，不把整行判畸形。
+            if seg not in unknown:
+                unknown.append(seg)
         else:
             return None
-    return kp_type, visual_tasks, intro, judge, indep_dates, judge_ref
+    return kp_type, visual_tasks, intro, judge, indep_dates, judge_ref, unknown
 
 
 def parse_kp_row(segs):
@@ -225,7 +262,7 @@ def parse_kp_row(segs):
     optional = parse_kp_optional(segs[6:])
     if optional is None:
         return None
-    kp_type, visual_tasks, intro, judge, indep_dates, judge_ref = optional
+    kp_type, visual_tasks, intro, judge, indep_dates, judge_ref, unknown_segs = optional
     m = KP_ID_RE.match(kid)
     if not m or not title or not section:
         return None
@@ -257,7 +294,8 @@ def parse_kp_row(segs):
             "bottom_note": bottom_note, "needs_consolidation": needs_consolidation,
             "type": kp_type, "visual_tasks": visual_tasks,
             "intro": intro, "judge": judge,
-            "indep_dates": indep_dates, "judge_ref": judge_ref}
+            "indep_dates": indep_dates, "judge_ref": judge_ref,
+            "unknown_segs": unknown_segs}
 
 # ---------------------------------------------------------------------------
 # 条目元数据解析（T04）：META_KEYS / META_TOKEN_RES / parse_meta 与括注拆分

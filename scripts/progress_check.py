@@ -1417,6 +1417,7 @@ def check(task_dir, release=False, proposed=None):
         "route_undone": route_undone,
         "audit_record_found": audit_record_found,
         "needs_consolidation": 0,  # v9.12.0（R54）：目行「需巩固」标注计数（kp 块解析后回填）
+        "unknown_segs": [],  # 票 92：被兜底忽略的未知段（按段名分组，kp 块解析后回填）
     }
 
     # ── 课程体系目行只读告警（warning 非 error，不阻断） ──
@@ -1463,6 +1464,25 @@ def check(task_dir, release=False, proposed=None):
                         seen_ids.add(normalized_id)
                         rows_unique.append(r)
                 kp_rows_all = rows_unique
+                # 票 92 未知段兜底：段名不在白名单 → 解析器已忽略该段，这里只记账一条告警。
+                # 每个**段名**一条（同一段名跨行合并），否则批④ 上线当天会按行数刷屏。
+                unknown_kind_to_segs, unknown_kind_order = {}, []
+                for r in rows_unique:
+                    for seg in r.get("unknown_segs") or ():
+                        kind = seg.split("：", 1)[0].split(":", 1)[0].strip() or seg
+                        if kind not in unknown_kind_to_segs:
+                            unknown_kind_to_segs[kind] = []
+                            unknown_kind_order.append(kind)
+                        if seg not in unknown_kind_to_segs[kind]:
+                            unknown_kind_to_segs[kind].append(seg)
+                coverage["unknown_segs"] = [
+                    {"field": kind, "segments": unknown_kind_to_segs[kind]}
+                    for kind in unknown_kind_order]
+                for kind in unknown_kind_order:
+                    warnings.append({"code": "W-KP-ROW-UNKNOWN-SEG",
+                                     "message": "课程体系目行含未知段「" + kind + "」，已忽略该段并照常解析"
+                                                "（段名不在白名单：引入/类型/视觉任务/判定/独立正确/判定依据）；"
+                                                "其余判据不放宽：" + "、".join(unknown_kind_to_segs[kind])})
                 # v9.12.0（R54）：「需巩固」标注只读计数（基值仍按已讲参与各项判定）
                 coverage["needs_consolidation"] = sum(
                     1 for r in rows_unique if r.get("needs_consolidation"))
@@ -2538,6 +2558,63 @@ def selftest():
         ok = ok and r48["ok"]
         ok = ok and any(w["code"] == "W-KP-JUDGE" and "缺省" in w["message"]
                         for w in r48["warnings"])
+
+        # ═══ 票 92 未知段兜底：只放宽「段名不在白名单」一个分支 ═══
+        # ⑲ 未知段 → 一条 W-KP-ROW-UNKNOWN-SEG；其余部分照常解析、计数一致、ok 仍真
+        LIST_UNKNOWN_SEG = ("# 课程体系：未知段兜底\n- 版本：1\n- 覆盖范围：全量\n"
+                            "- 覆盖摘要：总 2 ｜ 未讲 1 ｜ 已讲 1 ｜ 暂缓 0 ｜ 排除 0\n\n"
+                            "## 学习路线\n### 章1 ｜ 基础\n- [x] 1. 变量\n- [ ] 2. 循环\n"
+                            "- KP-01-01 ｜ 变量命名 ｜ 节 1 ｜ 前置：  ｜ 来源：目录 1.1"
+                            " ｜ 状态：已讲 ｜ 顺延：2\n"
+                            "- KP-02-01 ｜ 循环 ｜ 节 2 ｜ 前置：KP-01-01 ｜ 来源：目录 1.2"
+                            " ｜ 状态：未讲 ｜ 顺延：1 ｜ 检索锚：循环\n")
+        r_us = check(_mk(KP_PROG_NOHOLD, LIST_UNKNOWN_SEG))
+        ok = ok and r_us["ok"]
+        ok = ok and sum(1 for w in r_us["warnings"] if w["code"] == "W-KP-ROW-UNKNOWN-SEG") == 2
+        ok = ok and not any(w["code"] == "W-UNPARSED-KP" for w in r_us["warnings"])
+        ok = ok and not any(w["code"] == "W-KP-SUMMARY-MISMATCH" for w in r_us["warnings"])
+        # 同一段名跨行合并成一条告警（批④ 上线当天不按行数刷屏），逐段原文保留
+        _us_fields = {e["field"]: e["segments"] for e in r_us["coverage"]["unknown_segs"]}
+        ok = ok and set(_us_fields) == {"顺延", "检索锚"}
+        ok = ok and _us_fields["顺延"] == ["顺延：2", "顺延：1"]
+        ok = ok and _us_fields["检索锚"] == ["检索锚：循环"]
+        # 无未知段时该键为空（旧任务零新增告警）
+        ok = ok and r11["coverage"]["unknown_segs"] == []
+
+        # ⑳ 兜底不得变成全面松绑：四条严格判据喂**带未知段的同一形状**，仍出 W-UNPARSED-KP
+        def _kp_code_messages(r, code):
+            return [w["message"] for w in r["warnings"] if w["code"] == code]
+
+        _US = " ｜ 顺延：2"
+        # ⑳-a 状态非法
+        r_us_bad_status = check(_mk(KP_PROG_NOHOLD, LIST_UNKNOWN_SEG.replace(
+            "状态：已讲 ｜ 顺延：2", "状态：学会" + _US)))
+        ok = ok and any("未解析目行" in m for m in _kp_code_messages(r_us_bad_status, "W-UNPARSED-KP"))
+        # ⑳-b 前置引用不存在
+        r_us_bad_pre = check(_mk(KP_PROG_NOHOLD, LIST_UNKNOWN_SEG.replace(
+            "前置：KP-01-01 ｜ 来源：目录 1.2", "前置：KP-09-09 ｜ 来源：目录 1.2")))
+        ok = ok and any("前置引用不存在" in m for m in _kp_code_messages(r_us_bad_pre, "W-UNPARSED-KP"))
+        # ⑳-c 缺段（状态段缺失）
+        r_us_missing = check(_mk(KP_PROG_NOHOLD, LIST_UNKNOWN_SEG.replace(
+            " ｜ 状态：已讲 ｜ 顺延：2", _US)))
+        ok = ok and any("未解析目行" in m for m in _kp_code_messages(r_us_missing, "W-UNPARSED-KP"))
+        # ⑳-d 重复编号
+        r_us_dup = check(_mk(KP_PROG_NOHOLD, LIST_UNKNOWN_SEG.replace(
+            "- KP-02-01 ｜ 循环 ｜ 节 2 ｜ 前置：KP-01-01 ｜ 来源：目录 1.2",
+            "- KP-01-01 ｜ 循环 ｜ 节 2 ｜ 前置：KP-01-01 ｜ 来源：目录 1.2")))
+        ok = ok and any("重复" in m for m in _kp_code_messages(r_us_dup, "W-UNPARSED-KP"))
+        # ⑳-e 无冒号残段 / 必需段错位：不是「新字段」，仍判畸形（兜底不替残段兜底）
+        r_us_junk = check(_mk(KP_PROG_NOHOLD, LIST_UNKNOWN_SEG.replace(
+            "状态：已讲 ｜ 顺延：2", "状态：已讲 ｜ 节 2")))
+        ok = ok and any("未解析目行" in m for m in _kp_code_messages(r_us_junk, "W-UNPARSED-KP"))
+        # 残段「节 2」不得被记成「未知字段」——畸形行整行不解析，其段不进兜底账本；
+        # 未受影响的行（KP-02-01）照常记账，所以这里断言的是**段内容**而不是告警条数为零。
+        ok = ok and all("节 2" != seg
+                        for e in r_us_junk["coverage"]["unknown_segs"] for seg in e["segments"])
+        ok = ok and {e["field"] for e in r_us_junk["coverage"]["unknown_segs"]} == {"顺延", "检索锚"}
+        r_us_shift = check(_mk(KP_PROG_NOHOLD, LIST_UNKNOWN_SEG.replace(
+            "状态：已讲 ｜ 顺延：2", "状态：已讲 ｜ 状态：未讲")))
+        ok = ok and any("未解析目行" in m for m in _kp_code_messages(r_us_shift, "W-UNPARSED-KP"))
 
         # ═══ 出题前前置闸 E-PREREQ-UNMET（票 37 Q3 / 票 83）═══
         # 与 W-KP-JUDGE 相反：这里拦停。判据分工见票 81 Q4——W- 拦已写下的记账，E- 拦还没发生

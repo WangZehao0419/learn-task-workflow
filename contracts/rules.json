@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/3",
- "version": "9.21.13",
+ "version": "9.21.14",
  "constants": {
   "phases": [
    "接料建档",
@@ -277,6 +277,7 @@
     "W-KP-HOLD-CROSS",
     "W-KP-JUDGE",
     "W-KP-LIST-MISSING",
+    "W-KP-ROW-UNKNOWN-SEG",
     "W-KP-STATE-MISMATCH",
     "W-KP-SUMMARY-MISMATCH",
     "W-LEDGER-DRAFT",

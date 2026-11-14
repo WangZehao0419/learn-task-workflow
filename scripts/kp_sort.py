@@ -205,6 +205,20 @@ def find_cycle(ids, deps):
     return sorted(ids, key=kp_key)
 
 
+def _unknown_segs(rows):
+    """汇总所有目行里**被忽略的未知段**（票 92 兜底）。
+
+    只读透传：解析器已经放行这些段，本函数把它们按原文去重、稳定排序后交给调用侧。
+    排序保证同输入双跑逐字节一致（幂等纪律与 order/fringe 相同）——集合并集天然无序，
+    直接输出 list(set) 会让两次运行的 JSON 不同。
+    """
+    seen = set()
+    for r in rows:
+        for seg in r.get("unknown_segs") or ():
+            seen.add(seg)
+    return sorted(seen)
+
+
 def _counts(rows):
     """excluded/held 计数：状态为排除/暂缓的条目数（order 含清单全部行，
     讲授序与出题序仅取纳入项 = 状态 ∈ {未讲, 已讲}，口径见 data.md）。"""
@@ -273,7 +287,8 @@ def sort_from_text(text):
         exc_n, held_n = _counts(rows)
         return ({"order": [], "version": parsed["version"], "count": 0,
                  "excluded": exc_n, "held": held_n,
-                 "sort_rule": parsed["sort_rule"]}, 0)
+                 "sort_rule": parsed["sort_rule"],
+                 "unknown_segs": _unknown_segs(rows)}, 0)
 
     # K01 硬先修教学阻塞：纳入项（未讲/已讲）的硬前置若被文档过滤为暂缓/排除，
     # 实际讲授序会缺失必需先修——必须显式报 blocker，不能让调用侧从成功序里自行过滤。
@@ -336,7 +351,8 @@ def sort_from_text(text):
     exc_n, held_n = _counts(rows)
     return ({"order": order, "version": parsed["version"], "count": len(order),
              "excluded": exc_n, "held": held_n,
-             "sort_rule": parsed["sort_rule"]}, 0)
+             "sort_rule": parsed["sort_rule"],
+             "unknown_segs": _unknown_segs(rows)}, 0)
 
 
 FRINGE_SCHEMA = "ltw-fringe/1"
@@ -399,7 +415,8 @@ def fringe_from_text(text):
         else:
             available.append(r["id"])
     return ({"schema": FRINGE_SCHEMA, "met": met, "available": available,
-             "blockers": blockers, "pending": pending}, 0)
+             "blockers": blockers, "pending": pending,
+             "unknown_segs": _unknown_segs(rows)}, 0)
 
 
 def _read_list(kp_list_path):
@@ -594,6 +611,66 @@ def selftest():
     # 空清单合法：两张清单都空，不是失败
     _fe, _fec = fringe_from_text("# 课程体系：空\n- 版本：1\n\n- 无\n")
     ok = ok and _fec == 0 and _fe["met"] == [] and _fe["available"] == []
+
+    # ⑰ 票 92 未知段兜底：段名不在白名单 → 忽略该段、其余照常解析、排序可用
+    unknown_seg = ("# 课程体系：未知段兜底\n- 版本：1\n- 覆盖范围：全量\n\n"
+                   "- KP-01-01 ｜ 甲 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲"
+                   " ｜ 顺延：2 ｜ 检索锚：成本-概念\n"
+                   "- KP-01-02 ｜ 乙 ｜ 节 1 ｜ 前置：KP-01-01 ｜ 来源：总纲 1.1 ｜ 状态：未讲\n")
+    resu, codeu = sort_from_text(unknown_seg)
+    ok = ok and codeu == 0
+    ok = ok and resu.get("order") == ["KP-01-01", "KP-01-02"]
+    ok = ok and resu.get("count") == 2
+    # 未知段被记账而不是静默吞掉；原文完整、去重、稳定排序（双跑逐字节一致）
+    ok = ok and resu.get("unknown_segs") == ["检索锚：成本-概念", "顺延：2"]
+    ok = ok and (json.dumps(resu, ensure_ascii=False, sort_keys=True)
+                 == json.dumps(sort_from_text(unknown_seg)[0], ensure_ascii=False, sort_keys=True))
+    # 同一份夹具喂 fringe：未知段不阻断两张清单，且同样记账
+    fru, fruc = fringe_from_text(unknown_seg)
+    ok = ok and fruc == 0 and fru["available"] == ["KP-01-01"]
+    ok = ok and fru["pending"] == [{"kp": "KP-01-02", "waiting_for": ["KP-01-01"]}]
+    ok = ok and fru.get("unknown_segs") == resu.get("unknown_segs")
+    # 没有未知段时该键不冒出来（旧输出形状零回归，消费端不必改）
+    ok = ok and res.get("unknown_segs") == []
+    # 未知段与已知可选段共存：已知段照常生效（兜底不得吞掉类型/判定字段的解析）
+    mixed_seg = ("# 课程体系：未知段+已知段\n- 版本：1\n\n"
+                 "- KP-01-01 ｜ 甲 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲"
+                 " ｜ 顺延：2 ｜ 类型：概念 ｜ 判定：已判"
+                 " ｜ 判定依据：exercises/01-a-2026-11-10.md#题1\n")
+    resmz, codemz = sort_from_text(mixed_seg)
+    ok = ok and codemz == 0 and resmz.get("unknown_segs") == ["顺延：2"]
+    ok = ok and fringe_from_text(mixed_seg)[0]["met"] == ["KP-01-01"]
+
+    # ⑱ 兜底不得变成全面松绑：四条严格判据各一条用例，喂**带未知段的同一份夹具**，
+    #    必须仍然硬失败（rc≠0）。没有这一组，「只放宽一个分支」只是文档里的一句话。
+    def _with_unknown(row_tail):
+        return ("# 课程体系：宽松回归\n- 版本：1\n\n" + row_tail.replace("【UNK】", " ｜ 顺延：2"))
+
+    # ⑱-a 状态非法：状态段值非法 → 仍判畸形行（未知段不改变 required 段的枚举校验）
+    res_bad_status, code_bad_status = sort_from_text(_with_unknown(
+        "- KP-01-01 ｜ 甲 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：学会【UNK】\n"))
+    ok = ok and code_bad_status != 0 and "畸形" in res_bad_status.get("error", "")
+    # ⑱-b 前置引用不存在：前置悬空 → 仍报错（未知段不改变前置存在性校验）
+    res_bad_pre, code_bad_pre = sort_from_text(_with_unknown(
+        "- KP-01-01 ｜ 甲 ｜ 节 1 ｜ 前置：KP-09-09 ｜ 来源：总纲 1.1 ｜ 状态：未讲【UNK】\n"))
+    ok = ok and code_bad_pre != 0 and "KP-09-09" in res_bad_pre.get("error", "")
+    # ⑱-c 缺段：少一个必需段（无状态段）→ 仍判畸形行
+    res_missing, code_missing = sort_from_text(_with_unknown(
+        "- KP-01-01 ｜ 甲 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 1.1【UNK】\n"))
+    ok = ok and code_missing != 0 and "畸形" in res_missing.get("error", "")
+    # ⑱-d 重复编号（含别名归一）→ 仍报错
+    res_dup_unknown, code_dup_unknown = sort_from_text(_with_unknown(
+        "- KP-01-01 ｜ 甲 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲【UNK】\n"
+        "- KP-1-1 ｜ 甲别名 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲【UNK】\n"))
+    ok = ok and code_dup_unknown != 0 and "重复" in res_dup_unknown.get("error", "")
+    # ⑱-e 无冒号的野段不是「新字段」而是残段：仍判畸形（兜底不替残段兜底）
+    res_junk, code_junk = sort_from_text(_with_unknown(
+        "- KP-01-01 ｜ 甲 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲 ｜ 节 2\n"))
+    ok = ok and code_junk != 0 and "畸形" in res_junk.get("error", "")
+    # ⑱-f 必需段错位到可选区（行尾再写一个「状态：」）→ 仍判畸形，不被当成未知字段放过
+    res_shift, code_shift = sort_from_text(_with_unknown(
+        "- KP-01-01 ｜ 甲 ｜ 节 1 ｜ 前置：  ｜ 来源：总纲 1.1 ｜ 状态：未讲 ｜ 状态：已讲\n"))
+    ok = ok and code_shift != 0 and "畸形" in res_shift.get("error", "")
 
     print(("OK " if ok else "FAIL ") + "kp_sort --selftest")
     return 0 if ok else 1
