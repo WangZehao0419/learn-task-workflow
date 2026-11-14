@@ -13,11 +13,31 @@
 kp.judge（目行判定三字段的枚举与日期上限）缺失或越界；以及**两处 schema 声明必须相等**
 ——登记表 contracts/scripts-contract.json 里本脚本那条的 schema 与本文件的常量 SCHEMA——
 含「只改其中一处就红、还原就绿」的变异用例，与「索引侧 learn-task-index/7 不参与相等」的反例。
+
+红线凭据结构（票 96）是 constants 下的两个**平行块**，不进 REQUIRED_CONST——加字段不会让旧
+契约报错，缺这个块也不是错（阶段性对象）：
+
+    redlines: { "<线号>": { "title": …, "criteria": [ {key, order, evidence,
+                                                     coverage, decision_layer,
+                                                     cannot_infer} … ] } }
+    sources:  { "<出处 id>": { "table": "CREDITS.md", "section": … } }
+
+子判据用**双层键**：语义标识 `R<线号>.<slug>`（定下不得再改）+ 顺序号 `order`（可重排）。
+语义标识**不得派生自位置**——纯数字 slug 一律判非法，否则重排一次就能让一条规则被另一条
+顶替，而数量不变、硬闸静默放行。
+
+出处外键**双向**校验：正向是硬错——凭据引用了 sources 里没有的 id 即 E-EVIDENCE-REF-MISSING；
+反向是检出——sources 里没有任何子判据引用的条目由 orphan_sources() 报出来（`--redlines`
+与 `--redline-keys` 都会显示）。反向**不判硬错**：容器先于内容落地，票 98 才填凭据正文，
+此刻 23 条出处必然全部未被引用；把它设成硬错会让契约在整个重写期不可加载，等于用闸口
+堵死自己的施工顺序。
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -37,6 +57,13 @@ REQUIRED_CONST = (
     "review_origin_phases", "grading", "kp", "gates", "restatement",
     "budget", "schemas", "headings", "scheduler", "errors",
 )
+# 红线凭据结构的字段与键形态（票 96）。
+# slug 必须以小写字母开头——纯数字（R1.1）会被这里挡住，这是「语义标识不得派生自位置」
+# 的机器判据，不是命名风格建议。
+REDLINE_FIELDS = ("key", "order", "evidence", "coverage", "decision_layer",
+                  "cannot_infer")
+REDLINE_KEY_RE = re.compile(r"^R(?P<line>[1-9][0-9]*)\.(?P<slug>[a-z][a-z0-9]*(?:-[a-z0-9]+)*)$")
+SOURCE_FIELDS = ("table", "section")
 
 
 class ContractError(ValueError):
@@ -181,7 +208,140 @@ def validate(data: dict) -> dict:
         _require(isinstance(errs.get(level), list), "E-CONTRACT-INVALID",
                  "errors.%s 必须是数组" % level)
         _require(not _dup(errs[level]), "E-CONTRACT-INVALID", "errors.%s 有重复" % level)
+
+    _validate_redlines(c)
     return data
+
+
+def _validate_redlines(c: dict) -> None:
+    """校验 redlines / sources 两块的形态与双向外键。
+
+    两块要么都在、要么都不在——只出现一块说明有人在半途改契约，此时任何一侧的判定
+    都不可信，直接 fail closed。
+    """
+    has_red, has_src = "redlines" in c, "sources" in c
+    if not has_red and not has_src:
+        return
+    _require(has_red and has_src, "E-CONTRACT-INVALID",
+             "redlines 与 sources 必须成对出现（redlines=%s / sources=%s）"
+             % (has_red, has_src))
+
+    reds, srcs = c["redlines"], c["sources"]
+    _require(isinstance(reds, dict) and reds, "E-CONTRACT-INVALID", "redlines 必须是非空对象")
+    _require(isinstance(srcs, dict), "E-CONTRACT-INVALID", "sources 必须是对象")
+
+    for sid, sv in srcs.items():
+        _require(isinstance(sv, dict), "E-CONTRACT-INVALID", "sources.%s 必须是对象" % sid)
+        for f in SOURCE_FIELDS:
+            _require(isinstance(sv.get(f), str) and sv[f].strip(), "E-CONTRACT-INVALID",
+                     "sources.%s.%s 必须是非空字符串" % (sid, f))
+
+    # 线号：十进制字符串，从 1 起连续、不缺不重
+    for k in reds:
+        _require(isinstance(k, str) and k.isdigit() and int(k) >= 1, "E-CONTRACT-INVALID",
+                 "redlines 的线号必须是 ≥1 的十进制字符串（实际 %r）" % (k,))
+    nums = sorted(int(k) for k in reds)
+    _require(nums == list(range(1, len(nums) + 1)), "E-CONTRACT-INVALID",
+             "redlines 线号必须从 1 起连续（实际 %s）" % nums)
+
+    seen_keys = {}
+    for num in nums:
+        line = reds[str(num)]
+        _require(isinstance(line, dict), "E-CONTRACT-INVALID", "redlines.%d 必须是对象" % num)
+        _require(isinstance(line.get("title"), str) and line["title"].strip(),
+                 "E-CONTRACT-INVALID", "redlines.%d.title 必须是非空字符串" % num)
+        crits = line.get("criteria")
+        _require(isinstance(crits, list) and crits, "E-CONTRACT-INVALID",
+                 "redlines.%d.criteria 必须是非空数组" % num)
+
+        orders = []
+        for ct in crits:
+            _require(isinstance(ct, dict), "E-CONTRACT-INVALID",
+                     "redlines.%d 的子判据必须是对象" % num)
+            for f in REDLINE_FIELDS:
+                _require(f in ct, "E-CONTRACT-INVALID",
+                         "redlines.%d 有子判据缺字段 %s" % (num, f))
+            key = ct["key"]
+            _require(isinstance(key, str), "E-CONTRACT-INVALID",
+                     "redlines.%d 的 key 必须是字符串" % num)
+            m = REDLINE_KEY_RE.match(key)
+            _require(m is not None, "E-CONTRACT-INVALID",
+                     "子判据 key %r 不是 R<线号>.<slug> 形态；slug 必须以小写字母起头——"
+                     "纯序号（如 R1.1）把位置当身份，重排即静默顶替" % (key,))
+            _require(int(m.group("line")) == num, "E-CONTRACT-INVALID",
+                     "子判据 %s 的线号与所在的 redlines.%d 不符" % (key, num))
+            _require(key not in seen_keys, "E-CONTRACT-INVALID",
+                     "子判据 key 重复：%s（%s 与 %s）" % (key, seen_keys.get(key), num))
+            seen_keys[key] = "%d" % num
+
+            order = ct["order"]
+            _require(isinstance(order, int) and not isinstance(order, bool) and order >= 1,
+                     "E-CONTRACT-INVALID", "%s.order 必须是 ≥1 的整数" % key)
+            orders.append(order)
+
+            ev = ct["evidence"]
+            _require(isinstance(ev, list), "E-CONTRACT-INVALID", "%s.evidence 必须是数组" % key)
+            for ref in ev:
+                _require(isinstance(ref, str) and ref in srcs, "E-EVIDENCE-REF-MISSING",
+                         "%s 引用了 sources 里不存在的出处 %r（孤儿引用）" % (key, ref))
+            for f in ("coverage", "decision_layer", "cannot_infer"):
+                _require(isinstance(ct[f], str), "E-CONTRACT-INVALID",
+                         "%s.%s 必须是字符串（允许空串占位）" % (key, f))
+
+        _require(sorted(orders) == list(range(1, len(orders) + 1)), "E-CONTRACT-INVALID",
+                 "redlines.%d 的 order 必须是 1..%d 的一个排列（实际 %s）"
+                 % (num, len(orders), orders))
+
+
+def redlines_of(data: dict) -> dict:
+    return data["constants"].get("redlines") or {}
+
+
+def redline_keys(data: dict) -> list:
+    """语义标识全集（冻结基准：键集合相等即通过）。"""
+    return sorted(ct["key"] for line in redlines_of(data).values()
+                  for ct in line["criteria"])
+
+
+def redline_fingerprint(data: dict) -> str:
+    """内容指纹：只用于「变了就告警」，不当硬闸——重写期每批都会改内容。"""
+    canon = json.dumps(redlines_of(data), ensure_ascii=False, sort_keys=True,
+                       separators=(",", ":"))
+    return hashlib.sha256(canon.encode("utf-8")).hexdigest()
+
+
+def orphan_sources(data: dict) -> list:
+    """反向校验：sources 里没有任何子判据引用的条目（检出，不判硬错）。"""
+    srcs = data["constants"].get("sources") or {}
+    used = {ref for line in redlines_of(data).values()
+            for ct in line["criteria"] for ref in ct["evidence"]}
+    return sorted(set(srcs) - used)
+
+
+def render_redlines(data: dict) -> str:
+    """把凭据台账渲成人类可读文本。只读：调用方打印即可，不落盘。"""
+    reds = redlines_of(data)
+    if not reds:
+        return "（契约里没有 redlines 块）"
+    out = ["红线凭据台账（%d 条线 / %d 条子判据 / 出处 %d 条 / 未被引用 %d 条）"
+           % (len(reds), len(redline_keys(data)),
+              len(data["constants"].get("sources") or {}), len(orphan_sources(data)))]
+    for num in sorted(reds, key=int):
+        line = reds[num]
+        out.append("")
+        out.append("红线 %s｜%s（%d 条子判据）" % (num, line["title"], len(line["criteria"])))
+        for ct in sorted(line["criteria"], key=lambda x: x["order"]):
+            out.append("  %d. %s" % (ct["order"], ct["key"]))
+            out.append("     凭据：%s" % ("、".join(ct["evidence"]) or "（待填）"))
+            out.append("     覆盖：%s" % (ct["coverage"].strip() or "（待填）"))
+            out.append("     判定层：%s" % (ct["decision_layer"].strip() or "（待填）"))
+            out.append("     不能推出：%s" % (ct["cannot_infer"].strip() or "（待填）"))
+    orph = orphan_sources(data)
+    if orph:
+        out.append("")
+        out.append("未被任何子判据引用的出处（%d 条，反向校验检出）：%s"
+                   % (len(orph), "、".join(orph)))
+    return "\n".join(out)
 
 
 def load(path: Path | None = None) -> dict:
@@ -229,12 +389,17 @@ def _selftest() -> int:
     ran = [0]
 
     def case(name, fn, expect_ok):
+        # ContractError = 契约按预期被拒；其他异常是**用例自己写坏了**，必须显式报 FAIL，
+        # 不能冒泡成 traceback 让人误以为是环境问题。
         ran[0] += 1
         try:
             fn()
             got_ok = True
         except ContractError:
             got_ok = False
+        except Exception as exc:
+            fails.append("%s: 用例自身抛错 %s: %s" % (name, type(exc).__name__, exc))
+            return
         if got_ok != expect_ok:
             fails.append("%s: 期望 %s，实际 %s" % (name, "通过" if expect_ok else "失败",
                                                 "通过" if got_ok else "失败"))
@@ -386,6 +551,97 @@ def _selftest() -> int:
             return load(write("nokey.json", d))
         case("缺业务常量键", retired_key, False)
 
+        # ── 红线凭据结构（票 96）：删键红 / 语义标识退化成序号红 / 还原绿 ──
+        def without_redlines():
+            d = json.loads(json.dumps(base))
+            d["constants"].pop("redlines")
+            d["constants"].pop("sources")
+            return load(write("noreds.json", d))
+        case("两块都没有时旧契约仍可加载（平行块不破旧校验）", without_redlines, True)
+
+        def only_one_block():
+            d = json.loads(json.dumps(base))
+            d["constants"].pop("sources")
+            return load(write("halfred.json", d))
+        case("redlines 与 sources 只出现一块", only_one_block, False)
+
+        def drop_criterion_key():
+            d = json.loads(json.dumps(base))
+            first = d["constants"]["redlines"]["1"]["criteria"][0]
+            first.pop("order")
+            return load(write("nokeycrit.json", d))
+        case("子判据缺键", drop_criterion_key, False)
+
+        def numeric_slug():
+            d = json.loads(json.dumps(base))
+            first = d["constants"]["redlines"]["1"]["criteria"][0]
+            first["key"] = "R1.1"
+            return load(write("numslug.json", d))
+        case("语义标识退化成序号", numeric_slug, False)
+
+        def dangling_source():
+            d = json.loads(json.dumps(base))
+            d["constants"]["redlines"]["1"]["criteria"][0]["evidence"] = ["R0-0"]
+            return load(write("dangling.json", d))
+        case("凭据引用不存在的出处（孤儿引用）", dangling_source, False)
+
+        def order_gap():
+            d = json.loads(json.dumps(base))
+            d["constants"]["redlines"]["1"]["criteria"][0]["order"] = 9
+            return load(write("ordergap.json", d))
+        case("order 不是 1..n 的排列", order_gap, False)
+
+        def line_gap():
+            d = json.loads(json.dumps(base))
+            d["constants"]["redlines"].pop("5")
+            return load(write("linegap.json", d))
+        case("线号不连续", line_gap, False)
+
+        # 还原：在同一个用例里先改坏再改回，必须重新变绿——证明上面的红是那一处改动造成的，
+        # 不是夹带进来的别的错
+        def mutate_then_restore():
+            d = json.loads(json.dumps(base))
+            first = d["constants"]["redlines"]["1"]["criteria"][0]
+            original = first["key"]
+            first["key"] = "R1.1"
+            try:
+                load(write("restore_bad.json", d))
+            except ContractError:
+                pass
+            else:
+                raise AssertionError("改坏的那份本应加载失败")
+            first["key"] = original
+            return load(write("restore_ok.json", d))
+        case("改坏后还原", mutate_then_restore, True)
+
+        def real_contract_has_redlines():
+            data = load(real)
+            keys = redline_keys(data)
+            assert len(keys) == len(set(keys)), "语义标识不唯一"
+            assert all(REDLINE_KEY_RE.match(k) for k in keys), "存在非 R<线>.<slug> 形态"
+            assert len(redlines_of(data)) == 11, "红线条数不是 11"
+            return data
+        case("真实契约的红线凭据结构可用", real_contract_has_redlines, True)
+
+        def key_set_is_identity():
+            # 键集合相等即通过：只改内容不改键 → 指纹变、键集合不变
+            d = json.loads(json.dumps(base))
+            d["constants"]["redlines"]["1"]["criteria"][0]["coverage"] = "改内容不改键"
+            data = load(write("content.json", d))
+            assert redline_keys(data) == redline_keys(load(real)), "键集合不该变"
+            assert redline_fingerprint(data) != redline_fingerprint(load(real)), "指纹该变"
+            return data
+        case("内容指纹只告警：改内容不改键，键集合不变", key_set_is_identity, True)
+
+        def orphan_reported():
+            data = load(real)
+            srcs = set(data["constants"]["sources"])
+            used = srcs - set(orphan_sources(data))
+            assert used <= srcs, "孤儿不应凭空多出来"
+            assert set(orphan_sources(data)) | used == srcs, "孤儿与被引用必须覆盖 sources"
+            return data
+        case("反向校验：sources 被孤儿/被引用完整覆盖", orphan_reported, True)
+
     if fails:
         for f in fails:
             print("FAIL", f)
@@ -400,6 +656,11 @@ def main(argv=None) -> int:
     g.add_argument("--selftest", action="store_true")
     g.add_argument("--get", metavar="DOTTED")
     g.add_argument("--keys", action="store_true", help="列出业务常量键")
+    g.add_argument("--redline-keys", action="store_true",
+                   help="只读：输出红线子判据的语义标识集合与内容指纹（键集合是身份，"
+                        "指纹变了只告警）")
+    g.add_argument("--redlines", action="store_true",
+                   help="只读：把红线凭据台账渲到 stdout（不落盘）")
     args = ap.parse_args(argv)
 
     if args.selftest:
@@ -408,6 +669,22 @@ def main(argv=None) -> int:
         data = load_or_exit()
         print(json.dumps({"schema": data["schema"], "version": data["version"],
                           "constants": sorted(data["constants"])}, ensure_ascii=False))
+        return 0
+    if args.redline_keys:
+        data = load_or_exit()
+        print(json.dumps({
+            "schema": data["schema"],
+            "version": data["version"],
+            "redline_count": len(redlines_of(data)),
+            "keys": redline_keys(data),
+            "fingerprint": redline_fingerprint(data),
+            "orphan_sources": orphan_sources(data),
+        }, ensure_ascii=False, indent=1))
+        return 0
+    if args.redlines:
+        if hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8")
+        print(render_redlines(load_or_exit()))
         return 0
     print(json.dumps(get(args.get), ensure_ascii=False))
     return 0

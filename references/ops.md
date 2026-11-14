@@ -166,7 +166,7 @@
 | verify_explanation | `W-SELFTEST-MISSING` / `W-SELFTEST-EMPTY` | 自测/检验题面区缺同族答案区 / 答案区为空或占位 |
 | verify_explanation | `W-READER` / `W-READER-ALT` / `W-READER-CAPTION` / `W-READER-CONCLUSION` / `W-READER-DEEPNEST` / `W-READER-EMPHASIS` / `W-READER-HEADING` / `W-READER-HEADING-BODY` / `W-READER-INDEX` / `W-READER-LINKTEXT` / `W-READER-LONGLINE` / `W-READER-OVERVIEW` / `W-READER-SVG` / `W-READER-TABLE` / `W-READER-TABLE-ALIGN` | `--reader` 版式项：标题/表格/图注/alt/SVG/速览/索引/结论/强调/链接/长行/嵌套。图检查（`E-IMG-READ`/`W-READER-SVG`/`W-READER-ALT`/`W-READER-CAPTION`）对任何含图文本生效，不受「像不像讲义」的 gate 约束；gate 关闭时摘要打印「已跳过 N 项读者版检查（未校验）」，不再输出「通过：无违规项」 |
 | verify_explanation | `W-NO-TIER` | 讲义单元缺 tier 标签 |
-| rule_contract | `E-CONTRACT-MISSING` / `E-CONTRACT-INVALID` | 契约缺失 / 畸形 |
+| rule_contract | `E-CONTRACT-MISSING` / `E-CONTRACT-INVALID` / `E-EVIDENCE-REF-MISSING` | 契约缺失 / 畸形（含红线凭据结构不成立：子判据缺键、语义标识退化成序号、order 不是 1..n 的排列、线号不连续、两块只出现一块） / 凭据引用了 sources 里不存在的出处（孤儿引用） |
 | report_load_footprint | `E-LOAD-STRUCT` | 加载结构不成立：场景文件缺失、同一场景混用多个令牌、补读小节不存在 |
 | prereq_check | `E-LIST-MISSING` / `E-LIST-EMPTY` / `E-SCAN-MISSING` / `W-TERM-UNTAUGHT` | 清单缺失 / 清单零可用行 / 扫描文件缺失；`W-TERM-UNTAUGHT` 为术语对账逐条违规提示（stderr），exit 1 |
 | verify_effect_report | `W-EFFECT-MARKER` / `W-EFFECT-LEVEL` / `W-EFFECT-RETENTION` / `W-EFFECT-CALIBRATION` / `W-EFFECT-POINTER` | 效果报告缺段（标题容忍尾随括注与全角冒号）/ 判定行缺失或不合体例 / 未测理由占位 / 报告写了「键=值」字段行（只认行首列表项形态，体例纪律）；99- 卷缺「目标线：」；88- 延迟测量写了 `lesson_id=`；元认知未指到「信心=」行或 progress.md；证据指针悬空。**只告警不拦停**，恒 rc=0；报告不存在打印「跳过」不打印「通过」 |
@@ -307,7 +307,7 @@
 | `check_environment.py` | `[--manifest <路径>] [--capability <名称>]... [--selftest]` | 只读诊断 | 脚本调用出现解释器/版本类失败时诊断一次 |
 | `verify_explanation.py` | `<材料目录或单文件> [--selftest] [--reader]` | 只读静态校验，不写盘 | 讲义定稿前；`--reader` 加跑读者版 W 级检查 |
 | `prereq_check.py` | `--list <课程体系.md> --scan <题组或讲义.md>... [--extra-terms "…"] [--extra-file <文件>] [--scan-all] [--selftest]` | 只读对账，不写盘 | 判分题交付前（R46 出题前术语对账）；目行补登记 `引入` 列后跑 |
-| `rule_contract.py` | `--selftest \| --keys \| --get <键路径>` | 纯常量加载器：只读、只返回结构版本与业务常量 | 修改常量后跑 `--selftest`；排查取值用 `--get` |
+| `rule_contract.py` | `--selftest \| --keys \| --redline-keys \| --redlines \| --get <键路径>` | 纯常量加载器 + 红线凭据的只读出口：不写盘 | 修改常量后跑 `--selftest`；排查取值用 `--get`；查红线语义标识与指纹用 `--redline-keys`（键集合是身份，指纹变了只告警）；人读台账用 `--redlines` |
 | `verify-doc-pointers.py` | `[--selftest] [--root <仓库根>] [--json]` | 只读；校验 doc 指针四项——路径存在、锚点命中唯一、§N 编号唯一、自指记 W | 改分册标题、加删指针、合并或改名后跑；`--json` 供脚本消费 |
 | `verify_effect_report.py` | `<任务目录> [--selftest]` | 只读；效果报告机检——四段必填 + 三态判定行 + 按段定粒度的指针闭合，出 `W-EFFECT-*` 五码；只告警不拦停 | 结课当天写完效果报告后；第 30 天回填「延迟保持」段后再跑一次 |
 
@@ -389,7 +389,7 @@ python -B evals/verify-gate-registry.py
 
 ### 当前核验
 
-- 适用版本：9.21.14
+- 适用版本：9.21.15
 - 核验日期：2026-11-14
 - 环境依赖：`skill-dependencies.json`（核心层 Python `min_version`；增强层 `mmdc` 缺席不阻断）；只有 `check_environment.py` 输出 `ready` 才能继续，`degraded` 按上一节「核心层与增强层」说明一句。
 

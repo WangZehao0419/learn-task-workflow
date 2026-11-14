@@ -73,15 +73,15 @@
   },
   {
    "script": "rule_contract.py",
-   "usage": "--selftest | --keys | --get <dotted>",
-   "default_behavior": "只读；加载并校验 contracts/rules.json，输出 JSON",
+   "usage": "--selftest | --keys | --redline-keys | --redlines | --get <dotted>",
+   "default_behavior": "只读；加载并校验 contracts/rules.json，输出 JSON；两个红线出口只写 stdout、不落盘",
    "exit_codes": {
     "0": "正常/校验通过",
-    "1": "契约缺失/畸形或拓扑问题",
+    "1": "契约缺失/畸形或红线凭据结构不成立",
     "2": "用法错误"
    },
    "schema": "ltw-rules/3",
-   "notes": "契约唯一来源 contracts/rules.json；缺失/畸形报 E-CONTRACT-MISSING/E-CONTRACT-INVALID。纯常量加载器：只返回结构版本与业务常量。本条目的 schema 与本脚本的 SCHEMA 常量是**两处必须相等的副本**（票 91），由本脚本 --selftest 直接读本文件比对，只改其中一处即红；同文件里 task_index.py 的 learn-task-index/7 是索引产物版本，语义不同，不参与相等。--selftest 跑加载器自测；--keys 列出业务常量键；--get <dotted> 取单个取值。历史上的 --topology / --coverage / --audit / --audit-strict 已随编译层退役（见 v9.20.0），不再提供。"
+   "notes": "契约唯一来源 contracts/rules.json；缺失/畸形报 E-CONTRACT-MISSING/E-CONTRACT-INVALID。纯常量加载器：只返回结构版本与业务常量。本条目的 schema 与本脚本的 SCHEMA 常量是**两处必须相等的副本**（票 91），由本脚本 --selftest 直接读本文件比对，只改其中一处即红；同文件里 task_index.py 的 learn-task-index/7 是索引产物版本，语义不同，不参与相等。红线凭据（票 96）是 constants 下与业务常量平级的两个块 redlines / sources，不进 REQUIRED_CONST——加字段不破旧契约，缺块也不算错（阶段性对象），但两块必须成对出现。三层是 线 → 子判据 → 凭据；子判据用双层键：语义标识 R<线号>.<slug> 定下不得再改，order 可重排，slug 必须以小写字母起头（纯序号 R1.1 判非法，否则重排一次就能让一条规则被另一条顶替而数量不变）。出处外键双向：正向硬错——凭据引用 sources 里没有的 id 报 E-EVIDENCE-REF-MISSING（孤儿引用）；反向 soft——sources 里没人引用的条目由 --redline-keys 的 orphan_sources 与 --redlines 台账尾部报出，不拦加载（容器先于内容落地，票 98 才填正文，设成硬错会让整个重写期契约不可加载）。--redline-keys 输出键集合并附 fingerprint（redlines 块的规范化 JSON 的 sha256）：键集合相等即通过、指纹变化只告警，硬闸归票 99。--redlines 把台账渲到 stdout，不落盘（落盘等于把已退役的「契约反向生成文档」请回来）。--selftest 跑加载器自测；--keys 列出业务常量键；--get <dotted> 取单个取值。历史上的 --topology / --coverage / --audit / --audit-strict 已随编译层退役（见 v9.20.0），不再提供。"
   },
   {
    "script": "prereq_check.py",

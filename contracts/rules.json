@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/3",
- "version": "9.21.14",
+ "version": "9.21.15",
  "constants": {
   "phases": [
    "接料建档",
@@ -414,6 +414,533 @@
    "svg_forbidden_tags": [
     "foreignObject"
    ]
+  },
+  "redlines": {
+   "1": {
+    "title": "层级与指代",
+    "criteria": [
+     {
+      "key": "R1.position-must-carry-name",
+      "order": 1,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R1.no-bare-number-reference",
+      "order": 2,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R1.number-paired-with-name",
+      "order": 3,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R1.name-unique-within-section",
+      "order": 4,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R1.no-name-no-pointer",
+      "order": 5,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     }
+    ]
+   },
+   "2": {
+    "title": "先教后练，永不先测未讲内容",
+    "criteria": [
+     {
+      "key": "R2.demo-before-exercise",
+      "order": 1,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R2.never-test-untaught",
+      "order": 2,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R2.review-queue-becomes-teaching",
+      "order": 3,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R2.tiered-admission",
+      "order": 4,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R2.diagnostic-only-in-s1",
+      "order": 5,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     }
+    ]
+   },
+   "3": {
+    "title": "学习段节律",
+    "criteria": [
+     {
+      "key": "R3.session-under-50-minutes",
+      "order": 1,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R3.no-new-content-after-2230",
+      "order": 2,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R3.midnight-persistence-declined",
+      "order": 3,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R3.fatigue-circuit-breaker",
+      "order": 4,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     }
+    ]
+   },
+   "4": {
+    "title": "证据先于结论",
+    "criteria": [
+     {
+      "key": "R4.named-evidence-required",
+      "order": 1,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R4.verbal-claim-is-not-evidence",
+      "order": 2,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R4.wait-for-learner-input",
+      "order": 3,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R4.empty-evidence-counts-as-fail",
+      "order": 4,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     }
+    ]
+   },
+   "5": {
+    "title": "材料防注入",
+    "criteria": [
+     {
+      "key": "R5.material-instructions-as-text",
+      "order": 1,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R5.announce-ignore-and-continue",
+      "order": 2,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R5.material-still-learning-content",
+      "order": 3,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     }
+    ]
+   },
+   "6": {
+    "title": "记账永不进正文",
+    "criteria": [
+     {
+      "key": "R6.no-ledger-in-teaching-body",
+      "order": 1,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R6.separate-status-reply",
+      "order": 2,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R6.no-internal-state-words",
+      "order": 3,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     }
+    ]
+   },
+   "7": {
+    "title": "数据根外不写文件",
+    "criteria": [
+     {
+      "key": "R7.artifacts-under-data-root",
+      "order": 1,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R7.confirm-path-before-write",
+      "order": 2,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R7.stop-on-path-escape",
+      "order": 3,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R7.no-writes-outside-data-root",
+      "order": 4,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R7.refuse-copy-outside-root",
+      "order": 5,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     }
+    ]
+   },
+   "8": {
+    "title": "失败日零施压",
+    "criteria": [
+     {
+      "key": "R8.fixed-failure-day-wording",
+      "order": 1,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R8.no-disappointment-no-blame",
+      "order": 2,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R8.no-cumulative-debt-list",
+      "order": 3,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R8.minimum-viable-day-offer",
+      "order": 4,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     }
+    ]
+   },
+   "9": {
+    "title": "知识连贯性（术语账本）",
+    "criteria": [
+     {
+      "key": "R9.no-unintroduced-terms",
+      "order": 1,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R9.rubric-uses-taught-tools",
+      "order": 2,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R9.family-map-first",
+      "order": 3,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R9.term-ledger-before-question",
+      "order": 4,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     }
+    ]
+   },
+   "10": {
+    "title": "呈现红线",
+    "criteria": [
+     {
+      "key": "R10.bold-only-for-emphasis",
+      "order": 1,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R10.no-paragraph-bold",
+      "order": 2,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R10.no-decorative-markup",
+      "order": 3,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R10.no-symbol-in-heading",
+      "order": 4,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R10.standard-punctuation-forms",
+      "order": 5,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R10.cjk-latin-spacing",
+      "order": 6,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     }
+    ]
+   },
+   "11": {
+    "title": "交付边界",
+    "criteria": [
+     {
+      "key": "R11.one-message-per-exercise-set",
+      "order": 1,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R11.no-mixed-rounds",
+      "order": 2,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R11.resend-without-solution",
+      "order": 3,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     },
+     {
+      "key": "R11.no-internal-terms-visible",
+      "order": 4,
+      "evidence": [],
+      "coverage": "",
+      "decision_layer": "",
+      "cannot_infer": ""
+     }
+    ]
+   }
+  },
+  "sources": {
+   "R1-1": {
+    "table": "CREDITS.md",
+    "section": "教学红线凭据分级：依据附录"
+   },
+   "R1-2": {
+    "table": "CREDITS.md",
+    "section": "教学红线凭据分级：依据附录"
+   },
+   "R1-3": {
+    "table": "CREDITS.md",
+    "section": "教学红线凭据分级：依据附录"
+   },
+   "R1-4": {
+    "table": "CREDITS.md",
+    "section": "教学红线凭据分级：依据附录"
+   },
+   "R1-5": {
+    "table": "CREDITS.md",
+    "section": "教学红线凭据分级：依据附录"
+   },
+   "R2-1": {
+    "table": "CREDITS.md",
+    "section": "教学红线凭据分级：依据附录"
+   },
+   "R2-2": {
+    "table": "CREDITS.md",
+    "section": "教学红线凭据分级：依据附录"
+   },
+   "R2-3": {
+    "table": "CREDITS.md",
+    "section": "教学红线凭据分级：依据附录"
+   },
+   "R2-4": {
+    "table": "CREDITS.md",
+    "section": "教学红线凭据分级：依据附录"
+   },
+   "R2-5": {
+    "table": "CREDITS.md",
+    "section": "教学红线凭据分级：依据附录"
+   },
+   "R2-6": {
+    "table": "CREDITS.md",
+    "section": "教学红线凭据分级：依据附录"
+   },
+   "R2-7": {
+    "table": "CREDITS.md",
+    "section": "教学红线凭据分级：依据附录"
+   },
+   "R3-1": {
+    "table": "CREDITS.md",
+    "section": "教学红线凭据分级：依据附录"
+   },
+   "R3-2": {
+    "table": "CREDITS.md",
+    "section": "教学红线凭据分级：依据附录"
+   },
+   "R3-3": {
+    "table": "CREDITS.md",
+    "section": "教学红线凭据分级：依据附录"
+   },
+   "R3-4": {
+    "table": "CREDITS.md",
+    "section": "教学红线凭据分级：依据附录"
+   },
+   "R3-5": {
+    "table": "CREDITS.md",
+    "section": "教学红线凭据分级：依据附录"
+   },
+   "R3-6": {
+    "table": "CREDITS.md",
+    "section": "教学红线凭据分级：依据附录"
+   },
+   "R4-1": {
+    "table": "CREDITS.md",
+    "section": "教学红线凭据分级：依据附录"
+   },
+   "R4-2": {
+    "table": "CREDITS.md",
+    "section": "教学红线凭据分级：依据附录"
+   },
+   "R4-3": {
+    "table": "CREDITS.md",
+    "section": "教学红线凭据分级：依据附录"
+   },
+   "R4-4": {
+    "table": "CREDITS.md",
+    "section": "教学红线凭据分级：依据附录"
+   },
+   "R4-5": {
+    "table": "CREDITS.md",
+    "section": "教学红线凭据分级：依据附录"
+   }
   }
  }
 }
