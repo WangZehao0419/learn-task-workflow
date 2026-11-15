@@ -109,6 +109,7 @@
 | E-IMG-DEADLINK   | E  | `图：<相对路径>` 或 `![](<相对路径>)` 指向的文件不存在(死链)        |
 | E-READ-FILE      | E  | Markdown 读取失败或编码不是 UTF-8；继续扫描其他文件，最终 exit 1    |
 | E-IMG-READ       | E  | `--reader` 下 SVG 读取失败或编码不是 UTF-8(不受「像不像讲义」约束) |
+| W-EMPHASIS-IN-CODE | W | 强调标记落在行内代码/代码块/公式内,不会渲染成加粗(学员看到字面星号) |
 | W-READER-HEADING | W  | 读者版标题层级跳级(H1→H3 等);仅 `--reader`                       |
 | W-READER-TABLE   | W  | 读者版表格缺表头分隔行、列数不在 2–4、表头有空列名;仅 `--reader`     |
 | W-READER-ALT     | W  | 读者版图片 alt 为空或只写「示意图/图片」;仅 `--reader`(不受 gate 约束) |
@@ -727,6 +728,25 @@ def check_text(text, rel, base_dir=None, reader=False, skips=None):
                 add("W", "W-LEDGER-DRAFT", i,
                     "草稿内台账状态行——判分记账只留 progress.md 与题组文件,"
                     "学员会读草稿;移交证据后删除本行")
+
+    # ── 规则 1b:强调落在不解析强调的位置(渲染后看不见)──
+    # 行内代码/代码块/公式里的 ** 不会渲染成加粗,学员看到的是字面星号。
+    # 定界符规则一律走 scan_inline(单一真源,见该函数说明),本处不另写一套。
+    for i, ln in enumerate(lines):
+        if fence[i]:
+            continue
+        segs, _block_open, _unclosed = scan_inline(ln)
+        # 声明出口:确需展示字面字符时先声明,本行或上一行含声明即豁免。
+        declared = ("字面字符" in ln) or (i > 0 and "字面字符" in lines[i - 1])
+        for kind, a, b in segs:
+            if declared:
+                break
+            if kind in ("code", "math") and "**" in ln[a:b]:
+                add("W", "W-EMPHASIS-IN-CODE", i,
+                    "强调标记落在" + ("行内代码" if kind == "code" else "公式") +
+                    "内,不会渲染成加粗——学员看到的是字面星号;要强调请写在正文,"
+                    "确需展示字面字符时先声明「下面是字面字符」")
+                break
 
     # ── 规则 2:概念单元五要素(单元级,不得全文件计数代替)──
     for u in doc["units"]:
@@ -1742,6 +1762,14 @@ def selftest():
 
     # ① 合规定稿:全规则通过
     chk("合规定稿零违规", check_text(FIX_OK, "ok.md") == [])
+
+    # ①b 强调落在不解析强调的位置:双向用例(该红的红,该绿的绿)
+    _emph_bad = "概念 1 示例:把 `the **red** apple` 里的 red 写成加粗,学员看到的是星号。\n"
+    _emph_ok = "概念 1 示例:把 the **red** apple 里的 red 写成加粗,学员看到的是加粗。\n"
+    chk("行内代码内的强调标记报 W-EMPHASIS-IN-CODE",
+        len(codes(check_text(_emph_bad, "e.md"), "W-EMPHASIS-IN-CODE")) == 1)
+    chk("正文里的正常加粗不报 W-EMPHASIS-IN-CODE",
+        len(codes(check_text(_emph_ok, "e.md"), "W-EMPHASIS-IN-CODE")) == 0)
 
     # ② 定稿记账残留
     r = check_text(FIX_LEDGER, "ledger.md")

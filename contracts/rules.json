@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/3",
- "version": "9.22.0",
+ "version": "9.22.1",
  "constants": {
   "phases": [
    "接料建档",
@@ -192,7 +192,7 @@
     0.1542
    ],
    "desired_retention": 0.9,
-   "s_max": 36500.0,
+   "s_max": 36500,
    "s_min": 0.0001,
    "maximum_interval": 365,
    "enable_fuzzing": false
@@ -275,6 +275,7 @@
     "W-EFFECT-MARKER",
     "W-EFFECT-POINTER",
     "W-EFFECT-RETENTION",
+    "W-EMPHASIS-IN-CODE",
     "W-EMPTY-EVIDENCE",
     "W-GRADED-LOSS-UNLOGGED",
     "W-KP",
@@ -937,6 +938,16 @@
       "coverage": "R2-4 中英空格不强制（如留须全篇一致）；R2-5 英文与中文标点之间不设空格；R2-6 数值与单位留空隙（原文说空隙不说半角）；R2-7 负向记录排除 GB/T 15835。",
       "decision_layer": "D1（空格可机检）",
       "cannot_infer": "不能推出「必须留空格」（标准不强制）；也不能把 GB 3101 的科学技术领域写法外推为通用排版强制。"
+     },
+     {
+      "key": "R10.emphasis-must-render",
+      "order": 7,
+      "evidence": [
+       "E3"
+      ],
+      "coverage": "CommonMark 0.31.2 §6.1 正文：code span 优先于其他行内构造，内容只做换行与首尾空格规范化，不再解析强调标记；规范自带反例。本条只约束「强调是否真的渲染出来」，不约束加粗配额与位置——那由①②③管。",
+      "decision_layer": "D1（行内代码边界可机检）+ D3（聊天轮人工回放）",
+      "cannot_infer": "不能推出「行内代码内禁止出现星号」——讲 Markdown 语法本身时合法，须先声明；也不能推出「渲染后一定可见」由本仓保证，宿主渲染器行为不在本仓控制范围。"
      }
     ]
    },

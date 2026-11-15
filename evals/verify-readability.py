@@ -169,6 +169,9 @@ def main(argv=None) -> int:
         p = d / Path(SAMPLE_REL).name
         p.write_text(read(p) + "| 项 | 数值 |\n|---|---|\n| a | 1 |\n| b | 2 |\n", encoding="utf-8")
 
+    def mut_emphasis_in_code(d):
+        p = d / Path(SAMPLE_REL).name
+        p.write_text(read(p) + "\n把 `the **red** apple` 里的 red 写成加粗。\n", encoding="utf-8")
     mutations = (
         ("本节速览被删", mut_remove_overview, "W-READER-OVERVIEW"),
         ("一句话结论被删", mut_remove_conclusion, "W-READER-CONCLUSION"),
@@ -182,6 +185,7 @@ def main(argv=None) -> int:
         ("图缺图注", mut_missing_caption, "W-READER-CAPTION"),
         ("泛称链接文字", mut_generic_link, "W-READER-LINKTEXT"),
         ("数值列未右对齐", mut_table_align, "W-READER-TABLE-ALIGN"),
+        ("强调标记落进行内代码", mut_emphasis_in_code, "W-EMPHASIS-IN-CODE"),
     )
     for name, fn, code in mutations:
         rc, out = run_mutation(root, fn)
