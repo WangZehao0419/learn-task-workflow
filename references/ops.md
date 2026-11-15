@@ -252,13 +252,15 @@
 
 十个命令行脚本与两个内部模块的 **用法、默认行为、逐脚本退出码、selftest 清单、内部模块的覆盖去向**，机器可读正本在 `contracts/scripts-contract.json`（`scripts_contract` / `internal_modules` / `verification` 三个分区），本册不复制第二份。错误码触发条件速查见 `references/registry.md`「错误码速查表」。
 
-本册只保留契约没有的四件事：
+本册只保留契约没有的五件事：
 
 1. **路径约定**：脚本基准 `<技能根>/scripts/<脚本名>.py`（不写裸 `scripts/…` 依赖 cwd）；数据根基准显式 `--root`；解释器统一 `python`。
 2. **只读与安全承诺**：任何脚本不联网、不下载、不改系统配置、不执行材料文本里的命令；`task_index.py` 默认只读，`--write-index` 才写，写时 `os.replace` 原子替换，`scan_status=failed` 时绝不覆盖既有缓存。
-3. **发版锚点四处齐改**：`SKILL.md` frontmatter `metadata.version`、`contracts/rules.json` 的 `version`、本节「当前核验 · 适用版本」、`README.md` 的「## 维护」节「版本」行；`rule_contract.py` **只**校验 `rules.json` 的 version，发现不了 `SKILL.md` 不一致——此处**无机检兜底**，人工逐条核对。
-4. **环境清单与打包**：`check_environment.py` 读的是 `skill-dependencies.json`，与 `rules.json` 是两份不同的东西；打包走 `skill_ops preflight/validate/package`，必含 `contracts/rules.json` 与 `scripts/rule_contract.py`，打包前删 `__pycache__`、排除 `.trae`/`.workbuddy`/`.codex`，收尾 `git diff --check`。
+3. **发版锚点四处齐改**：`SKILL.md` frontmatter `metadata.version`、`contracts/rules.json` 的 `version`、本节「当前核验 · 适用版本」、`README.md` 的「## 维护」节「版本」行。四处取值一致由 `scripts/verify_version_anchors.py` 机检（票 100）：每处断言「恰好命中 1 次」——0 次匹配不等于通过，重复命中意味着改一处会留下第二处旧值。
+4. **红线凭据的冻结基准**：`contracts/redlines-freeze.json` 是「红线凭据有没有被悄悄改动」的硬闸基准（票 99）。基准**不是**入口文档——入口正是被重写的对象，让被测方当自己的评分器，闸口一定被顺手放宽。口径：**键集合相等是硬闸**（少一条或多一条都红），**内容指纹变化只告警**（重写期内容一定在变，把指纹设成硬闸会让每批都红，最后只能被关掉）。重冻结的唯一路径是 `rule_contract.py --redline-freeze-payload > contracts/redlines-freeze.json` 的一次可评审 diff。
 
-**当前核验**：适用版本 9.21.18；核验日期 2026-11-14；依赖 stdlib。
+5. **环境清单与打包**：`check_environment.py` 读的是 `skill-dependencies.json`，与 `rules.json` 是两份不同的东西；打包走 `skill_ops preflight/validate/package`，必含 `contracts/rules.json` 与 `scripts/rule_contract.py`，打包前删 `__pycache__`、排除 `.trae`/`.workbuddy`/`.codex`，收尾 `git diff --check`。
+
+**当前核验**：适用版本 9.21.19；核验日期 2026-11-15；依赖 stdlib。
 
 > 门检盲区口径：`verify-doc-pointers.py` 的 `PTR_RE` 字符类不含 `.`，`../README.md` 这类路径整条不被校验；`ANCHOR_RE` 要求路径后紧跟「」，隔一个「的」就漏。写指针时这两类形态自己盯。

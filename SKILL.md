@@ -2,7 +2,7 @@
 name: learn-task-workflow
 description: 当学员要把某个主题系统学下去、而不是问一道题时，用本技能带他跑完整个学习流程：问清目标与现状 → 诊断摸底 → 确认学习计划 → 逐节讲授与练习 → 判分验收 → 复习保持 → 结课。适合「我要学X」「教我X」「从零学X」「备考X／考研／考证」「继续上次学」「问进度」「学习简报」「考考我」「加练」，也适合独立写讲义、出题、组一套卷。不要用于：普通知识问答、单题求助（「这道题怎么做」）、代写作业、单纯总结或调研、搭课程脚手架。学员说「教我X」「帮我复习X」「考考我」这类高频词时，先确认它指的是系统学习还是只想问一下；指向不清就澄清一句再动手。宿主另有独立教学工作区或排版能力时，用户显式调用则让位，二者勿同时启动。
 metadata:
-  version: 9.21.18
+  version: 9.21.19
   author: 王责豪
   agent_created: true
 ---
@@ -13,19 +13,46 @@ metadata:
 
 > **一句话纪律**：闸口未达标，绝不进入下一阶段。本文件承载十一条教学红线的**完整判据**（见「十一条教学红线」），判据自足、不依赖任何分册；分册只承载背景、例外与学科差异。
 
-## 何时用 / 何时不用
+## 加载路由（遇到 Y 就读 X）
 
-触发判定的**唯一正本**是 `references/routing.md`：正向信号、负向信号、近邻陷阱、a–f 入口决策树、语义桥全在那里。本文件不复述清单。
+未载对应分册，不得执行该分册负责的动作。指针是**条件式**的：遇到 Y 才读 X，不预先整册通读。**一行只指一册**——叠加读的条件写在册顶第 3 行导读句（每册都是「…时读本册。」），入口不重复列。
 
-只有两条本文件必须自带的边界：高频词（「教我X」「帮我复习X」「考考我」）必须能指向系统学习意图或已有学习任务，否则先澄清一句；歧义时按 a–f 决策树定性，拿不准就问，不猜。
+| 你在做什么（何时读） | 读这一册 |
+|---|---|
+| 判请求该不该进陪学流程、选快捷指令 | `references/routing.md` |
+| S0 建档 / S1 摸底 / 读写数据三簿 | `references/intake.md` |
+| S2 计划确认、规划簿、结课目标线 | `references/planning.md` |
+| S3 课内六拍、提问反馈、备课定位 | `references/interaction.md` |
+| S3 逐目推进、每轮小步、节末收尾 | `references/lessons.md` |
+| S3 出题、判分、题组与变式 | `references/assessment.md` |
+| S3 写/改讲义：单元 schema 与支持级 | `references/handout-unit.md` |
+| S3 深讲概念、换风格重讲、教学姿态 | `references/teaching-method.md` |
+| S4 复习巩固、清复习债、间隔调度 | `references/review.md` |
+| S5 结课、综合测验与交付 | `references/closeout.md` |
+| 落盘、失败/阻断/红线、核验出处 | `references/ops.md` |
+| 闸口自检、覆盖率审计、产能与节律 | `references/gates.md` |
+| 讲义排版、公式符号、版面与打印 | `references/handout-typography.md` |
+| 答案框与体例、六套风格与卡片 | `references/handout-forms.md` |
+| 讲义流水线、来源评估、出厂自检 | `references/handout-pipeline.md` |
+| 讲义 P1/P2 增强、读者路径 | `references/handout-enhance.md` |
+| 已认到具体学科、取学科切片或学科包 | `references/subjects-index.md` |
+| 学习者画像与记忆簿 | `references/intake-optional.md` |
+| 查错误码含义与规则编号总表 | `references/registry.md` |
+| 查检索锚 / 概念图 / 六类图示的归属与检查 | `references/knowledge-artifacts.md` |
 
-## 能力接口与宿主映射
+### 一册读不完：按行号续读
 
-本技能只依赖能力，不依赖某一代理产品的工具名：文件读取、文件写入/编辑、目录枚举、文本检索、受限脚本执行、用户提问，以及可选的联网查证。各宿主可把这些能力映射到自己的工具；能力或必需输入缺失时立即停止当前运行，说明缺失条件与恢复方式，处理完后重跑原检查并从原阶段继续（见 `references/ops.md`），不提供降低交付或证据标准的替代路径。脚本命令中的 `python` 是跨环境的本地 CLI 契约，执行前使用宿主提供的等价终端能力；路径与退出码见 `references/ops.md`。
+被单次读取上限截断时**按行号续读**：记住已读到的最后一行 N，从 N+1 起继续读同一册，直到读完所需小节；不重头重读，不凭记忆补全，仍不完整就停下说明。
 
-**核心层与增强层**：能力分两层，唯一事实源是 `skill-dependencies.json` 里依赖上的 `degraded` 声明——**有降级声明 = 增强层，缺席不阻断**；没有的就是核心层，缺了必须停。当前增强层只有一项：SVG 图示工具链（`mmdc`），缺了按手写 SVG 走，产物与校验标准不变。
+### 指针解析约定
 
-**`degraded` 必须在学员可见文本之外说明**：`check_environment.py` 的输出出现 `degraded` 键时，本轮起手先把降级状态单独说一句（哪项增强不可用、走的是哪条降级路径、恢复条件），放在讲授正文之外，不混进讲义、题面或判分反馈（见红线 6「记账永不进正文」）。`degraded` 键缺席就一个字都不用提——**没降级就不要主动汇报"一切正常"**。
+本节及全仓的反引号 doc 指针（`xxx/yyy.md`）**一律解析为 `<技能根>/references/xxx/yyy.md`**——即使没写 `references/` 前缀。`references/` 是唯一的 doc 根。
+
+例外按字面解析：`scripts/…`、`evals/…`、`contracts/…`、`SKILL.md`。数据文件（`progress.md`、`课程体系.md`、`记忆.md`、`profile.md`、`<slug>/…`）属于 `<工作区根>/.learning/`，不是 references。
+
+### 加载失败怎么办
+
+指针目标缺失、不可读、anchor 不存在 → **停止当前运行**，说明停止点、缺失条件与恢复条件；不用「我记得规则」继续，也不用降低标准的替代路径。十一条教学红线的判据不受此影响——它们写在本文件里，永远可用。
 
 ## 调度协议（每次触发必经）
 
@@ -80,67 +107,35 @@ metadata:
 
 - **状态簿 `<slug>/progress.md`**（字段正本 `references/intake.md`）、**规划簿 `<slug>/课程体系.md`**（字段正本 `references/planning.md`）、**叙事簿 `<slug>/记忆.md`**（字段正本 `references/intake-optional.md`）、**画像 `<数据根>/profile.md`**（字段正本 `references/intake-optional.md`）。
 
-稳定引用对账与提交顺序见 `references/intake.md`；判分与调度语义见 `references/assessment.md`。
+稳定引用对账与提交顺序见 `references/planning.md`；判分与调度语义见 `references/assessment.md`。
 
 **确定性环节交给脚本**（判断归模型，数据归脚本）。脚本清单、用法、退出码、selftest、路径约定与 stdlib 约束统一见 `references/ops.md`；**不在本文件复制参数**。
+
+## 何时用 / 何时不用
+
+触发判定的**唯一正本**是 `references/routing.md`：正向信号、负向信号、近邻陷阱、a–f 入口决策树、语义桥全在那里。本文件不复述清单。
+
+只有两条本文件必须自带的边界：高频词（「教我X」「帮我复习X」「考考我」）必须能指向系统学习意图或已有学习任务，否则先澄清一句；歧义时按 a–f 决策树定性，拿不准就问，不猜。
+
+## 能力接口与宿主映射
+
+本技能只依赖能力，不依赖某一代理产品的工具名：文件读取、文件写入/编辑、目录枚举、文本检索、受限脚本执行、用户提问，以及可选的联网查证。各宿主可把这些能力映射到自己的工具；能力或必需输入缺失时立即停止当前运行，说明缺失条件与恢复方式，处理完后重跑原检查并从原阶段继续（见 `references/ops.md`），不提供降低交付或证据标准的替代路径。脚本命令中的 `python` 是跨环境的本地 CLI 契约，执行前使用宿主提供的等价终端能力；路径与退出码见 `references/ops.md`。
+
+**核心层与增强层**：能力分两层，唯一事实源是 `skill-dependencies.json` 里依赖上的 `degraded` 声明——**有降级声明 = 增强层，缺席不阻断**；没有的就是核心层，缺了必须停。当前增强层只有一项：SVG 图示工具链（`mmdc`），缺了按手写 SVG 走，产物与校验标准不变。
+
+**`degraded` 必须在学员可见文本之外说明**：`check_environment.py` 的输出出现 `degraded` 键时，本轮起手先把降级状态单独说一句（哪项增强不可用、走的是哪条降级路径、恢复条件），放在讲授正文之外，不混进讲义、题面或判分反馈（见红线 6「记账永不进正文」）。`degraded` 键缺席就一个字都不用提——**没降级就不要主动汇报"一切正常"**。
 
 ## 执行约束
 
 - **人设与教学四原则**：耐心、专业、严格而温暖的私人家教；循序渐进、旧知锚定+示范先行、费曼检验、诚实查证。完整定义、边界与执行动作的唯一事实源见 `references/teaching-method.md`；提问、反馈与错因见 `references/interaction.md`；来源分级与出处四要素见 `references/ops.md`。
 - **学习科学**：区分流利度与存储强度，用逐目分块、示范先行、反馈时机、检索/间隔/交错、条件化设计练习——调度与题组见 `references/assessment.md`，教学动作见 `references/interaction.md`；元方法教学、预判误区与概念探测见 `references/teaching-method.md`，智能变式判据见 `references/assessment.md`「智能变式一次一维（R43）」。
 - **不代劳 vs 直接讲解**：学员要求讲解/示范 → 直接讲；要求替交受评作业 → 先引导、坚持才给完整解析。唯一事实源见 `references/interaction.md`「提问与提示起点（T06）」苏格拉底边界。
-- **科目族映射**：S0 定档**学科族**（7 值：数学与统计 / 实验科学 / 语言 / 计算与技术 / 人文社科 / 医学与健康 / 艺术与技能，中文名与目录名的对应以契约 `constants.group_slugs` 为准）。三层取用：①**内容类型**定策略（记忆/概念/程序/设计，见 `references/teaching-method.md`）；②**学科群**定表征与共享策略（按学科族取 `references/subjects-{group}.md` 对应一册）；③**学科包**定内容与误区（S0 认到具体学科后，若 `references/disciplines/` 下有匹配包则加读该包）。学科族未定时先取 `references/subjects-index.md`，定档后补取群切片；学科包判据见 `references/subjects-index.md`「学科包准入判据」，无匹配包时只用群切片，不硬造。
-
-## 加载分册（遇到 Y 就读 X）
-
-**一句话纪律不变**：未载对应分册，不得执行该分册负责的动作。下面的指针是**条件式**的——遇到 Y 就读 X，不预先整册通读。
-
-### 按当前动作找分册
-
-| 你在做什么 | 读这些 |
-|---|---|
-| 判断这次请求该不该进陪学流程（单题 / 代写 / 只要建议 / 只要计划 / 独立写讲义出题组卷） | `references/routing.md` |
-| S0 接料建档 / S1 诊断摸底 / S2 计划确认 | `references/intake.md` · `references/intake.md` · `references/subjects-index.md` · `references/subjects-{group}.md` |
-| S3 讲授（六拍、逐目推进） | `references/lessons.md` · `references/interaction.md` · `references/handout-unit.md` · `references/subjects-{group}.md` |
-| S3 判分与热身 | `references/lessons.md` · `references/interaction.md` · `references/assessment.md` · `references/handout-forms.md` |
-| S3 出题 | `references/interaction.md` · `references/handout-forms.md` · `references/subjects-index.md` · `references/subjects-index.md` · `references/subjects-{group}.md` |
-| S3 写讲义 / 改讲义 | `references/handout-unit.md` · `references/subjects-{group}.md` |
-| S3 深讲概念 / 换风格重讲 | `references/teaching-method.md` · `references/handout-forms.md` |
-| S3 节末收尾 | `references/lessons.md` · `references/interaction.md` · `references/assessment.md` · `references/intake.md` |
-| S4 复习与清债 | `references/review.md` · `references/intake.md` · `references/interaction.md` · `references/handout-unit.md` · `references/subjects-index.md` · `references/subjects-index.md` · `references/subjects-{group}.md` |
-| S5 结课 | `references/closeout.md` · `references/intake.md` · `references/handout-unit.md` · `references/subjects-index.md` · `references/subjects-index.md` |
-| 任何落盘 / 续学 | `references/intake.md` · `references/ops.md` |
-
-### 按能力叠加（不是主场景，命中才加读）
-
-| 命中条件 | 加读 |
-|---|---|
-| 要输出公式 / 科学符号 | `references/handout-typography.md` |
-| 要核验来源、填出处四要素 | `references/ops.md` |
-| 遇到失败 / 环境阻断 / 红线 | `references/ops.md` |
-| 跨机制组合冲突 | `references/ops.md` |
-| 已认到具体学科 | `references/disciplines/{discipline}.md` |
-| 讲义要导出 / 打印 / 读者版 | `references/handout-typography.md` |
-| 讲义要 P1/P2 可选增强 | `references/handout-enhance.md` |
-| 排期要定学习段节律 | `references/gates.md`（按小节取用：「休息与节律（R39）」） |
-| 要定教学姿态 | `references/teaching-method.md` |
-| 要写答案框 | `references/handout-forms.md` |
-
-### 指针解析约定
-
-本节及全仓的反引号 doc 指针（`xxx/yyy.md`）**一律解析为 `<技能根>/references/xxx/yyy.md`**——即使没写 `references/` 前缀。`references/` 是唯一的 doc 根。
-
-例外按字面解析：`scripts/…`、`evals/…`、`contracts/…`、`SKILL.md`。数据文件（`progress.md`、`课程体系.md`、`记忆.md`、`profile.md`、`<slug>/…`）属于 `<工作区根>/.learning/`，不是 references。
-
-### 加载失败怎么办
-
-指针目标缺失、不可读、anchor 不存在 → **停止当前运行**，说明停止点、缺失条件与恢复条件；不用「我记得规则」继续，也不用降低标准的替代路径。十一条教学红线的判据不受此影响——它们写在本文件里，永远可用。
+- **科目族映射**：S0 定档**学科族**（7 值：数学与统计 / 实验科学 / 语言 / 计算与技术 / 人文社科 / 医学与健康 / 艺术与技能，中文名与目录名的对应以契约 `constants.group_slugs` 为准）。三层取用：①**内容类型**定策略（记忆/概念/程序/设计，见 `references/teaching-method.md`）；②**学科群**定表征与共享策略；③**学科包**定内容与误区。学科层全部文件、取用顺序与学科包准入判据见 `references/subjects-index.md`——本文件不再逐条列群切片与学科包；无匹配包时只用群切片，不硬造。
 
 ## 参考文件（按需加载）
 
 每本正本册开头的导读句写清了它由哪些能力域合成、管什么。本节只给目录级导航：
 
-- `references/routing.md` —— 意图路由（a–f 决策树、S3 内场景判别）、快捷指令明细、生态分工。
 - `references/routing.md` —— 意图路由（a–f 决策树、S3 内场景判别）、快捷指令明细、生态分工。
 - `references/intake.md` —— 接料建档、诊断摸底、数据三簿字段正本（progress/课程体系/记忆）、引用对账。
 - `references/intake-optional.md` —— 学习者画像、记忆簿（学习日志 / 学习记录 / 讲授证据）。
@@ -159,6 +154,5 @@ metadata:
 - `references/handout-enhance.md` —— P1 质量与运营、P2 教材级章节层、读者路径、图像可视化双轨。
 - `references/ops.md` —— 红线与失败处置、脚本契约指针、证据分级、环境与组合。
 - `references/registry.md` —— 规则编号与错误码总表。
-- `references/subjects-index.md` 与 `references/subjects-*.md`、`references/disciplines/` —— 学科层入口 + 七本学科群切片 + 十二个学科 variant 包（学科层不属动作正本册，按原路径解析）。
-- `references/subjects-*.md` 与 `references/disciplines/` —— 七本学科群正本册（每本含 plan / teach / practice / review 四类切片）+ 学科总则 + 十二个学科 variant 包（取用顺序见 `references/subjects-index.md`）。
+- `references/subjects-index.md` —— 学科层唯一入口：七本学科群切片与十二个学科包由它扇出（学科层不属动作正本册，按原路径解析）。
 - `contracts/rules.json` —— 业务常量（枚举 / 阈值 / 标题白名单 / 错误码）与结构版本；5 个模块（`ltw_parse` / `progress_check` / `scheduler` / `task_index` / `verify_explanation`）通过 `scripts/rule_contract.py` 读取。**它只存常量，不存结构索引。**

@@ -47,7 +47,9 @@
     "1": "畸形行 / 依赖环 / 解释器版本不足 / 疑似解析失败",
     "2": "用法错误"
    },
-   "schema": {"fringe": "ltw-fringe/1"},
+   "schema": {
+    "fringe": "ltw-fringe/1"
+   },
    "notes": "空合法课程体系与疑似解析失败分离；KP 编号别名归一（KP-1-1 ≡ KP-01-01）；环路径输出稳定；`--list` 是默认拓扑序的显式别名（data.md 长期这么写，输出与裸路径逐字节相同）；`fringe` 是只读纯计算的「已会 / 现在能学」两张清单（票 37 Q3 的消费端）：已会 = 判定=已判，现在能学 = 讲授域内自身未判且硬前置全部已判（或带摸底「已会」括注，票 81 Q2）；暂缓/排除两张清单都不收；硬前置被暂缓/排除时复用既有 blockers 形状单独列出（不新造第三类状态）；输出另带 pending（自身未判但还有前置未满足，附 waiting_for）——没有它，「能学清单为空」就分不出「全学完了」与「全被前置挡住」。输出按原文行序：票 37 未定「现在能学」的排序口径，脚本不发明排序。不写盘、不改 order/excluded/held 任何既有输出字段；票 92 前向兼容：目行**段名不在白名单**的未知段被忽略并记账，拓扑序与 fringe 输出另带 unknown_segs（去重 + 稳定排序，同输入双跑逐字节一致），状态非法/前置引用不存在/缺段/重复编号四条仍硬失败（exit 1）"
   },
   {
@@ -73,15 +75,15 @@
   },
   {
    "script": "rule_contract.py",
-   "usage": "--selftest | --keys | --redline-keys | --redlines | --get <dotted>",
-   "default_behavior": "只读；加载并校验 contracts/rules.json，输出 JSON；两个红线出口只写 stdout、不落盘",
+   "usage": "--selftest | --keys | --redline-keys | --redlines | --redline-freeze-check [--freeze <清单路径>] | --redline-freeze-payload | --registry-check [--registry <总表路径>] | --get <dotted>",
+   "default_behavior": "只读；加载并校验 contracts/rules.json，输出 JSON；红线台账、冻结清单内容与冻结比对结果都只写 stdout/stderr、不落盘（重新冻结必须是人显式重定向的一次可评审 diff）",
    "exit_codes": {
-    "0": "正常/校验通过",
-    "1": "契约缺失/畸形或红线凭据结构不成立",
-    "2": "用法错误"
+    "0": "正常/校验通过（冻结比对：键集合相等，或有内容指纹漂移但只是 W 级告警；总表对拍：错误码集合、规则编号集合与两组总数声明全部相等）",
+    "1": "契约缺失/畸形或红线凭据结构不成立；或冻结清单缺失/畸形、基准不是契约、键集合与契约不等（少一条或多一条）；或总表与契约双向对拍不等（错误码/规则编号缺一条或多一条、总数声明与常量或契约不符、声明行出现次数不为 1）",
+    "2": "用法错误（含 --freeze 未与 --redline-freeze-check 同用、--registry 未与 --registry-check 同用）"
    },
    "schema": "ltw-rules/3",
-   "notes": "契约唯一来源 contracts/rules.json；缺失/畸形报 E-CONTRACT-MISSING/E-CONTRACT-INVALID。纯常量加载器：只返回结构版本与业务常量。本条目的 schema 与本脚本的 SCHEMA 常量是**两处必须相等的副本**（票 91），由本脚本 --selftest 直接读本文件比对，只改其中一处即红；同文件里 task_index.py 的 learn-task-index/7 是索引产物版本，语义不同，不参与相等。红线凭据（票 96）是 constants 下与业务常量平级的两个块 redlines / sources，不进 REQUIRED_CONST——加字段不破旧契约，缺块也不算错（阶段性对象），但两块必须成对出现。三层是 线 → 子判据 → 凭据；子判据用双层键：语义标识 R<线号>.<slug> 定下不得再改，order 可重排，slug 必须以小写字母起头（纯序号 R1.1 判非法，否则重排一次就能让一条规则被另一条顶替而数量不变）。出处外键双向：正向硬错——凭据引用 sources 里没有的 id 报 E-EVIDENCE-REF-MISSING（孤儿引用）；反向 soft——sources 里没人引用的条目由 --redline-keys 的 orphan_sources 与 --redlines 台账尾部报出，不拦加载（容器先于内容落地，票 98 才填正文，设成硬错会让整个重写期契约不可加载）。--redline-keys 输出键集合并附 fingerprint（redlines 块的规范化 JSON 的 sha256）：键集合相等即通过、指纹变化只告警，硬闸归票 99。--redlines 把台账渲到 stdout，不落盘（落盘等于把已退役的「契约反向生成文档」请回来）。--selftest 跑加载器自测；--keys 列出业务常量键；--get <dotted> 取单个取值。历史上的 --topology / --coverage / --audit / --audit-strict 已随编译层退役（见 v9.20.0），不再提供。"
+   "notes": "契约唯一来源 contracts/rules.json；缺失/畸形报 E-CONTRACT-MISSING/E-CONTRACT-INVALID。纯常量加载器：只返回结构版本与业务常量。本条目的 schema 与本脚本的 SCHEMA 常量是**两处必须相等的副本**（票 91），由本脚本 --selftest 直接读本文件比对，只改其中一处即红；同文件里 task_index.py 的 learn-task-index/7 是索引产物版本，语义不同，不参与相等。红线凭据（票 96）是 constants 下与业务常量平级的两个块 redlines / sources，不进 REQUIRED_CONST——加字段不破旧契约，缺块也不算错（阶段性对象），但两块必须成对出现。三层是 线 → 子判据 → 凭据；子判据用双层键：语义标识 R<线号>.<slug> 定下不得再改，order 可重排，slug 必须以小写字母起头（纯序号 R1.1 判非法，否则重排一次就能让一条规则被另一条顶替而数量不变）。出处外键双向：正向硬错——凭据引用 sources 里没有的 id 报 E-EVIDENCE-REF-MISSING（孤儿引用）；反向 soft——sources 里没人引用的条目由 --redline-keys 的 orphan_sources 与 --redlines 台账尾部报出，不拦加载（容器先于内容落地，票 98 才填正文，设成硬错会让整个重写期契约不可加载）。--redline-keys 输出键集合并附 fingerprint（redlines 块的规范化 JSON 的 sha256）：键集合相等即通过、指纹变化只告警，硬闸归票 99。--redlines 把台账渲到 stdout，不落盘（落盘等于把已退役的「契约反向生成文档」请回来）。--selftest 跑加载器自测；--keys 列出业务常量键；--get <dotted> 取单个取值。历史上 --topology / --coverage / --audit / --audit-strict 已随编译层退役（见 v9.20.0），不再提供。票 99 冻结清单硬闸：基准是契约侧另存的 contracts/redlines-freeze.json（--redline-freeze-payload 的输出原样重定向而来，60 行 JSON / 47 条指纹，可逐字节重建），**不是 SKILL.md**——入口文档正是这轮被重写的对象，让被测方当自己的评分器，闸口一定会在某一批被顺手放宽且无人看见；清单的 baseline.path 必须是 contracts/rules.json，指向 SKILL.md 或任何其它路径一律红。口径两档：**键集合相等是硬闸**（清单缺一条或多一条 → rc=1，missing_in_freeze / extra_in_freeze 分别报出）；**内容指纹变化只告警**（逐条指纹落进 drift[] 并打 W-REDLINE-FREEZE-DRIFT 到 stderr，rc 仍为 0，不进 ok——重写期正文一定在变，把指纹设成硬闸会让每批都红，最后只能被关掉，比没有闸口更坏因为留下有闸的错觉）。指纹按**每条子判据**算（键 → sha256），不用整块指纹：整块只能告红指不出哪一条，人只能整份重冻结，那正是顺手放宽的入口。读不到清单 / JSON 非法 / 字段缺失 / schema 不符一律 fail closed（rc=1），不得当成没变化。清单是否与契约一致由 --selftest 内的真实夹具备份兜住，故 G3 跑 --selftest 即等于跑硬闸。票 94 总表双向对拍：--registry-check 把**人读总表** references/registry.md 与契约互为镜像——错误码集合（契约 constants.errors 递归收集去重，128 = E 59 + W 69）与规则编号集合（constants.redlines 的 R<线号>.<slug> 双层键，11 条线 / 47 条子判据）都必须**相等**，少一条或多一条都 rc=1；两组总数另以具名常量钉住（REGISTRY_CODE_TOTAL/REGISTRY_CODE_E/REGISTRY_CODE_W/REGISTRY_REDLINE_LINES/REGISTRY_CRITERIA_TOTAL），声明行必须**恰好出现一次**（零次=声明被删、多次=锚点不唯一，改错位置会得假绿）。理由：错误码总数漂过两次（116 → 126 → 128），两次都是文档落后于契约而脚本全绿。口径分三套且不得混：错误码与双层键进索引、参与集合相等；分册正文里的「R＋数字」旧编号（R35/R54 等 19 个取值，无机器正本）**只登记来源与落点、不进索引**——混计一次两套就再也分不开。--registry 只能与 --registry-check 同用。"
   },
   {
    "script": "prereq_check.py",
@@ -114,6 +116,61 @@
     "2": "用法错误"
    },
    "notes": "四项检查：① 路径存在；② 「小节名」锚点命中唯一——标题优先，正文加粗词兜底（W-PTR-BOLD），两层都必须唯一，多命中报 E-PTR-AMBIG、零命中报 E-PTR-ANCHOR；③ §N 编号唯一（本仓已弃用 §N，见 #31 方案 B，此项防回潮，W-PTR-SECNO 提示改小节名）；④ 自指指针记 W-PTR-SELF（合并票「分册零互指」的目标项，现存 249 处，见 #31）。匹配只做精确相等与去编号前缀（≥4 字），不做任意子串包含——那会让「图」命中「概念地图」。代码块内不校验；`references/xxx.md` 这类占位示例按 PLACEHOLDER 跳过；progress.md / 课程体系.md / 记忆.md / profile.md 属数据文件，不计自指。"
+  },
+  {
+   "script": "verify_entry_budget.py",
+   "usage": "[--selftest]",
+   "default_behavior": "只读；检查 SKILL.md 的三条入口预算判据",
+   "exit_codes": {
+    "0": "三条判据全过",
+    "1": "有判据不通过（含锚点缺失或砍点常量读不到——一律 fail closed）",
+    "2": "用法错误"
+   },
+   "notes": "票 102 把「压缩后入口还能用」变成会红的断言，三条判据都按**字节**算（rule_contract.py 的红线节预算按**字符**，是两个不同的验收轴，不能互相替代）：① 红线节（`## 十一条教学红线` 到下一个二级标题之前）的**结束字节**必须 < 压缩砍点下界；② 前两段（一句话纪律引用块 + 加载路由节）合计 ≤6000 B；③ 加载路由表每一行的行号必须早于红线节，且**一行只指一册**（E-ENTRY-ROUTE-MULTI-BOOKLET，是 AC「加载表改为动作 → 一册」的机器判据）。砍点下界**只从** contracts/rules.json 的 constants.budget.context_compress_cutoff_lower_bound 读，脚本内不写死数字：写死当前实测值，断言就永远跟着自己转——红线节哪天被砍掉 3,000 B，阈值跟着变小，断言照样绿，而这次重排的全部意义正是被砍掉的那部分。锚点缺失、常量缺失/缺键/非整数一律按红处理（fail closed），否则改一次标题就静默摘掉闸口。自测含四条夹具变异与四条**真实制品变异**（拷真身到临时根再改，不动被测文件）：挪表回红线之后 / 红线节前插填充 / 砍点常量改小到 5000 / 把两册塞进同一行，每条都断言「改坏 → 红，还原 → 绿」且变异锚点唯一。真实制品变异是必需的：夹具变异只证明判据逻辑对，证明不了真实 SKILL.md 的字节真被这条判据咬住。"
+  },
+  {
+   "script": "verify_subject_fanout.py",
+   "usage": "[--selftest]",
+   "default_behavior": "只读；检查学科层单点扇出（扇出表与磁盘双向相等、入口收敛为一条）",
+   "exit_codes": {
+    "0": "三条判据全过",
+    "1": "有判据不通过（含扇出表/契约/入口锚点缺失——一律 fail closed）",
+    "2": "用法错误"
+   },
+   "notes": "票 95 把「加一门学科只动一个文件」变成会红的断言。判据①**双向相等**：`references/subjects-index.md` 的「学科层扇出表」列出的文件集合，必须与磁盘上 `references/subjects-*.md`（不含本册）+ `references/disciplines/*.md` 的集合相等——少一行是漏登记，多一行是空指针，**只查一个方向等于没查**（只查「表里每行都有文件」时，新加一个学科包没写进表，表自己完全自洽、全绿，而漏登记正是本票要消灭的东西）。判据②每行只挂一个文件且「管什么/何时读」两栏非空、无重复行——表不能退化成一串裸文件名。判据③入口 `SKILL.md` 里指向学科层的路径只允许 `references/subjects-index.md` **一个取值**，且必须落在「加载路由」表内可达：散开即红（E-SUBJ-ENTRY-SCATTERED），只在「参考文件」列表里提也红（E-SUBJ-ENTRY-UNREACHABLE——读者仍不知道什么时候读它）。语义边界：本册自己是扇出的**发起方**不是被扇出行，故不进表（否则违反分册零互指，且让「行数 == 文件数」这个等式失去意义）；刻意**不**要求 `disciplines/` 目录与契约 `discipline_slugs` 相等，否则加一门学科要从「一个文件 + 一行」变成三处齐改，反倒违背本票 AC。自测 10 用例：绿基线和 AC 实证（加一个文件 → 红，再补一行 → 绿，全程只动这两处）加七条变异（删一行 / 加未登记文件 / 某行留空 / 入口散开 / 入口册从路由表消失 / 三个锚点缺失 fail closed / 真实制品变异），每条断言「改坏 → 红，还原 → 绿」且变异锚点唯一。"
+  },
+  {
+   "script": "verify_version_anchors.py",
+   "usage": "[--selftest] [--root <技能根>]",
+   "default_behavior": "只读：读四处发版锚点并比对取值，不写盘",
+   "exit_codes": {
+    "0": "四锚点取值一致且每处恰好命中 1 次",
+    "1": "不一致 / 锚点缺失 / 锚点重复 / 文件不可读",
+    "2": "用法错误"
+   },
+   "notes": "四处发版锚点（票 52 R4）：SKILL.md frontmatter metadata.version、contracts/rules.json version、README.md 发版行、references/ops.md「当前核验·适用版本」。票 100 之前此处无任何机检兜底——rule_contract.py 只校验 rules.json 一处，发现不了另三处漂移。每处断言「恰好命中 1 次」：0 次匹配不等于通过（正则写窄或锚点被删都会得到 0 次，写成「没有不匹配就通过」即是假绿）；多次命中意味着改一处会留下第二处旧值。"
+  },
+  {
+   "script": "verify_volume_budget.py",
+   "usage": "[--selftest] [--root <技能根>] [--limit <字节>]",
+   "default_behavior": "只读：统计 references/ 下 .md 字节并检查加载路由目标的册首导读句",
+   "exit_codes": {
+    "0": "全部 ≤上限且路由目标导读句齐备",
+    "1": "有超限册或路由目标缺导读句",
+    "2": "用法错误"
+   },
+   "notes": "两条判据各有适用域：字节上限对 references/ 下全部 .md 生效（超限会被宿主单次读取静默截断）；导读句只对加载路由表里出现的目标生效——学科群切片与学科包由 subjects-index.md「学科层扇出表」按需扇出，其「何时读」已在扇出表一栏，重复要求册顶导读句只会把耦合度做大。导读句判据是「第 3 行 blockquote 含『时读本册』」，允许后接补充说明。"
+  },
+  {
+   "script": "verify_eval_versions.py",
+   "usage": "[--selftest] [--root <技能根>] [--json]",
+   "default_behavior": "只读：读 evals/evals.json，按版本降级口径统计，不写盘",
+   "exit_codes": {
+    "0": "结构合规（含全部降级；降级不是错误）",
+    "1": "结构缺失或取值非法 / 账本不可读",
+    "2": "用法错误"
+   },
+   "notes": "降级规则：decided_against_version != applies_to_version 的证据视作「未验证」，不计入「通过」。降级是**第三态**——既非通过也非失败（成因：证据本来就是旧版本做的，或版本前进了而证据没重跑），因此 rc 仍为 0；只有结构缺失/非法才 rc=1。为什么必须机械：旧实现靠 evals.json 里一整段自然语言说明「这 19 条只证明当时的版本」，靠人读一段话记住，版本一多必漏且无信号。"
   }
  ],
  "internal_modules": [
@@ -136,9 +193,16 @@
    "python -B scripts/verify_explanation.py --selftest",
    "python -B scripts/prereq_check.py --selftest",
    "python -B scripts/rule_contract.py --selftest",
+   "python -B scripts/rule_contract.py --redline-freeze-check",
+   "python -B scripts/rule_contract.py --registry-check",
    "python -B scripts/verify-doc-pointers.py --selftest",
-   "python -B scripts/verify_effect_report.py --selftest"
+   "python -B scripts/verify_effect_report.py --selftest",
+   "python -B scripts/verify_entry_budget.py --selftest",
+   "python -B scripts/verify_subject_fanout.py --selftest",
+   "python -B scripts/verify_version_anchors.py --selftest",
+   "python -B scripts/verify_volume_budget.py --selftest",
+   "python -B scripts/verify_eval_versions.py --selftest"
   ],
-  "note": "十个命令行脚本自测覆盖确定性计算、结构校验、契约完整性与术语对账；真实教学回归与故障夹具见 evals；verify-doc-pointers 校验 doc 指针四项（路径/锚点/编号/自指）。本分区（scripts_contract vs internal_modules）不是人读声明，由 evals/verify-gate-registry.py 的 G1-G6 机检：G1 分区完备（不重不漏无幽灵）、G2 分类自证（命令行喂必败参数必须 rc≠0，内部模块喂同一参数必须 rc=0）、G3 清单可执行、G4 清单与契约同源、G5 覆盖去向（internal_modules 的 note 点名的每个覆盖者必须真的 import 该内部模块）、G6 字节同源（git 说干净的文件，工作区字节必须等于 index blob——抓被 stat 缓存掩盖的 EOL/等长篡改；非 git 检出跳过并明说未校验）。"
+  "note": "十一个命令行脚本自测覆盖确定性计算、结构校验、契约完整性与术语对账；真实教学回归与故障夹具见 evals；verify-doc-pointers 校验 doc 指针四项（路径/锚点/编号/自指）；票 99 的冻结清单硬闸（键集合相等 rc=1 / 内容指纹漂移只 W 级告警）随 rule_contract.py --selftest 一起跑，真身基准 contracts/redlines-freeze.json 由该自测内的真实夹具备份兜住；票 102 的入口预算三条判据（红线节结束字节 < 砍点下界常量 / 前两段 ≤6000 B / 加载路由早于红线且一行一册）随 verify_entry_budget.py --selftest 一起跑，砍点常量的唯一正本是 contracts/rules.json 的 constants.budget.context_compress_cutoff_lower_bound。本分区（scripts_contract vs internal_modules）不是人读声明，由 evals/verify-gate-registry.py 的 G1-G6 机检：G1 分区完备（不重不漏无幽灵）、G2 分类自证（命令行喂必败参数必须 rc≠0，内部模块喂同一参数必须 rc=0）、G3 清单可执行、G4 清单与契约同源、G5 覆盖去向（internal_modules 的 note 点名的每个覆盖者必须真的 import 该内部模块）、G6 字节同源（git 说干净的文件，工作区字节必须等于 index blob——抓被 stat 缓存掩盖的 EOL/等长篡改；非 git 检出跳过并明说未校验）。"
  }
 }

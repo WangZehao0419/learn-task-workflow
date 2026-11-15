@@ -1,8 +1,8 @@
 {
  "schema": "ltw-evals/2",
  "skill": "learn-task-workflow",
- "applies_to_version": "9.20.5",
- "updated_at": "2026-11-10",
+ "applies_to_version": "9.21.19",
+ "updated_at": "2026-11-15",
  "grading_axes": [
   "教学正确性",
   "目标匹配",
@@ -27,7 +27,8 @@
    "未验证"
   ],
   "scores 五轴": "每轴 0–5 分，由**独立评分者（非执行模型）**填写；machine 类可附脚本原始输出作为证据。",
-  "禁用": "不得用关键词检查代替教学准确性与体验评价；不得编造分数或输出；未跑的条目不得标「通过」。"
+  "禁用": "不得用关键词检查代替教学准确性与体验评价；不得编造分数或输出；未跑的条目不得标「通过」。",
+  "版本降级": "每条证据声明 decided_against_version（判定时所依据的版本）。版本不等的证据自动降级为「未验证」，不得计入通过；降级不等于失败，也不等于通过。机检见 scripts/verify_eval_versions.py。"
  },
  "formula_checks_rubric": {
   "声明": "FORMULA 系列用例的附加检查字段，按 0–2 记分；仅作附加证据，不替代五轴主评分。逐维定义唯一口径文件见 evals/formula-checks-rubric.md。",
@@ -78,7 +79,8 @@
    },
    "verdict": "通过",
    "reviewer": "主审（评审会话，与执行子代理分离）",
-   "review_note": "回答绑定步骤必要性、无未讲概念；路由 s3-deep+formulas 合理"
+   "review_note": "回答绑定步骤必要性、无未讲概念；路由 s3-deep+formulas 合理",
+   "decided_against_version": "9.12.2"
   },
   {
    "id": "E24",
@@ -98,7 +100,8 @@
    },
    "verdict": "通过",
    "reviewer": "主审（评审会话，与执行子代理分离）",
-   "review_note": "三子输入（单题/只要建议/审阅技能）全部零建档零枚举"
+   "review_note": "三子输入（单题/只要建议/审阅技能）全部零建档零枚举",
+   "decided_against_version": "9.12.2"
   },
   {
    "id": "FORMULA-01",
@@ -119,7 +122,8 @@
    "verdict": "通过",
    "reviewer": "主审（评审会话，与执行子代理分离）",
    "formula_checks": null,
-   "review_note": "纯文本目标豁免路径，行内可辨分组+定义域条件；formula_checks 不适用（纯文本目标，无渲染产物可打渲染/复制维）"
+   "review_note": "纯文本目标豁免路径，行内可辨分组+定义域条件；formula_checks 不适用（纯文本目标，无渲染产物可打渲染/复制维）",
+   "decided_against_version": "9.12.2"
   },
   {
    "id": "FORMULA-02",
@@ -140,7 +144,8 @@
    "verdict": "通过",
    "reviewer": "主审（评审会话，与执行子代理分离）",
    "formula_checks": null,
-   "review_note": "第 8 节宿主实测（2026-11-01，两环境七项样例+复制/窄屏通过）解除停机后重放渲染分支；停机分支记录见同档首轮回放。formula_checks 五维各 2 分（阻断型全 2）。学科内容 2/结构渲染 2/教学解释 2/复制保真 2/边界 2"
+   "review_note": "第 8 节宿主实测（2026-11-01，两环境七项样例+复制/窄屏通过）解除停机后重放渲染分支；停机分支记录见同档首轮回放。formula_checks 五维各 2 分（阻断型全 2）。学科内容 2/结构渲染 2/教学解释 2/复制保真 2/边界 2",
+   "decided_against_version": "9.12.2"
   },
   {
    "id": "FORMULA-03",
@@ -161,7 +166,8 @@
    "verdict": "通过",
    "reviewer": "主审（评审会话，与执行子代理分离）",
    "formula_checks": null,
-   "review_note": "第 8 节宿主实测（2026-11-01，两环境七项样例+复制/窄屏通过）解除停机后重放渲染分支；停机分支记录见同档首轮回放。formula_checks 五维各 2 分（阻断型全 2）。学科内容 2/结构渲染 2/教学解释 2/复制保真 2/边界 2"
+   "review_note": "第 8 节宿主实测（2026-11-01，两环境七项样例+复制/窄屏通过）解除停机后重放渲染分支；停机分支记录见同档首轮回放。formula_checks 五维各 2 分（阻断型全 2）。学科内容 2/结构渲染 2/教学解释 2/复制保真 2/边界 2",
+   "decided_against_version": "9.12.2"
   },
   {
    "id": "FORMULA-04",
@@ -182,7 +188,8 @@
    "verdict": "通过",
    "reviewer": "主审（评审会话，与执行子代理分离）",
    "formula_checks": null,
-   "review_note": "第 8 节宿主实测（2026-11-01，两环境七项样例+复制/窄屏通过）解除停机后重放渲染分支；停机分支记录见同档首轮回放。formula_checks 五维各 2 分（阻断型全 2）。学科内容 2/结构渲染 2/教学解释 2/复制保真 2/边界 2"
+   "review_note": "第 8 节宿主实测（2026-11-01，两环境七项样例+复制/窄屏通过）解除停机后重放渲染分支；停机分支记录见同档首轮回放。formula_checks 五维各 2 分（阻断型全 2）。学科内容 2/结构渲染 2/教学解释 2/复制保真 2/边界 2",
+   "decided_against_version": "9.12.2"
   },
   {
    "id": "FORMULA-05",
@@ -203,7 +210,8 @@
    "verdict": "通过",
    "reviewer": "主审（评审会话，与执行子代理分离）",
    "formula_checks": null,
-   "review_note": "纯文本豁免完整交付；括号两角色+条件差异讲清；formula_checks 不适用（纯文本豁免，无渲染产物）"
+   "review_note": "纯文本豁免完整交付；括号两角色+条件差异讲清；formula_checks 不适用（纯文本豁免，无渲染产物）",
+   "decided_against_version": "9.12.2"
   },
   {
    "id": "FORMULA-06",
@@ -224,7 +232,8 @@
    "verdict": "通过",
    "reviewer": "主审（评审会话，与执行子代理分离）",
    "formula_checks": null,
-   "review_note": "零公式化（formulas 不触发边界）；两要件解释正确；formula_checks 不适用（非公式任务无公式产物）"
+   "review_note": "零公式化（formulas 不触发边界）；两要件解释正确；formula_checks 不适用（非公式任务无公式产物）",
+   "decided_against_version": "9.12.2"
   },
   {
    "id": "FORMULA-07",
@@ -245,7 +254,8 @@
    "verdict": "通过",
    "reviewer": "主审（评审会话，与执行子代理分离）",
    "formula_checks": null,
-   "review_note": "代码边界：源码全程代码标记，解释控制序列与转义；formula_checks 不适用（源码以代码形态承载，非公式渲染）"
+   "review_note": "代码边界：源码全程代码标记，解释控制序列与转义；formula_checks 不适用（源码以代码形态承载，非公式渲染）",
+   "decided_against_version": "9.12.2"
   },
   {
    "id": "FORMULA-08",
@@ -272,7 +282,8 @@
     "复制保真": 2,
     "边界": 2
    },
-   "review_note": "渲染分支盲回放（run_id replay-v9.13.1-render-20261101-ce74e8d，执行子代理只读规范分册不读验收标准）主审逐项核对：定义域/验根/易错全对，阻断型三维全 2；首轮回放（纯文本分支）记录见 evals/replay-2026-11-01-v9.12.2.md"
+   "review_note": "渲染分支盲回放（run_id replay-v9.13.1-render-20261101-ce74e8d，执行子代理只读规范分册不读验收标准）主审逐项核对：定义域/验根/易错全对，阻断型三维全 2；首轮回放（纯文本分支）记录见 evals/replay-2026-11-01-v9.12.2.md",
+   "decided_against_version": "9.13.1"
   },
   {
    "id": "FORMULA-09",
@@ -299,7 +310,8 @@
     "复制保真": 2,
     "边界": 2
    },
-   "review_note": "渲染分支盲回放（replay-v9.13.1-render-20261101-ce74e8d）主审逐项核对：变量定义/数值单位分离/量纲/定律保留全落点，50 m/s、2 m/s²、4 N 复核正确，阻断型三维全 2；首轮回放（纯文本分支）记录见 evals/replay-2026-11-01-v9.12.2.md"
+   "review_note": "渲染分支盲回放（replay-v9.13.1-render-20261101-ce74e8d）主审逐项核对：变量定义/数值单位分离/量纲/定律保留全落点，50 m/s、2 m/s²、4 N 复核正确，阻断型三维全 2；首轮回放（纯文本分支）记录见 evals/replay-2026-11-01-v9.12.2.md",
+   "decided_against_version": "9.13.1"
   },
   {
    "id": "FORMULA-10",
@@ -326,7 +338,8 @@
     "复制保真": 2,
     "边界": 2
    },
-   "review_note": "渲染分支盲回放（replay-v9.13.1-render-20261101-ce74e8d）主审逐项核对：配平左右原子数核对/点燃+物态标注/SO₄²⁻ 四位置语义全对，阻断型三维全 2；首轮回放（纯文本分支）记录见 evals/replay-2026-11-01-v9.12.2.md"
+   "review_note": "渲染分支盲回放（replay-v9.13.1-render-20261101-ce74e8d）主审逐项核对：配平左右原子数核对/点燃+物态标注/SO₄²⁻ 四位置语义全对，阻断型三维全 2；首轮回放（纯文本分支）记录见 evals/replay-2026-11-01-v9.12.2.md",
+   "decided_against_version": "9.13.1"
   },
   {
    "id": "E25",
@@ -346,7 +359,8 @@
    },
    "verdict": "通过",
    "reviewer": "主审（评审会话，与执行子代理分离）",
-   "review_note": "完整流水线并停在真人冷读闸口；对话不贴全文（R41）"
+   "review_note": "完整流水线并停在真人冷读闸口；对话不贴全文（R41）",
+   "decided_against_version": "9.12.2"
   },
   {
    "id": "E26",
@@ -366,7 +380,8 @@
    },
    "verdict": "通过",
    "reviewer": "主审（评审会话，与执行子代理分离）",
-   "review_note": "s3-deep 路线轮+选择问；D1–D6 归属判定正确"
+   "review_note": "s3-deep 路线轮+选择问；D1–D6 归属判定正确",
+   "decided_against_version": "9.12.2"
   },
   {
    "id": "E27",
@@ -386,7 +401,8 @@
    },
    "verdict": "通过",
    "reviewer": "主审（评审会话，与执行子代理分离）",
-   "review_note": "边讲边写补读挂载生效、死锁消失；回放暴露 unit-schema 指针残留，当批已修（小节自足化）｜残留修复：I-TEACH-DRAFT 小节自足化（本批已改）"
+   "review_note": "边讲边写补读挂载生效、死锁消失；回放暴露 unit-schema 指针残留，当批已修（小节自足化）｜残留修复：I-TEACH-DRAFT 小节自足化（本批已改）",
+   "decided_against_version": "9.12.2"
   },
   {
    "id": "E28",
@@ -406,7 +422,8 @@
    },
    "verdict": "通过",
    "reviewer": "主审（评审会话，与执行子代理分离）",
-   "review_note": "主题匹配校验拦截「合同复习」，不进 S4、零建档"
+   "review_note": "主题匹配校验拦截「合同复习」，不进 S4、零建档",
+   "decided_against_version": "9.12.2"
   },
   {
    "id": "E29",
@@ -426,7 +443,8 @@
    },
    "verdict": "通过",
    "reviewer": "主审（评审会话，与执行子代理分离）",
-   "review_note": "无任务先澄清（SR-1），不静默建目录"
+   "review_note": "无任务先澄清（SR-1），不静默建目录",
+   "decided_against_version": "9.12.2"
   },
   {
    "id": "E30",
@@ -446,7 +464,8 @@
    },
    "verdict": "通过",
    "reviewer": "主审（评审会话，与执行子代理分离）",
-   "review_note": "一轮一小步；加载量与文件数以 report-load-footprint 报告记录（已取消预算上限，数值不作通过条件）"
+   "review_note": "一轮一小步；加载量与文件数以 report-load-footprint 报告记录（已取消预算上限，数值不作通过条件）",
+   "decided_against_version": "9.12.2"
   },
   {
    "id": "E32",
@@ -466,7 +485,8 @@
    },
    "verdict": "通过",
    "reviewer": "主审（评审会话，与执行子代理分离）",
-   "review_note": "历史回放：当时按四维版面评分记结构合规 2 / 行与密度 2 / 强调与记号 2 / 判分可读性 2；伺服行偏长（约 140 字）扣对话负担 1 分。v9.17.0 起版式轴与 ltw 结构闸口退役，本案例保留为历史证据，不再作为格式闸口必过项。"
+   "review_note": "历史回放：当时按四维版面评分记结构合规 2 / 行与密度 2 / 强调与记号 2 / 判分可读性 2；伺服行偏长（约 140 字）扣对话负担 1 分。v9.17.0 起版式轴与 ltw 结构闸口退役，本案例保留为历史证据，不再作为格式闸口必过项。",
+   "decided_against_version": "9.13.0"
   },
   {
    "id": "E33",
@@ -477,7 +497,8 @@
    "pass_condition": "讲授前先给 1 个日常情境小题请学员写下自己的答案与一句理由；探测不落判分行、不进分母、答错零评判；冲突步点破旧直觉失效处后接反驳式讲授与边界；探测暴露的误区写回当节 R42 清单；学员答对则省冲突步按压缩出口讲",
    "verdict": "未验证",
    "reviewer": null,
-   "review_note": "R56 的盲回放用例，待下一轮真实学习任务中回放判定"
+   "review_note": "R56 的盲回放用例，待下一轮真实学习任务中回放判定",
+   "decided_against_version": "unknown"
   }
  ],
  "redline_regression": {
@@ -743,7 +764,7 @@
    "原结果": "11/11 通过（来源不可复核，见票 43）"
   }
  },
- "_cases 的版本说明": "cases 里 19 条 verdict=通过 的证据，run_id 分别指向 replay-v9.12.2（12 条）、replay-v9.12.2-render（3 条）、replay-v9.13.1-render（3 条）、layout-v9.13.0（1 条）——都是 v9.12.2 / v9.13.x 的制品。本文件 applies_to_version 是 9.20.x，所以这 19 条只证明当时的版本，不构成对当前版本的证据。票 43 记录，未改 verdict：改判需要重跑。",
+ "_cases 的版本说明": "cases 里 19 条 verdict=通过 的证据，run_id 分别指向 replay-v9.12.2（12 条）、replay-v9.12.2-render（3 条）、replay-v9.13.1-render（3 条）、layout-v9.13.0（1 条）——都是 v9.12.2 / v9.13.x 的制品。本文件 applies_to_version 是 9.20.x，所以这 19 条只证明当时的版本，不构成对当前版本的证据。票 43 记录，未改 verdict：改判需要重跑。 自 9.21.19 起，本说明由 scripts/verify_eval_versions.py 机械化：每条 case 带 decided_against_version，与 applies_to_version 不等的证据自动降级为「未验证」，不计入通过。降级是第三态，既非通过也非失败。",
  "human_cold_read": {
   "声明": "真人冷读与抽样冷读的**资产定义**。**这是待执行清单，不是通过记录。**",
   "为什么需要": "红线盲回放测的是「有没有违规」，冷读测的是「学员读起来顺不顺、有没有被催促或被代答的体感」。两者互补，都属 P0 主证据。",

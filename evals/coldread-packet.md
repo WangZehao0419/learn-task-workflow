@@ -94,7 +94,7 @@ metadata:
 
 - **状态簿 `<slug>/progress.md`**（字段正本 `references/data.md`）、**规划簿 `<slug>/课程体系.md`**（字段正本 `references/data.md`）、**叙事簿 `<slug>/记忆.md`**（字段正本 `references/data.md`）、**画像 `<数据根>/profile.md`**（字段正本 `references/data.md`）。
 
-稳定引用对账与提交顺序见 `references/data.md`；判分与调度语义见 `references/assessment.md`。
+稳定引用对账与提交顺序见 `references/planning.md`；判分与调度语义见 `references/assessment.md`。
 
 **确定性环节交给脚本**（判断归模型，数据归脚本）。脚本清单、用法、退出码、selftest、路径约定与 stdlib 约束统一见 `references/ops.md`；**不在本文件复制参数**。
 
