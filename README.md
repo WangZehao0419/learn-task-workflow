@@ -20,7 +20,7 @@ python scripts/check_environment.py
 - `SKILL.md`（158 行）—— 激活即读的指令正文：调度协议、**十一条教学红线的完整判据**、阶段速查、数据三簿、按动作与按能力的分册指针。
 - `references/`（**27 个 .md**）—— **20 本按学员动作切分的正本册**（含 `routing`/`subjects-index`/`registry`/`knowledge-artifacts` 等，单册 ≤35,000 B）+ 7 本学科群切片 + `subjects-index.md` 学科层入口 + 12 个学科 **variant 包**（在 `references/disciplines/`，不计入正本册）。
 - `contracts/rules.json`（33 KB）—— **只存业务常量与结构版本**：枚举 / 阈值 / 标题白名单 / 错误码 / 红线凭据台账。不含场景注册表、意图登记或文件清单。
-- `scripts/`（**17 个文件** = 15 个命令行脚本 + 2 个内部模块，stdlib-only、幂等只读）—— 进度校验、判分证据验证、间隔调度、效果报告机检、纯常量加载、结构机检。
+- `scripts/`（**18 个文件** = 16 个命令行脚本 + 2 个内部模块，stdlib-only、幂等只读）—— 进度校验、判分证据验证、间隔调度、效果报告机检、纯常量加载、结构机检。
 - `evals/` —— 行为级验收脚本、红线回归与触发率用例、夹具。
 - `GLOSSARY.md` —— 五个 canonical 词（索引机检 / 行为机检 / 正本册 / variant 包 / 教学红线）。
 - `docs/adr/` —— 长期决策记录（ADR-0001 验收轴改判；ADR-0002 编译层退役；ADR-0003 调度增长律换 FSRS-6）。
@@ -38,13 +38,13 @@ python scripts/check_environment.py
 - 没有**场景注册表**，没有**意图登记**，没有**文件清单**，没有**派生表**
 - 没有「索引机检」——结构自洽不再是闸口
 - 保留的是**业务常量加载**（5 个模块仍从 `rule_contract.py` 读判分四态、调度参数等：`ltw_parse` / `progress_check` / `scheduler` / `task_index` / `verify_explanation`）
-- 兜底改用**逐文件内容保真比对** + 15 个命令行脚本的 `--selftest` import 不变量 + 行为机检
+- 兜底改用**逐文件内容保真比对** + 16 个命令行脚本的 `--selftest` import 不变量 + 行为机检
 - 两个**内部模块**（`ltw_parse.py` / `ltw_typography.py`）无 CLI，不在 `--selftest` 名单里；覆盖由四个消费者脚本与 `evals/verify-svg-checker.py` 承担，登记关系见 `contracts/scripts-contract.json` 的 `internal_modules`，由 `evals/verify-gate-registry.py` 机检
 
 ## 自检
 
 ```bash
-# 17 条命令（显式名单，与 contracts/scripts-contract.json 的 verification.selftest 逐条对应）
+# 18 条命令（显式名单，与 contracts/scripts-contract.json 的 verification.selftest 逐条对应）
 # 其中 rule_contract.py 是常量加载器，加载契约并校验其完整性；
 # 它的 --redline-freeze-check 与 --registry-check 是两道硬闸，也在清单内
 python -B scripts/task_index.py --selftest
@@ -64,6 +64,7 @@ python -B scripts/verify_subject_fanout.py --selftest
 python -B scripts/verify_version_anchors.py --selftest
 python -B scripts/verify_volume_budget.py --selftest
 python -B scripts/verify_eval_versions.py --selftest
+python -B scripts/verify_content_ledger.py --selftest
 
 # 登记表自检：上面这份名单与 scripts/ 实际文件对得上吗
 python -B evals/verify-gate-registry.py
@@ -100,8 +101,9 @@ python -B evals/compare-baseline.py --selftest
 ## 维护
 
 - **版本**：`SKILL.md` frontmatter 的 `metadata.version` 与 `contracts/rules.json` 各登记一处；
-  两者是否一致由发版清单人工逐条核对（见 `references/ops.md`「打包与验证」），改一处必改另一处。本次发布升版到 **9.21.21**（SKILL.md 与契约一致）。
+  两者是否一致由发版清单人工逐条核对（见 `references/ops.md`「打包与验证」），改一处必改另一处。本次发布升版到 **9.21.22**（SKILL.md 与契约一致）。
 - **加一门学科**：只在 `references/disciplines/` 加一个 variant 包，不牵动其他文档。
 - **改一条规则**：改它在**正本册**里的那一处；要引用就写指针，不复制条文。
 - **文献与借鉴出处**：见 `CREDITS.md`（维护侧档案，不进运行时上下文）。
-- **版本历史**：见 `git log` 与 tag；重做前的可回滚锚点是 `baseline/v9.19.2-pre-redo`。
+- **版本历史**：见 `git log` 与 tag；重做前的可回滚锚点是 `baseline/v9.19.2-pre-redo`（→ `725e852`，其 `references/` 树与 `v9.19.2` 相同）。
+- **重做删了什么、去了哪**：见 `docs/migrations/content-ledger.md`——v9.19.2 → 当前每一次删除/改名/拆分逐条登记，由 `scripts/verify_content_ledger.py` 机检。
