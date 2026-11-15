@@ -47,7 +47,7 @@ cannot_infer + 出处外键（按 `、` 连接）的字符数，判据原文不�
 
 票 94 再往这台加载器上加一个只读入口 `--registry-check`：把**人读总表**
 `references/registry.md` 与契约做双向对拍——错误码集合（契约递归收集去重，当前
-128 = E 59 + W 69）、规则编号集合（双层键 `R<线号>.<slug>`，47 条 / 11 线）、以及
+129 = E 59 + W 70）、规则编号集合（双层键 `R<线号>.<slug>`，47 条 / 11 线）、以及
 文档里声明的两组总数，三项任一不等即 rc=1。加这条的理由是错误码总数已经漂过两次
 （116 → 126 → 128），两次都是**文档落后于契约**，而既有校验只查契约自己——查不到
 文档那一侧，于是照文档办事的人拿到的是一份缺码名单，脚本却全绿。
@@ -121,17 +121,17 @@ FREEZE_REQUIRED_FIELDS = ("schema", "baseline", "criterion_count", "criteria")
 # 一份缺码名单，而脚本照常全绿。缺的那一条正是这么静悄悄少了三天的。
 #
 # 口径（先定口径再建表，两套编号不得混成一套）：
-#   ① 错误码正本 = 契约 constants.errors（递归收集去重，当前 128 = E 59 + W 69）；
+#   ① 错误码正本 = 契约 constants.errors（递归收集去重，当前 129 = E 59 + W 70）；
 #      总表里出现的码集合必须**与它相等**——少一条和多一条都红，只查一边等于没查。
 #   ② 规则编号正本 = 契约 constants.redlines 的子判据双层键（47 条 / 11 线）。分册
 #      正文里另有一套「R＋数字」的旧编号（实测 19 个不同取值），那是**另一套**，
 #      只做来源登记、不进本索引，也不参与集合相等——混计一次，两套就再也分不开。
 #   ③ 总数本身是断言：文档声明一组数字、代码钉一组常量，两边都得等于契约实测。
-#      只对拍集合不对拍数字，「128」这类清账数会继续漂而没人发现，而它已经漂过两次。
+#      只对拍集合不对拍数字，「129」这类清账数会继续漂而没人发现，而它已经漂过两次。
 REGISTRY_MD = "references/registry.md"
-REGISTRY_CODE_TOTAL = 128
+REGISTRY_CODE_TOTAL = 129
 REGISTRY_CODE_E = 59
-REGISTRY_CODE_W = 69
+REGISTRY_CODE_W = 70
 REGISTRY_REDLINE_LINES = 11
 REGISTRY_CRITERIA_TOTAL = 47
 # 码形态：[EW]-大写段，可多段。前后不得紧贴标识符字符，避免从长串里切出半截码。
@@ -1397,7 +1397,7 @@ def _selftest() -> int:
             assert res["codes_registry"] == REGISTRY_CODE_TOTAL, "总表码数不是钉住的值"
             assert res["criteria_registry"] == REGISTRY_CRITERIA_TOTAL, "总表规则编号数不对"
             return True
-        case("真实总表与契约双向对拍通过（码 128 / 子判据 47）", registry_baseline_ok, True)
+        case("真实总表与契约双向对拍通过（码 129 / 子判据 47）", registry_baseline_ok, True)
 
         # 变异一：从总表删掉一条码 → 红（漏一条也是硬闸）
         def registry_drop_code_red():
@@ -1434,14 +1434,18 @@ def _selftest() -> int:
             old = "码表总数：%d（E %d + W %d）" % (REGISTRY_CODE_TOTAL, REGISTRY_CODE_E,
                                                   REGISTRY_CODE_W)
             assert registry_text.count(old) == 1, "总数声明锚点不唯一，改错位置会得假绿"
-            p = write_registry("reg_total.md",
-                               registry_text.replace(old, "码表总数：126（E 59 + W 67）"))
+            # 变异值由常量派生：写死旧数字的话，下次改常量就漏改这一处，
+            # 变异会变成「改成一个恰好也错的数」，闸口看着还绿。
+            mutated = "码表总数：%d（E %d + W %d）" % (REGISTRY_CODE_TOTAL - 1,
+                                                      REGISTRY_CODE_E, REGISTRY_CODE_W - 1)
+            assert mutated != old, "变异值与基线相同，夹具失效"
+            p = write_registry("reg_total.md", registry_text.replace(old, mutated))
             res = check_registry(p)
             assert not res["ok"], "总数声明被改成旧值后闸口仍是绿的（数字没被断言）"
             assert any("码表总数" in r for r in res["reasons"]), \
                 "没指出是总数声明：%s" % res["reasons"]
             assert run_cli(["--registry-check", "--registry", str(p)])[0] == 1
-        case("变异：改码表总数声明（128 → 126）→ 红", registry_total_changed_red, True)
+        case("变异：改码表总数声明（129 → 128）→ 红", registry_total_changed_red, True)
 
         def registry_redline_total_changed_red():
             old = "规则编号总数：%d 条线 / %d 条子判据" % (REGISTRY_REDLINE_LINES,

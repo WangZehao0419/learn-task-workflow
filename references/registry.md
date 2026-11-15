@@ -23,10 +23,10 @@
 
 **总量声明**（本行是机检断言的锚点，恰好出现一次；改数字必须同时改 `scripts/rule_contract.py` 的常量与契约）：
 
-- 码表总数：128（E 59 + W 69）
+- 码表总数：129（E 59 + W 70）
 - 规则编号总数：11 条线 / 47 条子判据
 
-两组数字都由 `rule_contract.py --registry-check` 双向对拍：文档里的码集合与规则编号集合必须**等于**契约递归收集的结果（少一条或多一条都红），声明数字必须同时等于契约实测与代码常量。为什么把总数也做成断言：这个数字已经漂过两次（116 → 126 → 128），两次都是文档落后于契约，而脚本照常全绿。
+两组数字都由 `rule_contract.py --registry-check` 双向对拍：文档里的码集合与规则编号集合必须**等于**契约递归收集的结果（少一条或多一条都红），声明数字必须同时等于契约实测与代码常量。为什么把总数也做成断言：这个数字已经漂过三次（116 → 126 → 128 → 129），三次都是文档落后于契约、而脚本照常全绿；第三次是票 103 补上 `W-EFFECT-DENOMINATOR` 时抓出来的。
 
 ## 规则编号总表
 
@@ -132,7 +132,7 @@
 | rule_contract | `E-CONTRACT-MISSING` / `E-CONTRACT-INVALID` | 契约缺失 / 畸形 |
 | report_load_footprint | `E-LOAD-STRUCT` | 加载结构不成立：场景文件缺失、同一场景混用多个令牌、补读小节不存在 |
 | prereq_check | `E-LIST-MISSING` / `E-LIST-EMPTY` / `E-SCAN-MISSING` / `W-TERM-UNTAUGHT` | 清单缺失 / 清单零可用行 / 扫描文件缺失；`W-TERM-UNTAUGHT` 为术语对账逐条违规提示（stderr），exit 1 |
-| verify_effect_report | `W-EFFECT-MARKER` / `W-EFFECT-LEVEL` / `W-EFFECT-RETENTION` / `W-EFFECT-CALIBRATION` / `W-EFFECT-POINTER` | 效果报告缺段（标题容忍尾随括注与全角冒号）/ 判定行缺失或不合体例 / 未测理由占位 / 报告写了「键=值」字段行（只认行首列表项形态，体例纪律）；99- 卷缺「目标线：」；88- 延迟测量写了 `lesson_id=`；元认知未指到「信心=」行或 progress.md；证据指针悬空。**只告警不拦停**，恒 rc=0；报告不存在打印「跳过」不打印「通过」 |
+| verify_effect_report | `W-EFFECT-MARKER` / `W-EFFECT-LEVEL` / `W-EFFECT-RETENTION` / `W-EFFECT-CALIBRATION` / `W-EFFECT-POINTER` / `W-EFFECT-DENOMINATOR` | 效果报告缺段（标题容忍尾随括注与全角冒号）/ 判定行缺失或不合体例 / 未测理由占位 / 报告写了「键=值」字段行（只认行首列表项形态，体例纪律）；99- 卷缺「目标线：」；88- 延迟测量写了 `lesson_id=`；元认知未指到「信心=」行或 progress.md；证据指针悬空；「结课绝对水平」判已测但未写得分率分母来源（引用卷面 `目标线：a/b` 行或声明「按契约默认 a/b」）。**只验存在性，不验分母数值与卷面是否一致**（票 64 否决一致性校验）。**只告警不拦停**，恒 rc=0；报告不存在打印「跳过」不打印「通过」 |
 
 ## 分册旧编号来源登记
 
