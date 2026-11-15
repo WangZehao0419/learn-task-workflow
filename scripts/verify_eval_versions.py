@@ -8,8 +8,15 @@
 v9.12.2 / v9.13.x 的制品，而账本的 applies_to_version 早已前进。没有字段标记这件事，
 旧证据就能一直挂在「通过」栏里——它证明的那个版本早就不存在了。
 
-判据（三条，互相独立）：
+覆盖范围（票 101 收尾缺口：三块证据，不只 cases）：
 
+    cases               场景清单（顶层 list）
+    redline_regression  红线盲回放（redline_regression.cases）
+    trigger_eval        触发率用例（trigger_eval.cases）
+
+判据（四条，互相独立）：
+
+    E-EVAL-BLOCK-MISSING     某个证据块缺失、不是 list 或为空
     E-EVAL-VERSION-MISSING   某条证据没有 decided_against_version（结构缺失）
     E-EVAL-VERSION-INVALID   取值不是 x.y.z 形态也不是 "unknown"
     E-EVAL-VERDICT-INVALID   verdict 不在 {通过, 未通过, 未验证} 三态内
@@ -27,6 +34,10 @@ v9.12.2 / v9.13.x 的制品，而账本的 applies_to_version 早已前进。没
 为什么降级必须机械：旧实现靠 `_cases 的版本说明` 这一整段自然语言说明「这 19 条只
 证明当时的版本」——那是**靠人读一段话记住**，不是机器能拦的。版本一多、证据一多，
 总会有一条被漏掉，而且漏掉时没有任何信号。此脚本让「漏掉」变成可见的计数。
+
+为什么三块都要覆盖：`redline_regression` 的 11 条与 `trigger_eval` 的 20 条同样是证据，
+只读 `cases` 会让它们绕过降级——规则一改，它们照样挂在「通过」栏里，正是本票要消灭的
+假绿。块缺失、不是 list 或为空一律判红（fail closed），不允许「没读到就当没有」。
 
 用法：
     python -B scripts/verify_eval_versions.py
@@ -53,58 +64,98 @@ DEMOTED = "未验证"
 VERSION_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 UNKNOWN = "unknown"
 
+# 三块证据：(块名, 用例列表所在键；None = 块本身就是 list)
+BLOCKS = (
+    ("cases", None),
+    ("redline_regression", "cases"),
+    ("trigger_eval", "cases"),
+)
+
 
 def _valid_version(v):
     """x.y.z 或 unknown 合法；其余（含 null、空串、v 前缀）非法。"""
     return isinstance(v, str) and (v == UNKNOWN or bool(VERSION_RE.match(v)))
 
 
+def _block_cases(doc, name, nested):
+    """取出一个证据块的用例列表；返回 (list|None, 说明)。None 表示该块不可用。"""
+    if nested is None:
+        path = name
+        node = doc.get(name)
+    else:
+        path = "%s.%s" % (name, nested)
+        holder = doc.get(name)
+        if not isinstance(holder, dict):
+            return None, "%s 缺失或不是对象（该块的用例无从枚举）" % name
+        node = holder.get(nested)
+    if not isinstance(node, list) or not node:
+        return None, "%s 缺失或为空——没有证据的块不能当作「全过」" % path
+    return node, path
+
+
 def audit(doc):
-    """返回 (errors, stats)。stats 里 pass/demoted/unverified 都按「降级后」口径计。"""
+    """返回 (errors, stats)。stats 里 pass/demoted/unverified 都按「降级后」口径计，且按块分列。"""
     errors = []
     applies = doc.get("applies_to_version")
     if not _valid_version(applies):
         errors.append(("applies_to_version", "取值非法或缺失：%r" % (applies,)))
 
-    cases = doc.get("cases")
-    if not isinstance(cases, list) or not cases:
-        errors.append(("cases", "缺失或为空——没有证据的账本不能当作「全过」"))
-        return errors, {}
-
+    blocks = {}
     n_pass = n_demoted = n_unverified = n_fail = 0
     demoted_ids = []
-    for i, c in enumerate(cases):
-        cid = c.get("id") or "cases[%d]" % i
-        if "decided_against_version" not in c:
-            errors.append((cid, "缺 decided_against_version（无法判断它证明的是哪个版本）"))
-            continue
-        dv = c["decided_against_version"]
-        if not _valid_version(dv):
-            errors.append((cid, "decided_against_version 非法：%r" % (dv,)))
-            continue
-        verdict = c.get("verdict")
-        if verdict not in VERDICTS:
-            errors.append((cid, "verdict 非法：%r（只允许 %s）" % (verdict, "/".join(VERDICTS))))
+
+    for name, nested in BLOCKS:
+        cases, where = _block_cases(doc, name, nested)
+        if cases is None:
+            errors.append((name, where))
+            blocks[name] = {"total": 0, "pass": 0, "demoted": 0,
+                            "unverified": 0, "failed": 0}
             continue
 
-        # 降级判定：版本不相等（含 unknown）即视作未验证。
-        if dv != applies:
+        b_pass = b_demoted = b_unverified = b_fail = 0
+        for i, c in enumerate(cases):
+            if not isinstance(c, dict):
+                errors.append(("%s[%d]" % (where, i), "用例不是对象：%r" % (type(c).__name__,)))
+                continue
+            cid = c.get("id") or "%s[%d]" % (where, i)
+            if "decided_against_version" not in c:
+                errors.append((cid, "缺 decided_against_version（无法判断它证明的是哪个版本）"))
+                continue
+            dv = c["decided_against_version"]
+            if not _valid_version(dv):
+                errors.append((cid, "decided_against_version 非法：%r" % (dv,)))
+                continue
+            verdict = c.get("verdict")
+            if verdict not in VERDICTS:
+                errors.append((cid, "verdict 非法：%r（只允许 %s）" % (verdict, "/".join(VERDICTS))))
+                continue
+
+            # 降级判定：版本不相等（含 unknown）即视作未验证。
+            if dv != applies:
+                if verdict == PASS:
+                    b_demoted += 1
+                    demoted_ids.append(cid)
+                else:
+                    b_unverified += 1
+                continue
             if verdict == PASS:
-                n_demoted += 1
-                demoted_ids.append(cid)
+                b_pass += 1
+            elif verdict == "未通过":
+                b_fail += 1
             else:
-                n_unverified += 1
-            continue
-        if verdict == PASS:
-            n_pass += 1
-        elif verdict == "未通过":
-            n_fail += 1
-        else:
-            n_unverified += 1
+                b_unverified += 1
+
+        blocks[name] = {"total": len(cases), "pass": b_pass, "demoted": b_demoted,
+                        "unverified": b_unverified, "failed": b_fail}
+        n_pass += b_pass
+        n_demoted += b_demoted
+        n_unverified += b_unverified
+        n_fail += b_fail
 
     stats = {
         "applies_to_version": applies,
-        "total": len(cases),
+        "blocks": blocks,
+        "total": sum(b["total"] for b in blocks.values()),
         "pass": n_pass,
         "demoted": n_demoted,
         "unverified": n_unverified,
@@ -125,10 +176,12 @@ def load(path: Path):
 
 
 def _selftest() -> int:
-    """内置用例：正例 + 三种结构缺失 + 降级语义（通过→未验证，不是失败）。"""
+    """内置用例：三块覆盖 + 结构缺失 + 降级语义（通过→未验证，不是失败）。"""
     failures = []
+    total_cases = [0]
 
     def case(name, doc, expect_ok, expect_demoted=None, expect_pass=None):
+        total_cases[0] += 1
         errs, st = audit(doc)
         ok = not errs
         if ok != expect_ok:
@@ -139,11 +192,19 @@ def _selftest() -> int:
         if expect_pass is not None and st.get("pass") != expect_pass:
             failures.append("%s：期望通过 %d 条，实得 %s" % (name, expect_pass, st.get("pass")))
 
-    def doc(applies, cases):
-        return {"applies_to_version": applies, "cases": cases}
-
     def c(cid, verdict, dv):
         return {"id": cid, "verdict": verdict, "decided_against_version": dv}
+
+    def doc(applies, cases=None, rl=None, tr=None):
+        """三块齐全的账本。未指定的块用「同版本、非通过」占位，不污染通过计数。"""
+        return {
+            "applies_to_version": applies,
+            "cases": cases if cases is not None else [c("BASE", "通过", applies)],
+            "redline_regression": {
+                "cases": rl if rl is not None else [c("RL", "未验证", applies)]},
+            "trigger_eval": {
+                "cases": tr if tr is not None else [c("TR", "未验证", applies)]},
+        }
 
     case("同版本通过计入通过",
          doc("9.21.19", [c("A", "通过", "9.21.19")]), True, 0, 1)
@@ -159,16 +220,38 @@ def _selftest() -> int:
          doc("9.21.19", [c("A", "通过", "v9.12.2")]), False)
     case("verdict 非法即红",
          doc("9.21.19", [c("A", "过了", "9.21.19")]), False)
-    case("空账本即红",
+    case("空 cases 块即红",
          doc("9.21.19", []), False)
     case("混合：1 通过 + 2 降级",
          doc("9.21.19", [c("A", "通过", "9.21.19"),
                         c("B", "通过", "9.12.2"), c("C", "通过", "9.13.1")]),
          True, 2, 1)
 
+    # ── 三块覆盖（票 101 收尾缺口）：红线块与触发块必须同样受检 ──
+    case("红线块缺版本字段即红",
+         doc("9.21.19", rl=[{"id": "RL-01", "verdict": "通过"}]), False)
+    case("触发块缺版本字段即红",
+         doc("9.21.19", tr=[{"id": "TR-01", "verdict": "未验证"}]), False)
+    case("红线块旧版本通过被降级",
+         doc("9.21.19", rl=[c("RL-01", "通过", "9.19.2")]), True, 1, 1)
+    case("触发块旧版本通过被降级",
+         doc("9.21.19", tr=[c("TR-01", "通过", "9.19.2")]), True, 1, 1)
+
+    missing_block = doc("9.21.19")
+    del missing_block["trigger_eval"]
+    case("触发块整块缺失即红", missing_block, False)
+
+    not_object = doc("9.21.19")
+    not_object["trigger_eval"] = []
+    case("触发块不是对象即红", not_object, False)
+
+    empty_rl = doc("9.21.19")
+    empty_rl["redline_regression"] = {"cases": []}
+    case("红线块为空即红", empty_rl, False)
+
     for f in failures:
         print("FAIL " + f)
-    print("%s 评测账本版本降级：%d 个用例" % ("PASS" if not failures else "FAIL", 9))
+    print("%s 评测账本版本降级：%d 个用例" % ("PASS" if not failures else "FAIL", total_cases[0]))
     return 0 if not failures else 1
 
 
@@ -204,6 +287,10 @@ def main(argv=None) -> int:
         print("PASS 评测账本：基准版本 %s；共 %d 条——通过 %d / 已降级 %d / 未验证 %d / 未通过 %d"
               % (stats["applies_to_version"], stats["total"], stats["pass"],
                  stats["demoted"], stats["unverified"], stats["failed"]))
+        for name, b in stats["blocks"].items():
+            print("  %-18s 共 %d 条——通过 %d / 已降级 %d / 未验证 %d / 未通过 %d"
+                  % (name, b["total"], b["pass"], b["demoted"],
+                     b["unverified"], b["failed"]))
         if stats["demoted_ids"]:
             print("  已降级（旧版本证据，第三态：既非通过也非失败）：%s"
                   % "、".join(stats["demoted_ids"][:8])
