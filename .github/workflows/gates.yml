@@ -1,0 +1,105 @@
+name: gates
+
+# 判据（第一性）：CI 的价值不是「让闸口跑得完」，是「让基线声明与可执行现实之间的漂移
+# 自动暴露」。所以本工作流不自己写一份命令清单——它调 evals/run-gates.py，命令清单的
+# 唯一正本是 contracts/scripts-contract.json 的 verification.selftest + verification.evals。
+# 本地跑同一条命令，CI 跑同一条命令：不存在第二套口径。
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      mutation:
+        description: '变异验证：violation=故意让判据失败（必须标红）/ untested=故意制造环境缺失（必须标黄）/ none=正常'
+        type: choice
+        options: [none, violation, untested]
+        default: none
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # verify_content_ledger.py 要完整历史 + 基线 tag（C0 基线可指认），浅克隆会 fail closed
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # 变异注入：只在 workflow_dispatch 显式指定时生效，日常 push/PR 永不走这里。
+      # 为什么要能在 CI 上注入：票 107 的验收要求「故意让一条判据失败必须标红、故意制造
+      # 环境缺失必须标黄」——这两条只能在真实 runner 上证明，本地证明了不算数。
+      - name: 注入变异（仅 workflow_dispatch）
+        if: github.event_name == 'workflow_dispatch' && inputs.mutation != 'none'
+        run: |
+          set -euo pipefail
+          case "${{ inputs.mutation }}" in
+            violation)
+              # 删掉一个被机检读取的规则键：rule_contract.py --selftest 必然红（rc=1）。
+              # 用单行 -c 而不是 heredoc：heredoc 的终止符在 YAML 块标量里会被缩进吃掉。
+              python -c "import json,pathlib;p=pathlib.Path('contracts/rules.json');d=json.loads(p.read_text(encoding='utf-8'));d.pop('version',None);p.write_text(json.dumps(d,ensure_ascii=False,indent=1),encoding='utf-8');print('已注入变异 violation：移除 contracts/rules.json 的 version 键')"
+              ;;
+            untested)
+              # 删掉登记表本身：驱动读不到清单 = 判据没跑起来（rc=2，未测），不是查出违规
+              rm -f contracts/scripts-contract.json
+              echo "已注入变异 untested：移除 contracts/scripts-contract.json（环境不可用）"
+              ;;
+          esac
+
+      - name: 跑闸口（三态）
+        id: gates
+        run: |
+          set +e
+          python -B evals/run-gates.py --json gates-summary.json
+          rc=$?
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          echo "驱动退出码：$rc（0=通过 / 1=违规 / 2=未测）"
+          exit 0
+
+      # 分流：rc 决定 job 结论。红就是红，黄就是黄，通过就是通过——三档不合并。
+      - name: 判定（通过 / 违规 / 未测）
+        env:
+          RC: ${{ steps.gates.outputs.rc }}
+        run: |
+          set -euo pipefail
+          case "$RC" in
+            0) echo "::notice::闸口全部通过"; exit 0 ;;
+            1) echo "::error::有闸口查出违规（判据生效），见上方逐条输出"; exit 1 ;;
+            2) echo "::warning::有闸口未测（环境不可用）——这不等于通过，也不等于失败"; exit 0 ;;
+            *) echo "::error::驱动自身异常退出码 $RC"; exit 1 ;;
+          esac
+
+      # 黄灯：job 结论只有 success/failure 两档，没有 neutral。
+      # 实测确认过两条路都走不通——exit 78 在本 runner 上得到的是 failure（job 结论 failure），
+      # 不是 neutral。唯一能产出 neutral 的是 Checks API，所以这里显式建一个 neutral check run：
+      # 它会独立出现在 PR 的 checks 列表里，评审者看到的是「未测」，不会被绿勾吞掉。
+      - name: 未测标记（neutral check run）
+        if: steps.gates.outputs.rc == '2'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh api -X POST "repos/${{ github.repository }}/check-runs" \
+            -f name="gates / 未测" \
+            -f head_sha="${{ github.sha }}" \
+            -f status=completed \
+            -f conclusion=neutral \
+            -f "output[title]=未测（环境不可用）" \
+            -f "output[summary]=闸口没有跑起来，判据未生效。这不是通过，也不是违规；修复环境后重跑。" \
+            --jq '.conclusion'
+
+      - name: 上传汇总
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gates-summary
+          path: gates-summary.json
+          if-no-files-found: ignore

@@ -99,6 +99,32 @@
 
 三态的唯一定义处是 `scripts/ltw_exit.py`（常量 + `env_error()` + `usage_error()` + `UsageParser`），**不在调用侧写死数字**。逐脚本退出码语义的正本是 `contracts/scripts-contract.json` 的 `exit_codes`；`scripts/verify_exit_tristate.py` 用真实夹具机检每一条（环境夹具必须 rc=2 且带标记、违规夹具必须 rc=1、必败参数必须 rc=3），并把「环境分支改回 rc=1」「调用错误改回 rc=2」两种变异做成必须变红的断言。
 
+## CI 与本地同源（票 107）
+
+**命令清单只有一处正本**：`contracts/scripts-contract.json` 的 `verification.selftest`（21 条脚本自测）与 `verification.evals`（9 条登记表与行为机检）。`evals/run-gates.py` 是唯一消费者，本地与 CI 都只跑它：
+
+```bash
+python -B evals/run-gates.py            # 跑全部闸口
+python -B evals/run-gates.py --selftest # 分类器自测（证明它真的会红、会黄）
+python -B evals/run-gates.py --list     # 只打印清单，不执行
+```
+
+**三态退出码在这里是分流器**：`0` 通过 / `1` 有闸口查出违规（或清单条目自己参数非法——那是清单坏了）/ `2` 有闸口未测且无任何违规 / `3` 驱动自身参数非法。汇总优先级**违规压过未测**：未测不能掩盖真实的红。
+
+**CI 的三档结论**（`.github/workflows/gates.yml`）：
+
+| 驱动退出码 | job 结论 | 表现 |
+|---|---|---|
+| `0` | success | 绿 |
+| `1` | failure | 红 |
+| `2` | success + 一个 `neutral` check run | 黄（`gates / 未测` 独立出现在 checks 列表） |
+
+**为什么黄灯必须靠 Checks API 而不是退出码**：GitHub Actions 的 job 结论只有 success/failure 两档，runner 不支持「按退出码给 neutral」。票 107 在本仓 runner 上实测过 `exit 78`（历史上被称作 neutral 的码），job 结论是 **failure**，不是 neutral。所以未测时显式建一个 `conclusion=neutral` 的 check run——它独立于 job 结论存在，评审者看到「未测」，不会被绿勾吞掉。需要 workflow 声明 `permissions: checks: write`。
+
+**变异验证**（票 107 AC，只在 `workflow_dispatch` 显式触发，日常 push/PR 不走）：`mutation=violation` 移除 `contracts/rules.json` 的 `version` 键 → 必须红；`mutation=untested` 移除 `contracts/scripts-contract.json` → 必须黄。
+
+**为什么不把 `run-gates.py` 登记进 `verification` 清单**：它是清单的**消费者**。写进清单，`--run` 会递归调用自己。清单正本与消费者分离，递归就不可能发生；由 `evals/run-gates.py --selftest` 的「真实登记表」用例守住条目格式与数量下限。
+
 ## 每批四条准入
 
 **这是正本，别处不写第二份。** 规格 90 用户故事 36：每一批施工都有同样四条准入，不逐批重新发明验收方式。四条**缺一不可、不许多加**——条数由 `scripts/verify_admission.py` 钉死为 4，且每条的命令会被现场执行一次（只比对文本会全绿，那是本仓反复吃过的假绿）。

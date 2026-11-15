@@ -43,49 +43,20 @@ python scripts/check_environment.py
 
 ## 自检
 
+**本地与 CI 跑同一条命令**（票 107）。命令清单只有一处正本：
+`contracts/scripts-contract.json` 的 `verification.selftest`（21 条脚本自测）与
+`verification.evals`（9 条登记表与行为机检）。本文件不再抄第二份——抄一份就多一处会漂移的副本。
+
 ```bash
-# 21 条命令（显式名单，与 contracts/scripts-contract.json 的 verification.selftest 逐条对应）
-# 其中 rule_contract.py 是常量加载器，加载契约并校验其完整性；
-# 它的 --redline-freeze-check 与 --registry-check 是两道硬闸，也在清单内
-python -B scripts/task_index.py --selftest
-python -B scripts/progress_check.py --selftest
-python -B scripts/scheduler.py --selftest
-python -B scripts/kp_sort.py --selftest
-python -B scripts/check_environment.py --selftest
-python -B scripts/verify_explanation.py --selftest
-python -B scripts/prereq_check.py --selftest
-python -B scripts/rule_contract.py --selftest
-python -B scripts/rule_contract.py --redline-freeze-check
-python -B scripts/rule_contract.py --registry-check
-python -B scripts/verify-doc-pointers.py --selftest
-python -B scripts/verify_effect_report.py --selftest
-python -B scripts/verify_entry_budget.py --selftest
-python -B scripts/verify_subject_fanout.py --selftest
-python -B scripts/verify_version_anchors.py --selftest
-python -B scripts/verify_volume_budget.py --selftest
-python -B scripts/verify_eval_versions.py --selftest
-python -B scripts/verify_content_ledger.py --selftest
-python -B scripts/verify_zero_dependency.py --selftest
-python -B scripts/verify_admission.py --selftest
-python -B scripts/verify_exit_tristate.py --selftest
-
-# 登记表自检：上面这份名单与 scripts/ 实际文件对得上吗
-python -B evals/verify-gate-registry.py
-
-# 行为机检
-python -B evals/verify-formula-typesetting.py
-python -B evals/verify-marker-rules.py
-python -B evals/verify-readability.py
-python -B evals/verify-svg-checker.py
-python -B evals/report-load-footprint.py --check
-
-# 验收资产结构（只校资产可用性，不跑红线、不打分）
-python -B evals/verify-redline-assets.py
-python -B evals/verify-trigger-assets.py
-python -B evals/compare-baseline.py --selftest
+python -B evals/run-gates.py
 ```
 
-全部脚本命令、退出码与 selftest 清单见 `references/ops.md`。
+退出码即结论，三档不合并：`0` 全部通过 / `1` 有闸口查出违规 / `2` 有闸口未测（环境不可用，**不等于通过**）。
+
+CI（`.github/workflows/gates.yml`）跑的就是这条命令，没有第二套口径：违规标红，未测标黄（neutral check run），
+通过标绿。想单独看某条，`python -B evals/run-gates.py --list` 打印完整清单。
+
+逐脚本命令、退出码与 selftest 清单见 `references/ops.md`。
 
 ## 验收权重
 
@@ -109,7 +80,7 @@ python -B evals/compare-baseline.py --selftest
 ## 维护
 
 - **版本**：`SKILL.md` frontmatter 的 `metadata.version` 与 `contracts/rules.json` 各登记一处；
-  两者是否一致由发版清单人工逐条核对（见 `references/ops.md`「打包与验证」），改一处必改另一处。本次发布升版到 **10.0.8**（SKILL.md 与契约一致）。
+  两者是否一致由发版清单人工逐条核对（见 `references/ops.md`「打包与验证」），改一处必改另一处。本次发布升版到 **10.0.9**（SKILL.md 与契约一致）。
 - **加一门学科**：只在 `references/disciplines/` 加一个 variant 包，不牵动其他文档。
 - **改一条规则**：改它在**正本册**里的那一处；要引用就写指针，不复制条文。
 - **文献与借鉴出处**：见 `CREDITS.md`（维护侧档案，不进运行时上下文）。
