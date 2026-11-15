@@ -7,7 +7,7 @@ exercises/，从不读 materials/——报告写得再诚实也没有消费者�
 通道，只验**完整性 + 指针闭合**，不重算得分率（在脚本里重算等于同一批数据两套
 算法，改一处两处打架）。
 
-四条判据（票 73 拍板，票 64 定「只告警不拦停」）：
+五条判据（票 73 拍板，票 64 定「只告警不拦停」，票 103 加分母来源）：
   1. 四个 ## 小节硬必填：结课绝对水平 / 延迟保持 / 元认知校准 / 证据指针。
      段落硬必填、值可为「未测」——结课当天报告即「完整」，第 30 天只回填该段。
      机检验「有没有这一栏」，不验「做没做」；把两者混进一个判据会得出「没做第
@@ -18,7 +18,11 @@ exercises/，从不读 materials/——报告写得再诚实也没有消费者�
      延迟保持 → exercises/88-… 存在且**不含** lesson_id=（写了会顶掉节验收证据，
      整节报 E-ALL-FAILED + E-GATE-THRESHOLD + E-NO-RESTATEMENT）；元认知校准 →
      指到「信心=」行或 progress.md。一律不验内容一致性。
-  4. 报告不存在 = 打印「跳过」且 rc=0，**不得打印「通过」**——没查 ≠ 查过没问题
+  4. 「结课绝对水平」段必须写出得分率的分母来源（票 103 / 规格 90 结算项 B 第 3 条）：
+     引用该卷的「目标线：a/b」行，或显式声明「按契约默认 4/5」。**只验存在性**——
+     分母数值与卷面不一致**不报**（一致性校验已被票 64 否决，在脚本里重算等于同一
+     批数据两套算法）。
+  5. 报告不存在 = 打印「跳过」且 rc=0，**不得打印「通过」**——没查 ≠ 查过没问题
      （票 66 语义）。
 
 只告警不拦停：W- 不进任何 ok，脚本恒 rc=0（用法/路径错误除外）。
@@ -58,6 +62,21 @@ PROGRESS_PTR_RE = re.compile(r"progress\.md")
 CONFIDENCE_RE = re.compile(r"信心\s*=")
 TARGET_LINE_RE = re.compile(r"目标线\s*[：:]")
 LESSON_ID_RE = re.compile(r"lesson_id\s*=")
+# 分母来源（票 103）：结课绝对水平段必须写出得分率的**分母从哪来**——引用卷面
+# 「目标线：a/b」行，或显式声明「按契约默认 a/b」。两个正则都要求带具体 a/b：
+# 「见该卷目标线行」不写数值，等于没写分母。**存在性检查，不是一致性检查**——
+# 只问「有没有写」，不问「写得对不对」（票 64 否决一致性校验）。
+# 括注形态必须一起吃：「按契约默认（4/5）」「目标线：8/10）」都是人真会写的写法，
+# 认不出就等于把「写了」判成「没写」——假阳性比漏判更坏，它教人别按体例写。
+# 数值形态与 progress_check.py 的 TARGET_RE 对齐（允许小数）：卷面 `目标线：7.5/10`
+# 是合法卷面，报告原样引用它必须算写出分母来源。两处形态若分叉，就是同一件事两套口径。
+RATIO_NUM = r"\d+(?:\.\d+)?"
+# 空白用 [ \t]* 不用 \s*：\s 会吃换行，把「目标线：」与「8/10」分处两行的残句
+# 粘成一句，判成「已写分母来源」——那是假绿，且与本文件其余按行判的判据口径不一致。
+GAP = r"[ \t]*"
+TARGET_REF_RE = re.compile(r"目标线" + GAP + r"[：:]" + GAP + RATIO_NUM + GAP + r"/" + GAP + RATIO_NUM)
+CONTRACT_DEFAULT_RE = re.compile(
+    r"按契约默认" + GAP + r"[（(]?" + GAP + RATIO_NUM + GAP + r"/" + GAP + RATIO_NUM)
 
 # 报告不写「键=值」（票 73 ⑤）：字段行形态会撞 META_KEYS 白名单。只认
 # 「行首列表项 + 键=」的字段行形态；行文里提到「信心=」不算字段。
@@ -201,6 +220,20 @@ def check_report(task_dir: Path, report: Path):
                 _add(findings, "W-EFFECT-LEVEL", name,
                      "结课卷缺「目标线：」行（达标线机器可读入口）：" + p)
 
+    # 判据 4（票 103）：结课绝对水平段写出分母来源。只在该段判「已测」时要求——
+    # 段判「未测」时没有得分率可写分母，要求它等于把「没做」判成违规（票 73 ⑤ 的
+    # 同一条纪律）。**只验存在性**：分母数值与卷面不一致不报，那属票 64 已否决的
+    # 一致性校验，做了就是越界。
+    if verdicts.get("结课绝对水平") == "已测":
+        # 用换行拼：不带分隔符的拼接会让「目标线：」与「8/10」分处两行也算写出，
+        # 那是把两行残句粘成一句的假绿，与本文件其余按行判的判据口径也不一致。
+        level_body = "\n".join(line for _l, line in sections.get("结课绝对水平", []))
+        if not (TARGET_REF_RE.search(level_body)
+                or CONTRACT_DEFAULT_RE.search(level_body)):
+            _add(findings, "W-EFFECT-DENOMINATOR", name,
+                 "「结课绝对水平」未写出得分率的分母来源（引用该卷「目标线：a/b」行，" +
+                 "或显式声明「按契约默认 a/b」）；只验有没有写，不验数值是否与卷面一致")
+
     if verdicts.get("延迟保持") == "已测":
         cand = [p for _l, p in pointers if Path(p).name.startswith("88-")]
         if not cand:
@@ -250,6 +283,7 @@ def _selftest() -> int:
         "## 结课绝对水平\n"
         "- 判定：已测\n"
         "- 得分 8/10。\n"
+        "- 分母来源：该卷「目标线：8/10」行。\n"
         "\n"
         "## 延迟保持\n"
         "- 判定：未测（理由：第 30 天尚未到）\n"
@@ -347,6 +381,45 @@ def _selftest() -> int:
     # 7 报告写「键=值」字段行 → W-EFFECT-MARKER
     c7 = codes(build(CLEAN.replace("- 得分 8/10。", "- 信心=4")))
     chk("写「键=值」字段行 → W-EFFECT-MARKER", c7 is not None and "W-EFFECT-MARKER" in c7, str(c7))
+
+    # 8 分母来源（票 103）：只验存在性，不验一致性 ───────────────────────────
+    # 变异锚点必须唯一——改错位置得假绿，是本仓变异测试踩过的坑。
+    DENOM_LINE = "- 分母来源：该卷「目标线：8/10」行。\n"
+    chk("分母来源夹具锚点唯一", CLEAN.count(DENOM_LINE) == 1)
+    c8 = codes(build(CLEAN.replace(DENOM_LINE, "")))
+    chk("删掉分母来源 → W-EFFECT-DENOMINATOR",
+        c8 is not None and "W-EFFECT-DENOMINATOR" in c8, str(c8))
+    chk("写回分母来源 → 绿（变异可逆）", codes(build(CLEAN)) == [], str(c8))
+    # 另一种合法写法：显式声明按契约默认
+    c8b = codes(build(CLEAN.replace(DENOM_LINE, "- 分母来源：按契约默认 4/5。\n")))
+    chk("「按契约默认 4/5」也算写出分母来源", c8b == [], str(c8b))
+    # 括注形态（全角/半角）也是人真会写的：认不出就是假阳性。
+    for _p in ("（4/5）", "(4/5)", "（8/10）"):
+        c8b2 = codes(build(CLEAN.replace(
+            DENOM_LINE, "- 分母来源：按契约默认" + _p + "。\n")))
+        chk("「按契约默认" + _p + "」也算写出分母来源", c8b2 == [], str(c8b2))
+    # 越界证明：分母数值与卷面不一致**不报**（一致性校验已被票 64 否决）
+    c8c = codes(build(CLEAN.replace(DENOM_LINE, "- 分母来源：该卷「目标线：4/5」行。\n")))
+    chk("分母数值与卷面不一致 → 仍绿（不做一致性校验）", c8c == [], str(c8c))
+    # 边界：该段判「未测」时没有得分率，不要求分母来源
+    LEVEL_UNMEASURED = CLEAN.replace(
+        "- 判定：已测\n- 得分 8/10。\n" + DENOM_LINE,
+        "- 判定：未测（理由：结课当天未安排综合测验）\n")
+    chk("未测夹具锚点唯一",
+        DENOM_LINE not in LEVEL_UNMEASURED and "未测（理由：结课当天" in LEVEL_UNMEASURED)
+    c8d = codes(build(LEVEL_UNMEASURED))
+    chk("结课绝对水平判未测时不要求分母来源",
+        c8d is not None and "W-EFFECT-DENOMINATOR" not in c8d, str(c8d))
+    # 小数分母：卷面 `目标线：7.5/10` 合法（progress_check.TARGET_RE 允许小数），
+    # 报告原样引用必须算写出——两处数值形态分叉就是同一件事两套口径。
+    c8e = codes(build(CLEAN.replace(
+        DENOM_LINE, "- 分母来源：该卷「目标线：7.5/10」行。\n")))
+    chk("引用小数分母（7.5/10）也算写出分母来源", c8e == [], str(c8e))
+    # 跨行残句不算写出：两行各自断开的「目标线：」与「8/10」不能被粘成一句。
+    c8f = codes(build(CLEAN.replace(
+        DENOM_LINE, "- 分母来源：该卷「目标线：\n8/10」行。\n")))
+    chk("分母来源被换行拆断 → 仍报 W-EFFECT-DENOMINATOR",
+        c8f is not None and "W-EFFECT-DENOMINATOR" in c8f, str(c8f))
 
     print("SELFTEST OK" if ok else "SELFTEST FAILED")
     return 0 if ok else 1
