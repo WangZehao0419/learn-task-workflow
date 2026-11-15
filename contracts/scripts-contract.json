@@ -171,6 +171,17 @@
     "2": "用法错误"
    },
    "notes": "降级规则：decided_against_version != applies_to_version 的证据视作「未验证」，不计入「通过」。降级是**第三态**——既非通过也非失败（成因：证据本来就是旧版本做的，或版本前进了而证据没重跑），因此 rc 仍为 0；只有结构缺失/非法才 rc=1。为什么必须机械：旧实现靠 evals.json 里一整段自然语言说明「这 19 条只证明当时的版本」，靠人读一段话记住，版本一多必漏且无信号。"
+  },
+  {
+   "script": "verify_content_ledger.py",
+   "usage": "[--selftest] [--root <技能根>] [--ledger <台账路径>]",
+   "default_behavior": "只读：读 docs/migrations/v10-content-ledger.md 并与 git 实测差异对拍，不写盘",
+   "exit_codes": {
+    "0": "六条判据全过（C0 基线可指认 / C1 覆盖面 / C2 无幽灵行 / C3 去向可达 / C4 改名一致 / C5 判据非空）",
+    "1": "有判据不通过（含 git 不可用、基线 tag 不存在、两 tag 的 references/ 树不同——一律 fail closed）",
+    "2": "用法错误"
+   },
+   "notes": "票 104 把用户故事 34「清除冗余内容时有台账可查」从一句承诺变成会红的断言。台账是人写的，半年后必然与仓库脱节，所以每一行都必须可被脚本验证：C1 覆盖面（git diff --diff-filter=DR 的每个路径都在台账里，少一条即红）与 C2 无幽灵行（台账里的每个原路径都真的被删除或改名过，多一条即红）必须双向——只查 C1 会放过「删了 112 个文件、台账只记 20 条」这种全绿式漏登记，只查 C2 会放过台账写着一堆没发生过的路径、读者按台账 git show 全扑空。C3 要求去向路径真实存在且小节在目标文件内按标题恰好命中 1 次（不按子串计数：小节名会作为普通词组在正文反复出现，子串计数会把真实落点判成歧义，逼人去写更长的句子绕开，那是可机检的假象）；小节名用贪婪配对，因为真实小节名可嵌套引号（references/ops.md 的「核验状态与「不能推出什么」」）。C4 要求处置写「改名」的行，去向必须等于 git 实测的改名目标，且实测是改名的行不得写成删除。C5 要求判据列给出承接证据或废弃理由，写「—」即红。基线 tag 缺失或不可解析一律 fail closed（跳过等于没有基线就没有 diff、没有缺行就是绿，tag 一丢闸口自动全绿）；并断言 baseline/v9.19.2-pre-redo 的 references/ 树与 v9.19.2 逐字相同，台账才不因换基线而失去意义。自测 13 用例：10 条夹具变异（正例 / 删一行 / 加幽灵行 / 改坏去向 / 去向小节不存在 / 小节重名 / 改名不符 / 判据写「—」/ 基线 tag 缺失 / 两 tag 树不同）加 3 条真实制品变异（拷真台账到临时文件再改，不动被测文件：删一行 / 加幽灵行 / 只改「去向」单元格），每条断言改坏即红、还原即绿。需要完整 git 历史；非 git 检出时 C0 直接红并说明原因，不静默跳过。"
   }
  ],
  "internal_modules": [
@@ -201,8 +212,9 @@
    "python -B scripts/verify_subject_fanout.py --selftest",
    "python -B scripts/verify_version_anchors.py --selftest",
    "python -B scripts/verify_volume_budget.py --selftest",
-   "python -B scripts/verify_eval_versions.py --selftest"
+   "python -B scripts/verify_eval_versions.py --selftest",
+   "python -B scripts/verify_content_ledger.py --selftest"
   ],
-  "note": "十一个命令行脚本自测覆盖确定性计算、结构校验、契约完整性与术语对账；真实教学回归与故障夹具见 evals；verify-doc-pointers 校验 doc 指针四项（路径/锚点/编号/自指）；票 99 的冻结清单硬闸（键集合相等 rc=1 / 内容指纹漂移只 W 级告警）随 rule_contract.py --selftest 一起跑，真身基准 contracts/redlines-freeze.json 由该自测内的真实夹具备份兜住；票 102 的入口预算三条判据（红线节结束字节 < 砍点下界常量 / 前两段 ≤6000 B / 加载路由早于红线且一行一册）随 verify_entry_budget.py --selftest 一起跑，砍点常量的唯一正本是 contracts/rules.json 的 constants.budget.context_compress_cutoff_lower_bound。本分区（scripts_contract vs internal_modules）不是人读声明，由 evals/verify-gate-registry.py 的 G1-G6 机检：G1 分区完备（不重不漏无幽灵）、G2 分类自证（命令行喂必败参数必须 rc≠0，内部模块喂同一参数必须 rc=0）、G3 清单可执行、G4 清单与契约同源、G5 覆盖去向（internal_modules 的 note 点名的每个覆盖者必须真的 import 该内部模块）、G6 字节同源（git 说干净的文件，工作区字节必须等于 index blob——抓被 stat 缓存掩盖的 EOL/等长篡改；非 git 检出跳过并明说未校验）。"
+  "note": "十六个命令行脚本自测覆盖确定性计算、结构校验、契约完整性与术语对账；真实教学回归与故障夹具见 evals；verify-doc-pointers 校验 doc 指针四项（路径/锚点/编号/自指）；票 99 的冻结清单硬闸（键集合相等 rc=1 / 内容指纹漂移只 W 级告警）随 rule_contract.py --selftest 一起跑，真身基准 contracts/redlines-freeze.json 由该自测内的真实夹具备份兜住；票 102 的入口预算三条判据（红线节结束字节 < 砍点下界常量 / 前两段 ≤6000 B / 加载路由早于红线且一行一册）随 verify_entry_budget.py --selftest 一起跑，砍点常量的唯一正本是 contracts/rules.json 的 constants.budget.context_compress_cutoff_lower_bound。本分区（scripts_contract vs internal_modules）不是人读声明，由 evals/verify-gate-registry.py 的 G1-G6 机检：G1 分区完备（不重不漏无幽灵）、G2 分类自证（命令行喂必败参数必须 rc≠0，内部模块喂同一参数必须 rc=0）、G3 清单可执行、G4 清单与契约同源、G5 覆盖去向（internal_modules 的 note 点名的每个覆盖者必须真的 import 该内部模块）、G6 字节同源（git 说干净的文件，工作区字节必须等于 index blob——抓被 stat 缓存掩盖的 EOL/等长篡改；非 git 检出跳过并明说未校验）。"
  }
 }

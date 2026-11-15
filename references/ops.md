@@ -250,7 +250,7 @@
 
 ## 脚本操作与验证
 
-十个命令行脚本与两个内部模块的 **用法、默认行为、逐脚本退出码、selftest 清单、内部模块的覆盖去向**，机器可读正本在 `contracts/scripts-contract.json`（`scripts_contract` / `internal_modules` / `verification` 三个分区），本册不复制第二份。错误码触发条件速查见 `references/registry.md`「错误码速查表」。
+十六个命令行脚本与两个内部模块的 **用法、默认行为、逐脚本退出码、selftest 清单、内部模块的覆盖去向**，机器可读正本在 `contracts/scripts-contract.json`（`scripts_contract` / `internal_modules` / `verification` 三个分区），本册不复制第二份。错误码触发条件速查见 `references/registry.md`「错误码速查表」。
 
 本册只保留契约没有的五件事：
 
