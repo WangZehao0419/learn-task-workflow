@@ -95,6 +95,8 @@
 
 **为什么 rc=2 必须在输出层留痕**：只改退出码，调用方读到一个数字 2 仍分不清「没测」与「没通过」，机检也证明不了环境分支真的走了另一条路。所以环境失败一律在 stderr 打一行结构化 JSON（`verdict=untested` / `untested=true` / `code`）。
 
+**追认（2026-11-15，票 106）**：`3 = 调用错误` 与「`evals/` 9 个脚本同样适用三态」两处偏离规格的扩展已由维护者追认，即日起是本仓口径。适用范围 = **19 个命令行脚本 + 9 个 evals 脚本**；新脚本无论落在哪个目录，只要产出退出码就必须符合四档，并用 `ltw_exit.UsageParser`（裸 `argparse.ArgumentParser` 会让用法错误落回 2，与「未测」撞码）。
+
 三态的唯一定义处是 `scripts/ltw_exit.py`（常量 + `env_error()` + `usage_error()` + `UsageParser`），**不在调用侧写死数字**。逐脚本退出码语义的正本是 `contracts/scripts-contract.json` 的 `exit_codes`；`scripts/verify_exit_tristate.py` 用真实夹具机检每一条（环境夹具必须 rc=2 且带标记、违规夹具必须 rc=1、必败参数必须 rc=3），并把「环境分支改回 rc=1」「调用错误改回 rc=2」两种变异做成必须变红的断言。
 
 ## 每批四条准入
