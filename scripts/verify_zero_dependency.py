@@ -45,6 +45,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from rule_contract import skill_root  # noqa: E402
+import ltw_exit  # noqa: E402  三态退出码唯一定义处（票 106）
 
 SCAN_DIRS = ("scripts", "evals")
 
@@ -244,7 +245,7 @@ def _selftest() -> int:
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="零外部依赖机检（AST 静态判定）")
+    ap = ltw_exit.UsageParser(description="零外部依赖机检（AST 静态判定）")
     ap.add_argument("--selftest", action="store_true", help="跑内置用例再检查真实树")
     ap.add_argument("--root", default=None, help="技能根（默认脚本所在仓库）")
     args = ap.parse_args(argv)
@@ -259,7 +260,11 @@ def main(argv=None) -> int:
     if not ok:
         for code, detail in problems:
             print("FAIL [%s] %s" % (code, detail))
-        return 1
+        # 解释器缺 stdlib 名单 = 判不了（未测）；其余违规是判据真的生效了。
+        if any(code == "E-ZERODEP-STDLIB-NA" for code, _ in problems):
+            return ltw_exit.env_error("解释器缺 sys.stdlib_module_names，判不了就不许判绿",
+                                      code="E-ZERODEP-STDLIB-NA")
+        return ltw_exit.EXIT_VIOLATION
     print("PASS 零外部依赖：%d 个 .py / %d 条 import，全部落在标准库或本仓模块，"
           "无网络模块、无动态 import" % (stats["files"], stats["imports"]))
     return 0

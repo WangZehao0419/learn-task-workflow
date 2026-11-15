@@ -14,6 +14,8 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+import ltw_exit  # noqa: E402  三态退出码唯一定义处（票 106）
 
 SAMPLE_REL = "evals/fixtures/reader-layout/L1-机会成本-读者版样板.md"
 PROCEDURE_REL = "evals/fixtures/reader-layout/procedure/L1-二分法-程序型样板.md"
@@ -73,7 +75,7 @@ def run_mutation(root: Path, mutate):
 
 
 def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(description="读者版可读性行为测试（只读）")
+    parser = ltw_exit.UsageParser(description="读者版可读性行为测试（只读）")
     parser.add_argument("--skill-root", default=None)
     args = parser.parse_args(argv)
     root = (Path(args.skill_root).resolve() if args.skill_root
@@ -193,7 +195,7 @@ def main(argv=None) -> int:
 
     total = c.ok + c.fail
     print(f"verify-readability: {total} checks, {c.ok} OK, {c.fail} FAIL")
-    return 1 if c.fail else 0
+    return ltw_exit.EXIT_VIOLATION if c.fail else ltw_exit.EXIT_OK
 
 
 if __name__ == "__main__":

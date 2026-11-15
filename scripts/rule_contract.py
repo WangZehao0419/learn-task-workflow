@@ -61,6 +61,9 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import ltw_exit  # noqa: E402  三态退出码唯一定义处（票 106）
+
 SCHEMA = "ltw-rules/3"
 # schema 声明在仓里有两处必然相等的副本（票 91）：本文件的 SCHEMA，与登记表
 # contracts/scripts-contract.json 里 rule_contract.py 那条的 schema。这对副本漂移过很久
@@ -129,8 +132,8 @@ FREEZE_REQUIRED_FIELDS = ("schema", "baseline", "criterion_count", "criteria")
 #   ③ 总数本身是断言：文档声明一组数字、代码钉一组常量，两边都得等于契约实测。
 #      只对拍集合不对拍数字，「129」这类清账数会继续漂而没人发现，而它已经漂过两次。
 REGISTRY_MD = "references/registry.md"
-REGISTRY_CODE_TOTAL = 129
-REGISTRY_CODE_E = 59
+REGISTRY_CODE_TOTAL = 131
+REGISTRY_CODE_E = 61
 REGISTRY_CODE_W = 70
 REGISTRY_REDLINE_LINES = 11
 REGISTRY_CRITERIA_TOTAL = 47
@@ -462,16 +465,21 @@ def check_redline_freeze(path: Path | None = None, data: dict | None = None) -> 
     res = {"freeze": str(p), "ok": False, "keyset_equal": False,
            "missing_in_freeze": [], "extra_in_freeze": [], "drift": [],
            "block_fingerprint_changed": False, "criterion_count": 0,
-           "warnings": [], "reason": ""}
+           "warnings": [], "reason": "", "untested": False}
+    # untested 标记（票 106）：清单**读不出来**与清单**读出来了但内容不对**是两件事。
+    # 前者判据没跑起来（rc=2 未测），后者是判据生效并查出违规（rc=1）。把它们压成同一个
+    # 返回值，调用方就没法区分「基准丢了」和「基准说你不合格」——本票要消灭的正是这个。
     try:
         raw = p.read_text(encoding="utf-8")
     except OSError as e:
         res["reason"] = "冻结清单不可读：%s" % e
+        res["untested"] = True
         return res
     try:
         obj = json.loads(raw)
     except json.JSONDecodeError as e:
         res["reason"] = "冻结清单 JSON 非法：%s" % e
+        res["untested"] = True
         return res
     if not isinstance(obj, dict):
         res["reason"] = "冻结清单顶层必须是对象"
@@ -608,7 +616,7 @@ def check_registry(path: Path | None = None, data: dict | None = None) -> dict:
          （锚点不唯一时改错位置会得假绿）。
     """
     p = Path(path) if path is not None else (skill_root() / REGISTRY_MD)
-    res = {"registry": str(p), "ok": False,
+    res = {"registry": str(p), "ok": False, "untested": False,
            "codes_contract": 0, "codes_registry": 0,
            "codes_missing_in_registry": [], "codes_extra_in_registry": [],
            "codes_e": 0, "codes_w": 0,
@@ -620,6 +628,7 @@ def check_registry(path: Path | None = None, data: dict | None = None) -> dict:
         text = p.read_text(encoding="utf-8")
     except OSError as e:
         res["reasons"].append("总表不可读：%s" % e)
+        res["untested"] = True
         return res
 
     d = data if data is not None else load()
@@ -782,13 +791,18 @@ def load(path: Path | None = None) -> dict:
 
 
 def load_or_exit() -> dict:
-    """供 CLI 脚本在启动时调用；契约缺失/畸形即结构化失败并 exit 1。"""
+    """供 CLI 脚本在启动时调用；契约缺失/畸形即结构化失败并 exit 2（**未测**）。
+
+    为什么是 2 而不是 1（票 106 改判）：契约读不到时，**任何判据都没跑起来**。
+    报 1 等于用一次从未发生的检查去指控制品；调用方也无法区分「查出违规」与
+    「环境炸了」——那正是本票要消灭的缺陷。改判后 rc=1 的含义被收窄为
+    「判据生效且查出违规」，rc=2 才表示「未测」。
+    """
     try:
         return load()
     except ContractError as e:
-        print(json.dumps({"ok": False, "code": e.code, "message": e.message},
-                         ensure_ascii=False))
-        raise SystemExit(1)
+        raise SystemExit(ltw_exit.env_error(
+            "契约不可用（%s）：%s" % (e.code, e.message), code=e.code))
 
 
 def get(dotted: str, path: Path | None = None):
@@ -1308,14 +1322,20 @@ def _selftest() -> int:
         # 清单缺失 / 畸形：fail closed——读不到基准不得当成「没变化」
         def freeze_missing_red():
             gone = td / "no_such_freeze.json"
-            assert not check_redline_freeze(gone)["ok"], "清单不存在时闸口是绿的（假绿）"
-            assert run_cli(["--redline-freeze-check", "--freeze", str(gone)])[0] == 1
+            res_gone = check_redline_freeze(gone)
+            assert not res_gone["ok"], "清单不存在时闸口是绿的（假绿）"
+            assert res_gone["untested"] is True, "清单读不到必须标成 untested（未测≠查出违规）"
+            assert run_cli(["--redline-freeze-check", "--freeze", str(gone)])[0] == 2, \
+                "清单读不到应 rc=2（未测），不是 rc=1（查出违规）"
         case("清单缺失 → 红（fail closed）", freeze_missing_red, True)
 
         def freeze_bad_json_red():
             p = td / "freeze_bad.json"
             p.write_text("{oops", encoding="utf-8")
-            assert not check_redline_freeze(p)["ok"], "清单 JSON 非法时闸口是绿的"
+            res_bad = check_redline_freeze(p)
+            assert not res_bad["ok"], "清单 JSON 非法时闸口是绿的"
+            assert res_bad["untested"] is True, "清单 JSON 非法属未测，不得记成查出违规"
+            assert run_cli(["--redline-freeze-check", "--freeze", str(p)])[0] == 2
         case("清单 JSON 非法 → 红", freeze_bad_json_red, True)
 
         # 契约侧改动（不碰清单文件）也要分别落对档：改内容 → 只告警；增删键 → 红。
@@ -1370,7 +1390,7 @@ def _selftest() -> int:
         case("清账字段（条数/线数）被手改 → 红", tampered_clearance_field_red, True)
 
         def freeze_without_check_rejected():
-            assert run_cli(["--redline-keys", "--freeze", "x.json"])[0] == 2, \
+            assert run_cli(["--redline-keys", "--freeze", "x.json"])[0] == 3, \
                 "--freeze 单独使用应判用法错误 rc=2"
         case("--freeze 不与 --redline-freeze-check 同用 → rc=2", freeze_without_check_rejected, True)
 
@@ -1397,7 +1417,7 @@ def _selftest() -> int:
             assert res["codes_registry"] == REGISTRY_CODE_TOTAL, "总表码数不是钉住的值"
             assert res["criteria_registry"] == REGISTRY_CRITERIA_TOTAL, "总表规则编号数不对"
             return True
-        case("真实总表与契约双向对拍通过（码 129 / 子判据 47）", registry_baseline_ok, True)
+        case("真实总表与契约双向对拍通过（码 131 / 子判据 47）", registry_baseline_ok, True)
 
         # 变异一：从总表删掉一条码 → 红（漏一条也是硬闸）
         def registry_drop_code_red():
@@ -1489,7 +1509,7 @@ def _selftest() -> int:
         case("反例：分册旧编号 R35/R54 不进规则编号索引", legacy_numbers_not_indexed, True)
 
         def registry_without_check_rejected():
-            assert run_cli(["--redline-keys", "--registry", "x.md"])[0] == 2, \
+            assert run_cli(["--redline-keys", "--registry", "x.md"])[0] == 3, \
                 "--registry 单独使用应判用法错误 rc=2"
         case("--registry 不与 --registry-check 同用 → rc=2", registry_without_check_rejected, True)
 
@@ -1502,7 +1522,7 @@ def _selftest() -> int:
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="规则常量加载器（只读）")
+    ap = ltw_exit.UsageParser(description="规则常量加载器（只读）")
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--selftest", action="store_true")
     g.add_argument("--get", metavar="DOTTED")
@@ -1528,17 +1548,9 @@ def main(argv=None) -> int:
                     help="配合 --registry-check：指定总表路径（默认 " + REGISTRY_MD + "）")
     args = ap.parse_args(argv)
     if args.freeze is not None and not args.redline_freeze_check:
-        ap.print_usage(sys.stderr)
-        print(json.dumps({"ok": False, "code": "E-USAGE",
-                          "message": "--freeze 只能与 --redline-freeze-check 同用"},
-                         ensure_ascii=False), file=sys.stderr)
-        return 2
+        return ltw_exit.usage_error("--freeze 只能与 --redline-freeze-check 同用", parser=ap)
     if args.registry is not None and not args.registry_check:
-        ap.print_usage(sys.stderr)
-        print(json.dumps({"ok": False, "code": "E-USAGE",
-                          "message": "--registry 只能与 --registry-check 同用"},
-                         ensure_ascii=False), file=sys.stderr)
-        return 2
+        return ltw_exit.usage_error("--registry 只能与 --registry-check 同用", parser=ap)
     # 输出统一为 UTF-8 + LF：冻结清单是用 --redline-freeze-payload 重定向落盘的，
     # 平台默认的 CRLF 会在 diff 里把整份清单标成改动，也会让 G6 字节同源抓不到真差异。
     if hasattr(sys.stdout, "reconfigure"):
@@ -1577,13 +1589,17 @@ def main(argv=None) -> int:
         try:
             res = check_redline_freeze(args.freeze)
         except ContractError as e:
-            print(json.dumps({"ok": False, "code": e.code, "message": e.message},
-                             ensure_ascii=False))
-            return 1
+            # 契约/清单不可用属「未测」：判据没跑起来，不得报成「查出违规」。
+            return ltw_exit.env_error("冻结比对无法执行（%s）：%s" % (e.code, e.message),
+                                      code=e.code)
         print(json.dumps(res, ensure_ascii=False, indent=1))
         for w in res["warnings"]:
             print("[W] " + w, file=sys.stderr)
-        return 0 if res["ok"] else 1
+        if res["ok"]:
+            return ltw_exit.EXIT_OK
+        if res.get("untested"):
+            return ltw_exit.env_error("冻结比对未测：" + res["reason"])
+        return ltw_exit.EXIT_VIOLATION
     if args.redline_freeze_payload:
         print(json.dumps(build_freeze_payload(load_or_exit()),
                          ensure_ascii=False, indent=1, sort_keys=True))
@@ -1592,13 +1608,16 @@ def main(argv=None) -> int:
         try:
             res = check_registry(args.registry)
         except ContractError as e:
-            print(json.dumps({"ok": False, "code": e.code, "message": e.message},
-                             ensure_ascii=False))
-            return 1
+            return ltw_exit.env_error("总表对拍无法执行（%s）：%s" % (e.code, e.message),
+                                      code=e.code)
         print(json.dumps(res, ensure_ascii=False, indent=1))
         for r in res["reasons"]:
             print("[E] " + r, file=sys.stderr)
-        return 0 if res["ok"] else 1
+        if res["ok"]:
+            return ltw_exit.EXIT_OK
+        if res.get("untested"):
+            return ltw_exit.env_error("总表对拍未测：" + "；".join(res["reasons"]))
+        return ltw_exit.EXIT_VIOLATION
     print(json.dumps(get(args.get), ensure_ascii=False))
     return 0
 

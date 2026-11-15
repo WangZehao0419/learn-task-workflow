@@ -36,6 +36,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from rule_contract import skill_root  # noqa: E402
+import ltw_exit  # noqa: E402  三态退出码唯一定义处（票 106）
 
 SKILL_MD = "SKILL.md"
 CONTRACT = "contracts/rules.json"
@@ -147,7 +148,7 @@ def _selftest() -> int:
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="四锚点版本一致性机检")
+    ap = ltw_exit.UsageParser(description="四锚点版本一致性机检")
     ap.add_argument("--selftest", action="store_true", help="跑内置用例再检查真实树")
     ap.add_argument("--root", default=None, help="技能根（默认脚本所在仓库）")
     args = ap.parse_args(argv)
@@ -158,17 +159,20 @@ def main(argv=None) -> int:
             return rc
 
     root = Path(args.root) if args.root else skill_root()
+    rc_root = ltw_exit.require_root(root)
+    if rc_root is not None:
+        return rc_root
     ok, values, errors = check(root)
     if errors:
         for name, why in errors:
             print("FAIL [E-VERSION-ANCHOR] %s :: %s" % (name, why))
-        return 1
+        return ltw_exit.EXIT_VIOLATION
     if not ok:
         print("FAIL [E-VERSION-ANCHOR] 四锚点未全部取到值")
-        return 1
+        return ltw_exit.EXIT_VIOLATION
     version = next(iter(values.values()))
     print("PASS 四锚点一致：%s（%d 处）" % (version, len(values)))
-    return 0
+    return ltw_exit.EXIT_OK
 
 
 if __name__ == "__main__":

@@ -43,6 +43,8 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+import ltw_exit  # noqa: E402  三态退出码唯一定义处（票 106）
 
 # ── 夹具：完整有效讲义的公共骨架（草稿态，不触发定稿导读检查）──
 HEAD = "# 第 1 节 · 示例\n- 状态：草稿（进行中）\n\n## 概念 1 · {title} 【本节最小必需】\n"
@@ -347,7 +349,7 @@ def main(argv=None) -> int:
             sys.stdout.reconfigure(encoding="utf-8")
         except (AttributeError, ValueError):
             pass
-    parser = argparse.ArgumentParser(description="五要素新编号规则行为契约校验")
+    parser = ltw_exit.UsageParser(description="五要素新编号规则行为契约校验")
     parser.add_argument("--skill-root", default=None,
                         help="技能根目录（缺省取本脚本上级目录）")
     args = parser.parse_args(argv)
@@ -355,8 +357,8 @@ def main(argv=None) -> int:
             else Path(__file__).resolve().parent.parent)
     script = root / "scripts" / "verify_explanation.py"
     if not script.is_file():
-        print(f"[FAIL] 未找到 {script}")
-        return 1
+        # 被测脚本不在 = 判据没跑起来（未测 rc=2）。
+        return ltw_exit.env_error("未找到被测脚本：" + str(script))
     rv = Runner(root)
     c = Checker()
     group1_legacy(rv, c)
@@ -365,7 +367,7 @@ def main(argv=None) -> int:
     group4_line_anchor(rv, c)
     group5_multiq(rv, c)
     print(f"\n共 {c.ok + c.fail} 项:OK {c.ok} 项,FAIL {c.fail} 项")
-    return 0 if c.fail == 0 else 1
+    return ltw_exit.EXIT_OK if c.fail == 0 else ltw_exit.EXIT_VIOLATION
 
 
 if __name__ == "__main__":

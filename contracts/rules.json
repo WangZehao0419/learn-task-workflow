@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/3",
- "version": "9.21.26",
+ "version": "9.21.27",
  "constants": {
   "phases": [
    "接料建档",
@@ -217,6 +217,7 @@
     "E-ENUM-PHASE",
     "E-ENUM-START",
     "E-ENUM-TYPE",
+    "E-ENV-UNAVAILABLE",
     "E-EVIDENCE-REF-MISSING",
     "E-FINAL-ATTEMPT-CONFLICT",
     "E-FINAL-BELOW-TARGET",
@@ -257,7 +258,8 @@
     "E-THIRD-CONFLICT",
     "E-THIRD-EXEMPT-MISUSE",
     "E-UNDECLARED-CHANGES",
-    "E-UNREADABLE-PROGRESS"
+    "E-UNREADABLE-PROGRESS",
+    "E-USAGE"
    ],
    "W": [
     "W-CONFIDENCE-AMBIGUOUS",

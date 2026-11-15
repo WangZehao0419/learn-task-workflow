@@ -39,9 +39,12 @@ import sys
 from pathlib import Path
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+import ltw_exit  # noqa: E402  三态退出码唯一定义处（票 106）
 CONTRACT = SKILL_ROOT / "contracts" / "scripts-contract.json"
 
-# 必败参数：任何正经 argparse 入口都会以 rc=2 拒绝它。
+# 必败参数：任何正经 argparse 入口都会拒绝它。票 106 起拒绝码是 3（调用错误），
+# 不是 2——2 已被「未测」占住；本机检只断言 rc≠0，所以对两种码都成立。
 # 对无 CLI 的模块它什么也不触发——这正是我们要区分的两种形态。
 BOGUS_FLAG = "--this-flag-does-not-exist"
 
@@ -62,11 +65,16 @@ class Checker:
 
 
 def load_contract():
+    """读登记表。读不到 = 判据没跑起来（未测 rc=2），不是「查出违规」。
+
+    票 106 之前这里 raise SystemExit(2)，与「环境不可用」撞码纯属巧合——它本来就该是
+    未测，只是没登记成三态。现在显式走 ltw_exit.env_error，调用方能按 untested 分流。
+    """
     try:
         return json.loads(CONTRACT.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, ValueError) as exc:
-        print("E-CONTRACT-INVALID：无法读取 {}（{}）".format(CONTRACT.name, exc), file=sys.stderr)
-        raise SystemExit(2)
+        raise SystemExit(ltw_exit.env_error(
+            "无法读取登记表 %s（%s）" % (CONTRACT.name, exc), code="E-CONTRACT-INVALID"))
 
 
 def child_env():
@@ -207,7 +215,7 @@ def check_byte_identity(c):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="验收清单登记表机检（G1-G6）")
+    ap = ltw_exit.UsageParser(description="验收清单登记表机检（G1-G6）")
     ap.add_argument("--selftest", action="store_true",
                     help="幂等开关：本评估无状态，带与不带行为相同")
     ap.parse_args()
@@ -287,7 +295,7 @@ def main():
     print("G1-G6 汇总：{} 过 / {} 败；scripts/ {} 个文件 = {} 命令行 + {} 内部模块；"
           "selftest 清单 {} 条；字节同源 {}".format(
               c.ok, c.fail, len(on_disk), len(cli), len(internal), len(selftest), eol_result))
-    return 1 if c.fail else 0
+    return ltw_exit.EXIT_VIOLATION if c.fail else ltw_exit.EXIT_OK
 
 
 if __name__ == "__main__":

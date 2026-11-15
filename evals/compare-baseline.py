@@ -18,6 +18,8 @@ import argparse
 import json
 import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+import ltw_exit  # noqa: E402  三态退出码唯一定义处（票 106）
 
 
 def summarize(result):
@@ -110,7 +112,7 @@ def _selftest():
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="with-skill vs baseline 对照汇总（只读）")
+    ap = ltw_exit.UsageParser(description="with-skill vs baseline 对照汇总（只读）")
     ap.add_argument("--with-skill", help="with-skill 结果 JSON")
     ap.add_argument("--baseline", help="baseline 结果 JSON")
     ap.add_argument("--check", action="store_true")

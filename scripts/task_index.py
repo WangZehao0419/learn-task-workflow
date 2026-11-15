@@ -40,6 +40,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+import ltw_exit
 import rule_contract
 from ltw_parse import (BLOCK_RE, FIELD_RE, ROUTE_RE, hold_disposition_excluded, parse_field_line,
                        hold_entry_malformed)
@@ -453,7 +454,7 @@ def selftest():
         finally:
             globals()["_list_dir"] = original_list
         cache_after = cache.read_text(encoding="utf-8") if cache.exists() else None
-        ok = ok and rc_fail == 3
+        ok = ok and rc_fail == 2   # 票 106：枚举失败属「未测」rc=2，不再是旧码 3
         ok = ok and payload["scan_status"] == "failed"
         ok = ok and payload["task_count"] is None  # 未知，不得谎报 0
         ok = ok and cache_after == cache_before  # 枚举失败不覆盖上次完整缓存
@@ -527,7 +528,7 @@ def selftest():
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="task_index.py")
+    ap = ltw_exit.UsageParser(prog="task_index.py")
     ap.add_argument("--root", default=None)
     ap.add_argument("--write-index", dest="write_index", action="store_true", default=False,
                     help="物化 index.json（默认不写；需显式开启）")
@@ -582,10 +583,18 @@ def main(argv=None):
     out = dict(index)
     out["write_status"] = write_status
     print(json.dumps(out, ensure_ascii=False, indent=2, sort_keys=True))
-    # 退出码：0 正常（含 partial）；1 数据根缺失或非目录（仍输出空索引，不崩溃）；3 枚举失败
+    # 退出码（票 106 三态）：0 正常（含 partial）；2 未测（数据根缺失/非目录、枚举失败——
+    # 判据没跑起来，仍输出空索引，不崩溃）。原来的 1 与 3 都被收进 2：它们都不是
+    # 「查出违规」，而是「这份数据没法判」。旧码 3 已删除，调用方按 rc 分流的要一起改。
     if scan_status == "failed":
-        return 3
-    return 0 if (exists and root.is_dir()) else 1
+        return ltw_exit.env_error(
+            "枚举失败 scan_status=failed（%s）：数据根 %s 无法完整枚举，任务集合未知"
+            % (scan_error, root), extra={"scan_status": "failed"})
+    if not (exists and root.is_dir()):
+        return ltw_exit.env_error(
+            "数据根不存在或不是目录：%s（应指向 <工作区根>/.learning）" % root,
+            extra={"scan_status": scan_status})
+    return ltw_exit.EXIT_OK
 
 
 if __name__ == "__main__":

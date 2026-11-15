@@ -9,6 +9,8 @@ import argparse
 import json
 import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+import ltw_exit  # noqa: E402  三态退出码唯一定义处（票 106）
 
 # 正本册把多册合成一处后，章节会整体降一级；定位按「任意标题级别 + 章节名」，
 # 断言强度不变：八个章节仍必须全部出现，且分组内按序。
@@ -177,7 +179,7 @@ def main(argv=None) -> int:
             sys.stderr.reconfigure(encoding="utf-8")
         except (OSError, ValueError):
             pass
-    parser = argparse.ArgumentParser(description="formulas.md 结构契约校验（只读）")
+    parser = ltw_exit.UsageParser(description="formulas.md 结构契约校验（只读）")
     parser.add_argument("--skill-root", default=None)
     args = parser.parse_args(argv)
     root = (Path(args.skill_root).resolve() if args.skill_root
@@ -213,7 +215,7 @@ def main(argv=None) -> int:
     group_residue(scope, c)
     total = c.ok + c.fail
     print(f"verify-formula-typesetting: {total} checks, {c.ok} OK, {c.fail} FAIL")
-    return 1 if c.fail else 0
+    return ltw_exit.EXIT_VIOLATION if c.fail else ltw_exit.EXIT_OK
 
 
 if __name__ == "__main__":

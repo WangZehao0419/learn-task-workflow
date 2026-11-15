@@ -24,6 +24,7 @@ from pathlib import Path
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(SKILL_ROOT / "scripts"))
+import ltw_exit  # noqa: E402  三态退出码唯一定义处（票 106）
 
 import ltw_typography  # noqa: E402
 
@@ -174,7 +175,7 @@ def run():
 
 
 def main():
-    ap = argparse.ArgumentParser()
+    ap = ltw_exit.UsageParser()
     ap.add_argument("--selftest", action="store_true", help="只跑内置用例")
     ap.parse_args()
     fails = run()
@@ -183,7 +184,7 @@ def main():
         print("[FAIL] " + f)
     print("verify-svg-checker: {} checks, {} OK, {} FAIL".format(
         total, total - len(fails), len(fails)))
-    return 1 if fails else 0
+    return ltw_exit.EXIT_VIOLATION if fails else ltw_exit.EXIT_OK
 
 
 if __name__ == "__main__":

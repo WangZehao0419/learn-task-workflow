@@ -39,6 +39,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from rule_contract import skill_root  # noqa: E402
+import ltw_exit  # noqa: E402  三态退出码唯一定义处（票 106）
 
 GATES = "references/gates.md"
 HEADING = "## 每批四条准入"
@@ -184,7 +185,7 @@ def _selftest() -> int:
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="每批四条准入机检")
+    ap = ltw_exit.UsageParser(description="每批四条准入机检")
     ap.add_argument("--selftest", action="store_true", help="跑内置用例再检查真实树")
     ap.add_argument("--root", default=None, help="技能根（默认脚本所在仓库）")
     args = ap.parse_args(argv)
@@ -195,13 +196,16 @@ def main(argv=None) -> int:
             return rc
 
     root = Path(args.root) if args.root else skill_root()
+    rc_root = ltw_exit.require_root(root)
+    if rc_root is not None:
+        return rc_root
     ok, problems, stats = check(root)
     if not ok:
         for code, detail in problems:
             print("FAIL [%s] %s" % (code, detail))
-        return 1
+        return ltw_exit.EXIT_VIOLATION
     print("PASS 每批四条准入：%d 条齐备，%d 条命令全部 rc=0" % (stats["items"], stats["executed"]))
-    return 0
+    return ltw_exit.EXIT_OK
 
 
 if __name__ == "__main__":

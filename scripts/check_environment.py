@@ -22,6 +22,9 @@ import sys
 from pathlib import Path
 from typing import Any
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import ltw_exit  # noqa: E402  三态退出码唯一定义处（票 106）
+
 # 版本声明只接受「纯数字点分」格式（如 3 / 3.8 / 3.8.10）。
 # 用 fullmatch 整体匹配，拒绝前后缀垃圾（"3.8.9999999garbage"、"garbage3.8"）与
 # 非字符串强转（数字 3、布尔 False）——不得再用 re.search + str() 宽松放行。
@@ -550,7 +553,7 @@ def selftest() -> int:
         with contextlib.redirect_stdout(buf):
             rc_old = main(["--manifest", str(manifest_path), "--capability", "进度校验与证据验证"])
         out_old = json.loads(buf.getvalue())
-        ok = ok and rc_old == 1 and out_old["status"] == "needs_setup"
+        ok = ok and rc_old == 2 and out_old["status"] == "needs_setup"  # 票 106：未测 rc=2
         ok = ok and "functional_degradations" not in out_old and "unmapped_capabilities" not in out_old
         ok = ok and "停止" in out_old["next_action"]
     finally:
@@ -572,7 +575,7 @@ def selftest() -> int:
 
 
 def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(description="检查当前 Skill 的依赖和运行环境")
+    parser = ltw_exit.UsageParser(description="检查当前 Skill 的依赖和运行环境")
     parser.add_argument("--manifest", type=Path, default=Path(__file__).resolve().parents[1] / "skill-dependencies.json")
     parser.add_argument("--capability", action="append", default=[], help="本次请求涉及的功能，可重复传入")
     parser.add_argument("--selftest", action="store_true", help="运行内置自测（清单校验契约）")
@@ -587,11 +590,13 @@ def main(argv=None) -> int:
         dependencies = select_dependencies(manifest, set(args.capability))
     except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
         print(json.dumps({"status": "unavailable", "reason_code": "manifest_error", "error": str(exc)}, ensure_ascii=False, indent=2))
-        return 2
+        return ltw_exit.env_error("清单畸形 manifest_error：" + str(exc),
+                                  code="E-MANIFEST-INVALID")
     except Exception as exc:  # 防御：任何未预期的清单结构异常也必须结构化诊断，绝不裸崩成外部协议 traceback
         print(json.dumps({"status": "unavailable", "reason_code": "manifest_error",
                           "error": f"清单处理异常：{type(exc).__name__}: {exc}"}, ensure_ascii=False, indent=2))
-        return 2
+        return ltw_exit.env_error("清单处理异常 manifest_error：%s: %s" % (type(exc).__name__, exc),
+                                  code="E-MANIFEST-INVALID")
 
     # 状态只覆盖本次请求能力；核心层任何受影响能力未就绪都阻断，不附带替代方案。
     scope = set(args.capability) or set(manifest["capabilities"])
@@ -610,7 +615,15 @@ def main(argv=None) -> int:
     if degradations:
         output["degraded"] = degradations
     print(json.dumps(output, ensure_ascii=False, indent=2))
-    return 0 if status == "ready" else 1
+    # 票 106 三态：本脚本没有「查出违规」这一档——它只回答「环境能不能用」。
+    # 所以 ready → 0，needs_setup / unavailable → 2（**未测**：后续判据都没法跑）。
+    # 改判前这里返回 1，与「查出违规」撞码：调用方看到 rc=1 分不清是环境没配好，
+    # 还是某条教学判据真的被违反——那正是本票要消灭的缺陷。
+    if status == "ready":
+        return ltw_exit.EXIT_OK
+    return ltw_exit.env_error(
+        "环境未就绪（status=%s）：核心层依赖缺失或版本不满足" % status,
+        extra={"status": status, "reason_code": "env_not_ready"})
 
 
 if __name__ == "__main__":

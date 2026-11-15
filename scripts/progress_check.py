@@ -91,6 +91,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+import ltw_exit
 import rule_contract
 from ltw_parse import (ENUM_KP_TYPE, ENUM_KP_VISUAL, FIELD_RE, HOLD_KEYS, parse_field_line, strip_inline_comment,
                        JUDGE_POINTER_PREFIX, KP_ID_ANY_RE, KP_ID_RE,
@@ -3059,7 +3060,7 @@ def selftest():
         # ㊺ CLI：--proposed-phase / --changed-lessons 端到端可用且语义一致
         ok = ok and main([str(d42), "--release", "--proposed-phase", "已完成"]) == 1
         ok = ok and main([str(d44), "--release", "--changed-lessons", "2"]) == 0
-        ok = ok and main([str(d44), "--release", "--changed-lessons", "x"]) == 2
+        ok = ok and main([str(d44), "--release", "--changed-lessons", "x"]) == 3
 
         # ═══ 回归：稳定 ID 匹配 + 按对象 ID 对账 + 游标悬空 ═══
         # ㊻ 证据声明的 lesson_id 与路线行不一致 → 不命中（无序号回退）→ E-NO-EVIDENCE
@@ -3356,7 +3357,8 @@ def selftest():
                 rc = main(args)
             except SystemExit as exc:
                 rc = exc.code
-            ok = ok and rc == 2
+            # 票 106：用法错误 rc=3（未进入判据），不再是 2（那已被「未测」占住）。
+            ok = ok and rc == 3
 
         # ㊱ v9.12.0 判错↔入账护栏（W-GRADED-LOSS-UNLOGGED）：判错未入账 → W；
         # 已入账（薄弱点含该 KP）→ 无告警；j- 加练文件照常覆盖（入账则无告警、未入账则 W）；
@@ -3572,7 +3574,7 @@ def selftest():
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="progress_check.py")
+    ap = ltw_exit.UsageParser(prog="progress_check.py")
     ap.add_argument("task_dir", nargs="?", default=None)
     ap.add_argument("--release", action="store_true",
                     help="放行校验：本次新增掌握/结课/跨阶段前的严格检查"
@@ -3589,17 +3591,15 @@ def main(argv=None):
     if args.selftest:
         return selftest()
     if not args.task_dir:
-        ap.print_usage()
-        return 2
+        return ltw_exit.usage_error("缺少任务目录", parser=ap)
     proposed = {}
     if args.proposed_phase:
         proposed["phase"] = args.proposed_phase
     if args.staged:
         staged = Path(args.staged)
         if not staged.is_file():
-            print("[learn-task-workflow] --staged 指向的拟提交快照不存在或不是文件：" + str(staged),
-                  file=sys.stderr)
-            return 2
+            return ltw_exit.env_error(
+                "--staged 指向的拟提交快照不存在或不是文件：" + str(staged))
         proposed["text"] = staged.read_text(encoding="utf-8", errors="replace")
     if args.changed_lessons is not None:
         nums = []
@@ -3607,17 +3607,24 @@ def main(argv=None):
             if not tok:
                 continue
             if not tok.isdigit() or int(tok) < 1:
-                print("[learn-task-workflow] --changed-lessons 只接受正整数小节编号：" + tok,
-                      file=sys.stderr)
-                return 2
+                return ltw_exit.usage_error("--changed-lessons 只接受正整数小节编号：" + tok)
             nums.append(int(tok))
         if not nums:
-            print("[learn-task-workflow] --changed-lessons 不能为空列表", file=sys.stderr)
-            return 2
+            return ltw_exit.usage_error("--changed-lessons 不能为空列表")
         proposed["changed_lessons"] = nums
     result = check(args.task_dir, release=args.release, proposed=proposed)
     print(json.dumps(result, ensure_ascii=False, indent=2))
-    return 0 if result["ok"] else 1
+    if result["ok"]:
+        return ltw_exit.EXIT_OK
+    # 票 106：**任务目录/状态簿读不出来**属「未测」，不是「查出违规」。
+    # 只认那两个明确的不可用码：其余 errors 都是判据真的生效了（E-NO-EVIDENCE 等）。
+    untested = [e for e in result.get("errors", [])
+                if e.get("code") in ("E-UNREADABLE-PROGRESS", "E-NO-PROGRESS")]
+    if untested:
+        return ltw_exit.env_error(
+            "状态簿不可用，判据没有跑起来：" + "；".join(e["message"] for e in untested),
+            code=untested[0]["code"])
+    return ltw_exit.EXIT_VIOLATION
 
 
 if __name__ == "__main__":

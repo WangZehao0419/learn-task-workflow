@@ -15,6 +15,8 @@ import argparse
 import json
 import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+import ltw_exit  # noqa: E402  三态退出码唯一定义处（票 106）
 
 REDLINE_COUNT = 11
 REQUIRED_CASE_FIELDS = ("id", "redline", "prompt", "fixture", "pass_condition", "verdict")
@@ -112,12 +114,16 @@ def check_weights(w, c):
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="红线回归与冷读资产结构校验（只读）")
+    ap = ltw_exit.UsageParser(description="红线回归与冷读资产结构校验（只读）")
     ap.add_argument("--evals", default=None)
     args = ap.parse_args(argv)
     root = Path(__file__).resolve().parent.parent
     path = Path(args.evals) if args.evals else root / "evals" / "evals.json"
-    data = json.loads(path.read_text(encoding="utf-8"))
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, ValueError) as exc:
+        # 资产文件读不到 = 判据没跑起来（未测 rc=2）。
+        return ltw_exit.env_error("评测账本不可读：%s（%s）" % (path, exc))
 
     c = Checker()
     check_cases(data.get("redline_regression") or {}, c)
@@ -128,7 +134,7 @@ def main(argv=None) -> int:
 
     total = c.ok + c.fail
     print("verify-redline-assets: %d checks, %d OK, %d FAIL" % (total, c.ok, c.fail))
-    return 0 if c.fail == 0 else 1
+    return ltw_exit.EXIT_OK if c.fail == 0 else ltw_exit.EXIT_VIOLATION
 
 
 if __name__ == "__main__":

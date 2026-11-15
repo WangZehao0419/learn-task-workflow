@@ -97,6 +97,7 @@ import tempfile
 from datetime import date, timedelta
 from pathlib import Path
 
+import ltw_exit
 import rule_contract
 # 条目元数据解析（META_KEYS / parse_meta / 括注拆分）与 S/D 值域常数住在
 # ltw_parse：due-queue 与 progress_check 必须读同一条判据，各写一份就是判据分叉。
@@ -120,13 +121,12 @@ _SCHEMAS = _CONSTANTS["schemas"]
 def _contract_fail(msg):
     """契约自检失败：fail closed，不退回内置默认值继续跑。
 
-    与 rule_contract.load_or_exit() 同口径——契约畸形属「校验不通过」，走 exit 1 +
-    结构化 JSON（E-CONTRACT-INVALID），不走 exit 2（那是用法/参数错误）。同一类失败
-    在同一个脚本里必须只有一个退出码，否则调用方没法统一处理。
+    票 106 改判：契约畸形属「判据没跑起来」——调度公式根本没算，谈不上「算出违规」。
+    所以走 rc=2（未测）+ E-CONTRACT-INVALID 的结构化 JSON，与 rule_contract.load_or_exit
+    同口径。改判前这里走 rc=1，与「算出违规」撞码；同一个脚本里同一类失败必须只有一个
+    退出码，否则调用方没法统一处理。
     """
-    print(json.dumps({"ok": False, "code": "E-CONTRACT-INVALID", "message": msg},
-                     ensure_ascii=False))
-    raise SystemExit(1)
+    raise SystemExit(ltw_exit.env_error(msg, code="E-CONTRACT-INVALID"))
 
 
 W = [float(x) for x in _C["w"]]
@@ -158,9 +158,12 @@ DEFAULT_CAUSE = "知识性"  # v2.2：错因缺省枚举（仅脚本输出侧占
 DEFAULT_LEVEL = "B"       # v2.2：级缺省枚举（同上）
 
 def fail(msg):
-    """用法/参数错误：stderr 显式说明 + exit 2，不静默退化。"""
-    print("[learn-task-workflow] 参数错误：" + msg, file=sys.stderr)
-    sys.exit(2)
+    """用法/参数错误：stderr 显式说明 + exit 3（未进入判据），不静默退化。
+
+    票 106：rc=2 已被「环境不可用（未测）」占住，参数错必须另用一个码，否则
+    「喂坏参数」就能冒充「喂环境不可用夹具」，三态机检会假绿。
+    """
+    sys.exit(ltw_exit.usage_error("参数错误：" + msg))
 
 
 def round_half_up(x):
@@ -783,12 +786,11 @@ def calibration_output(root, slug_filter):
 def cmd_calibration(args):
     root = Path(args.root)
     if not root.exists() or not root.is_dir():
-        print("[learn-task-workflow] 数据根不存在或不是目录：" + str(root)
-              + "（应指向 <工作区根>/.learning）", file=sys.stderr)
-        return 1
+        return ltw_exit.env_error(
+            "数据根不存在或不是目录：" + str(root) + "（应指向 <工作区根>/.learning）")
     print(json.dumps(calibration_output(root, args.slug),
                      ensure_ascii=False, indent=2, allow_nan=False))
-    return 0
+    return ltw_exit.EXIT_OK
 
 
 # ---------------------------------------------------------------------------
@@ -870,12 +872,11 @@ def cmd_day_streak(args):
     today = parse_date_str(args.today, "--today")
     root = Path(args.root)
     if not root.exists() or not root.is_dir():
-        print("[learn-task-workflow] 数据根不存在或不是目录：" + str(root)
-              + "（应指向 <工作区根>/.learning）", file=sys.stderr)
-        return 1
+        return ltw_exit.env_error(
+            "数据根不存在或不是目录：" + str(root) + "（应指向 <工作区根>/.learning）")
     print(json.dumps(day_streak_output(root, args.slug, today),
                      ensure_ascii=False, indent=2, allow_nan=False))
-    return 0
+    return ltw_exit.EXIT_OK
 
 
 # ---------------------------------------------------------------------------
@@ -949,23 +950,22 @@ def cmd_next_interval(args):
                            confidence=confidence,
                            new_card=args.new_card, current_due=args.current_due)
     print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
-    return 0
+    return ltw_exit.EXIT_OK
 
 
 def cmd_due_queue(args):
     today = parse_date_str(args.today, "--today")
     root = Path(args.root)
     if not root.exists() or not root.is_dir():
-        print("[learn-task-workflow] 数据根不存在或不是目录：" + str(root)
-              + "（应指向 <工作区根>/.learning）", file=sys.stderr)
-        return 1
+        return ltw_exit.env_error(
+            "数据根不存在或不是目录：" + str(root) + "（应指向 <工作区根>/.learning）")
     result = due_queue_output(root, args.slug, today, args.all)
     print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
-    return 0
+    return ltw_exit.EXIT_OK
 
 
 def build_parser():
-    ap = argparse.ArgumentParser(
+    ap = ltw_exit.UsageParser(
         prog="scheduler.py",
         description="间隔重复调度计算（FSRS-6 增长律，只读，不写任何文件）")
     ap.add_argument("--selftest", action="store_true",
@@ -1008,16 +1008,17 @@ def main(argv=None):
         return selftest()
     if not getattr(args, "func", None):
         ap.print_help(file=sys.stderr)
-        return 2
+        return ltw_exit.usage_error("缺少子命令（next-interval / due-queue / calibration / day-streak）")
     try:
         return args.func(args)
     except ScheduleError as exc:
-        # 统一结构化拒绝：参数/范围/日期越界一律 exit 2，异常栈不进外部协议
+        # 统一结构化拒绝：参数/范围/日期越界一律 exit 3（调用错误），异常栈不进外部协议。
+        # 票 106：2 已被「未测」占住，参数错若仍报 2，「喂坏参数」就能冒充「喂环境夹具」。
         fail(str(exc))
     except (ValueError, OverflowError) as exc:
-        print("[learn-task-workflow] 计算失败：" + type(exc).__name__ + ": " + str(exc),
-              file=sys.stderr)
-        return 2
+        # 计算失败是**输入**的问题（日期越界、数值非法），判据没跑完 → 未测 rc=2。
+        return ltw_exit.env_error(
+            "计算失败（输入不可用）：" + type(exc).__name__ + ": " + str(exc))
 
 
 # ---------------------------------------------------------------------------
@@ -1222,14 +1223,14 @@ def selftest():
         ok = ok and r["interval_days"] == iv0
         ok = ok and r["stability_old"] is None and r["difficulty_old"] is None
         ok = ok and r["same_session"] is False
-    # 断言 5c：--init-shift 已删除——旧调用侧传它必须拿到 exit 2（argparse 未知参数），
-    # 不得静默接受后按 D0(G) 返回，否则「已删除」只是文档承诺。
+    # 断言 5c：--init-shift 已删除——旧调用侧传它必须拿到 exit 3（argparse 未知参数，
+    # 票 106 把「未进入判据」统一到 3），不得静默接受后按 D0(G) 返回，否则「已删除」只是文档承诺。
     try:
         main(["next-interval", "--grade", "good", "--new-card",
               "--last", "2026-11-13", "--today", "2026-11-13", "--init-shift", "1"])
         ok = False
     except SystemExit as exc:
-        ok = ok and exc.code == 2
+        ok = ok and exc.code == 3
 
     # 断言 5b：遗忘后 S 的短期上界 min(长期项, S/e^(w17*w18)) 真的会生效
     # （票面六公式块原文；不是 w17-w19 的同日复习公式）。S=1/D=1/R≈0.1 时长期项反超。
@@ -1250,17 +1251,19 @@ def selftest():
     ok = ok and r["stability_new"] < S_MAX
     ok = ok and r["interval_days"] == 365
 
-    # 断言 6a：契约畸形必须 exit 1（与 rule_contract.load_or_exit 同口径），不是 exit 2。
+    # 断言 6a（票 106 改判）：契约畸形必须 exit 2（未测，与 rule_contract.load_or_exit 同口径）。
     # 不启子进程（ops.md「脚本无子进程」），直接调 _contract_fail 看它抛什么。
     import contextlib as _cl
     import io as _io
     _buf = _io.StringIO()
     try:
-        with _cl.redirect_stdout(_buf):
+        # 三态结构化标记打在 **stderr**（ltw_exit.env_error 的默认流）：stdout 留给
+        # 正常结果，错误通道单独走，调用方才不会把「未测」当成一份正常输出解析。
+        with _cl.redirect_stderr(_buf):
             _contract_fail("selftest 探针")
         ok = False                                   # 没抛即失败
     except SystemExit as _exc:
-        ok = ok and _exc.code == 1
+        ok = ok and _exc.code == 2
     _probe = json.loads(_buf.getvalue())
     ok = ok and _probe["ok"] is False
     ok = ok and _probe["code"] == "E-CONTRACT-INVALID"
@@ -1418,7 +1421,7 @@ def selftest():
         ["next-interval", "--grade", "good", "--stability", "3",
          "--difficulty", "3", "--elapsed", "3", "--confidence", "9"],  # 信心越界
         ["due-queue", "--root", "x", "--today", "明天"],  # 非法日期
-        # 非有限数：NaN/Inf 一律结构化拒绝 rc=2（不得裸崩或输出 Infinity）
+        # 非有限数：NaN/Inf 一律结构化拒绝 rc=3（参数非法，不得裸崩或输出 Infinity）
         ["next-interval", "--grade", "good", "--stability", "nan",
          "--difficulty", "3", "--elapsed", "3"],
         ["next-interval", "--grade", "good", "--stability", "inf",
@@ -1435,9 +1438,9 @@ def selftest():
     for call in bad_calls:
         try:
             main(call)
-            ok = False  # 未抛 SystemExit(2) 即失败
+            ok = False  # 未抛 SystemExit(3) 即失败
         except SystemExit as exc:
-            ok = ok and exc.code == 2
+            ok = ok and exc.code == 3
 
     # 断言 9：calibration 手工验算锚点（FIX_A：显式信心恰 2 条、其中 cw 1 条
     # → rate=0.5；顽固点/默认链点/老错题/无日期点均无显式信心，不计入分母）
@@ -1529,15 +1532,15 @@ def selftest():
         ok = ok and _sy_items == ["甲：普通逾期", "乙：大量顺延"]
         ok = ok and _sy_out["queue"][1]["顺延"] == 9
 
-    # 断言 13：calibration 畸形输入 → exit 2；--root 非目录 → exit 1
-    for call in [["calibration"]]:  # 缺必填 --root → argparse exit 2
+    # 断言 13（票 106 三态）：缺必填参数 → rc=3（未进入判据）；数据根不可用 → rc=2（未测）
+    for call in [["calibration"]]:
         try:
             main(call)
             ok = False
         except SystemExit as exc:
-            ok = ok and exc.code == 2
+            ok = ok and exc.code == 3
     ok = ok and main(["calibration", "--root",
-                      str(Path(__file__).resolve().parent / "__no_such_dir__")]) == 1
+                      str(Path(__file__).resolve().parent / "__no_such_dir__")]) == 2
 
     # 断言 14：半角容忍——半角括号元数据可拆出、半角竖线错题行可分段，解析与全角等价
     it14, mt14 = split_weak_item("半角点：正负号 (S=2.0, D=3, last=2026-10-09, due=2026-10-09, 信心=4, cw)")
@@ -1785,11 +1788,11 @@ def selftest():
         # 26g：今天没有记录（缺天）→ 不数（宁可漏，不可错）
         ds_tomorrow = day_streak_output(root_ds, "ds3", date.fromisoformat("2026-10-16"))
         ok = ok and ds_tomorrow["per_slug"][0]["miss_streak"] == 0
-        # 26h：CLI 端到端——数据根不存在 exit 1，不谎报成功
+        # 26h：CLI 端到端——数据根不存在 exit 2（未测），不谎报成功也不谎报违规
         try:
             rc_ds = cmd_day_streak(argparse.Namespace(
                 root=str(Path(td_ds) / "__no_such_dir__"), slug=None, today="2026-10-15"))
-            ok = ok and rc_ds == 1
+            ok = ok and rc_ds == 2
         except SystemExit:
             ok = False
 

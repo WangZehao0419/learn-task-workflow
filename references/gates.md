@@ -78,6 +78,53 @@
 - **讲义负荷**：单次讲授只呈现当前目的内容；长讲义按目分块呈现（规范见 `references/handout-pipeline.md`「分块呈现（R41）」），不整篇抛出。
 - **考期例外**：距考试 ≤2 周的冲刺期，断新时刻可经学员显式确认后放宽，但单次学习段 ≤50 分钟的休息节律不放宽。
 
+## 三态退出码
+
+**退出码只回答一个问题：判据有没有跑起来、跑出了什么。** 它不回答「哪里坏了」。
+
+| 码 | 含义 | 调用方怎么读 |
+|---|---|---|
+| `0` | 判据跑完，通过 | 可以往下走 |
+| `1` | 判据跑完，**查出违规**（判据生效） | 制品有问题，修制品 |
+| `2` | **未测**：环境或输入不可用，判据没有跑起来 | 不是通过也不是不通过；修环境后重跑 |
+| `3` | **调用错误**：参数非法，判据没有进入 | 改调用方式；它不是第四态 |
+
+**为什么 2 与 3 必须分开**：argparse 的默认用法错误退出码就是 2。若沿用，「喂一个环境不可用夹具必须 rc=2」这条机检会被「喂一个必败参数」直接满足——闸口全绿，而它证明的只是 argparse 会拒绝坏参数，不是脚本分得清「没测」与「没通过」。
+
+**为什么 2 不能是 1**：rc=1 的含义是「判据生效了」。环境炸了却报 1，等于用一次从未发生的检查去指控制品；反过来，「跳过（未校验）」打印完仍 rc=0，等于用一次从未发生的检查去放行制品。两者都是假绿/假红（票 66、票 65、票 106 是同一类缺陷的三个形态）。
+
+**为什么 rc=2 必须在输出层留痕**：只改退出码，调用方读到一个数字 2 仍分不清「没测」与「没通过」，机检也证明不了环境分支真的走了另一条路。所以环境失败一律在 stderr 打一行结构化 JSON（`verdict=untested` / `untested=true` / `code`）。
+
+**追认（2026-11-15，票 106）**：`3 = 调用错误` 与「`evals/` 9 个脚本同样适用三态」两处偏离规格的扩展已由维护者追认，即日起是本仓口径。适用范围 = **19 个命令行脚本 + 9 个 evals 脚本**；新脚本无论落在哪个目录，只要产出退出码就必须符合四档，并用 `ltw_exit.UsageParser`（裸 `argparse.ArgumentParser` 会让用法错误落回 2，与「未测」撞码）。
+
+三态的唯一定义处是 `scripts/ltw_exit.py`（常量 + `env_error()` + `usage_error()` + `UsageParser`），**不在调用侧写死数字**。逐脚本退出码语义的正本是 `contracts/scripts-contract.json` 的 `exit_codes`；`scripts/verify_exit_tristate.py` 用真实夹具机检每一条（环境夹具必须 rc=2 且带标记、违规夹具必须 rc=1、必败参数必须 rc=3），并把「环境分支改回 rc=1」「调用错误改回 rc=2」两种变异做成必须变红的断言。
+
+## CI 与本地同源（票 107）
+
+**命令清单只有一处正本**：`contracts/scripts-contract.json` 的 `verification.selftest`（21 条脚本自测）与 `verification.evals`（9 条登记表与行为机检）。`evals/run-gates.py` 是唯一消费者，本地与 CI 都只跑它：
+
+```bash
+python -B evals/run-gates.py            # 跑全部闸口
+python -B evals/run-gates.py --selftest # 分类器自测（证明它真的会红、会黄）
+python -B evals/run-gates.py --list     # 只打印清单，不执行
+```
+
+**三态退出码在这里是分流器**：`0` 通过 / `1` 有闸口查出违规（或清单条目自己参数非法——那是清单坏了）/ `2` 有闸口未测且无任何违规 / `3` 驱动自身参数非法。汇总优先级**违规压过未测**：未测不能掩盖真实的红。
+
+**CI 的三档结论**（`.github/workflows/gates.yml`）：
+
+| 驱动退出码 | job 结论 | 表现 |
+|---|---|---|
+| `0` | success | 绿 |
+| `1` | failure | 红 |
+| `2` | success + 一个 `neutral` check run | 黄（`gates / 未测` 独立出现在 checks 列表） |
+
+**为什么黄灯必须靠 Checks API 而不是退出码**：GitHub Actions 的 job 结论只有 success/failure 两档，runner 不支持「按退出码给 neutral」。票 107 在本仓 runner 上实测过 `exit 78`（历史上被称作 neutral 的码），job 结论是 **failure**，不是 neutral。所以未测时显式建一个 `conclusion=neutral` 的 check run——它独立于 job 结论存在，评审者看到「未测」，不会被绿勾吞掉。需要 workflow 声明 `permissions: checks: write`。
+
+**变异验证**（票 107 AC，只在 `workflow_dispatch` 显式触发，日常 push/PR 不走）：`mutation=violation` 移除 `contracts/rules.json` 的 `version` 键 → 必须红；`mutation=untested` 移除 `contracts/scripts-contract.json` → 必须黄。
+
+**为什么不把 `run-gates.py` 登记进 `verification` 清单**：它是清单的**消费者**。写进清单，`--run` 会递归调用自己。清单正本与消费者分离，递归就不可能发生；由 `evals/run-gates.py --selftest` 的「真实登记表」用例守住条目格式与数量下限。
+
 ## 每批四条准入
 
 **这是正本，别处不写第二份。** 规格 90 用户故事 36：每一批施工都有同样四条准入，不逐批重新发明验收方式。四条**缺一不可、不许多加**——条数由 `scripts/verify_admission.py` 钉死为 4，且每条的命令会被现场执行一次（只比对文本会全绿，那是本仓反复吃过的假绿）。

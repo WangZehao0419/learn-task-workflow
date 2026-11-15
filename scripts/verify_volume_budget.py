@@ -45,6 +45,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from rule_contract import skill_root  # noqa: E402
+import ltw_exit  # noqa: E402  三态退出码唯一定义处（票 106）
 
 BT = chr(96)
 LIMIT = 35000
@@ -175,7 +176,7 @@ def _selftest() -> int:
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="分册字节上限与册首导读句机检")
+    ap = ltw_exit.UsageParser(description="分册字节上限与册首导读句机检")
     ap.add_argument("--selftest", action="store_true", help="跑内置用例再检查真实树")
     ap.add_argument("--root", default=None, help="技能根（默认脚本所在仓库）")
     ap.add_argument("--limit", type=int, default=LIMIT, help="单册字节上限（默认 35000）")
@@ -187,15 +188,18 @@ def main(argv=None) -> int:
             return rc
 
     root = Path(args.root) if args.root else skill_root()
+    rc_root = ltw_exit.require_root(root)
+    if rc_root is not None:
+        return rc_root
     over, nointro, total, nroute = check(root, args.limit)
-    rc = 0
+    rc = ltw_exit.EXIT_OK
     for rel, why in over:
         print("FAIL [E-VOLUME-OVERSIZE] %s :: %s" % (rel, why))
-        rc = 1
+        rc = ltw_exit.EXIT_VIOLATION
     for rel, why in nointro:
         print("FAIL [E-VOLUME-NO-INTRO] %s :: %s" % (rel, why))
-        rc = 1
-    if rc == 0:
+        rc = ltw_exit.EXIT_VIOLATION
+    if rc == ltw_exit.EXIT_OK:
         print("PASS 分册预算：%d 册全部 ≤%d B；加载路由 %d 个目标导读句齐备"
               % (total, args.limit, nroute))
     return rc
