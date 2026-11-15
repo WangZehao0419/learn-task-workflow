@@ -193,6 +193,17 @@
     "2": "用法错误"
    },
    "notes": "规格 90 用户故事 49 原写「零外部依赖是已经通过机检证明的结构性质」——在 9.21.25 之前这句话是假的：全仓 grep 'import ast' 零命中，没有任何脚本证明过这条性质。本脚本把承诺变成会红的断言。四条判据：E-ZERODEP-THIRDPARTY（import 了既不在标准库、也不是本仓模块的包）、E-ZERODEP-NETWORK（import 了具备联网能力的模块——socket / ssl / http / urllib / ftplib / smtplib / telnetlib / xmlrpc / webbrowser / asyncio 等，**即使是标准库也拦**，因为零依赖承诺说的是「不存在联网能力」，不是「没装第三方包」）、E-ZERODEP-DYNAMIC（__import__ / importlib，静态分析看不见目标，留这个口子前三条都可被绕开）、E-ZERODEP-STDLIB-NA（解释器 < 3.10 没有 sys.stdlib_module_names，判不了就红——写成「名单缺失就跳过」等于让闸口在旧解释器上自动全绿，正是本仓反复吃过的假绿）。扫描面为空也判红（E-ZERODEP-NO-SOURCE）：没有源文件时「零违规」不构成证据。本仓模块按 scripts/ 与 evals/ 下的文件名识别，相对 import 一律放行。自测 9 用例：纯标准库+本仓模块（绿）、requests、socket、urllib.request、http.client、__import__、importlib、扫描面为空、语法错误——后八条各自断言改坏即红。"
+  },
+  {
+   "script": "verify_admission.py",
+   "usage": "[--selftest] [--root <技能根>]",
+   "default_behavior": "只读：解析 references/gates.md 的四条准入并**实际执行**每条命令；不写盘",
+   "exit_codes": {
+    "0": "四条齐备，三栏齐全，且四条命令全部 rc=0",
+    "1": "缺节 / 条数不为 4 / 缺栏 / 无命令 / 命令失败",
+    "2": "用法错误"
+   },
+   "notes": "规格 90 用户故事 36：每批四条准入（脚本自测 / 规则清单回归 / 指针校验 / 续学验证）。在 9.21.26 之前这四条只存在于规格正文与 14 张已关闭实施票的票面里，仓内文档零命中——施工者要验收得先考古。本脚本把「文档写了四条」变成「文档写的那四条真的能跑」。判据：E-ADMIT-MISSING（references/gates.md 找不到「每批四条准入」节）、E-ADMIT-COUNT（条目数不等于 4——少一条=少一道关，多一条=有人偷偷加了口径）、E-ADMIT-FIELD（某条缺「跑什么 / 判定 / 失败处置」三栏之一）、E-ADMIT-NOCMD（某条没有可执行命令）、E-ADMIT-RED（某条命令执行后 rc != 0）。为什么命令要真的跑：文档里的验收清单最典型的腐烂方式不是被删，是脚本改名或参数变了而正文一字未动——只比对文本会全绿，那是本仓反复吃过的假绿。所以每条命令现场执行一次，rc=0 才算这条准入成立。为什么条数必须恰好 4：这四条是「每批固定、不逐批重新发明」的承诺；允许 3 或 5 条等于允许施工者按当批方便自行裁剪，那正是这条用户故事要消灭的东西。条目形态两种都认：列表项「1. **标题**」与小节标题「### 1. 标题」，解析结果一致。自测 8 用例：四条齐备（绿）、缺整节、只有三条、多出一条、缺「失败处置」栏、某条没有命令、某条命令失败、小节标题形态——后七条各自断言改坏即红。"
   }
  ],
  "internal_modules": [
@@ -225,8 +236,9 @@
    "python -B scripts/verify_volume_budget.py --selftest",
    "python -B scripts/verify_eval_versions.py --selftest",
    "python -B scripts/verify_content_ledger.py --selftest",
-   "python -B scripts/verify_zero_dependency.py --selftest"
+   "python -B scripts/verify_zero_dependency.py --selftest",
+   "python -B scripts/verify_admission.py --selftest"
   ],
-  "note": "十七个命令行脚本自测覆盖确定性计算、结构校验、契约完整性与术语对账；真实教学回归与故障夹具见 evals；verify-doc-pointers 校验 doc 指针四项（路径/锚点/编号/自指）；票 99 的冻结清单硬闸（键集合相等 rc=1 / 内容指纹漂移只 W 级告警）随 rule_contract.py --selftest 一起跑，真身基准 contracts/redlines-freeze.json 由该自测内的真实夹具备份兜住；票 102 的入口预算三条判据（红线节结束字节 < 砍点下界常量 / 前两段 ≤6000 B / 加载路由早于红线且一行一册）随 verify_entry_budget.py --selftest 一起跑，砍点常量的唯一正本是 contracts/rules.json 的 constants.budget.context_compress_cutoff_lower_bound。本分区（scripts_contract vs internal_modules）不是人读声明，由 evals/verify-gate-registry.py 的 G1-G6 机检：G1 分区完备（不重不漏无幽灵）、G2 分类自证（命令行喂必败参数必须 rc≠0，内部模块喂同一参数必须 rc=0）、G3 清单可执行、G4 清单与契约同源、G5 覆盖去向（internal_modules 的 note 点名的每个覆盖者必须真的 import 该内部模块）、G6 字节同源（git 说干净的文件，工作区字节必须等于 index blob——抓被 stat 缓存掩盖的 EOL/等长篡改；非 git 检出跳过并明说未校验）。"
+  "note": "十八个命令行脚本自测覆盖确定性计算、结构校验、契约完整性与术语对账；真实教学回归与故障夹具见 evals；verify-doc-pointers 校验 doc 指针四项（路径/锚点/编号/自指）；票 99 的冻结清单硬闸（键集合相等 rc=1 / 内容指纹漂移只 W 级告警）随 rule_contract.py --selftest 一起跑，真身基准 contracts/redlines-freeze.json 由该自测内的真实夹具备份兜住；票 102 的入口预算三条判据（红线节结束字节 < 砍点下界常量 / 前两段 ≤6000 B / 加载路由早于红线且一行一册）随 verify_entry_budget.py --selftest 一起跑，砍点常量的唯一正本是 contracts/rules.json 的 constants.budget.context_compress_cutoff_lower_bound。本分区（scripts_contract vs internal_modules）不是人读声明，由 evals/verify-gate-registry.py 的 G1-G6 机检：G1 分区完备（不重不漏无幽灵）、G2 分类自证（命令行喂必败参数必须 rc≠0，内部模块喂同一参数必须 rc=0）、G3 清单可执行、G4 清单与契约同源、G5 覆盖去向（internal_modules 的 note 点名的每个覆盖者必须真的 import 该内部模块）、G6 字节同源（git 说干净的文件，工作区字节必须等于 index blob——抓被 stat 缓存掩盖的 EOL/等长篡改；非 git 检出跳过并明说未校验）。"
  }
 }

@@ -250,7 +250,7 @@
 
 ## 脚本操作与验证
 
-十七个命令行脚本与两个内部模块的 **用法、默认行为、逐脚本退出码、selftest 清单、内部模块的覆盖去向**，机器可读正本在 `contracts/scripts-contract.json`（`scripts_contract` / `internal_modules` / `verification` 三个分区），本册不复制第二份。错误码触发条件速查见 `references/registry.md`「错误码速查表」。
+十八个命令行脚本与两个内部模块的 **用法、默认行为、逐脚本退出码、selftest 清单、内部模块的覆盖去向**，机器可读正本在 `contracts/scripts-contract.json`（`scripts_contract` / `internal_modules` / `verification` 三个分区），本册不复制第二份。错误码触发条件速查见 `references/registry.md`「错误码速查表」。
 
 本册只保留契约没有的五件事：
 
@@ -261,6 +261,6 @@
 
 5. **环境清单与打包**：`check_environment.py` 读的是 `skill-dependencies.json`，与 `rules.json` 是两份不同的东西；打包走 `skill_ops preflight/validate/package`，必含 `contracts/rules.json` 与 `scripts/rule_contract.py`，打包前删 `__pycache__`、排除 `.trae`/`.workbuddy`/`.codex`，收尾 `git diff --check`。
 
-**当前核验**：适用版本 9.21.25；核验日期 2026-11-15；依赖 stdlib。
+**当前核验**：适用版本 9.21.26；核验日期 2026-11-15；依赖 stdlib。
 
 > 门检盲区口径：`verify-doc-pointers.py` 的 `PTR_RE` 字符类不含 `.`，`../README.md` 这类路径整条不被校验；`ANCHOR_RE` 要求路径后紧跟「」，隔一个「的」就漏。写指针时这两类形态自己盯。
