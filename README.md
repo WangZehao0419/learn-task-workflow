@@ -98,7 +98,7 @@ python -B evals/compare-baseline.py --selftest
 > 其对应的执行记录（第七轮 v7）已按 [票 43](https://github.com/WangZehao0419/learn-task-workflow/issues/43) 退役——
 > 原件与 git 证据冲突，矛盾消除前不计入 P0。按 `evidence_policy`：没有可复核证据的条目不得算「通过」。
 >
-> 自 10.0.2 起这三块证据（`cases` / `redline_regression` / `trigger_eval`）**全部**带
+> 自 10.0.4 起这三块证据（`cases` / `redline_regression` / `trigger_eval`）**全部**带
 > `decided_against_version`，由 `scripts/verify_eval_versions.py` 机检：红线块与触发块的取值都是
 > `unknown`（v7 回放声称的判据与 git 对不上、触发块从未运行），按降级口径视作「未验证」——
 > 它们**不会**再挂在「通过」栏里。
@@ -106,7 +106,7 @@ python -B evals/compare-baseline.py --selftest
 ## 维护
 
 - **版本**：`SKILL.md` frontmatter 的 `metadata.version` 与 `contracts/rules.json` 各登记一处；
-  两者是否一致由发版清单人工逐条核对（见 `references/ops.md`「打包与验证」），改一处必改另一处。本次发布升版到 **10.0.2**（SKILL.md 与契约一致）。
+  两者是否一致由发版清单人工逐条核对（见 `references/ops.md`「打包与验证」），改一处必改另一处。本次发布升版到 **10.0.4**（SKILL.md 与契约一致）。
 - **加一门学科**：只在 `references/disciplines/` 加一个 variant 包，不牵动其他文档。
 - **改一条规则**：改它在**正本册**里的那一处；要引用就写指针，不复制条文。
 - **文献与借鉴出处**：见 `CREDITS.md`（维护侧档案，不进运行时上下文）。

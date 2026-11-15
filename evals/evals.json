@@ -1,7 +1,7 @@
 {
  "schema": "ltw-evals/2",
  "skill": "learn-task-workflow",
- "applies_to_version": "10.0.2",
+ "applies_to_version": "10.0.4",
  "updated_at": "2026-11-15",
  "grading_axes": [
   "教学正确性",
@@ -775,7 +775,7 @@
    "原结果": "11/11 通过（来源不可复核，见票 43）"
   }
  },
- "_cases 的版本说明": "cases 里 19 条 verdict=通过 的证据，run_id 分别指向 replay-v9.12.2（12 条）、replay-v9.12.2-render（3 条）、replay-v9.13.1-render（3 条）、layout-v9.13.0（1 条）——都是 v9.12.2 / v9.13.x 的制品。本文件 applies_to_version 是 9.20.x，所以这 19 条只证明当时的版本，不构成对当前版本的证据。票 43 记录，未改 verdict：改判需要重跑。 自 10.0.0 起，本说明由 scripts/verify_eval_versions.py 机械化：每条 case 带 decided_against_version，与 applies_to_version 不等的证据自动降级为「未验证」，不计入通过。降级是第三态，既非通过也非失败。 自 10.0.2 起覆盖范围扩到三块证据（cases / redline_regression / trigger_eval）：redline_regression 的 11 条与 trigger_eval 的 20 条同样必须带 decided_against_version，缺字段、块缺失或块为空一律 rc=1。本次补录的取值都是 unknown：红线块的 run_id 指向 2026-11-08 的 v7 回放，而该回放声称的判据（地图三要素）在 git 里最早出现于 894121a（2026-11-09 v9.20.0），与 v9.19.2 对不上（见票 43）；触发块 runs_done=0，从未运行。两者都没有可解析的判定版本，因此记 unknown——按降级口径视作「未验证」，不伪造版本号。",
+ "_cases 的版本说明": "cases 里 19 条 verdict=通过 的证据，run_id 分别指向 replay-v9.12.2（12 条）、replay-v9.12.2-render（3 条）、replay-v9.13.1-render（3 条）、layout-v9.13.0（1 条）——都是 v9.12.2 / v9.13.x 的制品。本文件 applies_to_version 是 9.20.x，所以这 19 条只证明当时的版本，不构成对当前版本的证据。票 43 记录，未改 verdict：改判需要重跑。 自 10.0.0 起，本说明由 scripts/verify_eval_versions.py 机械化：每条 case 带 decided_against_version，与 applies_to_version 不等的证据自动降级为「未验证」，不计入通过。降级是第三态，既非通过也非失败。 自 10.0.4 起覆盖范围扩到三块证据（cases / redline_regression / trigger_eval）：redline_regression 的 11 条与 trigger_eval 的 20 条同样必须带 decided_against_version，缺字段、块缺失或块为空一律 rc=1。本次补录的取值都是 unknown：红线块的 run_id 指向 2026-11-08 的 v7 回放，而该回放声称的判据（地图三要素）在 git 里最早出现于 894121a（2026-11-09 v9.20.0），与 v9.19.2 对不上（见票 43）；触发块 runs_done=0，从未运行。两者都没有可解析的判定版本，因此记 unknown——按降级口径视作「未验证」，不伪造版本号。",
  "human_cold_read": {
   "声明": "真人冷读与抽样冷读的**资产定义**。**这是待执行清单，不是通过记录。**",
   "为什么需要": "红线盲回放测的是「有没有违规」，冷读测的是「学员读起来顺不顺、有没有被催促或被代答的体感」。两者互补，都属 P0 主证据。",
