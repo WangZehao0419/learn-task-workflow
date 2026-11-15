@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/3",
- "version": "9.21.18",
+ "version": "10.0.0",
  "constants": {
   "phases": [
    "接料建档",
@@ -89,7 +89,8 @@
    "core_total_max": 6,
    "l3_review_min": 3,
    "l3_review_max": 5,
-   "reinforce_max": 3
+   "reinforce_max": 3,
+   "context_compress_cutoff_lower_bound": 15733
   },
   "schemas": {
    "index": "learn-task-index/7",

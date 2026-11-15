@@ -4,7 +4,36 @@
 
 ## 本册目录
 
-1. 科层总则：三轴、判档与深度标尺
+1. 学科层扇出表：本层全部学科文件与管辖范围
+2. 科层总则：三轴、判档与深度标尺
+
+## 学科层扇出表（本层全部学科文件，逐条）
+
+学科层只有本册一个入口。下表是本层**全部**学科文件与它们各自的管辖范围——加一门学科 = 在 `references/` 下加一个文件 + 在本表加一行，入口文档、其他册一律不动。
+
+| 文件 | 管什么 | 何时读 |
+|---|---|---|
+| `references/subjects-math.md` | 数学与统计群：高数、线代、概率、离散、逻辑、K12 数学的 plan / teach / practice / review 四类切片 | S0 定档为「数学与统计」后补取；备课、出题、复习按场景各取对应切片 |
+| `references/subjects-science.md` | 实验科学群：物理、化学、生物、地理与地球科学的四类切片 | S0 定档为「实验科学」后补取；概念与程序并重的表征与共享策略 |
+| `references/subjects-language.md` | 语言群：外语的四类切片（母语文另有独立学科包） | S0 定档为「语言」后补取；记忆与程序并重的表征与共享策略 |
+| `references/subjects-computing.md` | 计算与技术群：编程、算法、数据结构、计算机理论的四类切片 | S0 定档为「计算与技术」后补取；程序为主的表征与共享策略 |
+| `references/subjects-humanities.md` | 人文社科群：历史、法学、经济、心理、教育、政治的四类切片 | S0 定档为「人文社科」后补取；概念为主、记忆次之 |
+| `references/subjects-medicine.md` | 医学与健康群：临床、药理、解剖、生理、护理、公卫的四类切片 | S0 定档为「医学与健康」后补取；记忆与概念并重 |
+| `references/subjects-skill.md` | 艺术与技能群：音乐、美术、体育、手工、驾驶、厨艺的四类切片 | S0 定档为「艺术与技能」后补取；程序为主的表征与共享策略 |
+| `references/disciplines/calculus.md` | 高等数学与微积分包：学科身份、内容结构与前置链、专属教学法、误区库 | 认到「高数/微积分」且要通过学科包准入判据时读；与 math 群切片叠加 |
+| `references/disciplines/physics.md` | 物理包：学科身份、内容结构与前置链、专属教学法、误区库 | 认到「物理」且要通过学科包准入判据时读；与 science 群切片叠加 |
+| `references/disciplines/chemistry.md` | 化学包：学科身份、内容结构与前置链、专属教学法、误区库 | 认到「化学」且要通过学科包准入判据时读；与 science 群切片叠加 |
+| `references/disciplines/biology.md` | 生物包：学科身份、内容结构与前置链、专属教学法、误区库 | 认到「生物」且要通过学科包准入判据时读；与 science 群切片叠加 |
+| `references/disciplines/geography.md` | 地理与地球科学包：学科身份、内容结构与前置链、专属教学法、误区库 | 认到「地理/地球科学」且要通过学科包准入判据时读；与 science 群切片叠加 |
+| `references/disciplines/chinese.md` | 语文（母语文）包：与外语分道走的书面语解码、篇章组织与鉴赏判断 | 认到「语文」且要通过学科包准入判据时读；与 language 群切片叠加 |
+| `references/disciplines/english.md` | 英语（外语）包：定档与词汇档位、内容结构与前置链、专属教学法 | 认到「英语/外语」且要通过学科包准入判据时读；与 language 群切片叠加 |
+| `references/disciplines/computing-theory.md` | 计算机理论与算法包：机制与权衡为主的内容结构、专属教学法、误区库 | 认到「计算机理论/算法」且要通过学科包准入判据时读；与 computing 群切片叠加 |
+| `references/disciplines/history.md` | 历史包：学科身份、内容结构与前置链、专属教学法、误区库 | 认到「历史」且要通过学科包准入判据时读；与 humanities 群切片叠加 |
+| `references/disciplines/law.md` | 法学包：学科身份、内容结构与前置链、专属教学法、误区库 | 认到「法学」且要通过学科包准入判据时读；与 humanities 群切片叠加 |
+| `references/disciplines/economics-psychology.md` | 经济与心理包：概念与模型为主的内容结构、专属教学法、误区库 | 认到「经济/心理」且要通过学科包准入判据时读；与 humanities 群切片叠加 |
+| `references/disciplines/medicine.md` | 医学包：疾病脚本模板、认知偏误与去偏边界、专属教学法、误区库 | 认到「医学/临床」且要通过学科包准入判据时读；与 medicine 群切片叠加 |
+
+读法：**先群、后包**（取用顺序见「三轴与取用顺序」）。群切片按 7 个学科族各一本，`{group}` 的取值以契约 `constants.group_slugs` 为准；学科包按具体学科各一本，是否建包见「学科包准入判据」——没有匹配包时只用群切片，不硬造。
 
 # 学科层总则：三轴、判档与深度标尺
 
