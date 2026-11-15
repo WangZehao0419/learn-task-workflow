@@ -20,6 +20,7 @@
   "R10.standard-punctuation-forms": "d61dbd9e00f6e2fe761cbeb801254eeeb1b1af62d899de74453163386198e35e",
   "R11.no-internal-terms-visible": "fa66f258faa8f0bb031f8a008b8ce99473d80d0a2a8b1e4272282d0c547c750b",
   "R11.no-mixed-rounds": "85343bb79acefa5d1368be201101bcea377db2196a00042303964e41c787bdc9",
+  "R11.one-concept-per-teach-round": "64368507d82d672b12645eff91a6f39f59bd4bb63017c519997ff552542e00b7",
   "R11.one-message-per-exercise-set": "5b197812e67702a53adc79601d27de0915df8c6d24beb7f6e38fd80fa10151cf",
   "R11.resend-without-solution": "cbeb325fc49859296b246f55cff1e6805f049a91d344a34968fdabdb044e8c5d",
   "R2.demo-before-exercise": "333abea4f4e26359068e6a790ffd9f5d145b534d63ca16675170e4b200a52326",
@@ -55,8 +56,8 @@
   "R9.rubric-uses-taught-tools": "98256536e080d102a169c6109d0b1f9a593f3ea9cefb11b3c6aa84e5928f409f",
   "R9.term-ledger-before-question": "119c2fac23fa35b08cc9d8489733505c5407e0fae2d0b55daa0048b907f283ea"
  },
- "criterion_count": 49,
+ "criterion_count": 50,
  "redline_lines": 11,
- "redlines_fingerprint": "fbe69ea6eb1db66d49e21856b5049216235bb410969eac4474770a966bd85103",
+ "redlines_fingerprint": "3350f0780898860642f6e260bd80cf0d8949f9a03fbec54228ff3c47f93ae0e0",
  "schema": "ltw-redline-freeze/1"
 }
