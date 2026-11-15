@@ -38,6 +38,7 @@ import re
 import sys
 import tempfile
 from pathlib import Path
+import ltw_exit  # noqa: E402  三态退出码唯一定义处（票 106）
 
 MATERIALS = "materials"
 REPORT_GLOB = "效果报告-*.md"
@@ -426,7 +427,7 @@ def _selftest() -> int:
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="效果报告机检（W-EFFECT-*，只告警不拦停）")
+    ap = ltw_exit.UsageParser(description="效果报告机检（W-EFFECT-*，只告警不拦停）")
     ap.add_argument("task_dir", nargs="?", help="任务目录（<数据根>/<slug>）")
     ap.add_argument("--selftest", action="store_true",
                     help="运行内嵌样例自检（临时目录，不写盘被校验目录）")
@@ -436,13 +437,10 @@ def main(argv=None) -> int:
         return _selftest()
 
     if not args.task_dir:
-        ap.print_usage()
-        return 2
+        return ltw_exit.usage_error("缺少任务目录", parser=ap)
     task_dir = Path(args.task_dir)
     if not task_dir.is_dir():
-        print("[learn-task-workflow] 任务目录不存在或不可访问：" + str(task_dir),
-              file=sys.stderr)
-        return 2
+        return ltw_exit.env_error("任务目录不存在或不可访问：" + str(task_dir))
 
     report, hits = find_report(task_dir)
     if report is None:

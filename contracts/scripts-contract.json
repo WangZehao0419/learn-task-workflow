@@ -6,12 +6,11 @@
    "default_behavior": "只读、不物化 index.json（写缓存为显式 opt-in）",
    "exit_codes": {
     "0": "正常（含 scan_status=partial）",
-    "1": "数据根路径不存在",
-    "2": "用法错误",
-    "3": "枚举失败 scan_status=failed（不覆盖既有缓存）"
+    "2": "未测：数据根路径不存在或不是目录；或枚举失败 scan_status=failed（不覆盖既有缓存）",
+    "3": "用法错误"
    },
    "schema": "learn-task-index/7",
-   "notes": "scan_status=partial/failed 时任务集合不完整，调用方必须停止枚举/续学并修复数据后重跑，不得按部分结果继续；failed 时 task_count=null（未知≠0）；任务含 current_item/item_total（可选，来自「下次续学」的已讲到第 k/N 目，缺失为 null）与 route_count（来自课程体系.md 节路线勾选数，课程体系缺失为 null）；写缓存用同目录临时文件 + os.replace 原子替换，区分 written/unchanged/failed；--root 可省略（走默认根），路径存在但非目录 → 3（scan_status=failed），路径不存在 → 1"
+   "notes": "scan_status=partial/failed 时任务集合不完整，调用方必须停止枚举/续学并修复数据后重跑，不得按部分结果继续；failed 时 task_count=null（未知≠0）；任务含 current_item/item_total（可选，来自「下次续学」的已讲到第 k/N 目，缺失为 null）与 route_count（来自课程体系.md 节路线勾选数，课程体系缺失为 null）；写缓存用同目录临时文件 + os.replace 原子替换，区分 written/unchanged/failed；--root 可省略（走默认根），路径存在但非目录与路径不存在**都 → 2（未测，scan_status=failed）**——票 106 把旧码 1 与 3 一起收进 2，它们都不是「查出违规」而是「这份数据没法判」"
   },
   {
    "script": "progress_check.py",
@@ -19,8 +18,9 @@
    "default_behavior": "校验（warning 非阻断）",
    "exit_codes": {
     "0": "通过",
-    "1": "不通过",
-    "2": "用法错误"
+    "1": "不通过（判据生效）",
+    "2": "未测：缺 progress.md / progress.md 不可读 / --staged 快照不存在",
+    "3": "用法错误"
    },
    "notes": "--release 放行模式：判分四态 correct/partial/incorrect/ungraded；partial 入分母不入分子，ungraded 与作废行不入分母（W-VOIDED-ATTEMPT / W-UNGRADED-ATTEMPT）；参考答案/标准答案/正确答案不构成学员作答；节号和 changed-lessons 仅接受正整数；目行 KP 查重与前置统一别名归一（课程体系.md 为目清单唯一来源）；同 attempt 的结果/独立性/KP 冲突报 E-ATTEMPT-CONFLICT；非法显式目标线报 E-FINAL-INVALID-TARGET；KP 类型/视觉任务声明后分型验收（E-KP-TYPED-GATE）；章规划/材料覆盖结构提示（W-MODULE-CONTRACT-INCOMPLETE / W-UNPARSED-MODULE / W-UNPARSED-MATERIAL / W-MATERIAL-COVERAGE-GAP）；空/模板证据 E-EMPTY-EVIDENCE；结课蓝图覆盖按机器行「KP=<id>｜评分点=<…>」同行映射判（仅题面提编号不算映射，缺口分「未出现 / 出现但未挂评分点」两类报 E-FINAL-BLUEPRINT-GAP）；结课/已完成未完成路线 E-ROUTE-UNDONE；复习来源阶段枚举 {逐节学习, 结课, 已完成}；起点自进入 S2 起必填；节目标线可选字段缺省取 gates.min_ratio，非法报 E-GATE-RATIO-INVALID；复述门要求关键点 ≥ restatement.keypoints 且「无事实性错误」已勾；复习债形态判据 W-REVIEW-DEBT：progress.md 三区任一存在「顺延>0」条目即告警（形态不是阈值，不引入新数字），**只验数据形态、验不了「模型有没有明示」**（闸口看不到对话），不参与「连续 3 天触发停新」计数（progress.md 无该字段，缺口见票 75），warning 不拦截、不影响 ok；出题前前置闸 E-PREREQ-UNMET（票 37 Q3 / 票 83，**拦停**）：被出题或判分的目（节证据里 attempt 行点名的 KP + 复述勾选点名的 KP + 结课综合测验点名的 KP），其硬前置若 `判定≠已判` 且无摸底「已会」括注 → exit 1；前置被暂缓/排除同样拦（它不会被判，等它等于等不到）。**只在 --release 生效**，且**只对已采用判定字段的任务生效**（清单里任意一行写了 `判定`）——全零的旧任务按未采用处理，否则升级当天存量任务全红；与 W-KP-JUDGE 的分工是票 81 Q4 定的：W- 拦已写下的记账，E- 拦还没发生的那道题；目行判定三字段（判定/独立正确/判定依据）的**形态**由 ltw_parse 的 parse_kp_row fail closed（非法枚举/重复键/日期格式坏或超 2 个不同日期/指针格式坏 → W-UNPARSED-KP），**语义**由 W-KP-JUDGE 只告警（已判却缺依据 / 依据指向的文件或题号不存在 / 日期非空时指针个数 ≠ 日期个数、日期为空时只允许 1 个指针（摸底「已会」单次证据路径，票 81 Q2）/ 同日重复不足不同日数 / 未判却写了另两字段）——该码只验指针闭合，**验不了「这个题号是不是真的判对了」**；票 92 未知段兜底：目行第 6 段后**段名不在白名单**（引入/类型/视觉任务/判定/独立正确/判定依据）的段被忽略、整行照常解析，出 W-KP-ROW-UNKNOWN-SEG（每个段名一条、同一段名跨行合并，逐段原文经 coverage.unknown_segs 回显），warning 不拦截；只放宽这一个分支——状态非法 / 前置引用不存在 / 缺段 / 重复编号仍走 W-UNPARSED-KP，无冒号残段与必需段错位同样判畸形；票 97 区标题层级守卫 W-SECTION-LEVEL：状态簿的区（薄弱点/错题本/错题归档/保持复习/日达标/检索锚/暂缓与范围外/本次交接/下次续学）必须是二级标题，写成三级时报本码——三级不切换当前区，条目会被并进上一条区间当条目消费且**全程不报错**（静默污染；「日达标」票 38 已实测、「检索锚」票 97 同形）；解析层对任何层级的同名区硬性静音（不并区、不计入任何区，宁可漏不可错），本码只负责让该静音看得见；只告警不拦停、不影响 ok，存量文件不回溯"
   },
@@ -29,8 +29,8 @@
    "usage": "next-interval | due-queue | calibration | day-streak [--selftest]",
    "exit_codes": {
     "0": "正常",
-    "1": "数据根缺失或非目录；契约畸形（与 rule_contract.load_or_exit 同口径，输出 E-CONTRACT-INVALID 的 JSON）",
-    "2": "参数错误"
+    "2": "未测：数据根缺失或非目录；契约畸形（与 rule_contract.load_or_exit 同口径，输出 E-CONTRACT-INVALID 的 JSON）；输入不可用（日期越界/数值非法）",
+    "3": "参数错误"
    },
    "schema": {
     "due-queue": "ltw-due-queue/5",
@@ -44,8 +44,9 @@
    "usage": "fringe <课程体系.md> | <课程体系.md> [--list] [--selftest]",
    "exit_codes": {
     "0": "正常",
-    "1": "畸形行 / 依赖环 / 解释器版本不足 / 疑似解析失败",
-    "2": "用法错误"
+    "1": "畸形行 / 依赖环 / 疑似解析失败（判据生效）",
+    "2": "未测：清单文件不存在或不可读；解释器版本不足（无 graphlib）",
+    "3": "用法错误"
    },
    "schema": {
     "fringe": "ltw-fringe/1"
@@ -57,9 +58,10 @@
    "usage": "[--manifest <路径>] [--capability <名称>]... [--selftest]",
    "exit_codes": {
     "0": "ready（增强层缺席也计 ready，另出 degraded）",
-    "1": "needs_setup / unavailable（核心层未就绪，停止当前运行，处理后重检）",
-    "2": "清单畸形 manifest_error"
+    "2": "未测：needs_setup / unavailable（核心层未就绪，停止当前运行，处理后重检）；清单畸形 manifest_error",
+    "3": "用法错误"
    },
+   "tristate_note": "**永不 rc=1，且这是决议不是缺口**：本脚本只回答「环境能不能用」，不判制品——它没有「查出违规」这一档。票 106 之前 needs_setup/unavailable 返回 1，与「查出违规」撞码：调用方看到 rc=1 分不清是环境没配好，还是某条教学判据真的被违反。现在未就绪一律 rc=2（未测），三态对它退化为 0/2/3。",
    "notes": "manifest schema 2；删除 functional_degradations、依赖级 degradation、partial 与 unmapped_capabilities；只保留机器可检查能力，文件写入与来源检索在实际动作边界验证；严格校验 dependency type、setup.steps/verify/security、布尔、min_version 与 capabilities。核心层与增强层分层：依赖上声明 degraded（恰好 fallback/standard/recovery 三非空字符串，且 required=false）即为增强层——缺席不改 status、不进 dependencies[]，只进顶层可选 degraded[]；没有声明的是核心层，缺席必须停。新增 command 检查类型：只探测 PATH，不执行、不起子进程、不联网"
   },
   {
@@ -68,8 +70,9 @@
    "default_behavior": "只读静态校验，不写盘；--reader 为可选的读者版 W 级检查；效果报告等非讲义文件按排除名单整份跳过（票 97）",
    "exit_codes": {
     "0": "无 E（可有 W）",
-    "1": "有 E（结构违规）",
-    "2": "用法/路径错误"
+    "1": "有 E（结构违规，判据生效）",
+    "2": "未测：路径不存在/不可访问；目录下没有 .md 材料",
+    "3": "用法错误（缺路径参数）"
    },
    "notes": "概念单元级五要素检查（不得全文件计数代替；纯概念标「③ 不适用」时②③ 豁免、①④⑤仍查；参照级标【参照】+「③ 不适用（参照级）」时仅查①）；框内段内断行拆断 `$…$`/code span 报 E（多行本身不报，归人工自检）；③ 标记行带内容报 W-MARKER-CONTENT；定稿区才查判分记账残留与节首导读三行，草稿/历史日志合法；查自测/检验题面区缺答案区（题面区认 `本节自测`/`自测`/`自测题`/`检验`/`检验题`/`检验问题`/`本节检验`，答案区认同词干+`答案`（可接 `区`/`要点`/`与解析`）或通用 `答案`/`参考答案`，多答案区逐区查（同族答案区只覆盖同类题面区，通用答案区可统管其前多区）；开放/动手检验写 `- 检验说明：` 显式豁免）、图引用死链（正文 `图：路径` 与 Markdown 图片路径各按自己的语法作用域解析：`图：` 的命中位置落在图片语法区间内即判为 alt、丢弃，残缺与引用式同样按区间排除，故 alt 写「图型:一句话结论」不构成图引用）；Markdown 读取失败/非法 UTF-8 报 E-READ-FILE，SVG 读取失败/非法 UTF-8 报 E-IMG-READ，均继续扫描其余文件并最终 exit 1；`--reader` 加查标题层级/表格/alt/SVG/速览（含缺失）/回看索引/一句话结论/强调密度，结构项为 W 级、不阻断、旧讲义不回溯；图检查（E-IMG-READ/W-READER-SVG/W-READER-ALT/W-READER-CAPTION）对任何含图文本生效、不受「像不像讲义」的 gate 约束，文案/结构项仍受 gate 约束；gate 关闭时摘要打印「已跳过 N 项读者版检查（未校验）」，不再输出「通过:无违规项」，退出码语义不变；`--selftest` 的图注回归夹具必带真图（`has_image_ref` 读 vis，仅含 code span 的文档会被判无图而整块跳过图检查），并设两条前置断言锁住夹具不退化成恒过；自测题面标题接受 10 种（含本节前缀），契约 headings.self_test 为准；可见正文（vis）的定界符扫描以 CommonMark 0.31.2 §Code spans/§Backslash escapes 与 GitHub GFM 实测真值为准：起始定界符须未被奇数个反斜杠转义，code span 闭合只认等长反引号 run 且不认转义（span 内转义不生效），行内 `$` 开侧不得紧跟空白、闭合侧不得前接空白或后接数字，任一侧找不到配对即按字面文本保留（不吞该行余下正文）；vis 除代码围栏行（固定空串、由 fence 标记短路）外均与原文逐字符等长（含跨行 `$$` 块起点行与续行），下游按位置取尾巴；`breaks_inline` 复用同一 scan_inline，只认「开了没闭合」判 E-BOX-WRAP；票 97 讲义排除名单：效果报告（文件名前缀 `效果报告-` / `效果报告_`）与 `materials/` 路径段下的文件**不参与**讲义五要素检查——报告是评审证据不是讲义，它没有概念单元/答案框，按讲义扫必然零命中，旧实现因此在缺要素时**静默打印「通过：无违规项」**（假绿，不是报错）；排除后改打印「已跳过 N 个文件（不在讲义校验范围，未校验）」，与读者版「已跳过 N 项检查」分开措辞，并同样**阻止**「通过」输出；退出码语义不变（跳过 ≠ 通过，也不等于失败：无 E 仍 rc=0）；名单按**形状**匹配（文件名前缀 / 路径段）不写死单个文件名，显式传单个效果报告文件走同一判据；报告完整性归 verify_effect_report.py（W-EFFECT-*），本脚本不重复判也不替它判"
   },
@@ -79,8 +82,9 @@
    "default_behavior": "只读；加载并校验 contracts/rules.json，输出 JSON；红线台账、冻结清单内容与冻结比对结果都只写 stdout/stderr、不落盘（重新冻结必须是人显式重定向的一次可评审 diff）",
    "exit_codes": {
     "0": "正常/校验通过（冻结比对：键集合相等，或有内容指纹漂移但只是 W 级告警；总表对拍：错误码集合、规则编号集合与两组总数声明全部相等）",
-    "1": "契约缺失/畸形或红线凭据结构不成立；或冻结清单缺失/畸形、基准不是契约、键集合与契约不等（少一条或多一条）；或总表与契约双向对拍不等（错误码/规则编号缺一条或多一条、总数声明与常量或契约不符、声明行出现次数不为 1）",
-    "2": "用法错误（含 --freeze 未与 --redline-freeze-check 同用、--registry 未与 --registry-check 同用）"
+    "1": "判据生效并查出违规：契约缺失/畸形或红线凭据结构不成立；或冻结清单基准不是契约、键集合与契约不等（少一条或多一条）；或总表与契约双向对拍不等（错误码/规则编号缺一条或多条、总数声明与常量或契约不符、声明行出现次数不为 1）",
+    "2": "未测：契约/冻结清单/总表**读不出来**（缺失、不可读、JSON 非法）——判据没有跑起来，与「读出来了但内容不对」（rc=1）必须分开",
+    "3": "用法错误（含 --freeze 未与 --redline-freeze-check 同用、--registry 未与 --registry-check 同用）"
    },
    "schema": "ltw-rules/3",
    "notes": "契约唯一来源 contracts/rules.json；缺失/畸形报 E-CONTRACT-MISSING/E-CONTRACT-INVALID。纯常量加载器：只返回结构版本与业务常量。本条目的 schema 与本脚本的 SCHEMA 常量是**两处必须相等的副本**（票 91），由本脚本 --selftest 直接读本文件比对，只改其中一处即红；同文件里 task_index.py 的 learn-task-index/7 是索引产物版本，语义不同，不参与相等。红线凭据（票 96）是 constants 下与业务常量平级的两个块 redlines / sources，不进 REQUIRED_CONST——加字段不破旧契约，缺块也不算错（阶段性对象），但两块必须成对出现。三层是 线 → 子判据 → 凭据；子判据用双层键：语义标识 R<线号>.<slug> 定下不得再改，order 可重排，slug 必须以小写字母起头（纯序号 R1.1 判非法，否则重排一次就能让一条规则被另一条顶替而数量不变）。出处外键双向：正向硬错——凭据引用 sources 里没有的 id 报 E-EVIDENCE-REF-MISSING（孤儿引用）；反向 soft——sources 里没人引用的条目由 --redline-keys 的 orphan_sources 与 --redlines 台账尾部报出，不拦加载（容器先于内容落地，票 98 才填正文，设成硬错会让整个重写期契约不可加载）。--redline-keys 输出键集合并附 fingerprint（redlines 块的规范化 JSON 的 sha256）：键集合相等即通过、指纹变化只告警，硬闸归票 99。--redlines 把台账渲到 stdout，不落盘（落盘等于把已退役的「契约反向生成文档」请回来）。--selftest 跑加载器自测；--keys 列出业务常量键；--get <dotted> 取单个取值。历史上 --topology / --coverage / --audit / --audit-strict 已随编译层退役（见 v9.20.0），不再提供。票 99 冻结清单硬闸：基准是契约侧另存的 contracts/redlines-freeze.json（--redline-freeze-payload 的输出原样重定向而来，60 行 JSON / 47 条指纹，可逐字节重建），**不是 SKILL.md**——入口文档正是这轮被重写的对象，让被测方当自己的评分器，闸口一定会在某一批被顺手放宽且无人看见；清单的 baseline.path 必须是 contracts/rules.json，指向 SKILL.md 或任何其它路径一律红。口径两档：**键集合相等是硬闸**（清单缺一条或多一条 → rc=1，missing_in_freeze / extra_in_freeze 分别报出）；**内容指纹变化只告警**（逐条指纹落进 drift[] 并打 W-REDLINE-FREEZE-DRIFT 到 stderr，rc 仍为 0，不进 ok——重写期正文一定在变，把指纹设成硬闸会让每批都红，最后只能被关掉，比没有闸口更坏因为留下有闸的错觉）。指纹按**每条子判据**算（键 → sha256），不用整块指纹：整块只能告红指不出哪一条，人只能整份重冻结，那正是顺手放宽的入口。读不到清单 / JSON 非法 / 字段缺失 / schema 不符一律 fail closed（rc=1），不得当成没变化。清单是否与契约一致由 --selftest 内的真实夹具备份兜住，故 G3 跑 --selftest 即等于跑硬闸。票 94 总表双向对拍：--registry-check 把**人读总表** references/registry.md 与契约互为镜像——错误码集合（契约 constants.errors 递归收集去重，129 = E 59 + W 70）与规则编号集合（constants.redlines 的 R<线号>.<slug> 双层键，11 条线 / 47 条子判据）都必须**相等**，少一条或多一条都 rc=1；两组总数另以具名常量钉住（REGISTRY_CODE_TOTAL/REGISTRY_CODE_E/REGISTRY_CODE_W/REGISTRY_REDLINE_LINES/REGISTRY_CRITERIA_TOTAL），声明行必须**恰好出现一次**（零次=声明被删、多次=锚点不唯一，改错位置会得假绿）。理由：错误码总数漂过两次（116 → 126 → 128），两次都是文档落后于契约而脚本全绿。口径分三套且不得混：错误码与双层键进索引、参与集合相等；分册正文里的「R＋数字」旧编号（R35/R54 等 19 个取值，无机器正本）**只登记来源与落点、不进索引**——混计一次两套就再也分不开。--registry 只能与 --registry-check 同用。"
@@ -91,8 +95,9 @@
    "default_behavior": "只读对账，不写盘",
    "exit_codes": {
     "0": "干净（无未引入术语命中）",
-    "1": "存在命中（输出违规清单）",
-    "2": "用法/文件错误"
+    "1": "存在命中（判据生效，输出违规清单）",
+    "2": "未测：课程体系清单不存在 / 零可用目行；待扫描文件不存在",
+    "3": "用法错误（缺 --list 或 --scan）"
    },
    "notes": "R46 出题前术语对账的机器护栏：已引入集合 = 已讲目行引入列 ∪ 已讲 KP 名称 ∪ --extra-terms/--extra-file 追加；默认只扫题面区标题（## 题组/自测/检验/练习）之后到下一 ## 之前，--scan-all 扫全文；违规逐条输出 W-TERM-UNTAUGHT 到 stderr，JSON 汇总到 stdout；课程体系零可用目行 exit 2（E-LIST-EMPTY），不猜不补造"
   },
@@ -102,8 +107,10 @@
    "default_behavior": "只读静态校验，不写盘；只告警不拦停（W- 不进 ok，恒 rc=0）",
    "exit_codes": {
     "0": "已校验（可有 W）或报告不存在（打印「跳过」，未校验）",
-    "2": "用法/路径错误"
+    "2": "未测：任务目录不存在或不可访问",
+    "3": "用法错误（缺任务目录参数）"
    },
+   "tristate_note": "**不适用 rc=1，且这是决议不是缺口**：本脚本没有 E 级判据（票 64 定的「只告警不拦停」），所以它永远不会「查出违规」。三态对它退化为三档：0（已校验/跳过）、2（未测）、3（用法错误）。票面点名的「verify_effect_report.py 无 E 级判据故从不 rc=1」在这里被显式登记，不留成「看起来漏了」的疑问。",
    "notes": "效果报告（materials/效果报告-<课程名>.md）的消费通道：只验完整性 + 指针闭合，不重算得分率（票 64 否决「一致性」——同一批数据两套算法会打架）。四段硬必填（结课绝对水平 / 延迟保持 / 元认知校准 / 证据指针）+ 每段一行三态判定（判定：已测 / 判定：未测（理由：…），理由禁占位词）+ 按段定粒度的指针闭合（99- 卷须含「目标线：」；88- 延迟测量须不含 lesson_id=，写了会顶掉节验收证据；元认知指到「信心=」行或 progress.md）+ 报告不得写「键=值」字段行（只认行首列表项 + 键=；体例纪律，materials/ 不进 parse_meta，不会触发 W-META-INVALID）。小节标题容忍尾随括注与全角冒号。「结课绝对水平」判已测时另须写出得分率的分母来源（引用卷面 `目标线：a/b` 行或声明「按契约默认 a/b」；票 103 / 规格 90 结算项 B 第 3 条）——**只验存在性，不验分母数值与卷面是否一致**。六码 W-EFFECT-MARKER / -LEVEL / -RETENTION / -CALIBRATION / -POINTER / -DENOMINATOR。已知宽口：指针按全文找不按段、围栏代码块内标题算命中、多份报告只校验排序第一份。段落必填、值可「未测」——结课当天报告即完整，第 30 天只回填该段；机检验「有没有这一栏」不验「做没做」。报告不存在打印「跳过」且 rc=0，不得打印「通过」（票 66 语义）。本脚本无 E 级判据，故无 exit 1：只告警不拦停是票 64 决议。不验内容一致性、不设达标线（归票 36）。"
   },
   {
@@ -113,8 +120,9 @@
    "exit_codes": {
     "0": "无 E 级问题",
     "1": "存在 E 级问题（路径缺失/锚点断链/锚点歧义/§N 歧义）",
-    "2": "用法错误"
+    "3": "用法错误"
    },
+   "tristate_note": "**不适用 rc=2 的环境档**：本脚本的全部输入是仓内文件（SKILL.md / references/），路径由脚本自己解析、不接受外部数据根；读不到就当 E-PTR-PATH 报违规（那是「制品有问题」，不是「环境不可用」）。缺 --root 指向的仓根时同理走 rc=1。三态对它退化为 0/1/3，这是按输入性质判定的，不是漏做。",
    "notes": "四项检查：① 路径存在；② 「小节名」锚点命中唯一——标题优先，正文加粗词兜底（W-PTR-BOLD），两层都必须唯一，多命中报 E-PTR-AMBIG、零命中报 E-PTR-ANCHOR；③ §N 编号唯一（本仓已弃用 §N，见 #31 方案 B，此项防回潮，W-PTR-SECNO 提示改小节名）；④ 自指指针记 W-PTR-SELF（合并票「分册零互指」的目标项，现存 249 处，见 #31）。匹配只做精确相等与去编号前缀（≥4 字），不做任意子串包含——那会让「图」命中「概念地图」。代码块内不校验；`references/xxx.md` 这类占位示例按 PLACEHOLDER 跳过；progress.md / 课程体系.md / 记忆.md / profile.md 属数据文件，不计自指。"
   },
   {
@@ -124,8 +132,9 @@
    "exit_codes": {
     "0": "三条判据全过",
     "1": "有判据不通过（含锚点缺失或砍点常量读不到——一律 fail closed）",
-    "2": "用法错误"
+    "3": "用法错误"
    },
+   "tristate_note": "**不适用「rc=1 = 环境炸了」这一半**：票 106 之前 `--root` 指向不存在的目录时本脚本落成 rc=1，与「查出违规」撞码——环境没跑起来却被记成制品有问题。现在 `--root` 不可用一律走 rc=2（未测，经 `ltw_exit.require_root`），rc=1 只留给「判据生效且查出违规」。",
    "notes": "票 102 把「压缩后入口还能用」变成会红的断言，三条判据都按**字节**算（rule_contract.py 的红线节预算按**字符**，是两个不同的验收轴，不能互相替代）：① 红线节（`## 十一条教学红线` 到下一个二级标题之前）的**结束字节**必须 < 压缩砍点下界；② 前两段（一句话纪律引用块 + 加载路由节）合计 ≤6000 B；③ 加载路由表每一行的行号必须早于红线节，且**一行只指一册**（E-ENTRY-ROUTE-MULTI-BOOKLET，是 AC「加载表改为动作 → 一册」的机器判据）。砍点下界**只从** contracts/rules.json 的 constants.budget.context_compress_cutoff_lower_bound 读，脚本内不写死数字：写死当前实测值，断言就永远跟着自己转——红线节哪天被砍掉 3,000 B，阈值跟着变小，断言照样绿，而这次重排的全部意义正是被砍掉的那部分。锚点缺失、常量缺失/缺键/非整数一律按红处理（fail closed），否则改一次标题就静默摘掉闸口。自测含四条夹具变异与四条**真实制品变异**（拷真身到临时根再改，不动被测文件）：挪表回红线之后 / 红线节前插填充 / 砍点常量改小到 5000 / 把两册塞进同一行，每条都断言「改坏 → 红，还原 → 绿」且变异锚点唯一。真实制品变异是必需的：夹具变异只证明判据逻辑对，证明不了真实 SKILL.md 的字节真被这条判据咬住。"
   },
   {
@@ -135,8 +144,9 @@
    "exit_codes": {
     "0": "三条判据全过",
     "1": "有判据不通过（含扇出表/契约/入口锚点缺失——一律 fail closed）",
-    "2": "用法错误"
+    "3": "用法错误"
    },
+   "tristate_note": "**不适用「rc=1 = 环境炸了」这一半**：票 106 之前 `--root` 指向不存在的目录时本脚本落成 rc=1，与「查出违规」撞码——环境没跑起来却被记成制品有问题。现在 `--root` 不可用一律走 rc=2（未测，经 `ltw_exit.require_root`），rc=1 只留给「判据生效且查出违规」。",
    "notes": "票 95 把「加一门学科只动一个文件」变成会红的断言。判据①**双向相等**：`references/subjects-index.md` 的「学科层扇出表」列出的文件集合，必须与磁盘上 `references/subjects-*.md`（不含本册）+ `references/disciplines/*.md` 的集合相等——少一行是漏登记，多一行是空指针，**只查一个方向等于没查**（只查「表里每行都有文件」时，新加一个学科包没写进表，表自己完全自洽、全绿，而漏登记正是本票要消灭的东西）。判据②每行只挂一个文件且「管什么/何时读」两栏非空、无重复行——表不能退化成一串裸文件名。判据③入口 `SKILL.md` 里指向学科层的路径只允许 `references/subjects-index.md` **一个取值**，且必须落在「加载路由」表内可达：散开即红（E-SUBJ-ENTRY-SCATTERED），只在「参考文件」列表里提也红（E-SUBJ-ENTRY-UNREACHABLE——读者仍不知道什么时候读它）。语义边界：本册自己是扇出的**发起方**不是被扇出行，故不进表（否则违反分册零互指，且让「行数 == 文件数」这个等式失去意义）；刻意**不**要求 `disciplines/` 目录与契约 `discipline_slugs` 相等，否则加一门学科要从「一个文件 + 一行」变成三处齐改，反倒违背本票 AC。自测 10 用例：绿基线和 AC 实证（加一个文件 → 红，再补一行 → 绿，全程只动这两处）加七条变异（删一行 / 加未登记文件 / 某行留空 / 入口散开 / 入口册从路由表消失 / 三个锚点缺失 fail closed / 真实制品变异），每条断言「改坏 → 红，还原 → 绿」且变异锚点唯一。"
   },
   {
@@ -146,8 +156,9 @@
    "exit_codes": {
     "0": "四锚点取值一致且每处恰好命中 1 次",
     "1": "不一致 / 锚点缺失 / 锚点重复 / 文件不可读",
-    "2": "用法错误"
+    "3": "用法错误"
    },
+   "tristate_note": "**不适用「rc=1 = 环境炸了」这一半**：票 106 之前 `--root` 指向不存在的目录时本脚本落成 rc=1，与「查出违规」撞码——环境没跑起来却被记成制品有问题。现在 `--root` 不可用一律走 rc=2（未测，经 `ltw_exit.require_root`），rc=1 只留给「判据生效且查出违规」。",
    "notes": "四处发版锚点（票 52 R4）：SKILL.md frontmatter metadata.version、contracts/rules.json version、README.md 发版行、references/ops.md「当前核验·适用版本」。票 100 之前此处无任何机检兜底——rule_contract.py 只校验 rules.json 一处，发现不了另三处漂移。每处断言「恰好命中 1 次」：0 次匹配不等于通过（正则写窄或锚点被删都会得到 0 次，写成「没有不匹配就通过」即是假绿）；多次命中意味着改一处会留下第二处旧值。"
   },
   {
@@ -157,8 +168,9 @@
    "exit_codes": {
     "0": "全部 ≤上限且路由目标导读句齐备",
     "1": "有超限册或路由目标缺导读句",
-    "2": "用法错误"
+    "3": "用法错误"
    },
+   "tristate_note": "**不适用「rc=1 = 环境炸了」这一半**：票 106 之前 `--root` 指向不存在的目录时本脚本落成 rc=1，与「查出违规」撞码——环境没跑起来却被记成制品有问题。现在 `--root` 不可用一律走 rc=2（未测，经 `ltw_exit.require_root`），rc=1 只留给「判据生效且查出违规」。",
    "notes": "两条判据各有适用域：字节上限对 references/ 下全部 .md 生效（超限会被宿主单次读取静默截断）；导读句只对加载路由表里出现的目标生效——学科群切片与学科包由 subjects-index.md「学科层扇出表」按需扇出，其「何时读」已在扇出表一栏，重复要求册顶导读句只会把耦合度做大。导读句判据是「第 3 行 blockquote 含『时读本册』」，允许后接补充说明。"
   },
   {
@@ -167,8 +179,9 @@
    "default_behavior": "只读：读 evals/evals.json，按版本降级口径统计，不写盘",
    "exit_codes": {
     "0": "结构合规（含全部降级；降级不是错误）",
-    "1": "结构缺失或取值非法 / 账本不可读",
-    "2": "用法错误"
+    "1": "结构缺失或取值非法（判据生效）",
+    "2": "未测：账本不可读 / 不可解析",
+    "3": "用法错误"
    },
    "notes": "降级规则：decided_against_version != applies_to_version 的证据视作「未验证」，不计入「通过」。降级是**第三态**——既非通过也非失败（成因：证据本来就是旧版本做的，或版本前进了而证据没重跑），因此 rc 仍为 0；只有结构缺失/非法才 rc=1。为什么必须机械：旧实现靠 evals.json 里一整段自然语言说明「这 19 条只证明当时的版本」，靠人读一段话记住，版本一多必漏且无信号。 票 101 收尾缺口（规格 90 US44）：覆盖范围从只读 `cases` 扩到三块证据——`cases` / `redline_regression.cases` / `trigger_eval.cases`；每块的每条证据都必须带 `decided_against_version`。块缺失、不是对象或为空一律判红（fail closed，E-EVAL-BLOCK-MISSING 语义），不允许「没读到就当没有」。补录的取值只按证据本身能追溯到的版本记：红线块 11 条的 run_id 指向 2026-11-08 的 v7 回放，而该回放声称的判据（地图三要素）在 git 里最早出现于 894121a（2026-11-09 v9.20.0），与 v9.19.2 对不上（票 43），故记 `unknown`；触发块 20 条 runs_done=0、从未运行，同样记 `unknown`。两者按降级口径视作「未验证」，不伪造版本号、不改 verdict。自测 16 用例覆盖三块的正例、缺字段、整块缺失、块非对象、块为空与跨块混合计数。"
   },
@@ -179,8 +192,9 @@
    "exit_codes": {
     "0": "六条判据全过（C0 基线可指认 / C1 覆盖面 / C2 无幽灵行 / C3 去向可达 / C4 改名一致 / C5 判据非空）",
     "1": "有判据不通过（含 git 不可用、基线 tag 不存在、两 tag 的 references/ 树不同——一律 fail closed）",
-    "2": "用法错误"
+    "3": "用法错误"
    },
+   "tristate_note": "**不适用「rc=1 = 环境炸了」这一半**：票 106 之前 `--root` 指向不存在的目录时本脚本落成 rc=1，与「查出违规」撞码——环境没跑起来却被记成制品有问题。现在 `--root` 不可用一律走 rc=2（未测，经 `ltw_exit.require_root`），rc=1 只留给「判据生效且查出违规」。",
    "notes": "票 104 把用户故事 34「清除冗余内容时有台账可查」从一句承诺变成会红的断言。台账是人写的，半年后必然与仓库脱节，所以每一行都必须可被脚本验证：C1 覆盖面（git diff --diff-filter=DR 的每个路径都在台账里，少一条即红）与 C2 无幽灵行（台账里的每个原路径都真的被删除或改名过，多一条即红）必须双向——只查 C1 会放过「删了 112 个文件、台账只记 20 条」这种全绿式漏登记，只查 C2 会放过台账写着一堆没发生过的路径、读者按台账 git show 全扑空。C3 要求去向路径真实存在且小节在目标文件内按标题恰好命中 1 次（不按子串计数：小节名会作为普通词组在正文反复出现，子串计数会把真实落点判成歧义，逼人去写更长的句子绕开，那是可机检的假象）；小节名用贪婪配对，因为真实小节名可嵌套引号（references/ops.md 的「核验状态与「不能推出什么」」）。C4 要求处置写「改名」的行，去向必须等于 git 实测的改名目标，且实测是改名的行不得写成删除。C5 要求判据列给出承接证据或废弃理由，写「—」即红。基线 tag 缺失或不可解析一律 fail closed（跳过等于没有基线就没有 diff、没有缺行就是绿，tag 一丢闸口自动全绿）；并断言 baseline/v9.19.2-pre-redo 的 references/ 树与 v9.19.2 逐字相同，台账才不因换基线而失去意义。自测 13 用例：10 条夹具变异（正例 / 删一行 / 加幽灵行 / 改坏去向 / 去向小节不存在 / 小节重名 / 改名不符 / 判据写「—」/ 基线 tag 缺失 / 两 tag 树不同）加 3 条真实制品变异（拷真台账到临时文件再改，不动被测文件：删一行 / 加幽灵行 / 只改「去向」单元格），每条断言改坏即红、还原即绿。需要完整 git 历史；非 git 检出时 C0 直接红并说明原因，不静默跳过。"
   },
   {
@@ -189,8 +203,9 @@
    "default_behavior": "只读：AST 静态扫描 scripts/ 与 evals/ 下全部 .py 的 import，不执行被扫代码、不写盘",
    "exit_codes": {
     "0": "全部 import 落在标准库或本仓模块，且无网络模块、无动态 import",
-    "1": "有第三方包 / 网络模块 / 动态 import / 扫描面为空 / 解释器无 stdlib 名单（fail closed）",
-    "2": "用法错误"
+    "1": "有第三方包 / 网络模块 / 动态 import / 扫描面为空（判据生效）",
+    "2": "未测：解释器无 sys.stdlib_module_names（3.10 以下），判不了就不许判绿",
+    "3": "用法错误"
    },
    "notes": "规格 90 用户故事 49 原写「零外部依赖是已经通过机检证明的结构性质」——在 10.0.5 之前这句话是假的：全仓 grep 'import ast' 零命中，没有任何脚本证明过这条性质。本脚本把承诺变成会红的断言。四条判据：E-ZERODEP-THIRDPARTY（import 了既不在标准库、也不是本仓模块的包）、E-ZERODEP-NETWORK（import 了具备联网能力的模块——socket / ssl / http / urllib / ftplib / smtplib / telnetlib / xmlrpc / webbrowser / asyncio 等，**即使是标准库也拦**，因为零依赖承诺说的是「不存在联网能力」，不是「没装第三方包」）、E-ZERODEP-DYNAMIC（__import__ / importlib，静态分析看不见目标，留这个口子前三条都可被绕开）、E-ZERODEP-STDLIB-NA（解释器 < 3.10 没有 sys.stdlib_module_names，判不了就红——写成「名单缺失就跳过」等于让闸口在旧解释器上自动全绿，正是本仓反复吃过的假绿）。扫描面为空也判红（E-ZERODEP-NO-SOURCE）：没有源文件时「零违规」不构成证据。本仓模块按 scripts/ 与 evals/ 下的文件名识别，相对 import 一律放行。自测 9 用例：纯标准库+本仓模块（绿）、requests、socket、urllib.request、http.client、__import__、importlib、扫描面为空、语法错误——后八条各自断言改坏即红。"
   },
@@ -201,15 +216,43 @@
    "exit_codes": {
     "0": "四条齐备，三栏齐全，且四条命令全部 rc=0",
     "1": "缺节 / 条数不为 4 / 缺栏 / 无命令 / 命令失败",
-    "2": "用法错误"
+    "3": "用法错误"
    },
+   "tristate_note": "**不适用「rc=1 = 环境炸了」这一半**：票 106 之前 `--root` 指向不存在的目录时本脚本落成 rc=1，与「查出违规」撞码——环境没跑起来却被记成制品有问题。现在 `--root` 不可用一律走 rc=2（未测，经 `ltw_exit.require_root`），rc=1 只留给「判据生效且查出违规」。",
    "notes": "规格 90 用户故事 36：每批四条准入（脚本自测 / 规则清单回归 / 指针校验 / 续学验证）。在 10.0.6 之前这四条只存在于规格正文与 14 张已关闭实施票的票面里，仓内文档零命中——施工者要验收得先考古。本脚本把「文档写了四条」变成「文档写的那四条真的能跑」。判据：E-ADMIT-MISSING（references/gates.md 找不到「每批四条准入」节）、E-ADMIT-COUNT（条目数不等于 4——少一条=少一道关，多一条=有人偷偷加了口径）、E-ADMIT-FIELD（某条缺「跑什么 / 判定 / 失败处置」三栏之一）、E-ADMIT-NOCMD（某条没有可执行命令）、E-ADMIT-RED（某条命令执行后 rc != 0）。为什么命令要真的跑：文档里的验收清单最典型的腐烂方式不是被删，是脚本改名或参数变了而正文一字未动——只比对文本会全绿，那是本仓反复吃过的假绿。所以每条命令现场执行一次，rc=0 才算这条准入成立。为什么条数必须恰好 4：这四条是「每批固定、不逐批重新发明」的承诺；允许 3 或 5 条等于允许施工者按当批方便自行裁剪，那正是这条用户故事要消灭的东西。条目形态两种都认：列表项「1. **标题**」与小节标题「### 1. 标题」，解析结果一致。自测 8 用例：四条齐备（绿）、缺整节、只有三条、多出一条、缺「失败处置」栏、某条没有命令、某条命令失败、小节标题形态——后七条各自断言改坏即红。"
+  },
+  {
+   "script": "verify_exit_tristate.py",
+   "usage": "[--selftest] [--root <技能根>]",
+   "default_behavior": "只读：喂夹具跑真实脚本并读退出码，不写盘",
+   "exit_codes": {
+    "0": "全部脚本符合三态（环境夹具 rc=2 且带 untested 标记 / 违规夹具 rc=1 / 必败参数 rc=3）",
+    "1": "有脚本不符合三态（含名单读不到——一律按红处理）",
+    "2": "本机检自身无法判定",
+    "3": "用法错误"
+   },
+   "notes": "票 106：把「rc=1 既可能是查出违规、也可能是环境炸了」这个缺陷变成会红的断言。四条判据各自独立可证红：E-TRISTATE-ENV-NOT-2（环境不可用夹具必须 rc=2，不得 0/1/3）、E-TRISTATE-ENV-NO-MARK（rc=2 时 stderr 必须有独立一行的结构化 JSON 带 untested=true 或 verdict=untested——只改数字不算把两者分开，因为调用方与机检都只能看到一个数字）、E-TRISTATE-VIOLATION-1（必然违规的夹具必须 rc=1，证明判据真的生效）、E-TRISTATE-USAGE-3（必败参数必须 rc=3，证明「调用错误」没有与「未测」撞码）。**为什么 2 与 3 必须分开**：argparse 默认用法错误就是 exit 2，若沿用，则「喂一个环境不可用夹具必须 rc=2」这条机检会被「喂一个必败参数」直接满足——闸口全绿而它证明的只是 argparse 会拒绝坏参数。**夹具口径**：环境不可用用真实可构造的输入（不存在的路径 / 不可读的清单 / 坏掉的账本），不 mock 不打桩——打桩会把「脚本怎么判定环境」从被测范围里拿掉，而那正是本票要验的东西；违规夹具用必然 E 级违规的最小制品（图引用死链），不用「缺五要素」——后者对不像讲义的文本会整份跳过并打印「已跳过（未校验）」，rc=0 是正确语义（票 66），拿它当违规夹具会把一条正确的跳过语义误判成闸口失效。**命令行名单从登记表 scripts_contract 读，不 glob**：scripts/ 下还有无 CLI 的内部模块（ltw_parse / ltw_typography / ltw_exit），它们对任何参数都 rc=0 是对的（G2 内部模块自证正是这么断言的），glob 会把它们拉进「必败参数必须 rc=3」然后得出「闸口失效」的错误结论。**变异测试**（本票 AC 的硬要求）：拷真身到临时根，把 ltw_exit.EXIT_ENV 从 2 改成 1 → 必须红；把 EXIT_USAGE 从 3 改成 2 → 必须红；两条都断言变异锚点唯一。自测 6 用例。"
   }
  ],
+ "exit_tristate": {
+  "schema": "ltw-exit/1",
+  "definition": "scripts/ltw_exit.py",
+  "codes": {
+   "0": "通过",
+   "1": "查出违规（判据生效）",
+   "2": "未测（环境或输入不可用，判据没有跑起来）",
+   "3": "调用错误（参数非法，判据没有进入）"
+  },
+  "note": "票 106 的机读正本：三态 + 调用错误四档的口径、唯一定义处、以及「哪些脚本按输入性质不适用哪一档」。逐脚本的触发条件在各自的 exit_codes 里；本块只放跨脚本不变量，由 scripts/verify_exit_tristate.py 读取并断言 schema 相等（scripts/ltw_exit.py 的 SCHEMA 常量）。**为什么 3 必须与 2 分开**：argparse 默认用法错误就是 2，沿用则「环境夹具必须 rc=2」会被「喂必败参数」满足，闸口全绿而只证明了 argparse 会拒绝坏参数。"
+ },
  "internal_modules": [
   {
    "script": "ltw_parse.py",
    "note": "共享解析原语（清单行/目行/attempt 行），无 CLI；覆盖由四个消费者脚本的 --selftest 承担：task_index / progress_check / scheduler / kp_sort"
+  },
+  {
+   "script": "ltw_exit.py",
+   "note": "三态退出码唯一定义处（票 106），无 CLI；覆盖由 verify_exit_tristate.py 与全部导入它的命令行脚本 --selftest 承担：rule_contract / task_index / progress_check / scheduler / kp_sort / check_environment / verify_explanation / prereq_check / verify-doc-pointers / verify_effect_report / verify_admission / verify_entry_budget / verify_subject_fanout / verify_version_anchors / verify_volume_budget / verify_eval_versions / verify_content_ledger / verify_zero_dependency"
   },
   {
    "script": "ltw_typography.py",
@@ -237,7 +280,8 @@
    "python -B scripts/verify_eval_versions.py --selftest",
    "python -B scripts/verify_content_ledger.py --selftest",
    "python -B scripts/verify_zero_dependency.py --selftest",
-   "python -B scripts/verify_admission.py --selftest"
+   "python -B scripts/verify_admission.py --selftest",
+   "python -B scripts/verify_exit_tristate.py --selftest"
   ],
   "note": "十八个命令行脚本自测覆盖确定性计算、结构校验、契约完整性与术语对账；真实教学回归与故障夹具见 evals；verify-doc-pointers 校验 doc 指针四项（路径/锚点/编号/自指）；票 99 的冻结清单硬闸（键集合相等 rc=1 / 内容指纹漂移只 W 级告警）随 rule_contract.py --selftest 一起跑，真身基准 contracts/redlines-freeze.json 由该自测内的真实夹具备份兜住；票 102 的入口预算三条判据（红线节结束字节 < 砍点下界常量 / 前两段 ≤6000 B / 加载路由早于红线且一行一册）随 verify_entry_budget.py --selftest 一起跑，砍点常量的唯一正本是 contracts/rules.json 的 constants.budget.context_compress_cutoff_lower_bound。本分区（scripts_contract vs internal_modules）不是人读声明，由 evals/verify-gate-registry.py 的 G1-G6 机检：G1 分区完备（不重不漏无幽灵）、G2 分类自证（命令行喂必败参数必须 rc≠0，内部模块喂同一参数必须 rc=0）、G3 清单可执行、G4 清单与契约同源、G5 覆盖去向（internal_modules 的 note 点名的每个覆盖者必须真的 import 该内部模块）、G6 字节同源（git 说干净的文件，工作区字节必须等于 index blob——抓被 stat 缓存掩盖的 EOL/等长篡改；非 git 检出跳过并明说未校验）。"
  }

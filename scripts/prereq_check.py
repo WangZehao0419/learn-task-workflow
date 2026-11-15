@@ -44,6 +44,9 @@ import sys
 import tempfile
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import ltw_exit  # noqa: E402  三态退出码唯一定义处（票 106）
+
 STATUS_SPLIT_RE = re.compile(r"（[^）]*）\s*$")
 QUESTION_SECTION_RE = re.compile(r"^#{1,2}\s*(题组|本节自测|自测|自测题|检验|检验题|检验问题|本节检验|练习|题)")
 ANY_H2_RE = re.compile(r"^#{1,2}\s")
@@ -194,7 +197,7 @@ def _selftest() -> int:
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="出题前术语对账（R46）")
+    ap = ltw_exit.UsageParser(description="出题前术语对账（R46）")
     ap.add_argument("--list", required=False, help="课程体系.md 路径")
     ap.add_argument("--scan", action="append", default=[], help="待扫描的题组/讲义文件（可多次）")
     ap.add_argument("--extra-terms", default="", help="追加已引入术语（逗号/分号分隔）")
@@ -207,16 +210,15 @@ def main(argv=None) -> int:
         return _selftest()
 
     if not args.list or not args.scan:
-        print(json.dumps({"ok": False, "code": "E-USAGE", "message": "需要 --list 与 --scan"}), file=sys.stderr)
-        return 2
+        return ltw_exit.usage_error("需要 --list 与 --scan", parser=ap)
     lpath = Path(args.list)
     if not lpath.is_file():
-        print(json.dumps({"ok": False, "code": "E-LIST-MISSING", "message": str(lpath)}), file=sys.stderr)
-        return 2
+        # 清单读不到 = 输入不可用（判据没跑起来）→ 未测 rc=2。
+        return ltw_exit.env_error("课程体系清单不存在：" + str(lpath), code="E-LIST-MISSING")
     taught, untaught, usable = parse_list(lpath)
     if usable == 0:
-        print(json.dumps({"ok": False, "code": "E-LIST-EMPTY", "message": "清单零可用行"}), file=sys.stderr)
-        return 2
+        # 零可用目行 = 对账基准不存在（不是「查出违规」）→ 未测 rc=2。
+        return ltw_exit.env_error("课程体系清单零可用目行，对账基准不存在", code="E-LIST-EMPTY")
     for t in SPLIT_RE.split(args.extra_terms):
         if len(t.strip()) >= 2:
             taught[f"__extra__{t.strip()}"] = [t.strip()]
@@ -232,8 +234,7 @@ def main(argv=None) -> int:
     for sp in args.scan:
         p = Path(sp)
         if not p.is_file():
-            print(json.dumps({"ok": False, "code": "E-SCAN-MISSING", "message": str(p)}), file=sys.stderr)
-            return 2
+            return ltw_exit.env_error("待扫描文件不存在：" + str(p), code="E-SCAN-MISSING")
         files.append((sp, question_lines(p.read_text(encoding="utf-8", errors="replace"), scan_all=args.scan_all)))
 
     violations = check_files(build_taught_set(taught), untaught, files)
@@ -246,7 +247,7 @@ def main(argv=None) -> int:
     print(json.dumps(result, ensure_ascii=False))
     for v in violations[:20]:
         print(f"W-TERM-UNTAUGHT {v['file']}:{v['line']} 「{v['term']}」来自未讲 {v['untaught_kp']}", file=sys.stderr)
-    return 0 if not violations else 1
+    return ltw_exit.EXIT_OK if not violations else ltw_exit.EXIT_VIOLATION
 
 
 if __name__ == "__main__":

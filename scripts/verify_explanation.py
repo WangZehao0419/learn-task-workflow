@@ -148,6 +148,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+import ltw_exit
 import rule_contract
 import ltw_typography
 
@@ -1036,7 +1037,7 @@ def main(argv=None):
             sys.stderr.reconfigure(encoding="utf-8")
         except (OSError, ValueError):
             pass
-    ap = argparse.ArgumentParser(
+    ap = ltw_exit.UsageParser(
         prog="verify_explanation.py",
         description="讲义静态结构校验(只读、幂等;规则明细见脚本 docstring 契约)")
     ap.add_argument("path", nargs="?", default=None,
@@ -1049,21 +1050,18 @@ def main(argv=None):
     if args.selftest:
         return selftest()
     if not args.path:
-        ap.print_usage()
-        return 2
+        return ltw_exit.usage_error("缺少材料路径", parser=ap)
     p = Path(args.path)
     if p.is_dir():
         files = sorted(f for f in p.rglob("*.md")
                        if f.is_file() and "assets" not in f.parts)
         if not files:
-            print("[learn-task-workflow] 目录下未找到 .md 材料:" + str(p),
-                  file=sys.stderr)
-            return 2
+            # 目录里没有材料 = 输入不可用（判据没跑起来），属「未测」rc=2。
+            return ltw_exit.env_error("目录下未找到 .md 材料：" + str(p))
     elif p.is_file():
         files = [p]
     else:
-        print("[learn-task-workflow] 路径不存在或不可访问:" + str(p), file=sys.stderr)
-        return 2
+        return ltw_exit.env_error("路径不存在或不可访问：" + str(p))
     findings = []
     skips = []
     exempt = []
@@ -2018,8 +2016,8 @@ def selftest():
         (d1 / "a.md").write_text(FIX_LEDGER, encoding="utf-8")
         chk("退出码 0(无 E)", main([str(d0)]) == 0)
         chk("退出码 1(有 E)", main([str(d1)]) == 1)
-        chk("退出码 2(路径不存在)", main([str(Path(td) / "不存在")]) == 2)
-        chk("退出码 2(缺参数)", main([]) == 2)
+        chk("退出码 2(路径不存在=未测)", main([str(Path(td) / "不存在")]) == 2)
+        chk("退出码 3(缺参数=未进入判据)", main([]) == 3)
         d2 = Path(td) / "img"
         (d2 / "assets").mkdir(parents=True)
         (d2 / "assets" / "ok.svg").write_text("<svg/>", encoding="utf-8")

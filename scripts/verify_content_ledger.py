@@ -41,6 +41,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from rule_contract import skill_root  # noqa: E402
+import ltw_exit  # noqa: E402  三态退出码唯一定义处（票 106）
 
 BQ = chr(96)
 C1 = chr(0x300C)
@@ -316,8 +317,9 @@ def _selftest() -> int:
     if not shutil.which("git"):
         # 不得「跳过即通过」：G3 只认 rc=0，跳过会让这条闸口在无 git 环境里静默全绿，
         # 而本脚本的全部判据都建立在 git 历史上——没有 git 就没有可验证的东西，只能红。
-        print("FAIL 自测需要 git，PATH 上没有——本闸口的判据全建立在 git 历史上，无 git 即无法校验")
-        return 1
+        # 无 git = 判据没跑起来（未测 rc=2），不是「查出违规」。
+        return ltw_exit.env_error(
+            "自测需要 git，PATH 上没有——本闸口的判据全建立在 git 历史上，无 git 即无法校验")
     failures = []
     ran = [0]
 
@@ -485,7 +487,7 @@ def _selftest() -> int:
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="内容台账机检（只读，需要 git 历史）")
+    ap = ltw_exit.UsageParser(description="内容台账机检（只读，需要 git 历史）")
     ap.add_argument("--selftest", action="store_true", help="跑内置用例再检查真实树")
     ap.add_argument("--root", default=None, help="技能根（默认脚本所在仓库）")
     ap.add_argument("--ledger", default=None, help="台账路径（自测用）")
@@ -497,12 +499,15 @@ def main(argv=None) -> int:
             return rc
 
     root = Path(args.root) if args.root else skill_root()
+    rc_root = ltw_exit.require_root(root)
+    if rc_root is not None:
+        return rc_root
     ledger_rel = args.ledger or LEDGER
     probs = check(root, ledger_rel)
     for p in probs:
         print("FAIL " + p)
     if probs:
-        return 1
+        return ltw_exit.EXIT_VIOLATION
     path = Path(ledger_rel)
     if not path.is_absolute():
         path = root / ledger_rel

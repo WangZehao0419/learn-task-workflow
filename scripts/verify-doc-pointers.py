@@ -31,6 +31,7 @@ import os
 import re
 import sys
 from pathlib import Path
+import ltw_exit  # noqa: E402  三态退出码唯一定义处（票 106）
 
 FENCE = "```"
 DATA_FILES = {"progress.md", "课程体系.md", "记忆.md", "profile.md"}
@@ -460,13 +461,13 @@ def _selftest():
 
     if failures:
         print("FAIL 文档指针校验 %d/%d" % (len(failures), len(cases)))
-        return 1
+        return ltw_exit.EXIT_VIOLATION
     print("PASS 文档指针校验 %d/%d" % (len(cases), len(cases)))
-    return 0
+    return ltw_exit.EXIT_OK
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description="文档指针校验（只读）")
+    ap = ltw_exit.UsageParser(description="文档指针校验（只读）")
     ap.add_argument("--selftest", action="store_true")
     ap.add_argument("--root", help="仓库根（默认取本脚本上两级）")
     ap.add_argument("--json", action="store_true", help="以 JSON 输出报告")
@@ -477,6 +478,9 @@ def main(argv=None):
 
     root = (Path(args.root).resolve() if args.root
             else Path(__file__).resolve().parent.parent)
+    rc_root = ltw_exit.require_root(root)
+    if rc_root is not None:
+        return rc_root
     rep = check(root, Report())
 
     if args.json:
@@ -503,7 +507,7 @@ def main(argv=None):
                 print("  [%s] %s :: %s" % (w["kind"], w["where"], w["detail"]))
         if not rep.errors:
             print("PASS 文档指针校验：无 E 级问题")
-    return 0 if not rep.errors else 1
+    return ltw_exit.EXIT_OK if not rep.errors else ltw_exit.EXIT_VIOLATION
 
 
 if __name__ == "__main__":

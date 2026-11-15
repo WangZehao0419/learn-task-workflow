@@ -36,6 +36,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from rule_contract import skill_root  # noqa: E402
+import ltw_exit  # noqa: E402  三态退出码唯一定义处（票 106）
 
 BT = chr(96)
 CONTRACT = "contracts/rules.json"
@@ -437,24 +438,29 @@ def _selftest() -> int:
     case("真实树：扇出表与磁盘双向相等、入口收敛为一条", real_tree)
 
     if failures:
-        return 1
+        return ltw_exit.EXIT_VIOLATION
     print("PASS 学科层单点扇出机检：%d 个用例" % ran[0])
-    return 0
+    return ltw_exit.EXIT_OK
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="学科层单点扇出机检（只读）")
+    ap = ltw_exit.UsageParser(description="学科层单点扇出机检（只读）")
     ap.add_argument("--selftest", action="store_true")
+    ap.add_argument("--root", default=None, help="技能根（默认脚本所在仓库）")
     args = ap.parse_args(argv)
     if args.selftest:
         return _selftest()
-    probs = check(skill_root())
+    root = Path(args.root) if args.root else skill_root()
+    rc_root = ltw_exit.require_root(root)
+    if rc_root is not None:
+        return rc_root
+    probs = check(root)
     for x in probs:
         print(x)
     if probs:
-        return 1
+        return ltw_exit.EXIT_VIOLATION
     print("PASS 学科层单点扇出：扇出表与磁盘双向相等、入口收敛为一条")
-    return 0
+    return ltw_exit.EXIT_OK
 
 
 if __name__ == "__main__":

@@ -56,6 +56,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from rule_contract import skill_root  # noqa: E402
+import ltw_exit  # noqa: E402  三态退出码唯一定义处（票 106）
 
 EVALS = "evals/evals.json"
 VERDICTS = ("通过", "未通过", "未验证")
@@ -256,7 +257,7 @@ def _selftest() -> int:
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="评测账本版本降级机检")
+    ap = ltw_exit.UsageParser(description="评测账本版本降级机检")
     ap.add_argument("--selftest", action="store_true", help="跑内置用例再检查真实账本")
     ap.add_argument("--root", default=None, help="技能根（默认脚本所在仓库）")
     ap.add_argument("--json", action="store_true", dest="as_json",
@@ -272,8 +273,8 @@ def main(argv=None) -> int:
     path = root / EVALS
     doc, why = load(path)
     if doc is None:
-        print("FAIL [E-EVAL-LEDGER] %s" % why)
-        return 1
+        # 账本读不到 = 判据没跑起来（未测 rc=2），不是「查出违规」。
+        return ltw_exit.env_error("评测账本不可读：" + str(why), code="E-EVAL-LEDGER")
 
     errors, stats = audit(doc)
     if args.as_json:
@@ -282,7 +283,7 @@ def main(argv=None) -> int:
     if errors:
         for where, detail in errors:
             print("FAIL [E-EVAL-VERSION] %s :: %s" % (where, detail))
-        return 1
+        return ltw_exit.EXIT_VIOLATION
     if not args.as_json:
         print("PASS 评测账本：基准版本 %s；共 %d 条——通过 %d / 已降级 %d / 未验证 %d / 未通过 %d"
               % (stats["applies_to_version"], stats["total"], stats["pass"],

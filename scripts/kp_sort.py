@@ -41,6 +41,7 @@ import re
 import sys
 from pathlib import Path
 
+import ltw_exit
 from ltw_parse import KP_ID_RE, normalize_kp_id, parse_kp_row, strip_inline_comment
 
 VALID = """# 课程体系：格式演示（示例仅为格式演示，KP 取舍与依赖声明规则领域无关）
@@ -420,28 +421,32 @@ def fringe_from_text(text):
 
 
 def _read_list(kp_list_path):
-    """读清单文本；返回 (text, 失败结果)。排序与 fringe 共用同一读取口径（BOM/不可读）。"""
+    """读清单文本；返回 (text, 失败结果)。排序与 fringe 共用同一读取口径（BOM/不可读）。
+
+    票 106：清单**读不出来**属「未测」（rc=2）——判据没跑起来，不是清单内容有问题。
+    返回值带上 tri 字段让 run()/run_fringe() 能分流；畸形的**内容**仍走 rc=1。
+    """
     p = Path(kp_list_path)
     if not p.is_file():
-        return (None, {"error": "清单文件不存在：" + str(p)})
+        return (None, {"error": "清单文件不存在：" + str(p), "tri": "env"})
     try:
         # utf-8-sig：BOM 吞首行缝隙闭合，无 BOM 无副作用
         return (p.read_text(encoding="utf-8-sig", errors="replace"), None)
     except OSError as exc:
-        return (None, {"error": "清单文件不可读：" + str(exc)})
+        return (None, {"error": "清单文件不可读：" + str(exc), "tri": "env"})
 
 
 def run(kp_list_path):
     text, bad = _read_list(kp_list_path)
     if bad is not None:
-        return (bad, 1)
+        return (bad, ltw_exit.EXIT_ENV if bad.get("tri") == "env" else ltw_exit.EXIT_VIOLATION)
     return sort_from_text(text)
 
 
 def run_fringe(kp_list_path):
     text, bad = _read_list(kp_list_path)
     if bad is not None:
-        return (bad, 1)
+        return (bad, ltw_exit.EXIT_ENV if bad.get("tri") == "env" else ltw_exit.EXIT_VIOLATION)
     return fringe_from_text(text)
 
 
@@ -685,7 +690,7 @@ def main(argv=None):
     if raw and raw[0] == "fringe":
         want_fringe = True
         raw = raw[1:]
-    ap = argparse.ArgumentParser(prog="kp_sort.py")
+    ap = ltw_exit.UsageParser(prog="kp_sort.py")
     ap.add_argument("kp_list", nargs="?", default=None,
                     help="课程体系.md 文件路径（显式实参，不依赖 cwd）")
     ap.add_argument("--list", action="store_true",
@@ -695,14 +700,18 @@ def main(argv=None):
     if args.selftest:
         return selftest()
     if sys.version_info < (3, 9):
-        print(json.dumps({"error": "Python 版本不足：kp_sort 依赖标准库 graphlib（Python ≥ 3.9），"
-                                   "本技能要求 Python ≥ 3.10；当前 " + sys.version.split()[0] + "，不静默降级"},
-                         ensure_ascii=False, sort_keys=True))
-        return 1
+        # 解释器版本不足 = 环境不可用（未测）：脚本根本跑不起来，不是清单有问题。
+        return ltw_exit.env_error(
+            "Python 版本不足：kp_sort 依赖标准库 graphlib（Python ≥ 3.9），本技能要求 "
+            "Python ≥ 3.10；当前 " + sys.version.split()[0] + "，不静默降级")
     if not args.kp_list:
-        ap.print_usage()
-        return 2
+        return ltw_exit.usage_error("缺少清单文件路径", parser=ap)
     result, code = (run_fringe if want_fringe else run)(args.kp_list)
+    if code == ltw_exit.EXIT_ENV:
+        # 未测必须在**输出层**留痕：只返回 rc=2 时，调用方与机检都只能看到一个数字，
+        # 分不清「清单读不到」与「清单说你不合格」。stdout 仍保留原有 JSON 形状（不破坏
+        # 既有消费端），untested 标记走 stderr 的独立 JSON 行。
+        ltw_exit.env_error(result.get("error", "清单不可用"))
     print(json.dumps(result, ensure_ascii=False, sort_keys=True))
     return code
 

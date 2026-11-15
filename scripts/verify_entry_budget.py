@@ -36,6 +36,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from rule_contract import REDLINE_SECTION_HEAD, skill_root  # noqa: E402
+import ltw_exit  # noqa: E402  三态退出码唯一定义处（票 106）
 
 # 压缩砍点下界的唯一正本在契约里，这里只声明「去哪个键取」。
 BUDGET_KEY = "context_compress_cutoff_lower_bound"
@@ -396,25 +397,30 @@ def _selftest() -> int:
          real_tree_mutations)
 
     if failures:
-        return 1
+        return ltw_exit.EXIT_VIOLATION
     print("PASS 入口预算机检：%d 个用例" % ran[0])
-    return 0
+    return ltw_exit.EXIT_OK
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="入口预算机检（只读）")
+    ap = ltw_exit.UsageParser(description="入口预算机检（只读）")
     ap.add_argument("--selftest", action="store_true")
+    ap.add_argument("--root", default=None, help="技能根（默认脚本所在仓库）")
     args = ap.parse_args(argv)
     if args.selftest:
         return _selftest()
-    probs = check(skill_root())
+    root = Path(args.root) if args.root else skill_root()
+    rc_root = ltw_exit.require_root(root)
+    if rc_root is not None:
+        return rc_root
+    probs = check(root)
     for x in probs:
         print(x)
     if probs:
-        return 1
+        return ltw_exit.EXIT_VIOLATION
     print("PASS 入口预算：红线节结束 < 砍点下界、前两段 ≤%d B、加载路由早于红线"
           % FIRST_TWO_MAX)
-    return 0
+    return ltw_exit.EXIT_OK
 
 
 if __name__ == "__main__":

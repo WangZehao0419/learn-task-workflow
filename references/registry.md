@@ -23,7 +23,7 @@
 
 **总量声明**（本行是机检断言的锚点，恰好出现一次；改数字必须同时改 `scripts/rule_contract.py` 的常量与契约）：
 
-- 码表总数：129（E 59 + W 70）
+- 码表总数：131（E 61 + W 70）
 - 规则编号总数：11 条线 / 47 条子判据
 
 两组数字都由 `rule_contract.py --registry-check` 双向对拍：文档里的码集合与规则编号集合必须**等于**契约递归收集的结果（少一条或多一条都红），声明数字必须同时等于契约实测与代码常量。为什么把总数也做成断言：这个数字已经漂过三次（116 → 126 → 128 → 129），三次都是文档落后于契约、而脚本照常全绿；第三次是票 103 补上 `W-EFFECT-DENOMINATOR` 时抓出来的。
@@ -93,6 +93,8 @@
 |---|---|---|
 | progress_check | `E-NO-PROGRESS` / `E-UNREADABLE-PROGRESS` / `E-MISSING-FIELD` | 缺 progress.md / 不可读 / 缺必填字段（起点自 S2 起必填） |
 | progress_check | `E-ENUM-PHASE` / `E-ENUM-TYPE` / `E-ENUM-FAMILY` / `E-ENUM-START` / `E-ENUM-GRADE` | 阶段 / 类型 / 学科族 / 起点 / 判分结果非法枚举 |
+| 全部脚本 | `E-ENV-UNAVAILABLE` | 三态退出码的 rc=2（**未测**）：环境或输入不可用，判据没有跑起来——缺数据根、缺契约、缺清单、解释器版本不足、git 不可用等。与「查出违规」（rc=1）**必须分开**：rc=1 是判据生效，rc=2 是判据没跑。逐条脚本的具体触发条件见 `contracts/scripts-contract.json` 的 `exit_codes.2` |
+| 全部脚本 | `E-USAGE` | 三态退出码的 rc=3（**未进入判据**）：参数非法，判据根本没开始跑。为什么不是第四态：它是「没测」之外的另一种「没有结果」，而 2 已经被环境不可用占住——argparse 默认也用 2，两者撞码时「喂坏参数」就能满足「喂环境不可用夹具必须 rc=2」这条机检，闸口会假绿 |
 | progress_check | `E-LESSON-ID-MISSING` / `E-LESSON-ID-DUP` | 节路线行缺 `lesson_id=` / 路线间 `lesson_id` 重复 |
 | progress_check | `E-NO-EVIDENCE` / `E-EMPTY-EVIDENCE` / `E-NO-GRADED-ATTEMPT` / `E-ALL-FAILED` / `E-HINT-ONLY` / `E-NO-INDEPENDENCE` / `E-KEY-ABILITY-UNMET` / `E-GATE-THRESHOLD` / `E-NO-RESTATEMENT` | 已掌握/放行证据缺失或质量不足：无声明该 `lesson_id=` 的判分记录、空模板、无有效判定、全错、仅提示后对、独立性缺失、关键能力未独立通过、低于比例线、缺复述 |
 | progress_check | `E-KP-TYPED-GATE` | 声明了 KP 类型/视觉任务但缺对应分型证据 |

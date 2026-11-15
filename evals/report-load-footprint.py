@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+import ltw_exit  # noqa: E402  三态退出码唯一定义处（票 106）
 from rule_contract import load, skill_root  # noqa: E402
 
 POINTER_RE = re.compile(r"`((?:references|scripts|evals|contracts)/[^`]+?\.(?:md|py|json))`")
@@ -135,7 +136,7 @@ def _selftest() -> int:
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="加载足迹报告（只读）")
+    ap = ltw_exit.UsageParser(description="加载足迹报告（只读）")
     ap.add_argument("--skill-root")
     ap.add_argument("--selftest", action="store_true")
     ap.add_argument("--check", action="store_true")
