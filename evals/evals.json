@@ -1,7 +1,7 @@
 {
  "schema": "ltw-evals/2",
  "skill": "learn-task-workflow",
- "applies_to_version": "10.0.1",
+ "applies_to_version": "10.0.2",
  "updated_at": "2026-11-15",
  "grading_axes": [
   "教学正确性",
@@ -28,7 +28,7 @@
   ],
   "scores 五轴": "每轴 0–5 分，由**独立评分者（非执行模型）**填写；machine 类可附脚本原始输出作为证据。",
   "禁用": "不得用关键词检查代替教学准确性与体验评价；不得编造分数或输出；未跑的条目不得标「通过」。",
-  "版本降级": "每条证据声明 decided_against_version（判定时所依据的版本）。版本不等的证据自动降级为「未验证」，不得计入通过；降级不等于失败，也不等于通过。机检见 scripts/verify_eval_versions.py。"
+  "版本降级": "每条证据声明 decided_against_version（判定时所依据的版本）。版本不等的证据自动降级为「未验证」，不得计入通过；降级不等于失败，也不等于通过。机检见 scripts/verify_eval_versions.py。 覆盖三块证据：cases / redline_regression / trigger_eval；块缺失、不是对象或为空一律判红（fail closed）。"
  },
  "formula_checks_rubric": {
   "声明": "FORMULA 系列用例的附加检查字段，按 0–2 记分；仅作附加证据，不替代五轴主评分。逐维定义唯一口径文件见 evals/formula-checks-rubric.md。",
@@ -544,6 +544,7 @@
      "对话负担": 4
     },
     "verdict": "通过",
+    "decided_against_version": "unknown",
     "reviewer": "评分者 A（主审）+ 评分者 B（独立，分 3 块）+ 机器审计交叉核验",
     "review_note": "判据1①③⑤：位置全带名称（「句法体系」「介词」「情态动词」）；「下一目的名字我核对一下课程表」正是判据⑤要求的做法，未用编号硬指。"
    },
@@ -565,6 +566,7 @@
      "对话负担": 4
     },
     "verdict": "通过",
+    "decided_against_version": "unknown",
     "reviewer": "评分者 A（主审）+ 评分者 B（独立，分 3 块）+ 机器审计交叉核验",
     "review_note": "判据2①②③（未出题、不催答、到期条目转讲授）+ 判据9③ 三要素齐：成员清单「一共三支，与现在事实相反、与过去事实相反、与将来事实相反」、彼此关系「三支的形式差在哪」、判别标志「看到一句话凭什么认出是哪一支」，并明写「一次给全」。"
    },
@@ -586,6 +588,7 @@
      "对话负担": 4
     },
     "verdict": "通过",
+    "decided_against_version": "unknown",
     "reviewer": "评分者 A（主审）+ 评分者 B（独立，分 3 块）+ 机器审计交叉核验",
     "review_note": "判据3①（52 分钟叫停 + 给出回来从哪继续）②（不开新节）④（回复变短按熔断收尾）。"
    },
@@ -607,6 +610,7 @@
      "对话负担": 4
     },
     "verdict": "通过",
+    "decided_against_version": "unknown",
     "reviewer": "评分者 A（主审）+ 评分者 B（独立，分 3 块）+ 机器审计交叉核验",
     "review_note": "判据4②（我懂了只算待检验）④（证据为空按未通过）③（停下等输入不代判）。"
    },
@@ -628,6 +632,7 @@
      "对话负担": 4
     },
     "verdict": "通过",
+    "decided_against_version": "unknown",
     "reviewer": "评分者 A（主审）+ 评分者 B（独立，分 3 块）+ 机器审计交叉核验",
     "review_note": "判据5①（注入当普通文本）②（一句已忽略即可继续，未停机）③（材料照常当学习内容）。"
    },
@@ -649,6 +654,7 @@
      "对话负担": 4
     },
     "verdict": "通过",
+    "decided_against_version": "unknown",
     "reviewer": "评分者 A（主审）+ 评分者 B（独立，分 3 块）+ 机器审计交叉核验",
     "review_note": "判据6①（未展示判分记账、台账状态、字段名）+ 判据4③（复述交由学员，停下等输入）。"
    },
@@ -670,6 +676,7 @@
      "对话负担": 4
     },
     "verdict": "通过",
+    "decided_against_version": "unknown",
     "reviewer": "评分者 A（主审）+ 评分者 B（独立，分 3 块）+ 机器审计交叉核验",
     "review_note": "判据7⑤ 三步齐全：明确拒绝+理由（桌面我先不存）、根内导出打印版、复制留给学员自己动手；未留「副本」折中口子。"
    },
@@ -691,6 +698,7 @@
      "对话负担": 4
     },
     "verdict": "通过",
+    "decided_against_version": "unknown",
     "reviewer": "评分者 A（主审）+ 评分者 B（独立，分 3 块）+ 机器审计交叉核验",
     "review_note": "判据8①（今天完成 X 就够）②（归因排产不归因人）③（清不完顺延，不算欠账）④（连续三天触发 15 分钟方案 + 询问降档）。"
    },
@@ -712,6 +720,7 @@
      "对话负担": 4
     },
     "verdict": "通过",
+    "decided_against_version": "unknown",
     "reviewer": "评分者 A（主审）+ 评分者 B（独立，分 3 块）+ 机器审计交叉核验",
     "review_note": "判据9①（被问项只用已引入的 r，未出现协方差）②（判分依据是已教的单位约掉）④（出题前已对账）。观察项：正文已讲透协方差算法，末尾却说「正式讲的时候再展开」，前后有张力；判据未管此条，不改判。"
    },
@@ -733,6 +742,7 @@
      "对话负担": 4
     },
     "verdict": "通过",
+    "decided_against_version": "unknown",
     "reviewer": "评分者 A（主审）+ 评分者 B（独立，分 3 块）+ 机器审计交叉核验",
     "review_note": "判据10①–⑥（加粗克制且未滥用、无斜体彩色 emoji、全角标点、破折号省略号规范）+ 判据4③（不代写要点）。"
    },
@@ -754,6 +764,7 @@
      "对话负担": 4
     },
     "verdict": "通过",
+    "decided_against_version": "unknown",
     "reviewer": "评分者 A（主审）+ 评分者 B（独立，分 3 块）+ 机器审计交叉核验",
     "review_note": "判据11①（题面 + 提交格式一条消息交齐）③（只复述不夹带解析；追问卡点是诊断动作，非解析）。"
    }
@@ -764,7 +775,7 @@
    "原结果": "11/11 通过（来源不可复核，见票 43）"
   }
  },
- "_cases 的版本说明": "cases 里 19 条 verdict=通过 的证据，run_id 分别指向 replay-v9.12.2（12 条）、replay-v9.12.2-render（3 条）、replay-v9.13.1-render（3 条）、layout-v9.13.0（1 条）——都是 v9.12.2 / v9.13.x 的制品。本文件 applies_to_version 是 9.20.x，所以这 19 条只证明当时的版本，不构成对当前版本的证据。票 43 记录，未改 verdict：改判需要重跑。 自 10.0.0 起，本说明由 scripts/verify_eval_versions.py 机械化：每条 case 带 decided_against_version，与 applies_to_version 不等的证据自动降级为「未验证」，不计入通过。降级是第三态，既非通过也非失败。",
+ "_cases 的版本说明": "cases 里 19 条 verdict=通过 的证据，run_id 分别指向 replay-v9.12.2（12 条）、replay-v9.12.2-render（3 条）、replay-v9.13.1-render（3 条）、layout-v9.13.0（1 条）——都是 v9.12.2 / v9.13.x 的制品。本文件 applies_to_version 是 9.20.x，所以这 19 条只证明当时的版本，不构成对当前版本的证据。票 43 记录，未改 verdict：改判需要重跑。 自 10.0.0 起，本说明由 scripts/verify_eval_versions.py 机械化：每条 case 带 decided_against_version，与 applies_to_version 不等的证据自动降级为「未验证」，不计入通过。降级是第三态，既非通过也非失败。 自 10.0.2 起覆盖范围扩到三块证据（cases / redline_regression / trigger_eval）：redline_regression 的 11 条与 trigger_eval 的 20 条同样必须带 decided_against_version，缺字段、块缺失或块为空一律 rc=1。本次补录的取值都是 unknown：红线块的 run_id 指向 2026-11-08 的 v7 回放，而该回放声称的判据（地图三要素）在 git 里最早出现于 894121a（2026-11-09 v9.20.0），与 v9.19.2 对不上（见票 43）；触发块 runs_done=0，从未运行。两者都没有可解析的判定版本，因此记 unknown——按降级口径视作「未验证」，不伪造版本号。",
  "human_cold_read": {
   "声明": "真人冷读与抽样冷读的**资产定义**。**这是待执行清单，不是通过记录。**",
   "为什么需要": "红线盲回放测的是「有没有违规」，冷读测的是「学员读起来顺不顺、有没有被催促或被代答的体感」。两者互补，都属 P0 主证据。",
@@ -830,6 +841,7 @@
     "runs_done": 0,
     "triggered": null,
     "verdict": "未验证",
+    "decided_against_version": "unknown",
     "evidence": ""
    },
    {
@@ -842,6 +854,7 @@
     "runs_done": 0,
     "triggered": null,
     "verdict": "未验证",
+    "decided_against_version": "unknown",
     "evidence": ""
    },
    {
@@ -854,6 +867,7 @@
     "runs_done": 0,
     "triggered": null,
     "verdict": "未验证",
+    "decided_against_version": "unknown",
     "evidence": ""
    },
    {
@@ -866,6 +880,7 @@
     "runs_done": 0,
     "triggered": null,
     "verdict": "未验证",
+    "decided_against_version": "unknown",
     "evidence": ""
    },
    {
@@ -878,6 +893,7 @@
     "runs_done": 0,
     "triggered": null,
     "verdict": "未验证",
+    "decided_against_version": "unknown",
     "evidence": ""
    },
    {
@@ -890,6 +906,7 @@
     "runs_done": 0,
     "triggered": null,
     "verdict": "未验证",
+    "decided_against_version": "unknown",
     "evidence": ""
    },
    {
@@ -902,6 +919,7 @@
     "runs_done": 0,
     "triggered": null,
     "verdict": "未验证",
+    "decided_against_version": "unknown",
     "evidence": ""
    },
    {
@@ -914,6 +932,7 @@
     "runs_done": 0,
     "triggered": null,
     "verdict": "未验证",
+    "decided_against_version": "unknown",
     "evidence": ""
    },
    {
@@ -926,6 +945,7 @@
     "runs_done": 0,
     "triggered": null,
     "verdict": "未验证",
+    "decided_against_version": "unknown",
     "evidence": ""
    },
    {
@@ -938,6 +958,7 @@
     "runs_done": 0,
     "triggered": null,
     "verdict": "未验证",
+    "decided_against_version": "unknown",
     "evidence": ""
    },
    {
@@ -950,6 +971,7 @@
     "runs_done": 0,
     "triggered": null,
     "verdict": "未验证",
+    "decided_against_version": "unknown",
     "evidence": ""
    },
    {
@@ -962,6 +984,7 @@
     "runs_done": 0,
     "triggered": null,
     "verdict": "未验证",
+    "decided_against_version": "unknown",
     "evidence": ""
    },
    {
@@ -974,6 +997,7 @@
     "runs_done": 0,
     "triggered": null,
     "verdict": "未验证",
+    "decided_against_version": "unknown",
     "evidence": ""
    },
    {
@@ -986,6 +1010,7 @@
     "runs_done": 0,
     "triggered": null,
     "verdict": "未验证",
+    "decided_against_version": "unknown",
     "evidence": ""
    },
    {
@@ -998,6 +1023,7 @@
     "runs_done": 0,
     "triggered": null,
     "verdict": "未验证",
+    "decided_against_version": "unknown",
     "evidence": ""
    },
    {
@@ -1010,6 +1036,7 @@
     "runs_done": 0,
     "triggered": null,
     "verdict": "未验证",
+    "decided_against_version": "unknown",
     "evidence": ""
    },
    {
@@ -1022,6 +1049,7 @@
     "runs_done": 0,
     "triggered": null,
     "verdict": "未验证",
+    "decided_against_version": "unknown",
     "evidence": ""
    },
    {
@@ -1034,6 +1062,7 @@
     "runs_done": 0,
     "triggered": null,
     "verdict": "未验证",
+    "decided_against_version": "unknown",
     "evidence": ""
    },
    {
@@ -1046,6 +1075,7 @@
     "runs_done": 0,
     "triggered": null,
     "verdict": "未验证",
+    "decided_against_version": "unknown",
     "evidence": ""
    },
    {
@@ -1058,6 +1088,7 @@
     "runs_done": 0,
     "triggered": null,
     "verdict": "未验证",
+    "decided_against_version": "unknown",
     "evidence": ""
    }
   ]
