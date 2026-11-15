@@ -11,6 +11,7 @@
   "R1.number-paired-with-name": "00d0b53417834f92e1517c5efa2df1e8590061e4026e2fd41a9abdcfc17e80a0",
   "R1.position-must-carry-name": "a57d2dba32529189689970def4c528b1a88dddb93c577a969483ec00f29e95c8",
   "R10.bold-only-for-emphasis": "b323322f2bd17ad4c4164181e6e397167836d0d623fe0fc254932a0f381fced3",
+  "R10.chat-table-max-columns": "ed2b2236ef17084446129142903fd18af92d82c480b92a2e11fb1ca91998afdc",
   "R10.cjk-latin-spacing": "17f0aa97c9a56cfa359d325e2b54bb320db381b8533eb4578f4783e77e32ffbd",
   "R10.emphasis-must-render": "efa2105c94b34351c942212034e8dc706937e9f9e960e0e11e250a406f9a2c43",
   "R10.no-decorative-markup": "4256d14652c93d8b0f3559493c74a34f5ccc5fe7d73bde6f164a58c8e66fa5aa",
@@ -54,8 +55,8 @@
   "R9.rubric-uses-taught-tools": "98256536e080d102a169c6109d0b1f9a593f3ea9cefb11b3c6aa84e5928f409f",
   "R9.term-ledger-before-question": "119c2fac23fa35b08cc9d8489733505c5407e0fae2d0b55daa0048b907f283ea"
  },
- "criterion_count": 48,
+ "criterion_count": 49,
  "redline_lines": 11,
- "redlines_fingerprint": "53ef2e50467ae988a993484a26e8ac45b4d3831750f9fcddd3f264b2248a8656",
+ "redlines_fingerprint": "fbe69ea6eb1db66d49e21856b5049216235bb410969eac4474770a966bd85103",
  "schema": "ltw-redline-freeze/1"
 }

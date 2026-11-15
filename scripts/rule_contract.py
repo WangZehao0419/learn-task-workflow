@@ -126,17 +126,17 @@ FREEZE_REQUIRED_FIELDS = ("schema", "baseline", "criterion_count", "criteria")
 # 口径（先定口径再建表，两套编号不得混成一套）：
 #   ① 错误码正本 = 契约 constants.errors（递归收集去重，当前 129 = E 59 + W 70）；
 #      总表里出现的码集合必须**与它相等**——少一条和多一条都红，只查一边等于没查。
-#   ② 规则编号正本 = 契约 constants.redlines 的子判据双层键（48 条 / 11 线）。分册
+#   ② 规则编号正本 = 契约 constants.redlines 的子判据双层键（49 条 / 11 线）。分册
 #      正文里另有一套「R＋数字」的旧编号（实测 19 个不同取值），那是**另一套**，
 #      只做来源登记、不进本索引，也不参与集合相等——混计一次，两套就再也分不开。
 #   ③ 总数本身是断言：文档声明一组数字、代码钉一组常量，两边都得等于契约实测。
 #      只对拍集合不对拍数字，「129」这类清账数会继续漂而没人发现，而它已经漂过两次。
 REGISTRY_MD = "references/registry.md"
-REGISTRY_CODE_TOTAL = 132
+REGISTRY_CODE_TOTAL = 133
 REGISTRY_CODE_E = 61
-REGISTRY_CODE_W = 71
+REGISTRY_CODE_W = 72
 REGISTRY_REDLINE_LINES = 11
-REGISTRY_CRITERIA_TOTAL = 48
+REGISTRY_CRITERIA_TOTAL = 49
 # 码形态：[EW]-大写段，可多段。前后不得紧贴标识符字符，避免从长串里切出半截码。
 REGISTRY_CODE_RE = re.compile(r"(?<![A-Za-z0-9_-])(?:E|W)-[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*")
 # 规则编号只认双层键形态（带点，slug 以小写字母起头）。纯序号 R1.1 是**非法形态**，
@@ -1417,7 +1417,7 @@ def _selftest() -> int:
             assert res["codes_registry"] == REGISTRY_CODE_TOTAL, "总表码数不是钉住的值"
             assert res["criteria_registry"] == REGISTRY_CRITERIA_TOTAL, "总表规则编号数不对"
             return True
-        case("真实总表与契约双向对拍通过（码 132 / 子判据 48）", registry_baseline_ok, True)
+        case("真实总表与契约双向对拍通过（码 133 / 子判据 49）", registry_baseline_ok, True)
 
         # 变异一：从总表删掉一条码 → 红（漏一条也是硬闸）
         def registry_drop_code_red():
@@ -1476,7 +1476,7 @@ def _selftest() -> int:
             res = check_registry(p)
             assert not res["ok"], "规则编号总数被改后闸口仍是绿的"
             assert any("规则编号总数" in r for r in res["reasons"]), res["reasons"]
-        case("变异：改规则编号总数声明（11/48 → 10/47）→ 红", registry_redline_total_changed_red, True)
+        case("变异：改规则编号总数声明（11/49 → 10/48）→ 红", registry_redline_total_changed_red, True)
 
         # 变异四：从总表删掉一条规则编号行 → 红（集合相等，缺一条即红）
         def registry_drop_rule_red():

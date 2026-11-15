@@ -110,6 +110,7 @@
 | E-READ-FILE      | E  | Markdown 读取失败或编码不是 UTF-8；继续扫描其他文件，最终 exit 1    |
 | E-IMG-READ       | E  | `--reader` 下 SVG 读取失败或编码不是 UTF-8(不受「像不像讲义」约束) |
 | W-EMPHASIS-IN-CODE | W | 强调标记落在行内代码/代码块/公式内,不会渲染成加粗(学员看到字面星号) |
+| W-TABLE-COLUMNS | W | 表格列数超限:聊天轮 >3 列、讲义 >4 列;超限改列表或拆表 |
 | W-READER-HEADING | W  | 读者版标题层级跳级(H1→H3 等);仅 `--reader`                       |
 | W-READER-TABLE   | W  | 读者版表格缺表头分隔行、列数不在 2–4、表头有空列名;仅 `--reader`     |
 | W-READER-ALT     | W  | 读者版图片 alt 为空或只写「示意图/图片」;仅 `--reader`(不受 gate 约束) |
@@ -728,6 +729,19 @@ def check_text(text, rel, base_dir=None, reader=False, skips=None):
                 add("W", "W-LEDGER-DRAFT", i,
                     "草稿内台账状态行——判分记账只留 progress.md 与题组文件,"
                     "学员会读草稿;移交证据后删除本行")
+
+    # ── 规则 1c:表格列数超限(聊天轮 3 列,讲义 4 列)──
+    # 聊天界面在 4 列且单元格较长时裁切末列;讲义沿用既有 2–4 列版面标准。
+    _tbl_blocks = ltw_typography.table_blocks(lines, fence)
+    for _blk in _tbl_blocks:
+        if not _blk:
+            continue
+        _hdr = ltw_typography.table_cells(lines[_blk[0]])
+        _limit = READER["table_cols_max"]
+        if len(_hdr) > _limit:
+            add("W", "W-TABLE-COLUMNS", _blk[0],
+                "表格 " + str(len(_hdr)) + " 列,超过上限 " + str(_limit) +
+                "——聊天界面会裁切末列;超限改列表或拆表")
 
     # ── 规则 1b:强调落在不解析强调的位置(渲染后看不见)──
     # 行内代码/代码块/公式里的 ** 不会渲染成加粗,学员看到的是字面星号。

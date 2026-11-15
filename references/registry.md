@@ -24,8 +24,8 @@
 
 **总量声明**（本行是机检断言的锚点，恰好出现一次；改数字必须同时改 `scripts/rule_contract.py` 的常量与契约）：
 
-- 码表总数：132（E 61 + W 71）
-- 规则编号总数：11 条线 / 48 条子判据
+- 码表总数：133（E 61 + W 72）
+- 规则编号总数：11 条线 / 49 条子判据
 
 两组数字都由 `rule_contract.py --registry-check` 双向对拍：文档里的码集合与规则编号集合必须**等于**契约递归收集的结果（少一条或多一条都红），声明数字必须同时等于契约实测与代码常量。为什么把总数也做成断言：这个数字已经漂过三次（116 → 126 → 128 → 129），三次都是文档落后于契约、而脚本照常全绿；第三次是票 103 补上 `W-EFFECT-DENOMINATOR` 时抓出来的。
 
@@ -78,6 +78,7 @@
 | 10 | 4 | `R10.no-symbol-in-heading` | 标题与标签不加上下文无关的符号 | E5、R1-4 |
 | 10 | 5 | `R10.standard-punctuation-forms` | 中文正文用标准标点（`——`、`……`，不出半角替代） | E3、R2-1、R2-2 |
 | 10 | 7 | `R10.emphasis-must-render` | 加粗必须真的加粗：行内代码/代码块/公式里的 `**` 不渲染，按未强调处理 | E3 |
+| 10 | 8 | `R10.chat-table-max-columns` | 聊天轮表格不超过 3 列（讲义沿用 2–4 列），超限改列表或拆表 | E5 |
 | 10 | 6 | `R10.cjk-latin-spacing` | 中英数字间空格全篇一致；数字与单位留空隙；英文与中文标点间不设空格 | E5、E3、R2-4、R2-5、R2-6、R2-7 |
 | 11 交付边界 | 1 | `R11.one-message-per-exercise-set` | 一组题一条消息，不拆成多轮挤牙膏 | E5 |
 | 11 | 2 | `R11.no-mixed-rounds` | 讲授、出题、判分不混在同一轮交付里 | E5 |
@@ -133,6 +134,7 @@
 | verify_explanation | `W-SELFTEST-MISSING` / `W-SELFTEST-EMPTY` | 自测/检验题面区缺同族答案区 / 答案区为空或占位 |
 | verify_explanation | `W-READER` / `W-READER-ALT` / `W-READER-CAPTION` / `W-READER-CONCLUSION` / `W-READER-DEEPNEST` / `W-READER-EMPHASIS` / `W-READER-HEADING` / `W-READER-HEADING-BODY` / `W-READER-INDEX` / `W-READER-LINKTEXT` / `W-READER-LONGLINE` / `W-READER-OVERVIEW` / `W-READER-SVG` / `W-READER-TABLE` / `W-READER-TABLE-ALIGN` | `--reader` 版式项：标题/表格/图注/alt/SVG/速览/索引/结论/强调/链接/长行/嵌套。图检查（`E-IMG-READ`/`W-READER-SVG`/`W-READER-ALT`/`W-READER-CAPTION`）对任何含图文本生效，不受「像不像讲义」的 gate 约束；gate 关闭时摘要打印「已跳过 N 项读者版检查（未校验）」，不再输出「通过：无违规项」 |
 | verify_explanation | `W-EMPHASIS-IN-CODE` | 行内代码、代码块、公式内的强调标记不会渲染，学员看到字面星号；确需展示字面字符时先声明 |
+| verify_explanation | `W-TABLE-COLUMNS` | 表格列数超限：聊天轮 >3 列、讲义 >4 列；超限改列表或拆表 |
 | verify_explanation | `W-NO-TIER` | 讲义单元缺 tier 标签 |
 | rule_contract | `E-CONTRACT-MISSING` / `E-CONTRACT-INVALID` | 契约缺失 / 畸形 |
 | report_load_footprint | `E-LOAD-STRUCT` | 加载结构不成立：场景文件缺失、同一场景混用多个令牌、补读小节不存在 |

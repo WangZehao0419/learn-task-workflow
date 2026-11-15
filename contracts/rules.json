@@ -1,6 +1,6 @@
 {
  "schema": "ltw-rules/3",
- "version": "9.22.1",
+ "version": "9.22.2",
  "constants": {
   "phases": [
    "接料建档",
@@ -323,6 +323,7 @@
     "W-SELFTEST-MISSING",
     "W-STALE-REVIEW-ORIGIN",
     "W-STYLE-POINTER",
+    "W-TABLE-COLUMNS",
     "W-TERM-UNTAUGHT",
     "W-UNGRADED-ATTEMPT",
     "W-UNICODE-CHAR",
@@ -948,6 +949,16 @@
       "coverage": "CommonMark 0.31.2 §6.1 正文：code span 优先于其他行内构造，内容只做换行与首尾空格规范化，不再解析强调标记；规范自带反例。本条只约束「强调是否真的渲染出来」，不约束加粗配额与位置——那由①②③管。",
       "decision_layer": "D1（行内代码边界可机检）+ D3（聊天轮人工回放）",
       "cannot_infer": "不能推出「行内代码内禁止出现星号」——讲 Markdown 语法本身时合法，须先声明；也不能推出「渲染后一定可见」由本仓保证，宿主渲染器行为不在本仓控制范围。"
+     },
+     {
+      "key": "R10.chat-table-max-columns",
+      "order": 8,
+      "evidence": [
+       "E5"
+      ],
+      "coverage": "聊天界面在 4 列且单元格文字较长时裁切末列、横向滚动难以发现（实测社区报告）；讲义沿用既有 2–4 列版面标准，不因本条收窄。",
+      "decision_layer": "D1（表格列数可机检）+ D3（聊天轮人工回放）",
+      "cannot_infer": "不能推出「表格一律不如列表」——并列属性对比仍首选表格；也不能把聊天轮的 3 列上限外推到讲义。"
      }
     ]
    },
