@@ -44,7 +44,7 @@ python scripts/check_environment.py
 ## 自检
 
 **本地与 CI 跑同一条命令**（票 107）。命令清单只有一处正本：
-`contracts/scripts-contract.json` 的 `verification.selftest`（21 条脚本自测）与
+`contracts/scripts-contract.json` 的 `verification.selftest`（22 条脚本自测）与
 `verification.evals`（9 条登记表与行为机检）。本文件不再抄第二份——抄一份就多一处会漂移的副本。
 
 ```bash
@@ -57,6 +57,10 @@ CI（`.github/workflows/gates.yml`）跑的就是这条命令，没有第二套�
 通过标绿。想单独看某条，`python -B evals/run-gates.py --list` 打印完整清单。
 
 逐脚本命令、退出码与 selftest 清单见 `references/ops.md`。
+
+> `scripts/verify_renderer_branches.py` 是**两条证据采集**：`--selftest`（在闸口清单里，任何机器都能跑）验证断言框架本身会红；
+> 不带参数时去读宿主 `app.asar` 里前端打包产物的三条实现事实，**读不到就报 rc=2 未测**，绝不当作通过——
+> 「没条件验」和「验过没问题」是两件事，混在一起就是假绿。
 
 ## 验收权重
 
@@ -80,7 +84,7 @@ CI（`.github/workflows/gates.yml`）跑的就是这条命令，没有第二套�
 ## 维护
 
 - **版本**：`SKILL.md` frontmatter 的 `metadata.version` 与 `contracts/rules.json` 各登记一处；
-  两者是否一致由发版清单人工逐条核对（见 `references/ops.md`「打包与验证」），改一处必改另一处。本次发布升版到 **9.22.4**（SKILL.md 与契约一致）。
+  两者是否一致由发版清单人工逐条核对（见 `references/ops.md`「打包与验证」），改一处必改另一处。本次发布升版到 **9.22.5**（SKILL.md 与契约一致）。
 - **加一门学科**：只在 `references/disciplines/` 加一个 variant 包，不牵动其他文档。
 - **改一条规则**：改它在**正本册**里的那一处；要引用就写指针，不复制条文。
 - **文献与借鉴出处**：见 `CREDITS.md`（维护侧档案，不进运行时上下文）。

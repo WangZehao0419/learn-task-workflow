@@ -5,7 +5,7 @@
 判据（第一性）：只要「README 一份清单、CI 一份清单、本地一份清单」各写各的，
 三份必然漂移——本仓已经吃过一次：「基线文档宣称 21/21 全绿，实际 16/21」。
 所以命令清单只留**一处正本**：`contracts/scripts-contract.json` 的
-`verification.selftest`（21 条脚本自测）+ `verification.evals`（9 条行为机检/登记表机检）。
+`verification.selftest`（22 条脚本自测）+ `verification.evals`（9 条行为机检/登记表机检）。
 本地跑 `python -B evals/run-gates.py`，CI 跑**同一条命令**，不存在第二套口径。
 
 三态退出码（票 106）在这里是**分流器**，不是装饰：

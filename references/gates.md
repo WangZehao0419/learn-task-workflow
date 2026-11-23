@@ -101,7 +101,7 @@
 
 ## CI 与本地同源（票 107）
 
-**命令清单只有一处正本**：`contracts/scripts-contract.json` 的 `verification.selftest`（21 条脚本自测）与 `verification.evals`（9 条登记表与行为机检）。`evals/run-gates.py` 是唯一消费者，本地与 CI 都只跑它：
+**命令清单只有一处正本**：`contracts/scripts-contract.json` 的 `verification.selftest`（22 条脚本自测）与 `verification.evals`（9 条登记表与行为机检）。`evals/run-gates.py` 是唯一消费者，本地与 CI 都只跑它：
 
 ```bash
 python -B evals/run-gates.py            # 跑全部闸口

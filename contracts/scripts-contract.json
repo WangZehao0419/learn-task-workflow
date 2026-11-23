@@ -232,6 +232,18 @@
     "3": "用法错误"
    },
    "notes": "票 106：把「rc=1 既可能是查出违规、也可能是环境炸了」这个缺陷变成会红的断言。四条判据各自独立可证红：E-TRISTATE-ENV-NOT-2（环境不可用夹具必须 rc=2，不得 0/1/3）、E-TRISTATE-ENV-NO-MARK（rc=2 时 stderr 必须有独立一行的结构化 JSON 带 untested=true 或 verdict=untested——只改数字不算把两者分开，因为调用方与机检都只能看到一个数字）、E-TRISTATE-VIOLATION-1（必然违规的夹具必须 rc=1，证明判据真的生效）、E-TRISTATE-USAGE-3（必败参数必须 rc=3，证明「调用错误」没有与「未测」撞码）。**为什么 2 与 3 必须分开**：argparse 默认用法错误就是 exit 2，若沿用，则「喂一个环境不可用夹具必须 rc=2」这条机检会被「喂一个必败参数」直接满足——闸口全绿而它证明的只是 argparse 会拒绝坏参数。**夹具口径**：环境不可用用真实可构造的输入（不存在的路径 / 不可读的清单 / 坏掉的账本），不 mock 不打桩——打桩会把「脚本怎么判定环境」从被测范围里拿掉，而那正是本票要验的东西；违规夹具用必然 E 级违规的最小制品（图引用死链），不用「缺五要素」——后者对不像讲义的文本会整份跳过并打印「已跳过（未校验）」，rc=0 是正确语义（票 66），拿它当违规夹具会把一条正确的跳过语义误判成闸口失效。**命令行名单从登记表 scripts_contract 读，不 glob**：scripts/ 下还有无 CLI 的内部模块（ltw_parse / ltw_typography / ltw_exit），它们对任何参数都 rc=0 是对的（G2 内部模块自证正是这么断言的），glob 会把它们拉进「必败参数必须 rc=3」然后得出「闸口失效」的错误结论。**变异测试**（本票 AC 的硬要求）：拷真身到临时根，把 ltw_exit.EXIT_ENV 从 2 改成 1 → 必须红；把 EXIT_USAGE 从 3 改成 2 → 必须红；两条都断言变异锚点唯一。自测 6 用例。"
+  },
+  {
+   "script": "verify_renderer_branches.py",
+   "usage": "[--selftest] [--asar <app.asar 路径>]",
+   "default_behavior": "只读：默认去读宿主 app.asar 里前端打包产物的三条实现事实；--selftest 只跑断言框架，不碰宿主",
+   "exit_codes": {
+    "0": "三条实现事实都在（inlineCode 分派存在、strong 递归 children、表格包装器判 inBlockquote）",
+    "1": "至少一条实现事实消失——文档里判据 10⑦⑧ 的宿主结论需要重新取证",
+    "2": "未测：本机找不到宿主打包产物（没条件验，不是验过没问题）",
+    "3": "用法错误"
+   },
+   "notes": "票 115：判据 10⑦（加粗必须真的加粗）与 10⑧（聊天轮表格不超过 3 列）的结论原先只有「行内代码」有直接证据，代码块 / 公式 / 单元格内行内代码都是推断。2026-11-23 把宿主打包产物解出来实测后，本脚本把那次取证**固化成会红的断言**：文档写的是结论，结论的真假取决于宿主实现，所以断言的是结论所依赖的三条实现事实，而不是重跑一遍渲染（那要 DOM 与打包产物运行时，CI 装不上）。**为什么未测必须是 rc=2 而不是 rc=0**：本仓反复吃过「没条件验就假装验过」的亏；找不到产物只能说明这一次没验，标绿等于把「未验证」卖出「已验证」的价钱。**为什么不把它整条塞进 verification 清单**：不带参数的那种运行在 CI 上没有 app.asar，会让 31 条闸口永远停在 untested——那是自己制造的假黄；所以清单里登记的是 `--selftest`（任何机器都能验「断言框架会红」），真产物取证按需本地跑。**变异测试**：把 bundle 里的 inBlockquote 换成 inQuoteX、把 case\"inlineCode\" 换成 case\"inlineCodeX\"，对应断言各自不再匹配（实测），证明它真的在断言而不是恒真。"
   }
  ],
  "exit_tristate": {
@@ -281,7 +293,8 @@
    "python -B scripts/verify_content_ledger.py --selftest",
    "python -B scripts/verify_zero_dependency.py --selftest",
    "python -B scripts/verify_admission.py --selftest",
-   "python -B scripts/verify_exit_tristate.py --selftest"
+   "python -B scripts/verify_exit_tristate.py --selftest",
+   "python -B scripts/verify_renderer_branches.py --selftest"
   ],
   "evals": [
    "python -B evals/verify-gate-registry.py",

@@ -9,7 +9,8 @@
 3. 错误码速查表
 4. 红线 1 改写示例
 5. 红线 9 族性地图示例
-6. 分册旧编号来源登记
+6. 红线 10 渲染分支实证
+7. 分册旧编号来源登记
 
 ## 口径与总量声明
 
@@ -77,14 +78,14 @@
 | 10 | 2 | `R10.no-paragraph-bold` | 不整段加粗、不连续三行加粗 | E2、R1-1 |
 | 10 | 3 | `R10.no-decorative-markup` | 不用斜体/下划线/彩色/全大写/着重号/emoji 作语义标记 | E1、E5、R2-3 |
 | 10 | 4 | `R10.no-symbol-in-heading` | 标题与标签不加上下文无关的符号 | E5、R1-4 |
-| 10 | 5 | `R10.standard-punctuation-forms` | 中文正文用标准标点（`——`、`……`，不出半角替代） | E3、R2-1、R2-2 |
+| 10 | 5 | `R10.standard-punctuation-forms` | 中文正文用标准标点（`——`、`……`，不出半角替代） | E3、R2-1、R2-2 |
 | 10 | 7 | `R10.emphasis-must-render` | 加粗必须真的加粗：行内代码/代码块/公式里的 `**` 不渲染，按未强调处理 | E3 |
 | 10 | 8 | `R10.chat-table-max-columns` | 聊天轮表格不超过 3 列（讲义沿用 2–4 列），超限改列表或拆表 | E5 |
 | 10 | 6 | `R10.cjk-latin-spacing` | 中英数字间空格全篇一致；数字与单位留空隙；英文与中文标点间不设空格 | E5、E3、R2-4、R2-5、R2-6、R2-7 |
 | 11 交付边界 | 1 | `R11.one-message-per-exercise-set` | 一组题一条消息，不拆成多轮挤牙膏 | E5 |
 | 11 | 2 | `R11.no-mixed-rounds` | 讲授、出题、判分不混在同一轮交付里 | E5 |
 | 11 | 3 | `R11.resend-without-solution` | 重发题面时不夹带答案与解法 | E5 |
-| 11 | 4 | `R11.no-internal-terms-visible` | 学员可见文本不出现内部术语与文件名 | E5 |
+| 11 | 4 | `R11.no-internal-terms-visible` | 学员可见文本不出现内部术语与文件名 | E5 |
 | 11 | 5 | `R11.one-concept-per-teach-round` | 一轮只推进一个可独立检验的知识点，两个及以上即拆轮 | E5 |
 
 **机器入口**：`rule_contract.py --redlines` 渲四段台账；`--redline-keys` 出键集合与逐条指纹；`--registry-check` 做本表与契约的双向对拍；`--redline-freeze-check` 跑冻结清单硬闸。
@@ -134,7 +135,7 @@
 | verify_explanation | `E-THIRD-CONFLICT` / `E-THIRD-EXEMPT-MISUSE` / `E-LEDGER-RESIDUE` / `W-LEDGER-DRAFT` / `W-RUBRIC-SOURCE` | ③ 不适用与 ③ 答案并存 / 豁免被滥用 / 定稿判分记账残留 / 草稿内台账状态行（学员会读草稿） / 给分点量表缺「官方/训练量表」声明 |
 | verify_explanation | `W-MARKER-CONTENT` / `W-STYLE-POINTER` / `W-UNICODE-CHAR` | 标记行带内容 / 头部复制规则正文 / Unicode denylist 字符；`W-UNICODE-CHAR` 定稿前必须清零 |
 | verify_explanation | `W-SELFTEST-MISSING` / `W-SELFTEST-EMPTY` | 自测/检验题面区缺同族答案区 / 答案区为空或占位 |
-| verify_explanation | `W-READER` / `W-READER-ALT` / `W-READER-CAPTION` / `W-READER-CONCLUSION` / `W-READER-DEEPNEST` / `W-READER-EMPHASIS` / `W-READER-HEADING` / `W-READER-HEADING-BODY` / `W-READER-INDEX` / `W-READER-LINKTEXT` / `W-READER-LONGLINE` / `W-READER-OVERVIEW` / `W-READER-SVG` / `W-READER-TABLE` / `W-READER-TABLE-ALIGN` | `--reader` 版式项：标题/表格/图注/alt/SVG/速览/索引/结论/强调/链接/长行/嵌套。图检查（`E-IMG-READ`/`W-READER-SVG`/`W-READER-ALT`/`W-READER-CAPTION`）对任何含图文本生效，不受「像不像讲义」的 gate 约束；gate 关闭时摘要打印「已跳过 N 项读者版检查（未校验）」，不再输出「通过：无违规项」 |
+| verify_explanation | `W-READER` / `W-READER-ALT` / `W-READER-CAPTION` / `W-READER-CONCLUSION` / `W-READER-DEEPNEST` / `W-READER-EMPHASIS` / `W-READER-HEADING` / `W-READER-HEADING-BODY` / `W-READER-INDEX` / `W-READER-LINKTEXT` / `W-READER-LONGLINE` / `W-READER-OVERVIEW` / `W-READER-SVG` / `W-READER-TABLE` / `W-READER-TABLE-ALIGN` | `--reader` 版式项：标题/表格/图注/alt/SVG/速览/索引/结论/强调/链接/长行/嵌套。图检查（`E-IMG-READ`/`W-READER-SVG`/`W-READER-ALT`/`W-READER-CAPTION`）对任何含图文本生效，不受「像不像讲义」的 gate 约束；gate 关闭时摘要打印「已跳过 N 项读者版检查（未校验）」，不再输出「通过：无违规项」 |
 | verify_explanation | `W-EMPHASIS-IN-CODE` | 行内代码、代码块、公式内的强调标记不会渲染，学员看到字面星号；确需展示字面字符时先声明 |
 | verify_explanation | `W-TABLE-COLUMNS` | 表格列数超限：聊天轮 >3 列、讲义 >4 列；超限改列表或拆表 |
 | verify_explanation | `W-NO-TIER` | 讲义单元缺 tier 标签 |
@@ -153,7 +154,30 @@
 
 > 红线 9 判据自足，本节只放示例。判据正文见 `SKILL.md`「十一条教学红线」第 9 条。
 
-虚拟语气的地图 = 虚拟语气的地图 = 「与现在事实相反 / 与过去事实相反 / 与将来事实相反」三支（a），区别在于假设指向的时间（b），判别标志是主句的 would/could/might + 从句时态退格的层数（c）。
+虚拟语气的地图 = 「与现在事实相反 / 与过去事实相反 / 与将来事实相反」三支（a），区别在于假设指向的时间（b），判别标志是主句的 would/could/might + 从句时态退格的层数（c）。
+
+## 红线 10 渲染分支实证
+
+> 红线 10⑦⑧ 判据自足，本节只放宿主实测记录与复现口径。判据正文见 `SKILL.md`「十一条教学红线」第 10 条。
+
+**取证对象**：`E:/DeepSeek Harness/resources/app.asar` 内 `@deepseek-ai/dsh-web-frontend` 的打包产物（`dist/assets/index-*.js` + `vendor-*.js`），2026-11-23 按 asar 目录表解出后，用宿主自己的解析函数与渲染函数跑同一段输入。
+
+**判据 ⑦ 的三条分支，全部实测，不再有「推断」**：
+
+| 分支 | mdast 节点 | 星号去哪了 | 结论 |
+|---|---|---|---|
+| 行内代码 | `inlineCode`（只有 `value`） | 原样留在 value 里 | 渲染成 `<code>**red**</code>`，不成粗 |
+| 围栏代码块 | `code`（只有 `value`，无 `children`） | 原样留在 value 里 | 同上，不成粗 |
+| 公式（行内 `$…$` / 块级 `$$…$$`） | `inlineMath` / `math` | 原样进入公式文本 | 同上，不成粗 |
+| 表格单元格内的行内代码 | 单元格 children 里的 `inlineCode` | 原样留在 value 里 | 单独实测：`<td><code>**x**</code></td>` |
+
+对照组（证明这套管线确实会加粗，排除「解析器没生效」的假阳性）：`plain **red** apple` → `<p>plain <strong>red</strong> apple</p>`。
+
+**判据 ⑧ 的引用块分支**：同一张 4 列表格，正文里得 `md-table-wide` 且 `tabIndex=0`（可聚焦的横向滚动容器）；放进引用块后**两个都消失**，改走 `tableFill`（填满宽度、挤压，不滚动）。所以引用块内的宽表不是「能滚但难发现」，而是**根本没有滚动**——列数超限在那里只会挤成一团。3 列上限因此对两路都要卡。
+
+**复现口径**（不依赖本机路径也能判对错）：解析入口是 `fromMarkdown` 带 GFM 表格扩展，渲染分派里 `case "strong"` 递归 `children`、`case "inlineCode"` 只读 `value`；`code` / `inlineMath` 同样无 `children`。表格包装器判断 `(列数 >= 4) && r.inBlockquote !== true`。
+
+**未覆盖**：只在 `dsh-web-frontend` 这一条实际提供聊天界面的产物上验证；桌面端若另有渲染管线，本节的结论不自动外推到它。
 
 ## 分册旧编号来源登记
 
