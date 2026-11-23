@@ -32,10 +32,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import struct
 import sys
-import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -96,24 +96,40 @@ def read_asar_header(path: Path):
         return obj, header_size, 8 + header_size
 
 
+def walk_files(node, prefix=""):
+    """遍历 asar 目录表，逐个产出 (相对路径, 该条目的元数据)。
+
+    目录树是嵌套的 {"files": {...}}：有 files 键的是目录，没有的是文件。
+    只写一次，供「按正则找路径」与「按路径取偏移」两处共用——两处各写一遍
+    递归是同一段逻辑的两份抄本，改一处忘另一处就会静默分叉。
+    """
+    for name, val in (node.get("files") or {}).items():
+        rel = prefix + "/" + name
+        if "files" in val:
+            yield from walk_files(val, rel)
+        else:
+            yield rel, val
+
+
+def default_asar():
+    """按平台给出宿主 app.asar 的常见位置，找不到就返回该候选路径由调用方判未测。"""
+    env = os.environ.get("DSH_APP_ASAR")
+    if env:
+        return Path(env)
+    if sys.platform == "win32":
+        return Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "DeepSeek Harness" / "resources" / "app.asar"
+    if sys.platform == "darwin":
+        return Path("/Applications/DeepSeek Harness.app/Contents/Resources/app.asar")
+    return Path("/opt/DeepSeek Harness/resources/app.asar")
+
+
 def find_frontend_files(asar: Path):
     """返回 asar 内前端打包产物（按目录表筛 path）。"""
     try:
         tree, _, _ = read_asar_header(asar)
     except (OSError, ValueError, struct.error, UnicodeDecodeError):
         return []
-    hits = []
-
-    def walk(node, prefix):
-        for name, val in (node.get("files") or {}).items():
-            rel = prefix + "/" + name
-            if "files" in val:
-                walk(val, rel)
-            elif FRONTEND_ASSET_RE.search(rel):
-                hits.append(rel)
-
-    walk(tree, "")
-    return hits
+    return [rel for rel, _meta in walk_files(tree) if FRONTEND_ASSET_RE.search(rel)]
 
 
 def check(asar: Path):
@@ -131,16 +147,9 @@ def check(asar: Path):
     # 按目录表把命中文件取出来（只取这几个，几百 KB）。
     wanted = set(files)
     blobs = {}
-
-    def walk(node, prefix):
-        for name, val in (node.get("files") or {}).items():
-            rel = prefix + "/" + name
-            if "files" in val:
-                walk(val, rel)
-            elif rel in wanted:
-                blobs[rel] = (int(val.get("offset", 0)), int(val.get("size", 0)))
-
-    walk(tree, "")
+    for rel, meta in walk_files(tree):
+        if rel in wanted:
+            blobs[rel] = (int(meta.get("offset", 0)), int(meta.get("size", 0)))
     if not blobs:
         return None, "目录表里有路径但没有可读偏移"
 
@@ -187,11 +196,20 @@ def _selftest() -> int:
     if find_frontend_files(Path("__definitely_not_here__.asar")):
         failures.append("不存在的 asar 竟然查出了文件")
 
+    # walk_files 的契约：产出 (相对路径, 元数据) 二元组。
+    # 这条用例来自一次真实回归——重构时把 walk_files(tree) 直接喂给正则，
+    # 对 tuple 调 .search() 当场 TypeError。断言形态比断言「能跑」更能防住这类改动。
+    tree = {"files": {"a": {"files": {"b.js": {"offset": 10, "size": 20}}}, "c.md": {"offset": 3, "size": 4}}}
+    got = list(walk_files(tree))
+    expect = [("/a/b.js", {"offset": 10, "size": 20}), ("/c.md", {"offset": 3, "size": 4})]
+    if got != expect:
+        failures.append("walk_files 产出形态不对：期望 %s 实得 %s" % (expect, got))
+
     if failures:
         for f in failures:
             print("[FAIL] " + f)
         return ltw_exit.EXIT_VIOLATION
-    print("[OK] verify_renderer_branches 自测 5 用例全过")
+    print("[OK] verify_renderer_branches 自测 6 用例全过")
     return ltw_exit.EXIT_OK
 
 
@@ -199,13 +217,14 @@ def main(argv=None) -> int:
     # 用 UsageParser：argparse 默认把用法错误 exit 2，而 2 在本仓被「未测」占住。
     # 基类一处收口（见 ltw_exit.UsageParser 说明），新脚本只要用它就自动符合三态。
     ap = ltw_exit.UsageParser(description="宿主渲染分支机检")
-    ap.add_argument("--asar", default=None, help="app.asar 路径；缺省按平台猜")
+    ap.add_argument("--asar", default=None,
+                    help="app.asar 路径；缺省用 DSH_APP_ASAR 环境变量，再缺省按平台给常见位置（找不到即未测）")
     ap.add_argument("--selftest", action="store_true")
     args = ap.parse_args(argv)
     if args.selftest:
         return _selftest()
 
-    asar = Path(args.asar) if args.asar else Path("E:/DeepSeek Harness/resources/app.asar")
+    asar = Path(args.asar) if args.asar else default_asar()
     ok, detail = check(asar)
     if ok is None:
         return ltw_exit.env_error(
